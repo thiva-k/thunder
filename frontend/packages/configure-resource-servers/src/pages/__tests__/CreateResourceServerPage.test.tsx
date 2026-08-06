@@ -60,6 +60,23 @@ vi.mock('../../api/useCreateResourceServer', () => ({
   default: () => mockUseCreateResourceServer(),
 }));
 
+const mockSetDefaultMutate = vi.fn();
+const mockDefaultConfig = vi.fn(() => ({
+  data: {readOnly: {}, writable: {}, merged: {}},
+  isLoading: false,
+  error: null,
+}));
+
+vi.mock('../../api/useGetDefaultResourceServer', () => ({
+  default: () => mockDefaultConfig(),
+}));
+
+const mockUseSetDefaultResourceServer = vi.fn(() => ({mutate: mockSetDefaultMutate, isPending: false}));
+
+vi.mock('../../api/useSetDefaultResourceServer', () => ({
+  default: () => mockUseSetDefaultResourceServer(),
+}));
+
 vi.mock('@thunderid/configure-organization-units', () => ({
   useHasMultipleOUs: () => ({
     hasMultipleOUs: false,
@@ -78,6 +95,12 @@ describe('CreateResourceServerPage', () => {
       isError: false,
       reset: mockCreateResourceServerReset,
     });
+    mockDefaultConfig.mockReturnValue({
+      data: {readOnly: {}, writable: {}, merged: {}},
+      isLoading: false,
+      error: null,
+    });
+    mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: false});
   });
 
   it('renders the Type step initially', () => {
@@ -381,5 +404,212 @@ describe('CreateResourceServerPage', () => {
     fireEvent.click(screen.getByRole('button', {name: /API/i}));
 
     expect(mockCreateResourceServerReset).not.toHaveBeenCalled();
+  });
+});
+
+describe('CreateResourceServerPage default resource server', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCreateResourceServer.mockReturnValue({
+      mutate: mockCreateResourceServerMutate,
+      isPending: false,
+      isError: false,
+      reset: mockCreateResourceServerReset,
+    });
+    mockDefaultConfig.mockReturnValue({
+      data: {readOnly: {}, writable: {}, merged: {}},
+      isLoading: false,
+      error: null,
+    });
+    mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: false});
+  });
+
+  const defaultCheckbox = () => screen.queryByRole('checkbox', {name: /make this the default resource server/i});
+
+  const goToLastStep = async (): Promise<void> => {
+    renderWithProviders(<CreateResourceServerPage />);
+
+    fireEvent.click(screen.getByRole('button', {name: /API/i}));
+    fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByRole('textbox', {name: /resource server name/i}), {
+      target: {value: 'Payments API'},
+    });
+    fireEvent.change(screen.getByRole('textbox', {name: /identifier/i}), {
+      target: {value: 'https://api.example.com'},
+    });
+  };
+
+  const submit = async (): Promise<void> => {
+    fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', {name: /Create resource server/i})).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', {name: /Create resource server/i}));
+  };
+
+  const createSucceedsWith = (id: string): void => {
+    mockCreateResourceServerMutate.mockImplementationOnce(
+      (_payload: unknown, options: {onSuccess: (created: ResourceServer) => void}) => {
+        options.onSuccess({id} as ResourceServer);
+      },
+    );
+  };
+
+  it('ticks the choice when the deployment has no default yet', async () => {
+    await goToLastStep();
+
+    expect(defaultCheckbox()).toBeChecked();
+  });
+
+  it('leaves the choice unticked when a default already exists', async () => {
+    mockDefaultConfig.mockReturnValue({
+      data: {readOnly: {}, writable: {resourceServerId: 'rs-existing'}, merged: {resourceServerId: 'rs-existing'}},
+      isLoading: false,
+      error: null,
+    });
+
+    await goToLastStep();
+
+    expect(defaultCheckbox()).not.toBeChecked();
+  });
+
+  it('does not offer the choice when a declarative default has locked it', async () => {
+    mockDefaultConfig.mockReturnValue({
+      data: {readOnly: {resourceServerId: 'rs-locked'}, writable: {}, merged: {resourceServerId: 'rs-locked'}},
+      isLoading: false,
+      error: null,
+    });
+
+    await goToLastStep();
+
+    expect(defaultCheckbox()).toBeNull();
+  });
+
+  it('does not offer the choice while the default config is still loading', async () => {
+    mockDefaultConfig.mockReturnValue({data: undefined, isLoading: true, error: null});
+
+    await goToLastStep();
+
+    expect(defaultCheckbox()).toBeNull();
+  });
+
+  it('makes the created resource server the default when the choice is ticked', async () => {
+    createSucceedsWith('rs-new');
+
+    await goToLastStep();
+    await submit();
+
+    expect(mockSetDefaultMutate).toHaveBeenCalledWith({resourceServerId: 'rs-new'}, expect.any(Object));
+  });
+
+  it('leaves the default alone when the choice is unticked', async () => {
+    createSucceedsWith('rs-new');
+
+    await goToLastStep();
+    fireEvent.click(defaultCheckbox()!);
+    await submit();
+
+    expect(mockCreateResourceServerMutate).toHaveBeenCalled();
+    expect(mockSetDefaultMutate).not.toHaveBeenCalled();
+  });
+
+  it('still navigates to the created resource server when making it the default fails', async () => {
+    createSucceedsWith('rs-new');
+    mockSetDefaultMutate.mockImplementationOnce((_payload: unknown, options: {onError: (err: Error) => void}) => {
+      options.onError(new Error('locked'));
+    });
+
+    await goToLastStep();
+    await submit();
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('rs-new'));
+    });
+    expect(mockShowToast).toHaveBeenCalledWith(expect.stringMatching(/could not be made the default/i), 'warning');
+  });
+});
+
+describe('CreateResourceServerPage submit locking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCreateResourceServer.mockReturnValue({
+      mutate: mockCreateResourceServerMutate,
+      isPending: false,
+      isError: false,
+      reset: mockCreateResourceServerReset,
+    });
+    mockDefaultConfig.mockReturnValue({
+      data: {readOnly: {}, writable: {}, merged: {}},
+      isLoading: false,
+      error: null,
+    });
+    mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: false});
+  });
+
+  const goToLastStep = async (): Promise<void> => {
+    fireEvent.click(screen.getByRole('button', {name: /API/i}));
+    fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByRole('textbox', {name: /resource server name/i}), {
+      target: {value: 'Payments API'},
+    });
+    fireEvent.change(screen.getByRole('textbox', {name: /identifier/i}), {
+      target: {value: 'https://api.example.com'},
+    });
+    fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', {name: /Create resource server/i})).toBeInTheDocument();
+    });
+  };
+
+  const submitButton = (): HTMLElement => screen.getByRole('button', {name: /Create resource server|Creating/i});
+
+  it('keeps the submit button disabled while the follow-up default request is still in flight', async () => {
+    const {rerender} = renderWithProviders(<CreateResourceServerPage />);
+    await goToLastStep();
+
+    expect(submitButton()).toBeEnabled();
+
+    // The create has resolved but its follow-up default request has not, so navigation is still
+    // pending. Re-submitting here would create a duplicate resource server.
+    mockUseCreateResourceServer.mockReturnValue({
+      mutate: mockCreateResourceServerMutate,
+      isPending: false,
+      isSuccess: true,
+      isError: false,
+      reset: mockCreateResourceServerReset,
+    });
+    mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: true});
+    rerender(<CreateResourceServerPage />);
+
+    expect(submitButton()).toBeDisabled();
+  });
+
+  it('keeps the submit button disabled after a create succeeds even before the default request starts', async () => {
+    const {rerender} = renderWithProviders(<CreateResourceServerPage />);
+    await goToLastStep();
+
+    mockUseCreateResourceServer.mockReturnValue({
+      mutate: mockCreateResourceServerMutate,
+      isPending: false,
+      isSuccess: true,
+      isError: false,
+      reset: mockCreateResourceServerReset,
+    });
+    rerender(<CreateResourceServerPage />);
+
+    expect(submitButton()).toBeDisabled();
   });
 });

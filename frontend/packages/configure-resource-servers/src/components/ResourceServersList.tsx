@@ -4,17 +4,18 @@
 import {QueryErrorNotice} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {Box, Chip, DataGrid, IconButton, ListingTable, Tooltip, Typography} from '@wso2/oxygen-ui';
-import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {Box, Chip, DataGrid, IconButton, ListingTable, Menu, MenuItem, Tooltip, Typography} from '@wso2/oxygen-ui';
+import {EllipsisVertical, Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import ResourceServerDeleteDialog from './ResourceServerDeleteDialog';
+import SetDefaultResourceServerDialog from './SetDefaultResourceServerDialog';
 import useGetDefaultResourceServer from '../api/useGetDefaultResourceServer';
 import useGetResourceServers from '../api/useGetResourceServers';
 import {getResourceServerTypeLabel} from '../config/resource-server-types';
 import useResourceServerRoutes from '../hooks/useResourceServerRoutes';
-import type {ResourceServer} from '../models/resource-server';
+import {isDefaultEligibleType, type ResourceServer} from '../models/resource-server';
 
 export default function ResourceServersList(): JSX.Element {
   const navigate = useNavigate();
@@ -34,13 +35,60 @@ export default function ResourceServersList(): JSX.Element {
 
   const [paginationModel, setPaginationModel] = useState<DataGrid.GridPaginationModel>({pageSize: 10, page: 0});
   const [deleteTarget, setDeleteTarget] = useState<ResourceServer | null>(null);
+  const [setDefaultTarget, setSetDefaultTarget] = useState<ResourceServer | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [menuTarget, setMenuTarget] = useState<ResourceServer | null>(null);
 
   const {data, isLoading, error, refetch} = useGetResourceServers({
     limit: paginationModel.pageSize,
     offset: paginationModel.page * paginationModel.pageSize,
   });
-  const {data: defaultConfig} = useGetDefaultResourceServer();
+  const {data: defaultConfig, isLoading: isDefaultLoading, error: defaultError} = useGetDefaultResourceServer();
   const defaultId = defaultConfig?.merged?.resourceServerId;
+  // A declarative (read-only) default is locked: the backend rejects any write to it.
+  const isDefaultReady = !isDefaultLoading && !defaultError;
+  const isDefaultLocked = Boolean(defaultConfig?.readOnly?.resourceServerId);
+
+  // Why the action cannot apply to this row, or undefined when it can. It stays visible either way
+  // so the actions column keeps its shape, and the reason is shown so a disabled entry is not a
+  // mystery.
+  const makeDefaultBlockedReason = useCallback(
+    (resourceServer: ResourceServer): string | undefined => {
+      if (!isDefaultReady) {
+        return t('resourceServers:setDefault.unavailableReason', 'Checking the current default resource server.');
+      }
+      if (isDefaultLocked) {
+        return t(
+          'resourceServers:setDefault.lockedReason',
+          'The default resource server is fixed by the deployment configuration.',
+        );
+      }
+      if (resourceServer.id === defaultId) {
+        return t('resourceServers:setDefault.alreadyDefaultReason', 'This is already the default resource server.');
+      }
+      if (!isDefaultEligibleType(resourceServer.type)) {
+        return t(
+          'resourceServers:setDefault.ineligibleTypeReason',
+          'Only API and custom resource servers can be the default.',
+        );
+      }
+      return undefined;
+    },
+    [t, isDefaultReady, isDefaultLocked, defaultId],
+  );
+
+  const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, resourceServer: ResourceServer): void => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setMenuTarget(resourceServer);
+  }, []);
+
+  const menuBlockedReason = menuTarget ? makeDefaultBlockedReason(menuTarget) : undefined;
+
+  const handleMenuClose = useCallback((): void => {
+    setMenuAnchor(null);
+    setMenuTarget(null);
+  }, []);
 
   const columns: DataGrid.GridColDef<ResourceServer>[] = useMemo(
     () => [
@@ -152,13 +200,22 @@ export default function ResourceServersList(): JSX.Element {
                     <Trash2 size={16} />
                   </IconButton>
                 </Tooltip>
+                <Tooltip title={t('resourceServers:listing.actions.more', 'More actions')}>
+                  <IconButton
+                    size="small"
+                    aria-label={t('resourceServers:listing.actions.more', 'More actions')}
+                    onClick={(e) => handleMenuOpen(e, params.row)}
+                  >
+                    <EllipsisVertical size={16} />
+                  </IconButton>
+                </Tooltip>
               </>
             )}
           </ListingTable.RowActions>
         ),
       },
     ],
-    [t, navigate, routes, logger, defaultId],
+    [t, navigate, routes, logger, defaultId, handleMenuOpen],
   );
 
   if (error) {
@@ -201,11 +258,48 @@ export default function ResourceServersList(): JSX.Element {
         </ListingTable.Container>
       </ListingTable.Provider>
 
+      <Menu
+        anchorEl={menuAnchor}
+        open={menuAnchor !== null}
+        onClose={handleMenuClose}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+        transformOrigin={{vertical: 'top', horizontal: 'right'}}
+      >
+        <MenuItem
+          disabled={menuBlockedReason !== undefined}
+          onClick={() => {
+            // A disabled MenuItem is a list item, so it keeps its handler and is only kept inert by
+            // pointer-events. Guard here too, whatever dispatches the click.
+            if (menuBlockedReason !== undefined) return;
+            setSetDefaultTarget(menuTarget);
+            handleMenuClose();
+          }}
+        >
+          <Box>
+            <Typography variant="body2">
+              {t('resourceServers:setDefault.action', 'Make default resource server')}
+            </Typography>
+            {menuBlockedReason !== undefined && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                {menuBlockedReason}
+              </Typography>
+            )}
+          </Box>
+        </MenuItem>
+      </Menu>
+
       <ResourceServerDeleteDialog
         open={deleteTarget !== null}
         resourceServer={deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onSuccess={() => setDeleteTarget(null)}
+      />
+
+      <SetDefaultResourceServerDialog
+        open={setDefaultTarget !== null}
+        resourceServer={setDefaultTarget}
+        onClose={() => setSetDefaultTarget(null)}
+        onSuccess={() => setSetDefaultTarget(null)}
       />
     </>
   );
