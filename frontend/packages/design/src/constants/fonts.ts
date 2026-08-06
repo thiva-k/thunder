@@ -1,10 +1,11 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-/**
- * Common browser-safe / system fonts that do not require loading from Google Fonts.
- * Used by GoogleFontLoader to skip loading and by the theme builder as autocomplete suggestions.
- */
+/** The product's bundled default font stack, used as the fallback wherever a configured font
+ *  is applied so an unresolved font degrades to this instead of the browser's serif default. */
+export const DEFAULT_FONT_STACK = "'Inter Variable', sans-serif";
+
+/** Browser-safe fonts offered in the theme builder's web-safe font picker. */
 export const BROWSER_SAFE_FONTS: string[] = [
   'Arial',
   'Arial Black',
@@ -23,13 +24,3 @@ export const BROWSER_SAFE_FONTS: string[] = [
   'Trebuchet MS',
   'Verdana',
 ];
-
-/** Lowercase set derived from BROWSER_SAFE_FONTS plus generic CSS font families. */
-export const SYSTEM_FONTS = new Set([
-  ...BROWSER_SAFE_FONTS.map((f) => f.toLowerCase()),
-  'sans-serif',
-  'serif',
-  'monospace',
-  'cursive',
-  'fantasy',
-]);

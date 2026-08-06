@@ -39,8 +39,6 @@ const MIN_CONTENT_HEIGHT = 700;
  */
 const IFRAME_INITIAL_HTML = [
   '<!DOCTYPE html><html style="height:100%"><head>',
-  '<link rel="preconnect" href="https://fonts.googleapis.com">',
-  '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
   '<style>body{margin:0;height:100%}#root,#root>*{height:100%}</style>',
   '</head><body><div id="root"></div></body></html>',
 ].join('');
