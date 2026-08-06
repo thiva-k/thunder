@@ -14,6 +14,7 @@ Contributors do not have to write and review documentation from scratch, or memo
 - **`api.md`**: API documentation specifically — an OpenAPI spec (`api/*.yaml`) verified against the Go backend's actual registered routes, or an SDK reference page (`docs/content/sdks/*/apis/**`) verified against build artifacts when available locally. Unlike `seo.md`, this isn't advisory: technical accuracy is a hard gate here.
 - **`review.md`**: the full pre-merge check, running `check.md`, `style.md`, `tech.md`, and (for API-reference paths) `api.md` together. Also has a diff mode: ask it to "review my changes" or "review the diff" without naming a file, and it reviews every changed doc file — including anything not yet committed — instead of one file at a time.
 - **`seo.md`**: an optional discoverability pass for new pages or major rewrites.
+- **`use-case.md`**: structures or audits a use-case section (`docs/content/use-cases/<pattern>/`), covering page order, diagram design, and jargon-literacy checks for that funnel, plus a scoring rubric for a reader unfamiliar with IAM or ThunderID.
 
 ### Invoking a specific stage
 
@@ -29,6 +30,7 @@ Natural language works for all of the above ("check this file," "review my chang
 | `api` | `api.md` |
 | `seo` | `seo.md` |
 | `review` | `review.md` (omit the file path to review the diff instead of one file) |
+| `use-case` | `use-case.md` |
 
 ### Example workflow
 

@@ -67,11 +67,13 @@ import {K8sArchDiagram} from '@site/src/components/K8sArchDiagram';
 import {ConsoleUrl, WayFinderSampleUrl, WayFinderMailUrl} from '@site/src/components/LocalUrls';
 import {McpOAuthFlowDiagram} from '@site/src/components/McpQuickstartFlow';
 import {NextSteps, NextStepsCard} from '@site/src/components/NextSteps';
+import {Pattern, PatternPicker} from '@site/src/components/PatternPicker';
 import ProductName from '@site/src/components/ProductName';
 import RepoLink from '@site/src/components/RepoLink';
 import RunThunderID from '@site/src/components/RunThunderID';
 import SampleDownload from '@site/src/components/SampleDownload';
 import SDKCard from '@site/src/components/SDKCard';
+import {SolutionArchitectureDiagram} from '@site/src/components/SolutionArchitectureDiagram';
 import Stepper from '@site/src/components/Stepper';
 import TutorialHero, {TutorialHeroItem} from '@site/src/components/TutorialHero';
 import UseCaseBranchCards from '@site/src/components/UseCaseBranchCards';
@@ -167,6 +169,7 @@ export default {
   DeveloperShortcut,
   GettingStartedJourney,
   SampleDownload,
+  SolutionArchitectureDiagram,
   UseCaseBranchCards,
   UseCaseStepper,
   UseCaseStepperCard,
@@ -181,6 +184,8 @@ export default {
   DockerLogo,
   Html5Logo,
   SkillsLogo,
+  Pattern,
+  PatternPicker,
   // TODO: Heading styling is a bit off when oxygen-ui Typography is used.
   // After sorting that out, we can switch to using Oxygen UI Typography for headings as well.
   // ex: h1: (props: TypographyProps<'h1'>) => <Typography variant="h1" {...props} />,
