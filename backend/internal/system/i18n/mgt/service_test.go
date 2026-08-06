@@ -290,6 +290,26 @@ func (suite *I18nMgtServiceTestSuite) TestSetTranslationOverrideForKey_Declarati
 	suite.Equal(declarativeresource.ErrorDeclarativeResourceUpdateOperation.Code, err.Code)
 }
 
+func (suite *I18nMgtServiceTestSuite) TestSetTranslationOverrideForKey_CompositeAllowsWrite() {
+	// Global declarative flag is on, but the translation store is composite, so
+	// database-backed overrides must still be allowed.
+	config.GetServerRuntime().Config.DeclarativeResources.Enabled = true
+	config.GetServerRuntime().Config.Translation.Store = "composite"
+	defer func() {
+		config.GetServerRuntime().Config.DeclarativeResources.Enabled = false
+		config.GetServerRuntime().Config.Translation.Store = ""
+	}()
+
+	suite.mockStore.On("UpsertTranslation", mock.Anything).Return(nil)
+
+	result, err := suite.service.SetTranslationOverrideForKey(
+		context.Background(), "en-US", "common", "welcome", "Hello")
+
+	suite.Nil(err)
+	suite.NotNil(result)
+	suite.mockStore.AssertCalled(suite.T(), "UpsertTranslation", mock.Anything)
+}
+
 // ClearTranslationOverrideForKey Tests
 func (suite *I18nMgtServiceTestSuite) TestClearTranslationOverrideForKey_Success() {
 	suite.mockStore.On("DeleteTranslation", "en-US", "welcome", "common").Return(nil)
@@ -337,6 +357,24 @@ func (suite *I18nMgtServiceTestSuite) TestClearTranslationOverrideForKey_Declara
 
 	suite.NotNil(err)
 	suite.Equal(declarativeresource.ErrorDeclarativeResourceDeleteOperation.Code, err.Code)
+}
+
+func (suite *I18nMgtServiceTestSuite) TestClearTranslationOverrideForKey_CompositeAllowsDelete() {
+	// Global declarative flag is on, but the translation store is composite, so
+	// clearing database-backed overrides must still be allowed.
+	config.GetServerRuntime().Config.DeclarativeResources.Enabled = true
+	config.GetServerRuntime().Config.Translation.Store = "composite"
+	defer func() {
+		config.GetServerRuntime().Config.DeclarativeResources.Enabled = false
+		config.GetServerRuntime().Config.Translation.Store = ""
+	}()
+
+	suite.mockStore.On("DeleteTranslation", "en-US", "welcome", "common").Return(nil)
+
+	err := suite.service.ClearTranslationOverrideForKey(context.Background(), "en-US", "common", "welcome")
+
+	suite.Nil(err)
+	suite.mockStore.AssertCalled(suite.T(), "DeleteTranslation", "en-US", "welcome", "common")
 }
 
 // ResolveTranslations Tests
