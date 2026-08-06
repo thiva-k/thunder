@@ -43,6 +43,8 @@ const testRefreshTokenClientID = "test-client-id"
 const testRS01URI = "https://rs01.example.com"
 const testRS02URI = "https://rs02.example.com"
 
+func boolPtr(b bool) *bool { return &b }
+
 type RefreshTokenGrantHandlerTestSuite struct {
 	testCfg oauthconfig.Config
 	suite.Suite
@@ -165,7 +167,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestNewRefreshTokenGrantHandler(
 
 // A replayed (already-revoked) refresh token triggers a family revoke and is rejected as invalid_grant.
 func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_ReplayRevokesTokenFamily() {
-	suite.testCfg.OAuth.Revocation.TokenFamily.OnRefreshReplay = true
+	suite.testCfg.OAuth.Revocation.TokenFamily.OnRefreshReplay = boolPtr(true)
 	suite.rebuildHandlerWithConfig()
 
 	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"jti":"jti-old","tfid":"tfid-reuse"}`))
@@ -541,7 +543,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_Success_WithRene
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_RenewRevokesConsumedRefreshToken() {
 	suite.testCfg.OAuth.RefreshToken.RenewOnGrant = true
-	suite.testCfg.OAuth.RefreshToken.RevokePreviousOnRenew = true
+	suite.testCfg.OAuth.RefreshToken.RevokePreviousOnRenew = boolPtr(true)
 	suite.rebuildHandlerWithConfig()
 
 	consumedJTI := "consumed-rt-jti"
@@ -579,7 +581,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_RenewRevokesCons
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_RenewRevokeFailureFailsClosed() {
 	suite.testCfg.OAuth.RefreshToken.RenewOnGrant = true
-	suite.testCfg.OAuth.RefreshToken.RevokePreviousOnRenew = true
+	suite.testCfg.OAuth.RefreshToken.RevokePreviousOnRenew = boolPtr(true)
 	suite.rebuildHandlerWithConfig()
 
 	suite.mockTokenValidator.
@@ -616,7 +618,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_RevokePreviousOn
 	// renew_on_grant/revoke_previous_on_renew are independently configured. The handler must
 	// skip revocation rather than dereference the nil revoker.
 	suite.testCfg.OAuth.RefreshToken.RenewOnGrant = true
-	suite.testCfg.OAuth.RefreshToken.RevokePreviousOnRenew = true
+	suite.testCfg.OAuth.RefreshToken.RevokePreviousOnRenew = boolPtr(true)
 	suite.handler = newRefreshTokenGrantHandler(
 		suite.mockJWTService,
 		suite.mockTokenBuilder,

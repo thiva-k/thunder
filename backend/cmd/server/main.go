@@ -149,7 +149,7 @@ func initRevocationCache(ctx context.Context, logger *log.Logger,
 	cfg *config.Config) (revocationcache.EnforcerInterface, revocationcache.Syncer) {
 	rc := cfg.Server.SecurityConfig.TokenRevocation
 	enforcer, syncer, err := revocationcache.Initialize(revocationcache.Config{
-		Enabled:      rc.Enabled,
+		Enabled:      rc.IsEnabled(),
 		Source:       rc.Source,
 		SyncInterval: time.Duration(rc.SyncIntervalSeconds) * time.Second,
 	})

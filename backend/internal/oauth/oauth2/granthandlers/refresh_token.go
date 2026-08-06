@@ -284,7 +284,7 @@ func (h *refreshTokenGrantHandler) HandleGrant(ctx context.Context, tokenRequest
 		// Single-use: revoke the consumed refresh token so it cannot be replayed (RFC 9700 §4.14.2).
 		// Fail closed — if the revocation cannot be recorded, the old token would remain usable, so the
 		// rotation is rejected and the client retries with the still-valid old token.
-		if h.refreshRevoker != nil && h.cfg.OAuth.RefreshToken.RevokePreviousOnRenew {
+		if h.refreshRevoker != nil && h.cfg.OAuth.RefreshToken.RevokePreviousOnRenewEnabled() {
 			expiryTime := time.Unix(refreshTokenClaims.Exp, 0).UTC()
 			if err := h.refreshRevoker.RevokeRefreshToken(
 				ctx, refreshTokenClaims.JTI, expiryTime); err != nil {
@@ -319,7 +319,7 @@ func (h *refreshTokenGrantHandler) HandleGrant(ctx context.Context, tokenRequest
 // verified upstream, so its tfid claim is trustworthy; the payload is decoded here only to read it.
 func (h *refreshTokenGrantHandler) revokeTokenFamilyOnReplay(ctx context.Context, refreshToken string,
 	logger *log.Logger) {
-	if h.criteriaRevoker == nil || !h.cfg.OAuth.Revocation.TokenFamily.OnRefreshReplay {
+	if h.criteriaRevoker == nil || !h.cfg.OAuth.Revocation.TokenFamily.OnRefreshReplayEnabled() {
 		return
 	}
 	claims, err := jwt.DecodeJWTPayload(refreshToken)

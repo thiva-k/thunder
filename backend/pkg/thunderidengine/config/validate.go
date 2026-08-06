@@ -29,7 +29,7 @@ func (c *SecurityConfig) Validate() error {
 // unsupported source is rejected, a negative sync interval is rejected, and a non-positive interval
 // otherwise falls back to the default.
 func (c *TokenRevocationConfig) Validate() error {
-	if !c.Enabled {
+	if !c.IsEnabled() {
 		return nil
 	}
 	if c.SyncIntervalSeconds < 0 {
