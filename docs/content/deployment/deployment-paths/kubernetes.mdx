@@ -277,20 +277,24 @@ configuration:
   database:
     config:
       type: sqlite
-      sqlitePath: database/configdb.db
-      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+      sqlite:
+        path: database/configdb.db
+        options: "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)"
     runtime_transient:
       type: sqlite
-      sqlitePath: database/runtime_transient.db
-      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+      sqlite:
+        path: database/runtime_transient.db
+        options: "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)"
     entity:
       type: sqlite
-      sqlitePath: database/entitydb.db
-      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+      sqlite:
+        path: database/entitydb.db
+        options: "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)"
     runtime_persistent:
       type: sqlite
-      sqlitePath: database/runtime_persistent.db
-      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)"
+      sqlite:
+        path: database/runtime_persistent.db
+        options: "_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)"
 ```
 
 SQLite database files are stored inside the pod by default. To persist data across restarts and rescheduling, enable a PersistentVolumeClaim in the Helm values:
