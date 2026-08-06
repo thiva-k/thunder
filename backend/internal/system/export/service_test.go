@@ -88,7 +88,7 @@ func (suite *ExportServiceTestSuite) SetupTest() {
 	exporters := []declarativeresource.ResourceExporter{
 		application.NewApplicationExporterForTest(suite.appServiceMock),
 		connection.NewConnectionExporterForTest(suite.idpServiceMock, suite.mockNotificationService),
-		entitytype.NewEntityTypeExporterForTest(suite.mockEntityTypeService),
+		entitytype.NewEntityTypeExporterForTest(suite.mockEntityTypeService, entitytype.TypeCategoryUser),
 		flowmgt.NewFlowGraphExporterForTest(suite.mockFlowService),
 	}
 
@@ -1169,7 +1169,7 @@ func (suite *ExportServiceTestSuite) TestExportResources_TemplateGenerationError
 	exporters := []declarativeresource.ResourceExporter{
 		application.NewApplicationExporterForTest(suite.appServiceMock),
 		connection.NewConnectionExporterForTest(suite.idpServiceMock, suite.mockNotificationService),
-		entitytype.NewEntityTypeExporterForTest(suite.mockEntityTypeService),
+		entitytype.NewEntityTypeExporterForTest(suite.mockEntityTypeService, entitytype.TypeCategoryUser),
 	}
 
 	// Create a new export service with the mock parameterizer
@@ -1639,7 +1639,10 @@ func (suite *ExportServiceTestSuite) TestExportEntityTypes_Wildcard() {
 	}
 
 	suite.mockEntityTypeService.EXPECT().
-		GetEntityTypeList(mock.Anything, mock.Anything, 100, 0, mock.Anything).Return(mockSchemaList, nil)
+		GetEntityTypeList(mock.Anything, mock.Anything, 100, 0, mock.Anything).Return(mockSchemaList, nil).Once()
+	suite.mockEntityTypeService.EXPECT().
+		GetEntityTypeList(mock.Anything, mock.Anything, 100, 2, mock.Anything).
+		Return(&entitytype.EntityTypeListResponse{Types: []entitytype.EntityTypeListItem{}}, nil).Once()
 	suite.mockEntityTypeService.EXPECT().
 		GetEntityType(mock.Anything, mock.Anything, "schema1", mock.Anything).
 		Return(mockSchema1, nil)
@@ -1783,7 +1786,10 @@ func (suite *ExportServiceTestSuite) TestExportEntityTypes_WildcardPartialFailur
 	}
 
 	suite.mockEntityTypeService.EXPECT().
-		GetEntityTypeList(mock.Anything, mock.Anything, 100, 0, mock.Anything).Return(mockSchemaList, nil)
+		GetEntityTypeList(mock.Anything, mock.Anything, 100, 0, mock.Anything).Return(mockSchemaList, nil).Once()
+	suite.mockEntityTypeService.EXPECT().
+		GetEntityTypeList(mock.Anything, mock.Anything, 100, 3, mock.Anything).
+		Return(&entitytype.EntityTypeListResponse{Types: []entitytype.EntityTypeListItem{}}, nil).Once()
 	suite.mockEntityTypeService.EXPECT().
 		GetEntityType(mock.Anything, mock.Anything, "schema1", mock.Anything).
 		Return(mockSchema1, nil)

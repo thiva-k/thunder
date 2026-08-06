@@ -447,14 +447,15 @@ func (f *fakeLayoutService) UpdateLayout(_ context.Context,
 }
 
 type fakeEntityTypeService struct {
-	created []entitytype.CreateEntityTypeRequestWithID
-	updated []entitytype.UpdateEntityTypeRequest
-	byID    map[string]*entitytype.EntityType
-	byName  map[string]*entitytype.EntityType
+	created          []entitytype.CreateEntityTypeRequestWithID
+	updated          []entitytype.UpdateEntityTypeRequest
+	createCategories []entitytype.TypeCategory
+	byID             map[string]*entitytype.EntityType
+	byName           map[string]*entitytype.EntityType
 }
 
 func (f *fakeEntityTypeService) CreateEntityType(
-	_ context.Context, _ entitytype.TypeCategory, request entitytype.CreateEntityTypeRequestWithID,
+	_ context.Context, category entitytype.TypeCategory, request entitytype.CreateEntityTypeRequestWithID,
 ) (*entitytype.EntityType, *tidcommon.ServiceError) {
 	id := request.ID
 	if id == "" {
@@ -469,6 +470,7 @@ func (f *fakeEntityTypeService) CreateEntityType(
 		Schema:                request.Schema,
 	}
 	f.created = append(f.created, request)
+	f.createCategories = append(f.createCategories, category)
 	if f.byID == nil {
 		f.byID = map[string]*entitytype.EntityType{}
 	}
@@ -2189,6 +2191,100 @@ func TestImportResources_EntityTypeOUHandlePassedToService(t *testing.T) {
 	require.Len(t, entityTypeSvc.created, 1)
 	assert.Equal(t, "default", entityTypeSvc.created[0].OUHandle)
 	assert.Equal(t, "", entityTypeSvc.created[0].OUID)
+}
+
+func TestImportResources_AgentTypeDefaultsToAgentCategory(t *testing.T) {
+	entityTypeSvc := &fakeEntityTypeService{
+		byID:   map[string]*entitytype.EntityType{},
+		byName: map[string]*entitytype.EntityType{},
+	}
+	svc := newImportService(
+		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	content := strings.Join([]string{
+		"resource_type: agent_type",
+		"id: agtt-123",
+		"name: support-agent",
+		"ouId: ou-1",
+		"schema:",
+		"  type: object",
+		"  properties: {}",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Equal(t, operationCreate, resp.Results[0].Operation)
+	assert.Equal(t, "agtt-123", resp.Results[0].ResourceID)
+	require.Len(t, entityTypeSvc.created, 1)
+	assert.Equal(t, "agtt-123", entityTypeSvc.created[0].ID)
+	require.Len(t, entityTypeSvc.createCategories, 1)
+	assert.Equal(t, entitytype.TypeCategoryAgent, entityTypeSvc.createCategories[0])
+}
+
+func TestImportResources_AgentTypeExplicitCategoryTakesPrecedence(t *testing.T) {
+	entityTypeSvc := &fakeEntityTypeService{
+		byID:   map[string]*entitytype.EntityType{},
+		byName: map[string]*entitytype.EntityType{},
+	}
+	svc := newImportService(
+		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	content := strings.Join([]string{
+		"resource_type: agent_type",
+		"id: agtt-124",
+		"name: support-agent",
+		"category: user",
+		"ouId: ou-1",
+		"schema:",
+		"  type: object",
+		"  properties: {}",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, entityTypeSvc.createCategories, 1)
+	assert.Equal(t, entitytype.TypeCategoryUser, entityTypeSvc.createCategories[0])
+}
+
+func TestImportResources_UserTypeExplicitAgentCategoryStillWorks(t *testing.T) {
+	entityTypeSvc := &fakeEntityTypeService{
+		byID:   map[string]*entitytype.EntityType{},
+		byName: map[string]*entitytype.EntityType{},
+	}
+	svc := newImportService(
+		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	content := strings.Join([]string{
+		"resource_type: user_type",
+		"id: usrs-124",
+		"name: support-agent",
+		"category: agent",
+		"ouId: ou-1",
+		"schema:",
+		"  type: object",
+		"  properties: {}",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, entityTypeSvc.createCategories, 1)
+	assert.Equal(t, entitytype.TypeCategoryAgent, entityTypeSvc.createCategories[0])
 }
 
 func TestImportResources_StripsClientSecretForPublicClientWithNoneAuthMethod(t *testing.T) {

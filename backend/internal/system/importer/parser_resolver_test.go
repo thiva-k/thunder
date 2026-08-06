@@ -152,6 +152,21 @@ func TestParseDocuments_AgentWithOAuthNotClassifiedAsApplication(t *testing.T) {
 	assert.Equal(t, resourceTypeAgent, docs[0].ResourceType)
 }
 
+func TestParseDocuments_AgentTypeDocument(t *testing.T) {
+	content := strings.Join([]string{
+		"resource_type: agent_type",
+		"id: at-1",
+		"name: Test Agent Type",
+		"schema: '{}'",
+		"",
+	}, "\n")
+
+	docs, err := parseDocuments(content)
+	require.NoError(t, err)
+	require.Len(t, docs, 1)
+	assert.Equal(t, resourceTypeAgentType, docs[0].ResourceType)
+}
+
 func TestParseDocuments_UsesResourceTypeField(t *testing.T) {
 	content := "resource_type: application\nname: idp-one\ntype: GOOGLE\nproperties: []\n"
 
