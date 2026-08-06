@@ -33,7 +33,6 @@ Before you begin, ensure the following are available:
 | Tool | Installation Guide | Version Check |
 |------|--------------------|---------------|
 | Git | [Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) | `git --version` |
-| Helm | [Install Helm](https://helm.sh/docs/intro/install/) | `helm version` |
 | kubectl | [Install kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) | `kubectl version` |
 | OpenChoreo | [Install OpenChoreo](https://openchoreo.dev/docs/getting-started/quick-start-guide/) | `kubectl get crd \| grep openchoreo` |
 
@@ -47,20 +46,29 @@ kubectl get clustersecretstore
 
 ## How It Works
 
-1. The `thunderid-oc-resourcetype` chart registers the `thunderid` `ClusterResourceType`, which holds the schema and the Kubernetes templates.
+1. The `thunderid-oc-resourcetype` manifest registers the `thunderid` `ClusterResourceType`, which holds the schema and the Kubernetes templates.
 2. You create a `Resource` that references the `ClusterResourceType` and supplies the instance parameters. OpenChoreo cuts a `ResourceRelease` from it.
 3. A `ResourceReleaseBinding` pins the `ResourceRelease` to an environment.
 4. OpenChoreo renders the workload into the data-plane namespace: an `ExternalSecret` materialized from the platform secret store, the configuration `ConfigMap` resources, the `Deployment`, the `Service`, and the `HTTPRoute`.
 
-## Install the ResourceType
+## Clone the Repository
 
-A platform administrator installs the chart once per cluster:
+The steps below run from a local checkout of the <ProductName /> repository, which provides the `ResourceType` manifest, the sample `Resource`, and (for `postgres` mode) the database schema scripts. Clone it and run the remaining commands from its root:
 
 ```bash
-helm install thunderid-type install/openchoreo/thunderid-oc-resourcetype
+git clone https://github.com/thunder-id/thunderid.git
+cd thunderid
 ```
 
-This registers the `thunderid` `ClusterResourceType`. To register a namespaced `ResourceType` instead, set `resourceType.cluster=false`.
+## Install the ResourceType
+
+A platform administrator applies the manifest once per cluster:
+
+```bash
+kubectl apply -f install/openchoreo/thunderid-oc-resourcetype/resourcetype.yaml
+```
+
+This registers the cluster-scoped `thunderid` `ClusterResourceType`, shared across all projects.
 
 ## Generate the Key Material
 
@@ -132,11 +140,21 @@ Populate every value before the first deployment. Because the rendered release n
 
 ## Create the Resource
 
-Use the sample manifests at `install/openchoreo/thunderid-oc-resourcetype/samples/resource.yaml` as a starting point. Replace the `<SERVER_PUBLIC_URL>` and `<GATEWAY_HOSTNAME>` placeholders, then apply:
+Use the sample manifests at `install/openchoreo/thunderid-oc-resourcetype/samples/resource.yaml` as a starting point. The sample ships with `<SERVER_PUBLIC_URL>` and `<GATEWAY_HOSTNAME>` placeholders that must be substituted before applying.
+
+:::warning
+Do not `kubectl apply` the sample unedited. The unsubstituted placeholders are invalid values (for example an invalid CORS origin and redirect URI), and the pod crash-loops at startup. Always substitute the placeholders first.
+:::
+
+Substitute the placeholders and apply in one step. The values below are the OpenChoreo quick-start defaults, where `serverPublicUrl` follows the gateway hostname pattern `<environmentName>-<resourceName>-<resourceNamespace>.<gateway-host>`:
 
 ```bash
-kubectl apply -f install/openchoreo/thunderid-oc-resourcetype/samples/resource.yaml
+sed -e 's|<SERVER_PUBLIC_URL>|http://development-thunderid-default.openchoreoapis.localhost:19080|g' \
+    -e 's|<GATEWAY_HOSTNAME>|development-thunderid-default.openchoreoapis.localhost|g' \
+    install/openchoreo/thunderid-oc-resourcetype/samples/resource.yaml | kubectl apply -f -
 ```
+
+Adjust the two values for your own gateway host if you are not using the quick-start.
 
 A minimal `Resource` references the secret store and provides the declarative resources file:
 
@@ -169,7 +187,7 @@ The sample derives both the System resource server `identifier` and the Console'
 :::
 
 :::note
-Exports strip user credentials. Add a `credentials:` block to each user that must sign in, and resolve the password from the secret store so it never appears in the manifest:
+Exports strip user credentials. The sample already adds a `credentials:` block for the admin user; add one to any other user that must sign in, and resolve the password from the secret store so it never appears in the manifest:
 
 ```yaml
 credentials:
@@ -253,7 +271,7 @@ The `ResourceType` exposes further parameters for production hardening:
 - `runtime.certs.storeKey` reads the certificate and key files from a separate store entry instead of `secretStore.key`, for independent rotation or access control.
 - `configOverrides` replaces the generated `deployment.yaml`, Gate `config.js`, or Console `config.js` files when the built-in templates do not cover a setting.
 
-For the full parameter reference, see the chart documentation at `install/openchoreo/thunderid-oc-resourcetype/README.md`.
+For the full parameter reference, see the documentation at `install/openchoreo/thunderid-oc-resourcetype/README.md`.
 
 ## Environment Management
 
