@@ -1688,7 +1688,8 @@
           "id": "google_auth",
           "type": "TASK_EXECUTION",
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GoogleOIDCAuthExecutor",
@@ -1701,7 +1702,7 @@
               }
             ]
           },
-          "onSuccess": "auth_assert",
+          "onSuccess": "provisioning",
           "layout": {
             "size": {
               "width": 200,
@@ -1710,6 +1711,76 @@
             "position": {
               "x": 305,
               "y": 64
+            }
+          }
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "auth_assert",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 555,
+              "y": 64
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 555,
+              "y": -496
             }
           }
         },
@@ -1726,7 +1797,7 @@
               "height": 113
             },
             "position": {
-              "x": 646,
+              "x": 1126,
               "y": 64
             }
           }
@@ -1740,7 +1811,7 @@
               "height": 34
             },
             "position": {
-              "x": 1015,
+              "x": 1495,
               "y": 105
             }
           }
@@ -1783,7 +1854,8 @@
           "id": "github_auth",
           "type": "TASK_EXECUTION",
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GithubOAuthExecutor",
@@ -1796,7 +1868,7 @@
               }
             ]
           },
-          "onSuccess": "auth_assert",
+          "onSuccess": "provisioning",
           "layout": {
             "size": {
               "width": 200,
@@ -1805,6 +1877,76 @@
             "position": {
               "x": 305,
               "y": 64
+            }
+          }
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "auth_assert",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 555,
+              "y": 64
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 555,
+              "y": -496
             }
           }
         },
@@ -1821,7 +1963,7 @@
               "height": 113
             },
             "position": {
-              "x": 646,
+              "x": 1126,
               "y": 64
             }
           }
@@ -1835,7 +1977,7 @@
               "height": 34
             },
             "position": {
-              "x": 1015,
+              "x": 1495,
               "y": 105
             }
           }
@@ -1977,7 +2119,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GoogleOIDCAuthExecutor",
@@ -1990,7 +2133,7 @@
               }
             ]
           },
-          "onSuccess": "auth_assert"
+          "onSuccess": "provisioning"
         },
         {
           "id": "github_auth",
@@ -2006,7 +2149,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GithubOAuthExecutor",
@@ -2019,7 +2163,77 @@
               }
             ]
           },
-          "onSuccess": "auth_assert"
+          "onSuccess": "provisioning"
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "auth_assert",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1239,
+              "y": 454
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 1239,
+              "y": -106
+            }
+          }
         },
         {
           "id": "auth_assert",
@@ -2030,7 +2244,7 @@
               "height": 113
             },
             "position": {
-              "x": 1329,
+              "x": 1809,
               "y": 454
             }
           },
@@ -2048,7 +2262,7 @@
               "height": 34
             },
             "position": {
-              "x": 1710,
+              "x": 2190,
               "y": 493
             }
           }
@@ -2266,7 +2480,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GoogleOIDCAuthExecutor",
@@ -2279,7 +2494,77 @@
               }
             ]
           },
-          "onSuccess": "auth_assert"
+          "onSuccess": "provisioning"
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "auth_assert",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1083,
+              "y": 397
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 1083,
+              "y": -163
+            }
+          }
         },
         {
           "id": "auth_assert",
@@ -2290,7 +2575,7 @@
               "height": 113
             },
             "position": {
-              "x": 1175,
+              "x": 1655,
               "y": 397
             }
           },
@@ -2308,7 +2593,7 @@
               "height": 34
             },
             "position": {
-              "x": 1539,
+              "x": 2019,
               "y": 436
             }
           }
@@ -2526,7 +2811,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GithubOAuthExecutor",
@@ -2539,7 +2825,77 @@
               }
             ]
           },
-          "onSuccess": "auth_assert"
+          "onSuccess": "provisioning"
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "auth_assert",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1083,
+              "y": 397
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 1083,
+              "y": -163
+            }
+          }
         },
         {
           "id": "auth_assert",
@@ -2550,7 +2906,7 @@
               "height": 113
             },
             "position": {
-              "x": 1175,
+              "x": 1655,
               "y": 397
             }
           },
@@ -2568,7 +2924,7 @@
               "height": 34
             },
             "position": {
-              "x": 1539,
+              "x": 2019,
               "y": 436
             }
           }
@@ -2811,7 +3167,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GoogleOIDCAuthExecutor",
@@ -2824,7 +3181,7 @@
               }
             ]
           },
-          "onSuccess": "auth_assert"
+          "onSuccess": "provisioning"
         },
         {
           "id": "github_auth",
@@ -2840,7 +3197,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GithubOAuthExecutor",
@@ -2853,7 +3211,77 @@
               }
             ]
           },
-          "onSuccess": "auth_assert"
+          "onSuccess": "provisioning"
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "auth_assert",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1083,
+              "y": 485
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 1083,
+              "y": -75
+            }
+          }
         },
         {
           "id": "auth_assert",
@@ -2864,7 +3292,7 @@
               "height": 113
             },
             "position": {
-              "x": 1180,
+              "x": 1660,
               "y": 485
             }
           },
@@ -2882,7 +3310,7 @@
               "height": 34
             },
             "position": {
-              "x": 1555,
+              "x": 2035,
               "y": 313
             }
           }
@@ -4056,7 +4484,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GoogleOIDCAuthExecutor",
@@ -4069,7 +4498,7 @@
               }
             ]
           },
-          "onSuccess": "generate_otp"
+          "onSuccess": "provisioning"
         },
         {
           "id": "github_auth",
@@ -4085,7 +4514,8 @@
             }
           },
           "properties": {
-            "idpId": "{{IDP_ID}}"
+            "idpId": "{{IDP_ID}}",
+            "allowAuthenticationWithoutLocalUser": true
           },
           "executor": {
             "name": "GithubOAuthExecutor",
@@ -4098,7 +4528,77 @@
               }
             ]
           },
-          "onSuccess": "generate_otp"
+          "onSuccess": "provisioning"
+        },
+        {
+          "id": "provisioning",
+          "type": "TASK_EXECUTION",
+          "executor": {
+            "name": "ProvisioningExecutor"
+          },
+          "onSuccess": "generate_otp",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1004,
+              "y": 546
+            }
+          },
+          "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "prompt_schema_attrs",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "heading_schema_attrs",
+                "label": "{{ t(signin:forms.schema_attrs.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "type": "BLOCK",
+                "id": "block_dynamic_user_inputs",
+                "components": [
+                  {
+                    "type": "DYNAMIC_INPUT_PLACEHOLDER",
+                    "id": "dynamic_inputs"
+                  },
+                  {
+                    "type": "ACTION",
+                    "id": "action_schema_attrs",
+                    "label": "{{ t(signin:forms.schema_attrs.actions.continue.label) }}",
+                    "variant": "PRIMARY",
+                    "eventType": "SUBMIT"
+                  }
+                ]
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [],
+              "action": {
+                "ref": "action_schema_attrs",
+                "nextNode": "provisioning"
+              }
+            }
+          ],
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 400
+            },
+            "position": {
+              "x": 1004,
+              "y": -14
+            }
+          }
         },
         {
           "id": "generate_otp",
@@ -4109,7 +4609,7 @@
               "height": 113
             },
             "position": {
-              "x": 1065,
+              "x": 1545,
               "y": 546
             }
           },
@@ -4136,7 +4636,7 @@
               "height": 113
             },
             "position": {
-              "x": 1395,
+              "x": 1875,
               "y": 546
             }
           },
@@ -4158,7 +4658,7 @@
               "height": 676
             },
             "position": {
-              "x": 1407,
+              "x": 1887,
               "y": 266
             }
           },
@@ -4248,7 +4748,7 @@
               "height": 113
             },
             "position": {
-              "x": 1857,
+              "x": 2337,
               "y": 541
             }
           },
@@ -4267,7 +4767,7 @@
               "height": 113
             },
             "position": {
-              "x": 2177,
+              "x": 2657,
               "y": 542
             }
           },
@@ -4285,7 +4785,7 @@
               "height": 34
             },
             "position": {
-              "x": 2526,
+              "x": 3006,
               "y": 579
             }
           }
@@ -13542,6 +14042,14 @@
             {
               "key": "AUTH_ASSERT_EXECUTOR_ID",
               "type": "ID"
+            },
+            {
+              "key": "PROVISIONING_EXECUTOR_STEP_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PROVISIONING_PROMPT_STEP_ID",
+              "type": "ID"
             }
           ]
         },
@@ -13688,12 +14196,101 @@
                 "executor": {
                   "name": "GoogleOIDCAuthExecutor"
                 },
-                "onSuccess": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+                "onSuccess": "{{PROVISIONING_EXECUTOR_STEP_ID}}",
                 "onIncomplete": ""
               },
               "properties": {
-                "idpId": "{{IDP_ID}}"
+                "idpId": "{{IDP_ID}}",
+                "allowAuthenticationWithoutLocalUser": true
               }
+            }
+          },
+          {
+            "id": "{{PROVISIONING_EXECUTOR_STEP_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 668,
+              "y": 550
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "ProvisioningExecutor"
+                },
+                "onSuccess": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+                "onFailure": "",
+                "onIncomplete": "{{PROVISIONING_PROMPT_STEP_ID}}"
+              },
+              "properties": {
+                "allowCrossOUProvisioning": false,
+                "includeOptional": false,
+                "includeOptionalCredentials": false,
+                "maxPerPrompt": 5,
+                "assignGroup": "",
+                "assignRole": ""
+              }
+            }
+          },
+          {
+            "id": "{{PROVISIONING_PROMPT_STEP_ID}}",
+            "type": "VIEW",
+            "size": {
+              "width": 360,
+              "height": 220
+            },
+            "position": {
+              "x": 708,
+              "y": 250
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "IMAGE",
+                  "src": "{{ meta(application.logoUrl) }}",
+                  "alt": "Application logo",
+                  "height": "60",
+                  "width": ""
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "align": "center",
+                  "variant": "HEADING_1",
+                  "label": "Complete your details"
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "DISPLAY",
+                      "type": "DYNAMIC_INPUT_PLACEHOLDER"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
+                      "action": {
+                        "type": "NEXT",
+                        "onSuccess": "{{PROVISIONING_EXECUTOR_STEP_ID}}"
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           },
           {
@@ -13704,7 +14301,7 @@
               "height": 113
             },
             "position": {
-              "x": 770,
+              "x": 1148,
               "y": 424
             },
             "data": {
@@ -13726,7 +14323,7 @@
               "height": 34
             },
             "position": {
-              "x": 1122,
+              "x": 1500,
               "y": 462
             },
             "config": {},

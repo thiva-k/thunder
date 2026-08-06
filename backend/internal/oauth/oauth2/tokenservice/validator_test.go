@@ -261,7 +261,8 @@ func (suite *TokenValidatorTestSuite) TestExtractSubjectTokenClaims_MapsReserved
 	assert.Equal(suite.T(), "Jane", result.UserAttributes["firstName"])
 	// Reserved claims are still filtered out of the attribute set.
 	assert.NotContains(suite.T(), result.UserAttributes, "sub")
-	assert.NotContains(suite.T(), result.UserAttributes, "given_name")
+	// Mappings copy rather than rename, so the source claim survives alongside the local attribute.
+	assert.Equal(suite.T(), "Jane", result.UserAttributes["given_name"])
 }
 
 func (suite *TokenValidatorTestSuite) TestValidateSubjectToken_Error_InvalidJWTFormat() {
@@ -2782,8 +2783,8 @@ func (suite *ExternalIDPValidatorTestSuite) TestValidateSubjectToken_ExternalIDP
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), result)
 	assert.Equal(suite.T(), "user@example.com", result.UserAttributes["email"])
-	_, originalPresent := result.UserAttributes[externalAttribute]
-	assert.False(suite.T(), originalPresent)
+	// Mappings copy rather than rename, so the source claim survives alongside the local attribute.
+	assert.Equal(suite.T(), "user@example.com", result.UserAttributes[externalAttribute])
 	suite.mockIDPService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
 }

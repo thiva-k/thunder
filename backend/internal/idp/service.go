@@ -8,11 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
 	"github.com/thunder-id/thunderid/internal/entitytype"
+	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
@@ -36,6 +38,7 @@ type IDPServiceInterface interface {
 	DeleteIdentityProvider(ctx context.Context, idpID string) *tidcommon.ServiceError
 	GetIDPUsages(ctx context.Context, idpID string) (*resourcedependency.DependenciesResponse, *tidcommon.ServiceError)
 	SetDependencyRegistry(r resourcedependency.Registry)
+	ApplySchemaAwareDefaults(ctx context.Context, idp *providers.IDPDTO)
 }
 
 // idpService is the default implementation of the IdPServiceInterface.
@@ -46,6 +49,26 @@ type idpService struct {
 	dependencyRegistry resourcedependency.Registry
 	logger             *log.Logger
 	uuidGenerator      func() (string, error)
+}
+
+// userTypeAttributes holds a user type's non-credential schema attributes.
+type userTypeAttributes struct {
+	name       string
+	attributes []entitytype.AttributeInfo
+}
+
+// isUnique reports whether the user type declares attr as unique.
+func (u userTypeAttributes) isUnique(attr string) bool {
+	return slices.ContainsFunc(u.attributes, func(a entitytype.AttributeInfo) bool {
+		return a.Attribute == attr && a.Unique
+	})
+}
+
+// isRequired reports whether the user type declares attr as required.
+func (u userTypeAttributes) isRequired(attr string) bool {
+	return slices.ContainsFunc(u.attributes, func(a entitytype.AttributeInfo) bool {
+		return a.Attribute == attr && a.Required
+	})
 }
 
 // newIDPService creates a new instance of IdPService.
@@ -71,6 +94,9 @@ func (is *idpService) CreateIdentityProvider(
 	if svcErr := validateIDP(ctx, idp, logger); svcErr != nil {
 		return nil, svcErr
 	}
+	// Seeded on create only: an update replaces the whole connection, so re-seeding there would
+	// silently restore a section the administrator removed.
+	is.ApplySchemaAwareDefaults(ctx, idp)
 	if svcErr := is.validateAttributeConfiguration(ctx, idp); svcErr != nil {
 		return nil, svcErr
 	}
@@ -219,6 +245,9 @@ func (is *idpService) UpdateIdentityProvider(
 	if svcErr := validateIDP(ctx, idp, logger); svcErr != nil {
 		return nil, svcErr
 	}
+	// Defaults are seeded on create only. An update replaces the whole connection, so an omitted
+	// account-linking or mapping section is indistinguishable from one the administrator deliberately
+	// removed; re-seeding here would silently undo that removal.
 	if svcErr := is.validateAttributeConfiguration(ctx, idp); svcErr != nil {
 		return nil, svcErr
 	}
@@ -321,6 +350,174 @@ func (is *idpService) DeleteIdentityProvider(ctx context.Context, idpID string) 
 	}
 
 	return nil
+}
+
+// ApplySchemaAwareDefaults seeds account-linking and username-mapping defaults derived from user-type
+// schemas. Explicit configuration wins, and schema lookup failures leave the connection unchanged
+// rather than blocking the operation. Entity-type reads are authorized against ctx and never elevated.
+func (is *idpService) ApplySchemaAwareDefaults(ctx context.Context, idp *providers.IDPDTO) {
+	if idp == nil || is.entityTypeService == nil {
+		return
+	}
+
+	attributeConfig := idp.AttributeConfiguration
+	needsAccountLinking := attributeConfig == nil || attributeConfig.AccountLinking == nil
+	needsAttributeMappings := attributeConfig == nil || len(attributeConfig.UserTypeAttributeMappings) == 0
+	if !needsAccountLinking && !needsAttributeMappings {
+		return
+	}
+
+	// Every user type is a candidate: the per-type criteria the seeding helpers apply (a unique email,
+	// a required username) decide what can actually be seeded. Self registration is deliberately not a
+	// filter, because attribute mappings are read on login as well as during provisioning, so a type
+	// that only ever receives manually created users still needs them.
+	candidateUserTypes := is.loadCandidateUserTypes(ctx)
+	if len(candidateUserTypes) == 0 {
+		is.logger.Debug(ctx, "No user type to seed connection defaults from")
+		return
+	}
+
+	// Linking is a flat attribute list with no user type attached, so it is seeded independently of
+	// whether the mapping target can be decided.
+	if needsAccountLinking {
+		is.seedEmailAccountLinking(ctx, idp, candidateUserTypes)
+	}
+	if needsAttributeMappings {
+		is.seedUserTypeDefaults(ctx, idp, candidateUserTypes)
+	}
+}
+
+// loadCandidateUserTypes returns every user type visible to the caller with its non-credential
+// attributes, or nil when any of it cannot be read. AttributeInfo carries both the required and the
+// unique flag, so one read per type answers everything the seeding helpers ask. A partial read yields
+// nothing rather than a subset, because seeding on an incomplete view of the deployment could pick a
+// linking attribute that another type allows duplicates of.
+func (is *idpService) loadCandidateUserTypes(ctx context.Context) []userTypeAttributes {
+	response, svcErr := is.entityTypeService.GetEntityTypeList(
+		ctx, entitytype.TypeCategoryUser, serverconst.MaxPageSize, 0, false)
+	if svcErr != nil || response == nil {
+		is.logger.Warn(ctx, "Could not list user types, skipping connection default seeding")
+		return nil
+	}
+
+	candidates := make([]userTypeAttributes, 0, len(response.Types))
+	for _, userType := range response.Types {
+		attributes, attrErr := is.entityTypeService.GetAttributes(
+			ctx, entitytype.TypeCategoryUser, userType.Name,
+			entitytype.AttributeFilter{AllowNonCredential: true})
+		if attrErr != nil {
+			is.logger.Warn(ctx, "Could not read user type attributes, skipping connection default seeding",
+				log.String("userType", userType.Name))
+			return nil
+		}
+		candidates = append(candidates, userTypeAttributes{name: userType.Name, attributes: attributes})
+	}
+	return candidates
+}
+
+// seedEmailAccountLinking configures email as the account-linking attribute when the connection's
+// scopes can yield one and email is unique on every candidate. Uniqueness on all of them matters
+// because the linking list carries no user type: the lookup must identify a single user whichever
+// type an identity provisions into.
+func (is *idpService) seedEmailAccountLinking(
+	ctx context.Context, idp *providers.IDPDTO, candidateUserTypes []userTypeAttributes,
+) {
+	scopes := utils.ParseStringArray(GetPropertyValue(idp.Properties, PropScopes), ",")
+	if !scopesGrantEmail(idp.Type, scopes) {
+		return
+	}
+
+	for _, userType := range candidateUserTypes {
+		if !userType.isUnique(defaultAccountLinkingAttribute) {
+			is.logger.Debug(ctx, "Email is not unique on a candidate user type, skipping linking default",
+				log.String("userType", userType.name))
+			return
+		}
+	}
+
+	ensureAttributeConfiguration(idp).AccountLinking = &providers.AccountLinking{
+		Attributes: []string{defaultAccountLinkingAttribute},
+	}
+}
+
+// seedUserTypeDefaults records which local user type an incoming identity resolves to, and maps a
+// provider claim onto the local username for every candidate that requires one. Without the mapping,
+// provisioning prompts for a username on every first federated sign-in, since no provider emits a
+// claim under that name. The default must name a type the mappings cover, because GetAttributeMappings
+// looks up the entry keyed to it; with nothing to map it names a type email can match instead.
+func (is *idpService) seedUserTypeDefaults(
+	ctx context.Context, idp *providers.IDPDTO, candidateUserTypes []userTypeAttributes,
+) {
+	sourceAttribute := defaultUsernameSourceAttribute(idp.Type)
+	if sourceAttribute == "" {
+		return
+	}
+
+	// Google and OIDC derive the username from the email claim, which a connection only receives when
+	// its scopes ask for one. Seeding the mapping regardless would leave an entry that resolves to
+	// nothing: provisioning would still prompt for a username while the connection looks configured.
+	if sourceAttribute == emailClaim {
+		scopes := utils.ParseStringArray(GetPropertyValue(idp.Properties, PropScopes), ",")
+		if !scopesGrantEmail(idp.Type, scopes) {
+			is.logger.Debug(ctx, "Scopes cannot yield an email, skipping username mapping default")
+			return
+		}
+	}
+
+	usernameRequiredUserTypes := make([]string, 0, len(candidateUserTypes))
+	for _, userType := range candidateUserTypes {
+		if userType.isRequired(localUsernameAttribute) {
+			usernameRequiredUserTypes = append(usernameRequiredUserTypes, userType.name)
+		}
+	}
+
+	if len(usernameRequiredUserTypes) == 0 {
+		emailMatchableUserType := firstUserTypeMatchableByEmail(candidateUserTypes)
+		if emailMatchableUserType == "" {
+			return
+		}
+		setDefaultUserType(ensureAttributeConfiguration(idp), emailMatchableUserType)
+		return
+	}
+
+	mappings := make([]providers.UserTypeAttributeMapping, 0, len(usernameRequiredUserTypes))
+	for _, userType := range usernameRequiredUserTypes {
+		mappings = append(mappings, providers.UserTypeAttributeMapping{
+			UserType: userType,
+			Attributes: []providers.AttributeMapping{
+				{ExternalAttribute: sourceAttribute, LocalAttribute: localUsernameAttribute},
+			},
+		})
+	}
+
+	attributeConfig := ensureAttributeConfiguration(idp)
+	// Candidates arrive ordered by name, so taking the first is stable across restarts. This only
+	// selects which mapping entry applies; the type provisioning targets is still decided by the flow.
+	setDefaultUserType(attributeConfig, usernameRequiredUserTypes[0])
+	attributeConfig.UserTypeAttributeMappings = mappings
+}
+
+// firstUserTypeMatchableByEmail returns the first candidate that email can identify a single user on,
+// or "" when none can. Candidates arrive ordered by name, so the choice is stable across restarts.
+func firstUserTypeMatchableByEmail(candidateUserTypes []userTypeAttributes) string {
+	for _, userType := range candidateUserTypes {
+		if userType.isUnique(defaultAccountLinkingAttribute) {
+			return userType.name
+		}
+	}
+	return ""
+}
+
+// setDefaultUserType records the resolution default, leaving a claim-driven resolution the
+// administrator already configured intact: replacing the whole value would drop their external
+// attribute and value mapping.
+func setDefaultUserType(attributeConfig *providers.AttributeConfiguration, userType string) {
+	if attributeConfig.UserTypeResolution == nil {
+		attributeConfig.UserTypeResolution = &providers.UserTypeResolution{}
+	}
+	if strings.TrimSpace(attributeConfig.UserTypeResolution.Default) == "" {
+		attributeConfig.UserTypeResolution.Default = userType
+	}
 }
 
 // SetDependencyRegistry injects the dependency registry. Called by servicemanager after the
