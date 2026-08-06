@@ -326,6 +326,17 @@ const (
 	ConsentTypeAuthentication ConsentType = "AUTHENTICATION"
 )
 
+// ConsentDecisionReason defines the possible reasons a consent decision was submitted.
+type ConsentDecisionReason string
+
+const (
+	// ConsentDecisionReasonTimeout marks decisions submitted because the consent prompt expired
+	// rather than because the user chose anything.
+	ConsentDecisionReasonTimeout ConsentDecisionReason = "timeout"
+	// ConsentDecisionReasonUserDenied marks decisions submitted because the user denied the prompt.
+	ConsentDecisionReasonUserDenied ConsentDecisionReason = "user_denied"
+)
+
 // Namespace represents the consent namespace to scope consent elements and purposes.
 type Namespace string
 

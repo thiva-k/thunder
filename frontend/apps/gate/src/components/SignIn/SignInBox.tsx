@@ -148,7 +148,11 @@ export default function SignInBox(): JSX.Element {
             </Box>
           ) : (
             <>
-              {error && (
+              {/* Held back while a submission is in flight. An expired consent prompt auto-submits, and
+                  the SDK raises its expiry error against the request already on the wire, which would
+                  otherwise flash an error the user cannot act on. Errors worth showing outlive the
+                  request, since the flow clears them as each submission starts. */}
+              {error && !isLoading && (
                 <Alert severity="error" sx={{mb: 2}}>
                   {error.message ??
                     t(

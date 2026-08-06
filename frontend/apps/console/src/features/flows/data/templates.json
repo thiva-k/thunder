@@ -5072,6 +5072,12 @@
                 "variant": "BODY_1"
               },
               {
+                "id": "consent_timer",
+                "category": "DISPLAY",
+                "type": "TIMER",
+                "label": "This request expires in {time}. You will then be returned to the application."
+              },
+              {
                 "type": "BLOCK",
                 "id": "consent_block",
                 "components": [
