@@ -4456,11 +4456,12 @@ const translations = {
     'greeting.subtitle': 'What do you want to secure today?',
 
     // Start Building section
+    'start_building.hero.eyebrow': 'Get Started',
     'start_building.hero.title': 'Integrate {{product}} into your application',
     'start_building.hero.description':
       'Add secure sign-in, token management, and user sessions to your app in minutes.',
     'start_building.hero.actions.create.label': 'Create Application',
-    'start_building.frameworks.label': 'Start with a framework',
+    'start_building.frameworks.label': 'Start with a Template',
 
     // Next Steps section
     'next_steps.section.title': 'Quick Links',

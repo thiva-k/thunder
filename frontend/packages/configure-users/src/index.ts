@@ -23,6 +23,7 @@ export {default as UsersList} from './components/UsersList';
 export {default as QuickCopySection} from './components/edit-user/QuickCopySection';
 
 // Constants
+export {default as UserConstants} from './constants/user-constants';
 export {default as UserQueryKeys} from './constants/user-query-keys';
 
 // Models

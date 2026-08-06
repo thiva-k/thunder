@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Box, Button, Card, Chip, Stack, Typography} from '@wso2/oxygen-ui';
+import {ArrowRight} from '@wso2/oxygen-ui-icons-react';
 import type {JSX, ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -110,12 +111,13 @@ export default function HomeNextStepCard({
         <Stack direction="row" spacing={1} alignItems="center">
           {primaryLabel && primaryRoute && (
             <Button
-              variant="outlined"
+              variant="text"
               size="small"
+              endIcon={<ArrowRight size={14} />}
               onClick={() => {
                 navigate(primaryRoute)?.catch(() => undefined);
               }}
-              sx={{textTransform: 'none'}}
+              sx={{textTransform: 'none', whiteSpace: 'nowrap'}}
             >
               {primaryLabel}
             </Button>
