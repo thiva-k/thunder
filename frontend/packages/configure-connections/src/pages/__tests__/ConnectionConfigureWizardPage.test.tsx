@@ -7,9 +7,11 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import ConnectionConfigureWizardPage from '../ConnectionConfigureWizardPage';
 
 const mutateMock = vi.fn();
+const resetMock = vi.fn();
 const navigateMock = vi.fn();
 const showToastMock = vi.fn();
 const mockParams = {type: 'google'};
+const mutationState = {isPending: false, isError: false};
 
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
@@ -21,7 +23,9 @@ vi.mock('@thunderid/contexts', async (importOriginal) => ({
   useConfig: () => ({getGateCallbackUrl: () => 'https://id.acme.io/gate/callback'}),
   useToast: () => ({showToast: showToastMock}),
 }));
-vi.mock('../../api/useCreateConnection', () => ({default: () => ({mutate: mutateMock, isPending: false})}));
+vi.mock('../../api/useCreateConnection', () => ({
+  default: () => ({mutate: mutateMock, reset: resetMock, ...mutationState}),
+}));
 
 vi.mock('../../components/ConnectionForm', () => ({
   default: function StubConnectionForm({onFieldChange}: {onFieldChange: (name: string, value: string) => void}) {
@@ -34,7 +38,13 @@ vi.mock('../../components/ConnectionForm', () => ({
       onFieldChange('senderId', '+15005550006');
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    return <div data-testid="stub-connection-form" />;
+    return (
+      <div data-testid="stub-connection-form">
+        <button type="button" data-testid="edit-client-id" onClick={() => onFieldChange('clientId', 'changed')}>
+          edit
+        </button>
+      </div>
+    );
   },
 }));
 
@@ -42,6 +52,8 @@ describe('ConnectionConfigureWizardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockParams.type = 'google';
+    mutationState.isPending = false;
+    mutationState.isError = false;
   });
 
   it('shows a single configure step and creates with the fixed vendor name', () => {
@@ -90,15 +102,62 @@ describe('ConnectionConfigureWizardPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/connections/google/conn-1');
   });
 
-  it('shows a toast with the duplicate-name error on a 409 create conflict', () => {
+  it('shows a general inline error (no toast) on a 409 create conflict, since the name is not user-editable here', () => {
+    mutateMock.mockImplementationOnce((_payload, opts: {onError: (error: unknown) => void}) => {
+      opts.onError({response: {status: 409}});
+    });
     render(<ConnectionConfigureWizardPage />);
 
     fireEvent.click(screen.getByTestId('wizard-create'));
 
-    const {onError} = mutateMock.mock.calls[0][1] as {onError: (error: unknown) => void};
-    onError({response: {status: 409}});
+    expect(screen.getByText('Failed to create connection.')).toBeInTheDocument();
+    expect(showToastMock).not.toHaveBeenCalled();
+  });
 
-    expect(showToastMock).toHaveBeenCalledWith('A connection with this name already exists.', 'error');
+  it('shows a general inline error (no toast) for a non-conflict create failure', () => {
+    mutateMock.mockImplementationOnce((_payload, opts: {onError: (error: unknown) => void}) => {
+      opts.onError({response: {status: 500}});
+    });
+    render(<ConnectionConfigureWizardPage />);
+
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(screen.getByText('Failed to create connection.')).toBeInTheDocument();
+    expect(showToastMock).not.toHaveBeenCalled();
+  });
+
+  it('clears the general create error when a field is edited', () => {
+    mutateMock.mockImplementationOnce((_payload, opts: {onError: (error: unknown) => void}) => {
+      opts.onError({response: {status: 500}});
+    });
+    render(<ConnectionConfigureWizardPage />);
+
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    expect(screen.getByText('Failed to create connection.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('edit-client-id'));
+
+    expect(screen.queryByText('Failed to create connection.')).not.toBeInTheDocument();
+  });
+
+  it('does not reset a still-pending mutation when a field is edited', () => {
+    mutationState.isPending = true;
+    mutationState.isError = false;
+    render(<ConnectionConfigureWizardPage />);
+
+    fireEvent.click(screen.getByTestId('edit-client-id'));
+
+    expect(resetMock).not.toHaveBeenCalled();
+  });
+
+  it('resets a failed (settled) mutation when a field is edited', () => {
+    mutationState.isPending = false;
+    mutationState.isError = true;
+    render(<ConnectionConfigureWizardPage />);
+
+    fireEvent.click(screen.getByTestId('edit-client-id'));
+
+    expect(resetMock).toHaveBeenCalled();
   });
 
   it('SMS vendor: single configure step creates without attribute mapping', () => {

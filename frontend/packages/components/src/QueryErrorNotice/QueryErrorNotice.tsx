@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {getErrorMessage} from '@thunderid/utils';
-import {Alert, Button, ListingTable} from '@wso2/oxygen-ui';
+import {Alert, Button, ListingTable, Stack} from '@wso2/oxygen-ui';
 import {AlertCircle} from '@wso2/oxygen-ui-icons-react';
 import type {JSX, ReactNode} from 'react';
 
 /**
- * The subset of the i18next TFunction interface {@link ReadErrorState} needs from its caller.
+ * The subset of the i18next TFunction interface {@link QueryErrorNotice} needs from its caller.
  */
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -16,7 +16,7 @@ type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
  * (`@thunderid/utils`) exactly, so feature resolvers like `getUserErrorMessage` plug in with no
  * adapter.
  */
-export type ReadErrorMessageResolver = (
+export type QueryErrorMessageResolver = (
   error: Error,
   t: TranslateFn,
   fallbackKey: string,
@@ -24,11 +24,11 @@ export type ReadErrorMessageResolver = (
 ) => string;
 
 /**
- * Props for {@link ReadErrorState}.
+ * Props for {@link QueryErrorNotice}.
  *
  * @public
  */
-export interface ReadErrorStateProps {
+export interface QueryErrorNoticeProps {
   /** The error thrown by the failed read. */
   error: Error;
 
@@ -55,12 +55,12 @@ export interface ReadErrorStateProps {
    * `@thunderid/utils`. Pass a feature resolver (e.g. `getUserErrorMessage`) to interpolate
    * error-specific params.
    */
-  resolveErrorMessage?: ReadErrorMessageResolver;
+  resolveErrorMessage?: QueryErrorMessageResolver;
 
-  /** Called when the user retries. Renders a `common:actions.refresh` button. Ignored if `action` is set. */
+  /** Called when the user retries. Renders a `common:actions.refresh` button above `action`, if set. */
   onRetry?: () => void;
 
-  /** Overrides the default retry button, e.g. for an edit page's "Back to X" action. */
+  /** A second action stacked below the retry button, e.g. an edit page's "Back to X" link. */
   action?: ReactNode;
 
   /** Custom illustration for `variant="block"`. Defaults to an `AlertCircle` icon. */
@@ -69,12 +69,12 @@ export interface ReadErrorStateProps {
 
 /**
  * Renders a failed read (list, edit page, or tab section) in place of its content, resolving the
- * error through {@link ReadErrorMessageResolver} rather than surfacing raw server text. See
+ * error through {@link QueryErrorMessageResolver} rather than surfacing raw server text. See
  * `frontend/AGENTS.md`'s Error Display section.
  *
  * @public
  */
-export default function ReadErrorState({
+export default function QueryErrorNotice({
   error,
   t,
   variant = 'block',
@@ -85,15 +85,25 @@ export default function ReadErrorState({
   onRetry = undefined,
   action = undefined,
   illustration = undefined,
-}: ReadErrorStateProps): JSX.Element {
+}: QueryErrorNoticeProps): JSX.Element {
   const message = resolveErrorMessage(error, t, fallbackKey, fallbackDefaultValue);
+  const retryButton = onRetry ? (
+    <Button variant="outlined" onClick={onRetry}>
+      {t('common:actions.refresh', {defaultValue: 'Refresh'})}
+    </Button>
+  ) : undefined;
+
+  // Stack the retry button above a secondary action (e.g. a back link) so both read as
+  // one action group instead of competing side by side.
   const resolvedAction =
-    action ??
-    (onRetry ? (
-      <Button variant="outlined" onClick={onRetry}>
-        {t('common:actions.refresh', {defaultValue: 'Refresh'})}
-      </Button>
-    ) : undefined);
+    retryButton && action ? (
+      <Stack direction="column" spacing={1} alignItems="center">
+        {retryButton}
+        {action}
+      </Stack>
+    ) : (
+      (retryButton ?? action)
+    );
 
   if (variant === 'inline') {
     return (

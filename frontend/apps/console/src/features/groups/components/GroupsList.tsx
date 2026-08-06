@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ReadErrorState} from '@thunderid/components';
+import {QueryErrorNotice} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
@@ -139,7 +139,7 @@ export default function GroupsList(): JSX.Element {
 
   if (error) {
     return (
-      <ReadErrorState
+      <QueryErrorNotice
         error={error}
         t={t}
         variant="block"

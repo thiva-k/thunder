@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ReadErrorState} from '@thunderid/components';
+import {QueryErrorNotice} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
@@ -177,7 +177,7 @@ export default function UserTypesList() {
 
   if (userTypesRequestError) {
     return (
-      <ReadErrorState
+      <QueryErrorNotice
         error={userTypesRequestError}
         t={(key, options) => t(key.includes(':') ? key : `userTypes:${key}`, options)}
         variant="block"

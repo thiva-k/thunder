@@ -139,19 +139,6 @@ var (
 			DefaultValue: "The provided recipient is invalid",
 		},
 	}
-	// ErrorInvalidChannel is the error returned when an invalid channel is provided.
-	ErrorInvalidChannel = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "MNS-1011",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.notificationservice.invalid_channel",
-			DefaultValue: "Invalid channel",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.notificationservice.invalid_channel_description",
-			DefaultValue: "The provided channel is invalid",
-		},
-	}
 	// ErrorUnsupportedChannel is the error returned when an unsupported channel is provided.
 	ErrorUnsupportedChannel = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
@@ -189,20 +176,6 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.notificationservice.invalid_session_token_description",
 			DefaultValue: "The provided session token is invalid, malformed, or expired",
-		},
-	}
-	// ErrorClientErrorWhileRetrievingMessageClient is the error returned when a client error occurs
-	// while retrieving the message client.
-	ErrorClientErrorWhileRetrievingMessageClient = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "MNS-1015",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.notificationservice.error_while_retrieving_message_client",
-			DefaultValue: "Error while retrieving message client",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.notificationservice.error_while_retrieving_message_client_description",
-			DefaultValue: "An error occurred while retrieving the message client",
 		},
 	}
 	// ErrorSenderHasBlockingDependencies is returned when a notification sender cannot be deleted

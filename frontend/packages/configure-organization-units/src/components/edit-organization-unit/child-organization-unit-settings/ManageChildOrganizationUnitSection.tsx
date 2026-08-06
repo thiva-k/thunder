@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ReadErrorState, SettingsCard} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {Box, DataGrid, Avatar, useTheme} from '@wso2/oxygen-ui';
@@ -121,7 +121,7 @@ export default function ManageChildOrganizationUnitSection({
           'View and manage child organization units under this OU',
         )}
       >
-        <ReadErrorState
+        <QueryErrorNotice
           error={error}
           t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
           variant="inline"

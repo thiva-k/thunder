@@ -1,11 +1,11 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
 import {useGetAgentType, useGetAgentTypes} from '@thunderid/configure-agent-types';
 import {dropNonConformingOptionalAttributes} from '@thunderid/configure-users';
 import {useLogger} from '@thunderid/logger/react';
-import {isEqualIgnoringEmpty} from '@thunderid/utils';
+import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -72,8 +72,16 @@ export default function AgentEditPage(): JSX.Element {
   const logger = useLogger('AgentEditPage');
   const {agentId} = useParams<{agentId: string}>();
 
-  const {data: agent, isLoading, error, isError, refetch} = useGetAgent(agentId ?? '');
+  const {data: agent, isLoading, error, refetch} = useGetAgent(agentId ?? '');
   const updateAgent = useUpdateAgent();
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   const justCreatedSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
   const [secretDialogOpen, setSecretDialogOpen] = useState(Boolean(justCreatedSecret));
@@ -127,9 +135,15 @@ export default function AgentEditPage(): JSX.Element {
     [logger],
   );
 
-  const handleFieldChange = useCallback((field: keyof Agent, value: unknown) => {
-    setEditedAgent((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof Agent, value: unknown) => {
+      if (updateAgent.isError) {
+        updateAgent.reset(); // a save error is stale once the form changes
+      }
+      setEditedAgent((prev) => ({...prev, [field]: value}));
+    },
+    [updateAgent],
+  );
 
   const handleSave = useCallback(async () => {
     if (!agent || !agentId) return;
@@ -159,15 +173,21 @@ export default function AgentEditPage(): JSX.Element {
     return <PageLoadingAnimation />;
   }
 
-  if (isError || error) {
+  if (error) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {error?.message ?? t('agents:edit.page.error', 'Failed to load agent')}
-        </Alert>
-        <Button onClick={() => void handleBack()} startIcon={<ArrowLeft size={16} />}>
-          {t('agents:edit.page.back', 'Back to agents')}
-        </Button>
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="block"
+          title={t('agents:edit.page.errorTitle', 'Failed to load agent')}
+          onRetry={() => void refetch()}
+          action={
+            <Button onClick={() => void handleBack()} startIcon={<ArrowLeft size={16} />}>
+              {t('agents:edit.page.back', 'Back to agents')}
+            </Button>
+          }
+        />
       </PageContent>
     );
   }
@@ -486,7 +506,20 @@ export default function AgentEditPage(): JSX.Element {
           savingLabel={t('agents:edit.page.saving', 'Saving…')}
           isSaving={updateAgent.isPending}
           saveDisabled={hasAnyValidationError || agent.isReadOnly === true}
+          error={
+            updateAgent.error
+              ? getErrorMessage(
+                  updateAgent.error,
+                  tForErrors,
+                  'update.error',
+                  'Failed to update agent. Please try again.',
+                )
+              : undefined
+          }
           onReset={() => {
+            if (updateAgent.isError) {
+              updateAgent.reset(); // a save error is stale once the form resets
+            }
             setEditedAgent({});
             setSectionResetKey((key) => key + 1);
           }}

@@ -1,8 +1,10 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ExternalLink} from '@thunderid/components';
+import {ExternalLink, QueryErrorNotice} from '@thunderid/components';
+import {useToast} from '@thunderid/contexts';
 import {useGetThemes, useGetLayouts, useCreateLayout} from '@thunderid/design';
+import {getErrorMessage} from '@thunderid/utils';
 import {Box, Button, Card, Grid, PageContent, PageTitle, Skeleton, Typography} from '@wso2/oxygen-ui';
 import {ArrowUpRight, LayoutTemplate, Palette, Plus} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, type JSX} from 'react';
@@ -35,8 +37,9 @@ const LAYOUT_PRESET_DEFAULT: Record<LayoutPresetVariant, string> = {
 export default function DesignPage(): JSX.Element {
   const {t} = useTranslation('design');
   const navigate = useNavigate();
-  const {data: themesData, isLoading: themesLoading} = useGetThemes();
-  const {data: layoutsData} = useGetLayouts();
+  const {showToast} = useToast();
+  const {data: themesData, isLoading: themesLoading, error: themesError, refetch: refetchThemes} = useGetThemes();
+  const {data: layoutsData, error: layoutsError, refetch: refetchLayouts} = useGetLayouts();
   const {mutateAsync: createLayout} = useCreateLayout();
 
   const [showAllThemes, setShowAllThemes] = useState(false);
@@ -52,15 +55,29 @@ export default function DesignPage(): JSX.Element {
         return;
       }
 
-      // Create a new layout with default config when none exists yet
-      const created = await createLayout({
-        handle: presetId,
-        displayName: LAYOUT_PRESET_DEFAULT[presetId],
-        layout: {},
-      });
-      await navigate(RouteConfig.design.layoutDetail(created.id));
+      // Create a new layout with default config when none exists yet. This is a one-shot click
+      // action on a preset card with no dialog or form to attach an inline error to, so a failure
+      // toasts instead.
+      try {
+        const created = await createLayout({
+          handle: presetId,
+          displayName: LAYOUT_PRESET_DEFAULT[presetId],
+          layout: {},
+        });
+        await navigate(RouteConfig.design.layoutDetail(created.id));
+      } catch (err) {
+        showToast(
+          getErrorMessage(
+            err as Error,
+            t,
+            'layouts.errors.create_failed.message',
+            'Failed to create layout. Please try again.',
+          ),
+          'error',
+        );
+      }
     },
-    [navigate, createLayout],
+    [navigate, createLayout, showToast, t],
   );
 
   const allThemes = themesData?.themes ?? [];
@@ -102,74 +119,82 @@ export default function DesignPage(): JSX.Element {
           }
         />
 
-        <Grid container spacing={2} sx={{mb: 5}}>
-          {themesLoading
-            ? Array.from({length: skeletonCount}, (_, i) => `theme-skeleton-${i}`).map((key) => (
-                <Grid key={key} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
-                  <Skeleton variant="rounded" sx={{aspectRatio: '4/3', height: 'auto', borderRadius: 2}} />
-                </Grid>
-              ))
-            : [
-                ...visibleThemes.map((theme) => (
-                  <Grid key={theme.id} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
-                    <ItemCard
-                      thumbnail={<ThemeThumbnail theme={theme} />}
-                      name={theme.displayName}
-                      isReadOnly={theme.isReadOnly}
-                      onClick={() => {
-                        (async () => {
-                          await navigate(RouteConfig.design.themeDetail(theme.id));
-                        })().catch(() => {
-                          // Ignore navigation errors
-                        });
-                      }}
-                      onDelete={
-                        theme.isReadOnly ? undefined : () => setDeleteTarget({id: theme.id, name: theme.displayName})
-                      }
-                    />
-                  </Grid>
-                )),
-                ...(!showAllThemes && allThemes.length > DesignUIConstants.INITIAL_LIMIT
-                  ? [
-                      <Grid key="show-more" size={{xs: 6, sm: 4, md: 3, lg: 2}}>
-                        <Box
-                          onClick={() => setShowAllThemes(true)}
-                          sx={{
-                            cursor: 'pointer',
-                            borderRadius: 1,
-                            border: '1.5px dashed',
-                            borderColor: 'divider',
-                            aspectRatio: '4/3',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 0.75,
-                            color: 'text.secondary',
-                            transition: 'all 0.18s ease',
-                            width: '100%',
-                            height: '100%',
-                            '&:hover': {borderColor: 'primary.main', color: 'primary.main', bgcolor: 'primary.50'},
+        {themesError ? (
+          <QueryErrorNotice error={themesError} t={t} variant="inline" onRetry={() => void refetchThemes()} />
+        ) : (
+          <>
+            <Grid container spacing={2} sx={{mb: 5}}>
+              {themesLoading
+                ? Array.from({length: skeletonCount}, (_, i) => `theme-skeleton-${i}`).map((key) => (
+                    <Grid key={key} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
+                      <Skeleton variant="rounded" sx={{aspectRatio: '4/3', height: 'auto', borderRadius: 2}} />
+                    </Grid>
+                  ))
+                : [
+                    ...visibleThemes.map((theme) => (
+                      <Grid key={theme.id} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
+                        <ItemCard
+                          thumbnail={<ThemeThumbnail theme={theme} />}
+                          name={theme.displayName}
+                          isReadOnly={theme.isReadOnly}
+                          onClick={() => {
+                            (async () => {
+                              await navigate(RouteConfig.design.themeDetail(theme.id));
+                            })().catch(() => {
+                              // Ignore navigation errors
+                            });
                           }}
-                        >
-                          <ArrowUpRight size={20} />
-                          <Typography variant="caption" sx={{fontSize: '0.75rem', fontWeight: 500}}>
-                            {t('themes.show_more.label', 'Show {{count}} more', {
-                              count: allThemes.length - DesignUIConstants.INITIAL_LIMIT,
-                            })}
-                          </Typography>
-                        </Box>
-                      </Grid>,
-                    ]
-                  : []),
-              ]}
-        </Grid>
+                          onDelete={
+                            theme.isReadOnly
+                              ? undefined
+                              : () => setDeleteTarget({id: theme.id, name: theme.displayName})
+                          }
+                        />
+                      </Grid>
+                    )),
+                    ...(!showAllThemes && allThemes.length > DesignUIConstants.INITIAL_LIMIT
+                      ? [
+                          <Grid key="show-more" size={{xs: 6, sm: 4, md: 3, lg: 2}}>
+                            <Box
+                              onClick={() => setShowAllThemes(true)}
+                              sx={{
+                                cursor: 'pointer',
+                                borderRadius: 1,
+                                border: '1.5px dashed',
+                                borderColor: 'divider',
+                                aspectRatio: '4/3',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 0.75,
+                                color: 'text.secondary',
+                                transition: 'all 0.18s ease',
+                                width: '100%',
+                                height: '100%',
+                                '&:hover': {borderColor: 'primary.main', color: 'primary.main', bgcolor: 'primary.50'},
+                              }}
+                            >
+                              <ArrowUpRight size={20} />
+                              <Typography variant="caption" sx={{fontSize: '0.75rem', fontWeight: 500}}>
+                                {t('themes.show_more.label', 'Show {{count}} more', {
+                                  count: allThemes.length - DesignUIConstants.INITIAL_LIMIT,
+                                })}
+                              </Typography>
+                            </Box>
+                          </Grid>,
+                        ]
+                      : []),
+                  ]}
+            </Grid>
 
-        {!themesLoading && allThemes.length === 0 && (
-          <Box sx={{mb: 5, py: 6, textAlign: 'center', color: 'text.secondary'}}>
-            <Palette size={32} style={{opacity: 0.3, marginBottom: 8}} />
-            <Typography variant="body2">{t('themes.empty_state.message', 'No themes yet')}</Typography>
-          </Box>
+            {!themesLoading && allThemes.length === 0 && (
+              <Box sx={{mb: 5, py: 6, textAlign: 'center', color: 'text.secondary'}}>
+                <Palette size={32} style={{opacity: 0.3, marginBottom: 8}} />
+                <Typography variant="body2">{t('themes.empty_state.message', 'No themes yet')}</Typography>
+              </Box>
+            )}
+          </>
         )}
       </Box>
 
@@ -181,84 +206,88 @@ export default function DesignPage(): JSX.Element {
           icon={<LayoutTemplate size={18} />}
         />
 
-        <Grid container spacing={2}>
-          {LAYOUT_PRESET_IDS.map((id) => {
-            const apiLayoutId = layoutIdByHandle.get(id);
-            const isEnabled = id === 'centered';
+        {layoutsError ? (
+          <QueryErrorNotice error={layoutsError} t={t} variant="inline" onRetry={() => void refetchLayouts()} />
+        ) : (
+          <Grid container spacing={2}>
+            {LAYOUT_PRESET_IDS.map((id) => {
+              const apiLayoutId = layoutIdByHandle.get(id);
+              const isEnabled = id === 'centered';
 
-            return (
-              <Grid key={id} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
-                <Card
-                  sx={{
-                    cursor: isEnabled ? 'pointer' : 'default',
-                    opacity: isEnabled ? 1 : 0.72,
-                    pointerEvents: isEnabled ? 'auto' : 'none',
-                    transition: 'box-shadow 0.15s ease',
-                    '&:hover': isEnabled ? {boxShadow: 4} : undefined,
-                  }}
-                  {...(isEnabled
-                    ? {
-                        role: 'button',
-                        tabIndex: 0,
-                        onClick: () => {
-                          handleLayoutClick(id, apiLayoutId).catch(() => {
-                            /* no-op */
-                          });
-                        },
-                        onKeyDown: (e: React.KeyboardEvent) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+              return (
+                <Grid key={id} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
+                  <Card
+                    sx={{
+                      cursor: isEnabled ? 'pointer' : 'default',
+                      opacity: isEnabled ? 1 : 0.72,
+                      pointerEvents: isEnabled ? 'auto' : 'none',
+                      transition: 'box-shadow 0.15s ease',
+                      '&:hover': isEnabled ? {boxShadow: 4} : undefined,
+                    }}
+                    {...(isEnabled
+                      ? {
+                          role: 'button',
+                          tabIndex: 0,
+                          onClick: () => {
                             handleLayoutClick(id, apiLayoutId).catch(() => {
                               /* no-op */
                             });
-                          }
-                        },
-                      }
-                    : {})}
-                >
-                  <Box sx={{aspectRatio: '4/3', overflow: 'hidden', position: 'relative'}}>
-                    <Box sx={{width: '100%', height: '100%', filter: isEnabled ? 'none' : 'grayscale(1)'}}>
-                      <LayoutPresetThumbnail variant={id} />
+                          },
+                          onKeyDown: (e: React.KeyboardEvent) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleLayoutClick(id, apiLayoutId).catch(() => {
+                                /* no-op */
+                              });
+                            }
+                          },
+                        }
+                      : {})}
+                  >
+                    <Box sx={{aspectRatio: '4/3', overflow: 'hidden', position: 'relative'}}>
+                      <Box sx={{width: '100%', height: '100%', filter: isEnabled ? 'none' : 'grayscale(1)'}}>
+                        <LayoutPresetThumbnail variant={id} />
+                      </Box>
+                      {!isEnabled && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            bgcolor: 'warning.main',
+                            color: 'warning.contrastText',
+                            px: 1,
+                            py: 0.4,
+                            borderRadius: 1,
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.03em',
+                          }}
+                        >
+                          {t('layouts.badges.coming_soon.label', 'Coming Soon')}
+                        </Box>
+                      )}
                     </Box>
-                    {!isEnabled && (
-                      <Box
+                    <Box sx={{px: 1.5, py: 1, borderTop: '1px solid', borderColor: 'divider'}}>
+                      <Typography
+                        variant="body2"
                         sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          bgcolor: 'warning.main',
-                          color: 'warning.contrastText',
-                          px: 1,
-                          py: 0.4,
-                          borderRadius: 1,
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.03em',
+                          fontWeight: 500,
+                          fontSize: '0.8125rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {t('layouts.badges.coming_soon.label', 'Coming Soon')}
-                      </Box>
-                    )}
-                  </Box>
-                  <Box sx={{px: 1.5, py: 1, borderTop: '1px solid', borderColor: 'divider'}}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        fontSize: '0.8125rem',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {t(LAYOUT_PRESET_KEY[id], LAYOUT_PRESET_DEFAULT[id])}
-                    </Typography>
-                  </Box>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
+                        {t(LAYOUT_PRESET_KEY[id], LAYOUT_PRESET_DEFAULT[id])}
+                      </Typography>
+                    </Box>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        )}
       </Box>
 
       <ThemeDeleteDialog

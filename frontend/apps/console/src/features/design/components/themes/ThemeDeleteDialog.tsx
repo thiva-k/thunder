@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useDeleteTheme, useGetThemeUsages} from '@thunderid/design';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Button,
@@ -49,6 +50,11 @@ export default function ThemeDeleteDialog({
   const handleCancel = (): void => {
     if (deleteTheme.isPending) return;
     setError(null);
+    // Only reset once the mutation has actually failed: resetting a still-pending mutation
+    // flips isPending back to false before the in-flight request settles.
+    if (deleteTheme.isError) {
+      deleteTheme.reset();
+    }
     onClose();
   };
 
@@ -63,7 +69,7 @@ export default function ThemeDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('themes.delete.error'));
+        setError(getErrorMessage(err, t, 'themes.delete.error', 'Failed to delete theme. Please try again.'));
       },
     });
   };

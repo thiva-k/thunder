@@ -164,48 +164,6 @@ var (
 		},
 	}
 
-	// ErrorCannotUpdateDeclarativeLayout is returned when attempting to update a declarative layout.
-	ErrorCannotUpdateDeclarativeLayout = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "LAY-1013",
-		Error: tidcommon.I18nMessage{
-			Key:          "layout.error.cannot_update_declarative",
-			DefaultValue: "Cannot update declarative layout",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "layout.error.cannot_update_declarative_description",
-			DefaultValue: "Layout is defined in declarative resources and cannot be modified",
-		},
-	}
-
-	// ErrorCannotDeleteDeclarativeLayout is returned when attempting to delete a declarative layout.
-	ErrorCannotDeleteDeclarativeLayout = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "LAY-1014",
-		Error: tidcommon.I18nMessage{
-			Key:          "layout.error.cannot_delete_declarative",
-			DefaultValue: "Cannot delete declarative layout",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "layout.error.cannot_delete_declarative_description",
-			DefaultValue: "Layout is defined in declarative resources and cannot be deleted",
-		},
-	}
-
-	// ErrorResultLimitExceededInCompositeMode is returned when composite store result count exceeds max limit.
-	ErrorResultLimitExceededInCompositeMode = tidcommon.ServiceError{
-		Type: tidcommon.ServerErrorType,
-		Code: "LAY-5001",
-		Error: tidcommon.I18nMessage{
-			Key:          "layout.error.result_limit_exceeded",
-			DefaultValue: "Result limit exceeded",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "layout.error.result_limit_exceeded_description",
-			DefaultValue: "Total count of layouts exceeds maximum allowed limit in composite mode",
-		},
-	}
-
 	// ErrorCannotModifyDeclarativeResource is returned when attempting to modify a declarative layout.
 	ErrorCannotModifyDeclarativeResource = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,

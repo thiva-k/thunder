@@ -4,13 +4,15 @@
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 import ConnectionQueryKeys from '../constants/query-keys';
 import type {ConnectionType} from '../models/connection';
 
 /**
  * Delete a connection instance (DELETE /connections/{type}/{id}).
+ *
+ * Failures are not toasted here — the caller surfaces them inline in the confirm dialog it
+ * passes `onConfirm`/`isPending` to, keeping the dialog open so the user can see why it failed.
  */
 export default function useDeleteConnection(type: ConnectionType): UseMutationResult<void, Error, string> {
   const {http} = useThunderID();
@@ -39,9 +41,6 @@ export default function useDeleteConnection(type: ConnectionType): UseMutationRe
         // Ignore invalidation errors
       });
       showToast(t('delete.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'delete.error'), 'error');
     },
   });
 }

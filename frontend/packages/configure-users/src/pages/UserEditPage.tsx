@@ -3,7 +3,7 @@
 
 import {
   PageLoadingAnimation,
-  ReadErrorState,
+  QueryErrorNotice,
   ResourceAvatar,
   SettingsCard,
   UnsavedChangesBar,
@@ -218,34 +218,27 @@ export default function UserEditPage() {
   if (userError ?? userTypeListError ?? schemaError) {
     return (
       <PageContent>
-        <ReadErrorState
+        <QueryErrorNotice
           error={(userError ?? userTypeListError ?? schemaError)!}
           t={(key, options) => t(key.includes(':') ? key : `users:${key}`, options)}
           resolveErrorMessage={getUserErrorMessage}
           variant="block"
           title={t('users:manageUser.loadError', 'Failed to load user information')}
+          onRetry={() => {
+            // The error state covers all three queries, so retry only the one(s) that failed.
+            if (userError) void refetch();
+            if (userTypeListError) void refetchUserTypeList();
+            if (schemaError) void refetchUserType();
+          }}
           action={
-            <Stack direction="row" spacing={1} justifyContent="center">
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  // The error state covers all three queries, so retry only the one(s) that failed.
-                  if (userError) void refetch();
-                  if (userTypeListError) void refetchUserTypeList();
-                  if (schemaError) void refetchUserType();
-                }}
-              >
-                {t('common:actions.refresh', 'Refresh')}
-              </Button>
-              <Button
-                onClick={() => {
-                  handleBack().catch(() => null);
-                }}
-                startIcon={<ArrowLeft size={16} />}
-              >
-                {t('users:manageUser.back', 'Back to Users')}
-              </Button>
-            </Stack>
+            <Button
+              onClick={() => {
+                handleBack().catch(() => null);
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('users:manageUser.back', 'Back to Users')}
+            </Button>
           }
         />
       </PageContent>

@@ -8,7 +8,7 @@ import FlowDeleteDialog from '../FlowDeleteDialog';
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, options?: string | Record<string, unknown>) => {
       const translations: Record<string, string> = {
         'flows:delete.title': 'Delete Flow',
         'flows:delete.message': 'Are you sure you want to delete this flow?',
@@ -18,16 +18,24 @@ vi.mock('react-i18next', () => ({
         'common:actions.delete': 'Delete',
         'common:status.deleting': 'Deleting...',
       };
-      return translations[key] || key;
+      if (translations[key] !== undefined) return translations[key];
+      if (typeof options === 'string') return options || key;
+      if (options && typeof options === 'object' && 'defaultValue' in options) {
+        return (options.defaultValue as string) || '';
+      }
+      return key;
     },
   }),
 }));
 
 // Mock useDeleteFlow hook
 const mockMutate = vi.fn();
+const mockReset = vi.fn();
 const mockDeleteFlow = {
   mutate: mockMutate,
+  reset: mockReset,
   isPending: false,
+  isError: false,
 };
 
 vi.mock('../../api/useDeleteFlow', () => ({
@@ -49,6 +57,7 @@ describe('FlowDeleteDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDeleteFlow.isPending = false;
+    mockDeleteFlow.isError = false;
   });
 
   describe('Dialog Visibility', () => {
@@ -186,7 +195,7 @@ describe('FlowDeleteDialog', () => {
   });
 
   describe('Error Handling', () => {
-    it('should display error alert on deletion failure', async () => {
+    it('should display a resolved error message on deletion failure, never the raw server text', async () => {
       mockMutate.mockImplementation((_flowId: string, options: {onError: (err: Error) => void}) => {
         options.onError(new Error('Network error'));
       });
@@ -197,7 +206,8 @@ describe('FlowDeleteDialog', () => {
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to delete flow')).toBeInTheDocument();
+        expect(screen.queryByText('Network error')).not.toBeInTheDocument();
       });
     });
 
@@ -216,7 +226,7 @@ describe('FlowDeleteDialog', () => {
       });
     });
 
-    it('should clear error when dialog is cancelled', async () => {
+    it('should clear error and reset the mutation when dialog is cancelled', async () => {
       mockMutate.mockImplementation((_flowId: string, options: {onError: (err: Error) => void}) => {
         options.onError(new Error('Network error'));
       });
@@ -228,14 +238,34 @@ describe('FlowDeleteDialog', () => {
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to delete flow')).toBeInTheDocument();
       });
 
-      // Cancel should clear error
+      // Simulate the mutation now being in an errored state, as it would be after onError fires.
+      mockDeleteFlow.isError = true;
+
+      // Cancel should clear the error and reset the now-errored mutation
       const cancelButton = screen.getByRole('button', {name: 'Cancel'});
       fireEvent.click(cancelButton);
 
+      expect(mockReset).toHaveBeenCalledTimes(1);
       expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('should not reset the mutation on cancel while a delete is still pending', () => {
+      mockDeleteFlow.isPending = true;
+      mockDeleteFlow.isError = true;
+
+      render(<FlowDeleteDialog open flowId="flow-123" onClose={mockOnClose} />);
+
+      // The cancel button is disabled while pending, but the underlying handler also guards on
+      // isPending directly: resetting a still-pending mutation would flip isPending back to false
+      // before the in-flight request settles.
+      const cancelButton = screen.getByRole('button', {name: 'Cancel'});
+      fireEvent.click(cancelButton);
+
+      expect(mockReset).not.toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
     });
   });
 });

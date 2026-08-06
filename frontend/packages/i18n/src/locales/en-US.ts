@@ -1085,7 +1085,7 @@ const translations = {
       "Store the new client secret somewhere safe. If you lose it, you'll need to regenerate it again.",
 
     // Edit page (header)
-    'edit.page.error': 'Failed to load agent',
+    'edit.page.errorTitle': 'Failed to load agent',
     'edit.page.notFound': 'Agent not found',
     'edit.page.back': 'Back to agents',
     'edit.page.description.empty': 'No description',
@@ -1298,12 +1298,14 @@ const translations = {
     'errors.AGT-1032': 'The specified theme does not exist.',
     'errors.AGT-1033': 'The specified layout does not exist.',
     'errors.AGT-1034': 'One or more provided response types are invalid.',
-    'errors.AGT-1035': 'Failed to sync agent attribute changes with the consent service.',
     'errors.AGT-1036': 'A certificate operation failed due to invalid input.',
     'errors.AGT-1037': 'An entity with the same client ID already exists.',
     'errors.AGT-1038': 'An entity may have at most one inbound auth config per protocol.',
     'errors.AGT-1039': 'The specified owner does not match any known user, application, or agent.',
     'errors.AGT-1040': 'One or more user attributes are not valid for the configured allowed user types.',
+    'errors.AGT-1041': 'The provided logo URL is not valid.',
+    'errors.AGT-1042':
+      'The subject attribute mapping must reference an attribute that is unique, required, and string typed in an allowed agent type.',
   },
 
   // ============================================================================
@@ -1741,6 +1743,7 @@ const translations = {
     'listing.empty.title': 'No connections match your filters',
     'listing.empty.description':
       'Try a different search term, or clear the active filters to see all available connections.',
+    'listing.loadError': 'Failed to load connections',
 
     // Filters / categories
     'categories.all': 'All',
@@ -1811,6 +1814,9 @@ const translations = {
 
     // Connection detail / edit page
     'detail.backToConnections': 'Back to Connections',
+    'detail.loadError.title': 'Failed to load connection',
+    'detail.notFound.title': 'Connection not found',
+    'detail.notFound.description': 'This connection may have been deleted or the link is incorrect.',
     'detail.tabs.general': 'General',
     'detail.tabs.attributeMapping': 'Attribute Configuration',
     'detail.quickCopy.title': 'Quick copy',
@@ -1963,6 +1969,31 @@ const translations = {
     'validation.required': 'This field is required.',
     'validation.url': 'Enter a valid URL.',
     'validation.accountSid': 'Enter a valid Account SID: “AC” followed by 32 hexadecimal characters.',
+
+    // Error codes (backend)
+    'errors.CON-1001': 'The requested connection category is not supported.',
+    'errors.CON-1002': 'The limit parameter must be a positive integer.',
+    'errors.CON-1003': 'The offset parameter must be a non-negative integer.',
+    'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
+    'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
+    'errors.IDP-1003': 'The identity provider name is invalid or missing.',
+    'errors.IDP-1004': 'The identity provider type is invalid or missing.',
+    'errors.IDP-1005': 'An identity provider with the same name already exists.',
+    'errors.IDP-1006': 'One or more identity provider properties are invalid or missing.',
+    'errors.IDP-1007': 'One or more identity provider properties are not supported.',
+    'errors.IDP-1008': 'The identity provider data is missing.',
+    'errors.IDP-1009': 'The request body is malformed or contains invalid data.',
+    'errors.IDP-1010': 'This identity provider is managed declaratively and cannot be modified or deleted.',
+    'errors.IDP-1011': 'The number of records exceeds the maximum allowed in composite mode.',
+    'errors.IDP-1012': "This identity provider's attribute configuration is invalid.",
+    'errors.IDP-1013':
+      'This identity provider cannot be deleted because other resources depend on it. Remove or reassign them first.',
+    'errors.MNS-1001': 'This connection no longer exists. It may have already been deleted.',
+    'errors.MNS-1002': 'The connection ID is invalid or missing.',
+    'errors.MNS-1004': 'The selected SMS provider is invalid or unsupported.',
+    'errors.MNS-1005': 'A connection with this name already exists.',
+    'errors.MNS-1016':
+      'This connection cannot be deleted because other resources depend on it. Remove or reassign them first.',
   },
 
   // ============================================================================
@@ -2017,6 +2048,27 @@ const translations = {
     'create.error': 'Failed to create trusted issuer. Please try again.',
     'update.success': 'Trusted issuer updated successfully.',
     'update.error': 'Failed to update trusted issuer. Please try again.',
+    'delete.error': 'Failed to delete trusted issuer. Please try again.',
+
+    // Not found
+    'detail.notFound.title': 'Trusted issuer not found',
+    'detail.notFound.description': 'This trusted issuer may have been deleted or the link is incorrect.',
+
+    // Error codes (backend)
+    'errors.IDP-1001': 'This trusted issuer no longer exists. It may have already been deleted.',
+    'errors.IDP-1002': 'The trusted issuer ID is invalid or missing.',
+    'errors.IDP-1003': 'The trusted issuer name is invalid or missing.',
+    'errors.IDP-1004': 'The trusted issuer type is invalid or missing.',
+    'errors.IDP-1005': 'A trusted issuer with the same name already exists.',
+    'errors.IDP-1006': 'One or more trusted issuer properties are invalid or missing.',
+    'errors.IDP-1007': 'One or more trusted issuer properties are not supported.',
+    'errors.IDP-1008': 'The trusted issuer data is missing.',
+    'errors.IDP-1009': 'The request body is malformed or contains invalid data.',
+    'errors.IDP-1010': 'This trusted issuer is managed declaratively and cannot be modified or deleted.',
+    'errors.IDP-1011': 'The number of records exceeds the maximum allowed in composite mode.',
+    'errors.IDP-1012': "This trusted issuer's attribute configuration is invalid.",
+    'errors.IDP-1013':
+      'This trusted issuer cannot be deleted because other resources depend on it. Remove or reassign them first.',
   },
 
   // ============================================================================
@@ -3981,8 +4033,39 @@ const translations = {
     'core.loginFlowBuilder.errors.validationRequired': 'Please fix all validation errors before saving.',
     'core.loginFlowBuilder.errors.structureValidationFailed': 'Flow structure validation failed: {{error}}',
     'core.loginFlowBuilder.errors.saveFailed': 'Failed to save flow. Please try again.',
+    'core.loginFlowBuilder.errors.loadFailed': 'Failed to load flow',
     'core.loginFlowBuilder.success.flowCreated': 'Flow created successfully.',
     'core.loginFlowBuilder.success.flowUpdated': 'Flow updated successfully.',
+
+    // I18n configuration card
+    'core.elements.textPropertyField.i18nCard.createError': 'Failed to create translation. Please try again.',
+
+    // Backend error code translations (per flow management service error envelope).
+    'errors.FLM-1001': 'The request body is malformed or contains invalid data.',
+    'errors.FLM-1002': 'The flow ID must be provided.',
+    'errors.FLM-1003': 'This flow no longer exists. It may have already been deleted.',
+    'errors.FLM-1004': 'The specified flow type is invalid.',
+    'errors.FLM-1005': 'The flow definition contains invalid data.',
+    'errors.FLM-1006': 'The limit parameter must be a positive integer.',
+    'errors.FLM-1007': 'The offset parameter must be a non-negative integer.',
+    'errors.FLM-1010': 'The flow handle must be provided.',
+    'errors.FLM-1011': 'The flow name must be provided.',
+    'errors.FLM-1012': 'The flow type cannot be changed once created.',
+    'errors.FLM-1013': 'A flow with this handle already exists for the given flow type.',
+    'errors.FLM-1014': 'The flow handle cannot be modified after creation.',
+    'errors.FLM-1015': 'The flow handle must be lowercase, alphanumeric, and can only contain underscores or dashes.',
+    'errors.FLM-1017': 'This flow is managed declaratively and cannot be modified or deleted.',
+    'errors.FLM-1018': 'The flow ID must be a valid UUID.',
+    'errors.FLM-1019': 'A flow with the specified ID already exists.',
+    'errors.FLM-1020':
+      'The flow definition has structural issues, such as a missing or duplicate start or end node, or an unreachable node.',
+    'errors.FLM-1021': 'One or more nodes have an invalid configuration.',
+    'errors.FLM-1022': 'A node or interceptor references a node that does not exist.',
+    'errors.FLM-1023': 'One or more executor configurations are invalid.',
+    'errors.FLM-1024': 'One or more input configurations are invalid.',
+    'errors.FLM-1025': 'A CALL node references a flow that does not exist.',
+    'errors.FLM-1026':
+      'This update was rejected because a resource that references this flow would be left in an inconsistent state.',
   },
 
   // ============================================================================
@@ -4114,6 +4197,7 @@ const translations = {
     'themes.actions.add.label': 'Add Theme',
     'themes.empty_state.message': 'No themes yet',
     'themes.show_more.label': 'Show {{count}} more',
+    'themes.builder.errors.load.title': 'Failed to load theme',
     'themes.builder.actions.delete.label': 'Delete',
     'themes.builder.actions.save.label': 'Save',
     'themes.builder.actions.revert.label': 'Revert',
@@ -4131,6 +4215,7 @@ const translations = {
     'themes.builder.sections.typography.description': 'Font family & type scale',
     'themes.config.select_theme.message': 'Select a theme to view configuration',
     'themes.config.errors.load.message': 'Failed to load theme configuration.',
+    'themes.config.errors.save.message': 'Failed to save theme. Please try again.',
     'themes.createWizard.steps.name': 'Details',
     'themes.forms.configure_name.title': "Let's collect some details about your theme",
     'themes.forms.configure_name.fieldLabel': 'Theme name',
@@ -4216,6 +4301,7 @@ const translations = {
     'themes.delete.usages.title': 'The following applications will revert to the default theme:',
     'themes.delete.usages.more': '+{{count}} more',
     'layouts.section.title': 'Layouts',
+    'layouts.errors.create_failed.message': 'Failed to create layout. Please try again.',
     'layouts.presets.centered.label': 'Centered',
     'layouts.presets.split_screen.label': 'Split Screen',
     'layouts.presets.full_screen.label': 'Full Screen',
@@ -4223,6 +4309,7 @@ const translations = {
     'layouts.badges.coming_soon.label': 'Coming Soon',
     'layouts.config.select_layout.message': 'Select a layout to view constraints',
     'layouts.config.errors.load.message': 'Failed to load layout configuration.',
+    'layouts.config.errors.save.message': 'Failed to save layout. Please try again.',
     'layouts.config.no_screen_selected.message': 'No screen selected.',
     'layouts.preview.labels.base_layout': 'Base layout',
     'layouts.preview.labels.screen_variants': 'Screen variants',
@@ -4237,6 +4324,7 @@ const translations = {
     'layouts.preview.slots.links.label': 'Links',
     'layouts.preview.errors.load.message': 'Failed to load layout',
     'layouts.preview.select_layout.message': 'Select a layout to preview',
+    'layouts.builder.errors.load.title': 'Failed to load layout',
     'layouts.builder.actions.back_to_design.tooltip': 'Back to Design',
     'layouts.builder.actions.save.label': 'Save',
     'layouts.config.custom_css.title': 'Custom CSS',
@@ -4325,6 +4413,37 @@ const translations = {
     'common.preview.toolbar.actions.cycle_color_scheme.tooltip': 'Toggle color scheme',
     'common.item_card.actions.open_in_builder.label': 'Open in builder',
     'common.section_header.badges.coming_soon.label': 'COMING SOON',
+
+    // Backend error code translations (per theme and layout management service error envelope).
+    'errors.THM-1001': 'The provided theme data is invalid.',
+    'errors.THM-1002': 'The provided theme ID is invalid.',
+    'errors.THM-1003': 'The requested theme was not found.',
+    'errors.THM-1005': 'The theme display name is required.',
+    'errors.THM-1006': 'The theme configuration is required.',
+    'errors.THM-1007': 'The theme must be a valid JSON object.',
+    'errors.THM-1008': 'The limit parameter must be within the valid range.',
+    'errors.THM-1009': 'The offset parameter must be non-negative.',
+    'errors.THM-1010': 'The limit parameter must be a valid integer.',
+    'errors.THM-1011': 'The offset parameter must be a valid integer.',
+    'errors.THM-1014': 'This theme is declarative and cannot be modified or deleted.',
+    'errors.THM-1015': 'A theme with the same handle already exists.',
+    'errors.THM-1016': 'The theme handle is required.',
+    'errors.THM-1017': 'The theme handle cannot be changed after creation.',
+    'errors.LAY-1001': 'The provided layout data is invalid.',
+    'errors.LAY-1002': 'The provided layout ID is invalid.',
+    'errors.LAY-1003': 'The requested layout was not found.',
+    'errors.LAY-1004': 'A layout with the same ID already exists.',
+    'errors.LAY-1005': 'The layout display name is required.',
+    'errors.LAY-1006': 'The layout configuration is required.',
+    'errors.LAY-1007': 'The layout must be a valid JSON object.',
+    'errors.LAY-1009': 'The limit parameter must be within the valid range.',
+    'errors.LAY-1010': 'The offset parameter must be non-negative.',
+    'errors.LAY-1011': 'The limit parameter must be a valid integer.',
+    'errors.LAY-1012': 'The offset parameter must be a valid integer.',
+    'errors.LAY-1015': 'This layout is declarative and cannot be modified or deleted.',
+    'errors.LAY-1016': 'A layout with the same handle already exists.',
+    'errors.LAY-1017': 'The layout handle is required.',
+    'errors.LAY-1018': 'The layout handle cannot be changed after creation.',
   },
 
   // ============================================================================
@@ -4468,7 +4587,7 @@ const translations = {
     'listing.columns.actions': 'Actions',
     'listing.systemResourceServer': 'System resource server',
     'listing.default': 'Default',
-    'listing.error': 'Failed to load resource servers.',
+    'listing.error': 'Failed to load resource servers',
     'actions.setAsDefault': 'Set as default',
     'setDefault.title': 'Set default resource server',
     'setDefault.message':
@@ -4481,6 +4600,7 @@ const translations = {
     'delete.message': 'Are you sure you want to delete this resource server? This action cannot be undone.',
     'delete.disclaimer':
       'Warning: All associated resources, actions, and permission strings will be permanently removed.',
+    'delete.error': 'Failed to delete resource server. Please try again.',
     'create.steps.type': 'Type',
     'create.steps.name': 'Details',
     'create.steps.separator': 'Permission Delimiter',
@@ -4571,6 +4691,7 @@ const translations = {
     'create.separator.underscore': 'Underscore ( _ )',
     'create.success': 'Resource server created successfully.',
     'create.successMcp': 'MCP server created successfully.',
+    'create.error': 'Failed to create resource server. Please try again.',
     'create.creating': 'Creating…',
     'create.submit': 'Create resource server',
     'create.submitMcp': 'Create MCP server',
@@ -4580,6 +4701,7 @@ const translations = {
     'edit.defaultBadgeManaged': 'Managed by server configuration.',
     'edit.back': 'Back to resource servers',
     'edit.identifierRequired': 'Identifier is required.',
+    'edit.errorTitle': 'Failed to load resource server',
     'edit.notFound': 'Resource server not found.',
     'edit.systemResourceServer': 'System',
     'edit.tabs': 'Resource server settings',
@@ -4631,6 +4753,29 @@ const translations = {
     'permissionCatalog.loadError': 'Failed to load permissions for this resource server.',
     'permissionCatalog.loadServersError': 'Failed to load resource servers.',
     'permissionCatalog.serverNotFound': 'Resource server not found',
+
+    // Backend error code translations (per resource server service error envelope).
+    'errors.RES-1001': 'The request body is malformed or contains invalid data.',
+    'errors.RES-1002': 'An ID is required for this request.',
+    'errors.RES-1003': 'This resource server no longer exists. It may have already been deleted.',
+    'errors.RES-1004': 'A resource server with the same name already exists.',
+    'errors.RES-1005': 'The specified parent resource does not exist.',
+    'errors.RES-1006': 'This cannot be deleted because it still has resources or actions. Remove them first.',
+    'errors.RES-1008': 'This resource no longer exists. It may have already been deleted.',
+    'errors.RES-1009': 'This action no longer exists. It may have already been deleted.',
+    'errors.RES-1010': 'The specified organization unit does not exist.',
+    'errors.RES-1011': 'The limit parameter must be a positive integer.',
+    'errors.RES-1012': 'The offset parameter must be a non-negative integer.',
+    'errors.RES-1013': 'A resource server with the same identifier already exists.',
+    'errors.RES-1014': 'A resource or action with the same handle already exists under this parent.',
+    'errors.RES-1015': 'The delimiter must be a single valid character: . _ : - /',
+    'errors.RES-1016': 'The handle must be under 100 characters and contain only letters, numbers, and . _ : - /',
+    'errors.RES-1017': 'The handle cannot contain the delimiter character.',
+    'errors.RES-1018': 'This resource server is managed declaratively and cannot be modified.',
+    'errors.RES-1019': 'This resource is managed declaratively and cannot be modified.',
+    'errors.RES-1020': 'This action is managed declaratively and cannot be modified.',
+    'errors.RES-1021': 'The number of records exceeds the maximum allowed in composite mode.',
+    'errors.RES-1023': 'A resource server with the specified ID already exists.',
   },
 
   // ============================================================================

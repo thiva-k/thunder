@@ -205,7 +205,8 @@ describe('AgentEditPage', () => {
 
       render(<AgentEditPage />);
 
-      expect(screen.getByText('Boom')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load agent')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
       expect(screen.getByRole('button', {name: /Back to agents/i})).toBeInTheDocument();
     });
 
@@ -438,6 +439,44 @@ describe('AgentEditPage', () => {
       });
       expect(mockRefetch).not.toHaveBeenCalled();
       expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    });
+
+    it('surfaces the resolved save error inline on the unsaved-changes bar', async () => {
+      const user = userEvent.setup();
+      mockUseUpdateAgent.mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        error: new Error('raw backend update failure detail'),
+        isError: true,
+        reset: vi.fn(),
+      });
+
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+
+      expect(screen.getByText('Failed to update agent. Please try again.')).toBeInTheDocument();
+      expect(screen.queryByText('raw backend update failure detail')).not.toBeInTheDocument();
+    });
+
+    it('resets a failed save mutation as soon as another field changes', async () => {
+      const user = userEvent.setup();
+      const mockReset = vi.fn();
+      mockUseUpdateAgent.mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        error: new Error('Boom'),
+        isError: true,
+        reset: mockReset,
+      });
+
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+
+      expect(mockReset).toHaveBeenCalled();
     });
   });
 

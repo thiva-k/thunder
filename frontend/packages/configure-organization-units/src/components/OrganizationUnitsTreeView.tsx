@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useQueryClient} from '@tanstack/react-query';
-import {PageLoadingAnimation, ReadErrorState, ResourceAvatar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {useThunderID} from '@thunderid/react';
@@ -780,7 +780,7 @@ export default function OrganizationUnitsTreeView(): JSX.Element {
 
   if (error) {
     return (
-      <ReadErrorState
+      <QueryErrorNotice
         error={error}
         t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
         variant="block"

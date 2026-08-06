@@ -103,6 +103,49 @@ describe('ThemeBuilderProvider', () => {
     });
   });
 
+  describe('Error state', () => {
+    it('renders a read error instead of the provider tree when the theme fetch fails', () => {
+      mockUseGetTheme.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Network error'),
+        refetch: vi.fn(),
+      });
+
+      render(
+        <ThemeBuilderProvider>
+          <span data-testid="child">Child</span>
+        </ThemeBuilderProvider>,
+      );
+
+      expect(screen.getByText('Failed to load theme')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('child')).not.toBeInTheDocument();
+    });
+
+    it('retries the fetch when the read error action is clicked', async () => {
+      const mockRefetch = vi.fn();
+      mockUseGetTheme.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Network error'),
+        refetch: mockRefetch,
+      });
+
+      const user = userEvent.setup();
+      render(
+        <ThemeBuilderProvider>
+          <span data-testid="child">Child</span>
+        </ThemeBuilderProvider>,
+      );
+
+      await user.click(screen.getByRole('button', {name: 'Refresh'}));
+
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Loaded state', () => {
     beforeEach(() => {
       mockUseGetTheme.mockReturnValue({

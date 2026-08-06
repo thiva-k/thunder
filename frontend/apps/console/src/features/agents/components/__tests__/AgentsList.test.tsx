@@ -96,6 +96,21 @@ vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
         </>
       ),
       RowActions: ({children}: {children: React.ReactNode}): React.ReactElement => children as React.ReactElement,
+      EmptyState: ({
+        title = undefined,
+        description = undefined,
+        action = undefined,
+      }: {
+        title?: string;
+        description?: string;
+        action?: React.ReactNode;
+      }): React.ReactElement => (
+        <div>
+          {title && <h2>{title}</h2>}
+          {description && <p>{description}</p>}
+          {action}
+        </div>
+      ),
     },
   };
 });
@@ -185,9 +200,8 @@ describe('AgentsList', () => {
 
     renderComponent();
 
-    expect(screen.getByRole('heading', {name: 'Failed to load agents'})).toBeInTheDocument();
-    const errorTexts = screen.getAllByText('Failed to load agents');
-    expect(errorTexts).toHaveLength(2);
+    expect(screen.getByText('Failed to load agents')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
   it('should render error state with default message when error has no message', () => {
@@ -201,7 +215,8 @@ describe('AgentsList', () => {
 
     renderComponent();
 
-    expect(screen.getByRole('heading', {name: 'Failed to load agents'})).toBeInTheDocument();
+    expect(screen.getByText('Failed to load agents')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
   it('should render agents list successfully', () => {

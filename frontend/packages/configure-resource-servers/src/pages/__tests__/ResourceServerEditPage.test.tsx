@@ -68,16 +68,19 @@ vi.mocked(componentsModule.UnsavedChangesBar).mockImplementation(
     message,
     resetLabel,
     saveLabel,
+    error = undefined,
     onReset,
     onSave,
   }: {
     message: string;
     resetLabel: string;
     saveLabel: string;
+    error?: string;
     onReset: () => void;
     onSave: () => void;
   }) => (
     <div data-testid="unsaved-changes-bar">
+      {error && <span>{error}</span>}
       <span>{message}</span>
       <button type="button" onClick={onReset}>
         {resetLabel}
@@ -91,6 +94,14 @@ vi.mocked(componentsModule.UnsavedChangesBar).mockImplementation(
 
 const mockUseGetResourceServer = vi.fn();
 const mockUpdateMutate = vi.fn();
+const mockUpdateReset = vi.fn();
+const mockUseUpdateResourceServer = vi.fn(() => ({
+  mutate: mockUpdateMutate,
+  isPending: false,
+  isError: false,
+  error: null,
+  reset: mockUpdateReset,
+}));
 
 vi.mock('../../api/useGetResourceServer', () => ({
   default: () =>
@@ -103,7 +114,7 @@ vi.mock('../../api/useGetResourceServer', () => ({
 }));
 
 vi.mock('../../api/useUpdateResourceServer', () => ({
-  default: () => ({mutate: mockUpdateMutate, isPending: false}),
+  default: () => mockUseUpdateResourceServer(),
 }));
 
 const mockUseGetDefaultResourceServer = vi.fn();
@@ -171,6 +182,13 @@ describe('ResourceServerEditPage', () => {
     mockUseGetDefaultResourceServer.mockReturnValue({
       data: {readOnly: {}, writable: {}, merged: {}},
     });
+    mockUseUpdateResourceServer.mockReturnValue({
+      mutate: mockUpdateMutate,
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: mockUpdateReset,
+    });
   });
 
   it('renders the loading animation when data is loading', () => {
@@ -186,7 +204,7 @@ describe('ResourceServerEditPage', () => {
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
-  it('renders the error alert when the fetch fails', () => {
+  it('renders the resolved catalog message in the error state, never the raw server text, when the fetch fails', () => {
     mockUseGetResourceServer.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -196,7 +214,55 @@ describe('ResourceServerEditPage', () => {
 
     renderWithProviders(<ResourceServerEditPage />);
 
-    expect(screen.getByText('Network error')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load resource server')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+  });
+
+  it('retries the fetch when Refresh is clicked in the error state', () => {
+    mockUseGetResourceServer.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('button', {name: /Refresh/i}));
+
+    expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it('navigates back to the resource servers list from the error state', async () => {
+    mockUseGetResourceServer.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('button', {name: /Back to resource servers/i}));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/resource-servers');
+    });
+  });
+
+  it('renders a distinct not-found message, not the generic error state, when the fetch succeeds with no data', () => {
+    mockUseGetResourceServer.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    expect(screen.getByText('Resource server not found.')).toBeInTheDocument();
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 
   it('renders the resource server name after successful load', () => {
@@ -442,5 +508,103 @@ describe('ResourceServerEditPage', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('Dark Dodos Smash')).toBeInTheDocument();
     });
+  });
+
+  it('shows the resolved catalog message inline, never the raw server text, when a save fails', async () => {
+    mockUseUpdateResourceServer.mockReturnValue({
+      mutate: mockUpdateMutate,
+      isPending: false,
+      isError: true,
+      error: new Error('raw backend save failure detail'),
+      reset: mockUpdateReset,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Identifier'), {target: {value: 'https://new-api.example.com'}});
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to save changes.')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('raw backend save failure detail')).not.toBeInTheDocument();
+  });
+
+  it('resets the save error as soon as an edited field is changed', async () => {
+    mockUseUpdateResourceServer.mockReturnValue({
+      mutate: mockUpdateMutate,
+      isPending: false,
+      isError: true,
+      error: new Error('save failed'),
+      reset: mockUpdateReset,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Identifier'), {target: {value: 'https://new-api.example.com'}});
+
+    expect(mockUpdateReset).toHaveBeenCalled();
+  });
+
+  it('does not reset a pending update mutation when a field changes', async () => {
+    mockUseUpdateResourceServer.mockReturnValue({
+      mutate: mockUpdateMutate,
+      isPending: true,
+      isError: false,
+      error: null,
+      reset: mockUpdateReset,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Identifier'), {target: {value: 'https://new-api.example.com'}});
+
+    expect(mockUpdateReset).not.toHaveBeenCalled();
+  });
+
+  it('resets a failed update mutation when the unsaved changes bar is reset', async () => {
+    mockUseUpdateResourceServer.mockReturnValue({
+      mutate: mockUpdateMutate,
+      isPending: false,
+      isError: true,
+      error: new Error('save failed'),
+      reset: mockUpdateReset,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Identifier'), {target: {value: 'https://new-api.example.com'}});
+
+    await waitFor(() => {
+      expect(screen.getByTestId('unsaved-changes-bar')).toBeInTheDocument();
+    });
+
+    mockUpdateReset.mockClear();
+    fireEvent.click(screen.getByRole('button', {name: 'Reset'}));
+
+    expect(mockUpdateReset).toHaveBeenCalled();
   });
 });

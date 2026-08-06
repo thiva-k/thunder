@@ -530,16 +530,6 @@ paths:
                     description:
                       key: "error.agentservice.invalid_response_type_description"
                       defaultValue: "One or more provided response types are invalid"
-                consent-sync-failed:
-                  summary: Consent service sync failure
-                  value:
-                    code: "AGT-1035"
-                    message:
-                      key: "error.agentservice.consent_sync_failed"
-                      defaultValue: "Consent sync failed"
-                    description:
-                      key: "error.agentservice.consent_sync_failed_description"
-                      defaultValue: "Failed to sync agent attribute changes with the consent service"
                 certificate-client-error:
                   summary: Certificate operation failed due to invalid input
                   value:
@@ -1067,16 +1057,6 @@ paths:
                     description:
                       key: "error.agentservice.invalid_response_type_description"
                       defaultValue: "One or more provided response types are invalid"
-                consent-sync-failed:
-                  summary: Consent service sync failure
-                  value:
-                    code: "AGT-1035"
-                    message:
-                      key: "error.agentservice.consent_sync_failed"
-                      defaultValue: "Consent sync failed"
-                    description:
-                      key: "error.agentservice.consent_sync_failed_description"
-                      defaultValue: "Failed to sync agent attribute changes with the consent service"
                 certificate-client-error:
                   summary: Certificate operation failed due to invalid input
                   value:

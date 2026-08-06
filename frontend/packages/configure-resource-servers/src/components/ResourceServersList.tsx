@@ -1,11 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {Alert, Box, Chip, DataGrid, IconButton, ListingTable, Tooltip, Typography} from '@wso2/oxygen-ui';
+import {Box, Chip, DataGrid, IconButton, ListingTable, Tooltip, Typography} from '@wso2/oxygen-ui';
 import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
-import {useMemo, useState, type JSX} from 'react';
+import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import ResourceServerDeleteDialog from './ResourceServerDeleteDialog';
@@ -22,10 +23,19 @@ export default function ResourceServersList(): JSX.Element {
   const logger = useLogger('ResourceServersList');
   const dataGridLocaleText = useDataGridLocaleText();
 
+  // Resolves an error through the `resourceServers` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `resourceServers:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `resourceServers:${key}`, options),
+    [t],
+  );
+
   const [paginationModel, setPaginationModel] = useState<DataGrid.GridPaginationModel>({pageSize: 10, page: 0});
   const [deleteTarget, setDeleteTarget] = useState<ResourceServer | null>(null);
 
-  const {data, isLoading, error} = useGetResourceServers({
+  const {data, isLoading, error, refetch} = useGetResourceServers({
     limit: paginationModel.pageSize,
     offset: paginationModel.page * paginationModel.pageSize,
   });
@@ -153,9 +163,13 @@ export default function ResourceServersList(): JSX.Element {
 
   if (error) {
     return (
-      <Alert severity="error" sx={{mt: 2}}>
-        {t('resourceServers:listing.error', 'Failed to load resource servers.')}
-      </Alert>
+      <QueryErrorNotice
+        error={error}
+        t={tForErrors}
+        variant="block"
+        title={t('resourceServers:listing.error', 'Failed to load resource servers')}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
