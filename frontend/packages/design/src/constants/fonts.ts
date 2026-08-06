@@ -15,6 +15,7 @@ export const BROWSER_SAFE_FONTS: string[] = [
   'Georgia',
   'Helvetica',
   'Impact',
+  'Inter Variable',
   'Lucida Console',
   'Lucida Sans Unicode',
   'Palatino Linotype',

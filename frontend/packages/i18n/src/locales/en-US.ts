@@ -4081,8 +4081,8 @@ const translations = {
     'themes.forms.typography_builder.font_family.title': 'Font Family',
     'themes.forms.typography_builder.font_family.modes.web_safe': 'Use a web-safe font',
     'themes.forms.typography_builder.font_family.modes.import': 'Use a Custom Font',
-    'themes.forms.typography_builder.fields.font_family.placeholder': 'e.g. Inter, Arial, sans-serif',
-    'themes.forms.typography_builder.fields.font_family.helper_text': 'Choose a preset or type any CSS font stack',
+    'themes.forms.typography_builder.fields.font_family.placeholder': 'Select a font',
+    'themes.forms.typography_builder.fields.font_family.helper_text': 'Choose from the available web-safe fonts',
     'themes.forms.typography_builder.fields.font_import_url.label': 'Font Import URL',
     'themes.forms.typography_builder.fields.font_import_url.placeholder':
       'E.g., https://fonts.googleapis.com/css2?family=Poppins',

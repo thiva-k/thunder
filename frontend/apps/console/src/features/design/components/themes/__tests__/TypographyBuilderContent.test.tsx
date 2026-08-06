@@ -80,6 +80,11 @@ describe('TypographyBuilderContent font modes', () => {
     expect(screen.queryByLabelText('Font Import URL')).toBeNull();
   });
 
+  it('shows the bare name selected when the theme stores the default font stack', () => {
+    renderEditor(makeDraft({fontFamily: "'Inter Variable', sans-serif"}));
+    expect(screen.getByRole<HTMLInputElement>('combobox').value).toBe('Inter Variable');
+  });
+
   it('starts in import mode showing the configured import URL', () => {
     const draft = makeDraft({
       fontFamily: 'Poppins',

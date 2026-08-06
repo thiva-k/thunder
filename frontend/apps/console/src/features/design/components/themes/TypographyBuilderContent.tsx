@@ -128,8 +128,7 @@ export interface TypographyBuilderContentProps {
 
 /**
  * TypographyBuilderContent - Theme builder section for font family configuration.
- * Provides a freeSolo autocomplete with common browser-safe fonts; users can
- * also type any custom font stack.
+ * Provides an autocomplete to select from a fixed list of browser-safe fonts.
  */
 export default function TypographyBuilderContent({draft, onUpdate}: TypographyBuilderContentProps): JSX.Element {
   const {t} = useTranslation('design');
@@ -200,12 +199,8 @@ export default function TypographyBuilderContent({draft, onUpdate}: TypographyBu
     setFontMode(value);
   };
 
-  const handleChange = (_: SyntheticEvent, value: string | null): void => {
-    applyFont(value ?? '', '');
-  };
-
-  const handleInputChange = (_: SyntheticEvent, value: string, reason: string): void => {
-    if (reason === 'input') applyFont(value, '');
+  const handleChange = (_: SyntheticEvent, value: string): void => {
+    applyFont(value, '');
   };
 
   return (
@@ -229,11 +224,11 @@ export default function TypographyBuilderContent({draft, onUpdate}: TypographyBu
 
         {fontMode === 'web-safe' ? (
           <Autocomplete
-            freeSolo
+            disableClearable
             options={BROWSER_SAFE_FONTS}
-            value={fontFamily || null}
+            // The seeded default themes store the full fallback stack rather than the bare name.
+            value={fontFamily === DEFAULT_FONT_STACK ? 'Inter Variable' : fontFamily || undefined}
             onChange={handleChange}
-            onInputChange={handleInputChange}
             renderOption={(props, option: string) => (
               <Box component="li" {...props} key={option}>
                 <Typography sx={{fontFamily: option, fontSize: '0.875rem'}}>{option}</Typography>
@@ -243,13 +238,10 @@ export default function TypographyBuilderContent({draft, onUpdate}: TypographyBu
               <TextField
                 {...params}
                 size="small"
-                placeholder={t(
-                  'themes.forms.typography_builder.fields.font_family.placeholder',
-                  'e.g. Inter, Arial, sans-serif',
-                )}
+                placeholder={t('themes.forms.typography_builder.fields.font_family.placeholder', 'Select a font')}
                 helperText={t(
                   'themes.forms.typography_builder.fields.font_family.helper_text',
-                  'Choose a preset or type any CSS font stack',
+                  'Choose from the available web-safe fonts',
                 )}
               />
             )}
