@@ -26,7 +26,7 @@ export {default as useGetDesignResolve} from './api/useGetDesignResolve';
 export {default as DesignQueryKeys} from './constants/design-query-keys';
 
 // Font constants
-export {BROWSER_SAFE_FONTS} from './constants/fonts';
+export {BROWSER_SAFE_FONTS, DEFAULT_FONT_STACK} from './constants/fonts';
 
 // Context
 export {default as DesignContext} from './contexts/Design/DesignContext';
@@ -46,8 +46,10 @@ export * from './models/responses';
 export * from './models/theme';
 
 // Components
-export {default as GoogleFontLoader} from './components/GoogleFontLoader';
-export type {GoogleFontLoaderProps} from './components/GoogleFontLoader';
+export {default as FontImporter} from './components/FontImporter';
+export type {FontImporterProps} from './components/FontImporter';
+
+export {default as useFontStylesheetLink} from './components/useFontStylesheetLink';
 
 export {default as QrCode} from './components/QrCode';
 export type {QrCodeProps} from './components/QrCode';

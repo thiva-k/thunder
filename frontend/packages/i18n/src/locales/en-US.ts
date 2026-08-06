@@ -4291,8 +4291,19 @@ const translations = {
     'themes.forms.shape_builder.fields.style.options.dotted.label': 'Dotted',
     'themes.forms.shape_builder.fields.style.options.none.label': 'None',
     'themes.forms.typography_builder.font_family.title': 'Font Family',
-    'themes.forms.typography_builder.fields.font_family.placeholder': 'e.g. Inter, Arial, sans-serif',
-    'themes.forms.typography_builder.fields.font_family.helper_text': 'Choose a preset or type any CSS font stack',
+    'themes.forms.typography_builder.font_family.modes.web_safe': 'Use a web-safe font',
+    'themes.forms.typography_builder.font_family.modes.import': 'Use a Custom Font',
+    'themes.forms.typography_builder.fields.font_family.placeholder': 'Select a font',
+    'themes.forms.typography_builder.fields.font_family.helper_text': 'Choose from the available web-safe fonts',
+    'themes.forms.typography_builder.fields.font_import_url.label': 'Font Import URL',
+    'themes.forms.typography_builder.fields.font_import_url.placeholder':
+      'E.g., https://fonts.googleapis.com/css2?family=Poppins',
+    'themes.forms.typography_builder.fields.font_import_url.helper_text':
+      'Enter a URL to import a custom font from a font service.',
+    'themes.forms.typography_builder.fields.font_family_input.label': 'Font Family',
+    'themes.forms.typography_builder.fields.font_family_input.placeholder': 'E.g. Poppins',
+    'themes.forms.typography_builder.fields.font_family_input.helper_text':
+      'Enter the font family name documented by the font service above.',
     'themes.forms.typography_builder.fields.preview.label': 'Preview',
     'themes.forms.typography_builder.font_weights.title': 'Font Weights',
     'themes.forms.typography_builder.fields.light.label': 'Light',

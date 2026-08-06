@@ -1,17 +1,27 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {BROWSER_SAFE_FONTS, type Theme} from '@thunderid/design';
+import {
+  BROWSER_SAFE_FONTS,
+  DEFAULT_FONT_STACK,
+  getFontImportURL,
+  useFontStylesheetLink,
+  type Theme,
+} from '@thunderid/design';
 import {
   Autocomplete,
   Box,
+  FormControl,
+  FormLabel,
   Link,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
   type AutocompleteRenderInputParams,
 } from '@wso2/oxygen-ui';
-import {type JSX, type SyntheticEvent} from 'react';
+import {useState, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import ConfigCard from '../common/ConfigCard';
 import SelectRow from '../common/SelectRow';
@@ -118,57 +128,171 @@ export interface TypographyBuilderContentProps {
 
 /**
  * TypographyBuilderContent - Theme builder section for font family configuration.
- * Provides a freeSolo autocomplete with common browser-safe fonts; users can
- * also type any custom font stack.
+ * Provides an autocomplete to select from a fixed list of browser-safe fonts.
  */
 export default function TypographyBuilderContent({draft, onUpdate}: TypographyBuilderContentProps): JSX.Element {
   const {t} = useTranslation('design');
   const fontFamily = (draft.typography?.fontFamily as string) ?? '';
+  const importURL = getFontImportURL(draft) ?? '';
   const typo = draft.typography;
 
-  const handleChange = (_: SyntheticEvent, value: string | null): void => {
+  // FontImporter only loads this into the GatePreview iframe, a separate document from this panel.
+  useFontStylesheetLink(importURL || undefined);
+
+  const [fontMode, setFontMode] = useState<'web-safe' | 'import'>(importURL ? 'import' : 'web-safe');
+
+  // Values for the inactive mode aren't in the theme, so stash them here to restore on toggle-back.
+  const [stashedWebSafeFamily, setStashedWebSafeFamily] = useState(importURL ? '' : fontFamily);
+  const [stashedImport, setStashedImport] = useState<{family: string; url: string}>(
+    importURL ? {family: fontFamily, url: importURL} : {family: '', url: ''},
+  );
+
+  // Re-sync the toggle when the draft changes from outside (e.g. a Revert), in either direction.
+  // handleFontModeChange pre-syncs these to the values it's about to apply, so this block only
+  // ever fires for changes it didn't cause itself.
+  const [prevImportURL, setPrevImportURL] = useState(importURL);
+  const [prevFontFamily, setPrevFontFamily] = useState(fontFamily);
+  if (importURL !== prevImportURL || fontFamily !== prevFontFamily) {
+    setPrevImportURL(importURL);
+    setPrevFontFamily(fontFamily);
+    if (importURL && fontMode !== 'import') {
+      setFontMode('import');
+    } else if (!importURL && fontMode === 'import') {
+      setFontMode('web-safe');
+    }
+  }
+
+  const applyFont = (family: string, url: string): void => {
     onUpdate((d) => {
-      if (d.typography) Object.assign(d.typography, {fontFamily: value ?? ''});
+      if (!d.typography) return;
+      Object.assign(d.typography, {fontFamily: family});
+      const typography = d.typography as unknown as {font?: {importURL?: string}};
+      if (url) {
+        typography.font = {...(typography.font ?? {}), importURL: url};
+      } else if (typography.font) {
+        delete typography.font.importURL;
+        if (Object.keys(typography.font).length === 0) delete typography.font;
+      }
     });
   };
 
-  const handleInputChange = (_: SyntheticEvent, value: string, reason: string): void => {
-    if (reason === 'input')
-      onUpdate((d) => {
-        if (d.typography) Object.assign(d.typography, {fontFamily: value});
-      });
+  const handleFontModeChange = (_: SyntheticEvent, value: 'web-safe' | 'import' | null): void => {
+    if (!value || value === fontMode) return;
+    let nextFamily: string;
+    let nextURL: string;
+    if (value === 'web-safe') {
+      // Leaving import mode: remember its values, then restore the remembered web-safe font.
+      setStashedImport({family: fontFamily, url: importURL});
+      nextFamily = stashedWebSafeFamily;
+      nextURL = '';
+    } else {
+      // Leaving web-safe mode: remember its font, then restore the remembered import values.
+      setStashedWebSafeFamily(fontFamily);
+      nextFamily = stashedImport.family;
+      nextURL = stashedImport.url;
+    }
+    applyFont(nextFamily, nextURL);
+    // Pre-sync so the re-sync block above doesn't mistake this intentional toggle for an
+    // external draft change and immediately flip the mode back.
+    setPrevFontFamily(nextFamily);
+    setPrevImportURL(nextURL);
+    setFontMode(value);
+  };
+
+  const handleChange = (_: SyntheticEvent, value: string): void => {
+    applyFont(value, '');
   };
 
   return (
     <Stack gap={1}>
       <ConfigCard title={t('themes.forms.typography_builder.font_family.title', 'Font Family')}>
-        <Autocomplete
-          freeSolo
-          options={BROWSER_SAFE_FONTS}
-          value={fontFamily || null}
-          onChange={handleChange}
-          onInputChange={handleInputChange}
-          renderOption={(props, option: string) => (
-            <Box component="li" {...props} key={option}>
-              <Typography sx={{fontFamily: option, fontSize: '0.875rem'}}>{option}</Typography>
-            </Box>
-          )}
-          renderInput={(params: AutocompleteRenderInputParams) => (
-            <TextField
-              {...params}
-              size="small"
-              placeholder={t(
-                'themes.forms.typography_builder.fields.font_family.placeholder',
-                'e.g. Inter, Arial, sans-serif',
-              )}
-              helperText={t(
-                'themes.forms.typography_builder.fields.font_family.helper_text',
-                'Choose a preset or type any CSS font stack',
-              )}
-            />
-          )}
+        <ToggleButtonGroup
+          value={fontMode}
+          exclusive
+          size="small"
+          onChange={handleFontModeChange}
+          fullWidth
           sx={{mb: 1.5}}
-        />
+        >
+          <ToggleButton value="web-safe" sx={{textTransform: 'none', fontSize: '0.75rem'}}>
+            {t('themes.forms.typography_builder.font_family.modes.web_safe', 'Use a web-safe font')}
+          </ToggleButton>
+          <ToggleButton value="import" sx={{textTransform: 'none', fontSize: '0.75rem'}}>
+            {t('themes.forms.typography_builder.font_family.modes.import', 'Use a Custom Font')}
+          </ToggleButton>
+        </ToggleButtonGroup>
+
+        {fontMode === 'web-safe' ? (
+          <Autocomplete
+            disableClearable
+            options={BROWSER_SAFE_FONTS}
+            // The seeded default themes store the full fallback stack rather than the bare name.
+            value={fontFamily === DEFAULT_FONT_STACK ? 'Inter Variable' : fontFamily || undefined}
+            onChange={handleChange}
+            renderOption={(props, option: string) => (
+              <Box component="li" {...props} key={option}>
+                <Typography sx={{fontFamily: option, fontSize: '0.875rem'}}>{option}</Typography>
+              </Box>
+            )}
+            renderInput={(params: AutocompleteRenderInputParams) => (
+              <TextField
+                {...params}
+                size="small"
+                placeholder={t('themes.forms.typography_builder.fields.font_family.placeholder', 'Select a font')}
+                helperText={t(
+                  'themes.forms.typography_builder.fields.font_family.helper_text',
+                  'Choose from the available web-safe fonts',
+                )}
+              />
+            )}
+            sx={{mb: 1.5}}
+          />
+        ) : (
+          <Stack gap={1.5} sx={{mb: 1.5}}>
+            <FormControl fullWidth>
+              <FormLabel htmlFor="font-import-url-input">
+                {t('themes.forms.typography_builder.fields.font_import_url.label', 'Font Import URL')}
+              </FormLabel>
+              <TextField
+                fullWidth
+                id="font-import-url-input"
+                size="small"
+                value={importURL}
+                onChange={(e) => {
+                  const newUrl = e.target.value;
+                  // Clearing the URL clears the family too, since a family with nothing to load it
+                  // from is meaningless.
+                  applyFont(newUrl ? fontFamily : '', newUrl);
+                }}
+                placeholder={t(
+                  'themes.forms.typography_builder.fields.font_import_url.placeholder',
+                  'E.g., https://fonts.googleapis.com/css2?family=Poppins',
+                )}
+                helperText={t(
+                  'themes.forms.typography_builder.fields.font_import_url.helper_text',
+                  'Enter a URL to import a custom font from a font service.',
+                )}
+              />
+            </FormControl>
+            <FormControl fullWidth>
+              <FormLabel htmlFor="font-family-input">
+                {t('themes.forms.typography_builder.fields.font_family_input.label', 'Font Family')}
+              </FormLabel>
+              <TextField
+                fullWidth
+                id="font-family-input"
+                size="small"
+                value={fontFamily}
+                onChange={(e) => applyFont(e.target.value, importURL)}
+                placeholder={t('themes.forms.typography_builder.fields.font_family_input.placeholder', 'E.g. Poppins')}
+                helperText={t(
+                  'themes.forms.typography_builder.fields.font_family_input.helper_text',
+                  'Enter the font family name documented by the font service above.',
+                )}
+              />
+            </FormControl>
+          </Stack>
+        )}
 
         {/* Live preview of the selected font */}
         {fontFamily && (
@@ -184,10 +308,17 @@ export default function TypographyBuilderContent({draft, onUpdate}: TypographyBu
             <Typography variant="caption" color="text.disabled" sx={{display: 'block', mb: 0.5, fontSize: '0.65rem'}}>
               {t('themes.forms.typography_builder.fields.preview.label', 'Preview')}
             </Typography>
-            <Typography sx={{fontFamily, fontSize: '1rem', lineHeight: 1.4}}>
+            <Typography sx={{fontFamily: `${fontFamily}, ${DEFAULT_FONT_STACK}`, fontSize: '1rem', lineHeight: 1.4}}>
               The quick brown fox jumps over the lazy dog.
             </Typography>
-            <Typography sx={{fontFamily, fontSize: '0.75rem', color: 'text.secondary', mt: 0.5}}>
+            <Typography
+              sx={{
+                fontFamily: `${fontFamily}, ${DEFAULT_FONT_STACK}`,
+                fontSize: '0.75rem',
+                color: 'text.secondary',
+                mt: 0.5,
+              }}
+            >
               ABCDEFGHIJKLMNOPQRSTUVWXYZ · 0123456789
             </Typography>
           </Box>

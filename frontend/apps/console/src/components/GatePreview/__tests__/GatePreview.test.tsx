@@ -15,7 +15,8 @@ vi.mock('@thunderid/design', () => ({
   FlowComponentRenderer: () => <div data-testid="flow-component" />,
   AuthPageLayout: ({children}: {children: React.ReactNode}) => <div data-testid="auth-page-layout">{children}</div>,
   AuthCardLayout: ({children}: {children: React.ReactNode}) => <div data-testid="auth-card-layout">{children}</div>,
-  GoogleFontLoader: () => null,
+  FontImporter: () => null,
+  getFontImportURL: () => undefined,
   AcrylicOrangeTheme: {},
 }));
 

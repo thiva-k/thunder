@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useConfig} from '@thunderid/contexts';
-import {useDesign, GoogleFontLoader, StylesheetInjector, DefaultTheme, type Theme} from '@thunderid/design';
+import {
+  useDesign,
+  FontImporter,
+  StylesheetInjector,
+  DefaultTheme,
+  getFontImportURL,
+  type Theme,
+} from '@thunderid/design';
 import {LanguageSwitcher} from '@thunderid/react';
 import {
   OxygenUIThemeProvider,
@@ -23,7 +30,7 @@ import Head from '../components/Head';
 export default function withTheme<P extends object>(WrappedComponent: ComponentType<P>) {
   return function WithTheme(props: P): JSX.Element {
     const {config} = useConfig();
-    const {theme, isLoading} = useDesign(DefaultTheme as Theme);
+    const {theme, isLoading, design} = useDesign(DefaultTheme as Theme);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
     return (
@@ -41,7 +48,7 @@ export default function withTheme<P extends object>(WrappedComponent: ComponentT
       >
         <Head />
         <StylesheetInjector />
-        <GoogleFontLoader />
+        <FontImporter importURL={getFontImportURL(design?.theme)} />
         <ColorSchemeToggle
           sx={{
             position: 'fixed',
