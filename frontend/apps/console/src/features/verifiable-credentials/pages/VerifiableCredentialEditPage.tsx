@@ -1,10 +1,11 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice} from '@thunderid/components';
+import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Button, IconButton, PageContent, PageTitle, Stack, TextField, Typography} from '@wso2/oxygen-ui';
 import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
-import {useState, type JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
 import useGetVerifiableCredential from '../api/useGetVerifiableCredential';
@@ -20,9 +21,18 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
   const navigate = useNavigate();
   const {t} = useTranslation();
 
-  const {data, isLoading, error} = useGetVerifiableCredential(vcId);
+  const {data, isLoading, error, refetch} = useGetVerifiableCredential(vcId);
   const updateVC = useUpdateVerifiableCredential();
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
+
+  // Resolves an error through the `verifiable-credentials` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `verifiable-credentials:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `verifiable-credentials:${key}`, options),
+    [t],
+  );
 
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -66,15 +76,22 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
   if (error) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {error.message ?? t('verifiable-credentials:edit.loadError')}
-        </Alert>
-        {backButton}
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="block"
+          title={t('verifiable-credentials:edit.loadError', 'Failed to load credential template')}
+          onRetry={() => void refetch()}
+          action={backButton}
+        />
       </PageContent>
     );
   }
 
   if (!data) {
+    if (!vcId) {
+      return <PageLoadingAnimation />;
+    }
     return (
       <PageContent>
         <Alert severity="warning" sx={{mb: 2}}>
@@ -101,6 +118,7 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
                 onBlur={() => {
                   const trimmed = tempName.trim();
                   if (trimmed && trimmed !== name.trim()) {
+                    if (updateVC.isError) updateVC.reset();
                     setName(trimmed);
                   }
                   setIsEditingName(false);
@@ -109,6 +127,7 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
                   if (e.key === 'Enter') {
                     const trimmed = tempName.trim();
                     if (trimmed && trimmed !== name.trim()) {
+                      if (updateVC.isError) updateVC.reset();
                       setName(trimmed);
                     }
                     setIsEditingName(false);
@@ -150,6 +169,7 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
                 onBlur={() => {
                   const trimmed = tempDescription.trim();
                   if (trimmed !== description.trim()) {
+                    if (updateVC.isError) updateVC.reset();
                     setDescription(trimmed);
                   }
                   setIsEditingDescription(false);
@@ -158,6 +178,7 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
                   if (e.key === 'Enter' && e.ctrlKey) {
                     const trimmed = tempDescription.trim();
                     if (trimmed !== description.trim()) {
+                      if (updateVC.isError) updateVC.reset();
                       setDescription(trimmed);
                     }
                     setIsEditingDescription(false);
@@ -205,6 +226,14 @@ export default function VerifiableCredentialEditPage(): JSX.Element {
         submitLabel={t('common:actions.save')}
         onSubmit={handleSubmit}
         onDelete={(): void => setDeleteOpen(true)}
+        error={
+          updateVC.error
+            ? getErrorMessage(updateVC.error, tForErrors, 'update.error', 'Failed to update credential template')
+            : undefined
+        }
+        onErrorClear={() => {
+          if (updateVC.isError) updateVC.reset();
+        }}
       />
 
       <VerifiableCredentialDeleteDialog

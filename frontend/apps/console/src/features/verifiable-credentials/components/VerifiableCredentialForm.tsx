@@ -50,6 +50,10 @@ export interface VerifiableCredentialFormProps {
   submitLabel: string;
   onSubmit: (data: CreateVerifiableCredentialRequest) => void;
   onDelete?: () => void;
+  /** Resolved message from the last failed save, shown in the unsaved-changes bar. */
+  error?: string;
+  /** Called to clear a stale save error once the user edits a field or resets the form. */
+  onErrorClear?: () => void;
 }
 
 interface TabPanelProps {
@@ -80,6 +84,8 @@ export default function VerifiableCredentialForm({
   submitLabel,
   onSubmit,
   onDelete = undefined,
+  error = undefined,
+  onErrorClear = undefined,
 }: VerifiableCredentialFormProps): JSX.Element {
   const {t} = useTranslation('verifiable-credentials');
 
@@ -93,6 +99,32 @@ export default function VerifiableCredentialForm({
   const [locale, setLocale] = useState<string>(initial?.display?.locale ?? '');
   const [logoUri, setLogoUri] = useState<string>(initial?.display?.logoUri ?? '');
   const [claims, setClaims] = useState<ClaimRow[]>(credentialToClaimRows(initial));
+
+  // A save error is stale once the form's data changes.
+  const handleOuIdChange = (v: string): void => {
+    onErrorClear?.();
+    setOuId(v);
+  };
+  const handleVctChange = (v: string): void => {
+    onErrorClear?.();
+    setVct(v);
+  };
+  const handleFormatChange = (v: string): void => {
+    onErrorClear?.();
+    setFormat(v);
+  };
+  const handleLocaleChange = (v: string): void => {
+    onErrorClear?.();
+    setLocale(v);
+  };
+  const handleLogoUriChange = (v: string): void => {
+    onErrorClear?.();
+    setLogoUri(v);
+  };
+  const handleClaimsChange = (v: ClaimRow[]): void => {
+    onErrorClear?.();
+    setClaims(v);
+  };
 
   const configurationId = initial?.id;
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -166,6 +198,7 @@ export default function VerifiableCredentialForm({
     setLocale(initial?.display?.locale ?? '');
     setLogoUri(initial?.display?.logoUri ?? '');
     setClaims(credentialToClaimRows(initial));
+    onErrorClear?.();
   };
 
   const text = (
@@ -273,7 +306,7 @@ export default function VerifiableCredentialForm({
                   <OrganizationUnitTreePicker
                     id="vc-ou-picker"
                     value={effectiveOuId}
-                    onChange={setOuId}
+                    onChange={handleOuIdChange}
                     maxHeight={320}
                     helperText={t('form.organizationUnit.pickerHint')}
                   />
@@ -367,10 +400,10 @@ export default function VerifiableCredentialForm({
       <TabPanel value={tab} index={1}>
         <SettingsCard title={t('form.protocol.title')} description={t('form.protocol.description')}>
           <Stack spacing={3}>
-            {text('vc-vct', t('form.vct.label'), vct, setVct, 'urn:eudi:pid:de:1', true, t('form.vct.hint'))}
+            {text('vc-vct', t('form.vct.label'), vct, handleVctChange, 'urn:eudi:pid:de:1', true, t('form.vct.hint'))}
             <FormControl fullWidth>
               <FormLabel htmlFor="vc-format">{t('form.format.label')}</FormLabel>
-              <Select id="vc-format" value={format} onChange={(e): void => setFormat(e.target.value)}>
+              <Select id="vc-format" value={format} onChange={(e): void => handleFormatChange(e.target.value)}>
                 <MenuItem value="dc+sd-jwt">{t('form.format.sdJwt')}</MenuItem>
               </Select>
               <FormHelperText>{t('form.format.hint')}</FormHelperText>
@@ -379,7 +412,7 @@ export default function VerifiableCredentialForm({
               'vc-locale',
               t('form.display.locale'),
               locale,
-              setLocale,
+              handleLocaleChange,
               'en-US',
               false,
               t('form.display.localeHint'),
@@ -388,7 +421,7 @@ export default function VerifiableCredentialForm({
               'vc-logo',
               t('form.display.logo'),
               logoUri,
-              setLogoUri,
+              handleLogoUriChange,
               'https://example.com/logo.png',
               false,
               t('form.display.logoHint'),
@@ -398,7 +431,7 @@ export default function VerifiableCredentialForm({
       </TabPanel>
 
       <TabPanel value={tab} index={2}>
-        <ClaimsEditor claims={claims} onChange={setClaims} />
+        <ClaimsEditor claims={claims} onChange={handleClaimsChange} />
       </TabPanel>
 
       {dirty && (
@@ -409,6 +442,7 @@ export default function VerifiableCredentialForm({
           savingLabel={t('common:status.saving')}
           isSaving={submitting}
           saveDisabled={!valid}
+          error={error}
           onReset={handleReset}
           onSave={(): void => onSubmit(buildRequest())}
         />

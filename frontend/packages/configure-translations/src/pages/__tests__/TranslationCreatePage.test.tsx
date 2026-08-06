@@ -388,7 +388,7 @@ describe('TranslationCreatePage', () => {
       await user.click(screen.getByText('language.create.createButton'));
 
       await vi.waitFor(() => {
-        expect(setError).toHaveBeenCalledWith('language.add.error');
+        expect(setError).toHaveBeenCalledWith('Failed to add language. Please try again.');
         expect(setIsCreating).toHaveBeenCalledWith(false);
       });
     });
@@ -422,7 +422,7 @@ describe('TranslationCreatePage', () => {
       await user.click(screen.getByText('language.create.createButton'));
 
       await vi.waitFor(() => {
-        expect(setError).toHaveBeenCalledWith('language.add.error');
+        expect(setError).toHaveBeenCalledWith('Failed to add language. Please try again.');
         expect(setIsCreating).toHaveBeenCalledWith(false);
       });
     });

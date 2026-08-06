@@ -3,6 +3,7 @@
 
 import {useGetTranslations, useCreateTranslations, I18nDefaultConstants} from '@thunderid/i18n';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Breadcrumbs, Button, IconButton, LinearProgress, Typography} from '@wso2/oxygen-ui';
 import {ChevronRight, X} from '@wso2/oxygen-ui-icons-react';
 import {useCallback, useState, type JSX} from 'react';
@@ -131,7 +132,11 @@ export default function TranslationCreatePage(): JSX.Element {
     const {data: enData, error: enError} = await fetchEnTranslations();
     if (enError || !enData) {
       logger.error('Failed to fetch en-US translations', {error: enError});
-      setError(t('language.add.error'));
+      setError(
+        enError
+          ? getErrorMessage(enError, t, 'language.add.error', 'Failed to add language. Please try again.')
+          : t('language.add.error'),
+      );
       setIsCreating(false);
       return;
     }
@@ -149,7 +154,7 @@ export default function TranslationCreatePage(): JSX.Element {
       setProgress(100);
     } catch (_err: unknown) {
       logger.error('Failed to create translations', {error: _err});
-      setError(t('language.add.error'));
+      setError(getErrorMessage(_err as Error, t, 'language.add.error', 'Failed to add language. Please try again.'));
       setIsCreating(false);
       return;
     }

@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ResourceAvatar} from '@thunderid/components';
+import {QueryErrorNotice, ResourceAvatar} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {getDisplayNameForCode, toFlagEmoji, useGetLanguages} from '@thunderid/i18n';
 import {useLogger} from '@thunderid/logger/react';
@@ -25,7 +25,7 @@ export default function TranslationsList(): JSX.Element {
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
-  const {data, isLoading} = useGetLanguages();
+  const {data, isLoading, error, refetch} = useGetLanguages();
 
   const handleEditClick = useCallback(
     (language: string): void => {
@@ -122,6 +122,17 @@ export default function TranslationsList(): JSX.Element {
     ],
     [handleDeleteClick, handleEditClick, t, theme],
   );
+
+  if (error) {
+    return (
+      <QueryErrorNotice
+        error={error}
+        t={t}
+        title={t('listing.error', 'Failed to load languages')}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <>

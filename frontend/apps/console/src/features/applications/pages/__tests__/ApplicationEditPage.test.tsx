@@ -132,9 +132,11 @@ vi.mock('../../components/edit-application/mcp/McpConnectTab', () => ({
   )),
 }));
 
-vi.mock('@thunderid/components', async () => {
+vi.mock('@thunderid/components', async (importOriginal) => {
   const React = await import('react');
+  const actual = await importOriginal<typeof import('@thunderid/components')>();
   return {
+    ...actual,
     AppleIcon: vi.fn(() => null),
     AndroidLogo: vi.fn(() => null),
     FlutterLogo: vi.fn(() => null),
@@ -1210,21 +1212,23 @@ describe('ApplicationEditPage', () => {
   });
 
   describe('Error Handling', () => {
-    it('should display error message from error object', () => {
-      const errorMessage = 'Custom error message';
+    it('should resolve a mapped error code instead of raw server text', () => {
       mockUseGetApplication.mockReturnValue({
         data: undefined,
         isLoading: false,
         isError: true,
-        error: {message: errorMessage},
+        error: {message: 'raw server text', response: {data: {code: 'APP-1020'}}},
       } as unknown as UseQueryResult<Application>);
 
       renderComponent();
 
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      expect(
+        screen.getByText('An application with this name already exists. Choose a different name.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('raw server text')).not.toBeInTheDocument();
     });
 
-    it('should display default error message when error has no message', () => {
+    it('should display a generic fallback message when the error has no mapped code', () => {
       mockUseGetApplication.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -1234,7 +1238,7 @@ describe('ApplicationEditPage', () => {
 
       renderComponent();
 
-      expect(screen.getByText('applications:edit.page.error')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     });
 
     it('should handle save failure gracefully', async () => {

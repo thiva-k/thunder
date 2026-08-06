@@ -182,19 +182,19 @@ describe('ApplicationsList', () => {
   });
 
   it('should render error state', () => {
-    const error = new Error('Failed to load applications');
+    const error = new Error('raw server text');
     vi.mocked(useGetApplications).mockReturnValue({
       data: undefined,
       isLoading: false,
       error,
-    } as ReturnType<typeof useGetApplications>);
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetApplications>);
 
     renderComponent();
 
-    expect(screen.getByRole('heading', {name: 'Failed to load applications'})).toBeInTheDocument();
-    // The error message is displayed twice - once in heading and once in body
-    const errorTexts = screen.getAllByText('Failed to load applications');
-    expect(errorTexts).toHaveLength(2);
+    expect(screen.getByText('Failed to load applications')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.queryByText('raw server text')).not.toBeInTheDocument();
   });
 
   it('should render applications list successfully', () => {

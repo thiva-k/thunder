@@ -4,7 +4,6 @@
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 import SettingsQueryKeys from '../constants/settings-query-keys';
 import type {CorsConfigResponse, CorsValue} from '../models/responses';
@@ -56,9 +55,6 @@ export default function useUpdateCorsConfig(): UseMutationResult<CorsConfigRespo
       // PUT returns the full config, so keep the read model in sync without a refetch.
       queryClient.setQueryData([SettingsQueryKeys.SERVER_CONFIG, SettingsQueryKeys.CORS], data);
       showToast(t('settings:cors.save.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'settings:cors.save.error'), 'error');
     },
   });
 }

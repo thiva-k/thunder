@@ -224,8 +224,6 @@ func handleError(ctx context.Context, w http.ResponseWriter, svcErr *tidcommon.S
 			statusCode = http.StatusConflict
 		} else if svcErr.Code == ErrorCannotModifyDeclarativeResource.Code {
 			statusCode = http.StatusForbidden
-		} else if svcErr.Code == ErrorResultLimitExceededInCompositeMode.Code {
-			statusCode = http.StatusBadRequest
 		} else if svcErr.Code == tidcommon.ErrorUnauthorized.Code {
 			statusCode = http.StatusForbidden
 		}

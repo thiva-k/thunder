@@ -38,7 +38,8 @@ const {mockMutateAsync, mockUseGetTranslations, mockUseUpdateTranslation} = vi.h
   mockUseUpdateTranslation: vi.fn(),
 }));
 
-vi.mock('@thunderid/i18n', () => ({
+vi.mock('@thunderid/i18n', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/i18n')>()),
   useGetTranslations: mockUseGetTranslations,
   useUpdateTranslation: mockUseUpdateTranslation,
   NamespaceConstants: {
@@ -73,6 +74,7 @@ vi.mock('@/components/edit-translation/TranslationEditorHeader', () => ({
     isFallbackLanguage: boolean;
     hasNamespace: boolean;
     dirtyCount: number;
+    error?: string;
   }) => {
     mockTranslationEditorHeader(props);
     return (
@@ -92,6 +94,7 @@ vi.mock('@/components/edit-translation/TranslationEditorHeader', () => ({
         <span data-testid="header-language">{props.selectedLanguage}</span>
         <span data-testid="header-dirty-count">{props.dirtyCount}</span>
         <span data-testid="header-is-english">{String(props.isFallbackLanguage)}</span>
+        {props.error && <span data-testid="header-error">{props.error}</span>}
       </div>
     );
   },
@@ -317,7 +320,7 @@ describe('TranslationsEditPage', () => {
       expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('0');
     });
 
-    it('shows an error toast when at least one save request fails', async () => {
+    it('shows the resolved error inline in the header when at least one save request fails', async () => {
       mockMutateAsync.mockRejectedValueOnce(new Error('Network error'));
       const user = userEvent.setup();
       render(<TranslationsEditPage />);
@@ -325,7 +328,7 @@ describe('TranslationsEditPage', () => {
       await user.click(screen.getByText('change field'));
       await user.click(screen.getByText('save'));
 
-      expect(screen.getByText('editor.jsonSaveError')).toBeInTheDocument();
+      expect(screen.getByTestId('header-error')).toBeInTheDocument();
     });
   });
 

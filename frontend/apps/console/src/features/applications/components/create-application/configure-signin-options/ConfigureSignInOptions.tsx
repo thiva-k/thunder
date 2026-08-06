@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {
   AuthenticatorTypes,
   IdentityProviderTypes,
@@ -132,14 +133,28 @@ export default function ConfigureSignInOptions({
   const {selectedAuthFlow, setSelectedAuthFlow, setIntegrations, setIsEmailOtpMfaEnabled, setIsSmsOtpMfaEnabled} =
     useApplicationCreateContext();
 
-  const {data, isLoading, error} = useIdentityProviders();
+  const {data, isLoading, error, refetch} = useIdentityProviders();
   const {
     data: flowsData,
     isLoading: isFlowsLoading,
     error: flowsError,
+    refetch: refetchFlows,
   } = useGetFlows({
     flowType: FlowType.AUTHENTICATION,
   });
+
+  // Resolves an error through the code's owning namespace. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // the given namespace, per getErrorMessage's namespace-resolution contract.
+  const tForConnectionsErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `connections:${key}`, options),
+    [t],
+  );
+  const tForFlowsErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `flows:${key}`, options),
+    [t],
+  );
 
   const availableIntegrations: IdentityProvider[] = useMemo(() => data ?? [], [data]);
   const availableFlows: BasicFlowDefinition[] = useMemo(() => flowsData?.flows ?? [], [flowsData?.flows]);
@@ -241,11 +256,19 @@ export default function ConfigureSignInOptions({
 
   if (error || flowsError) {
     return (
-      <Alert severity="error" sx={{mb: 4}}>
-        {t('applications:onboarding.configure.SignInOptions.error', {
-          error: error?.message ?? flowsError?.message ?? 'Unknown error',
-        })}
-      </Alert>
+      <Box sx={{mb: 4}}>
+        <QueryErrorNotice
+          error={error ?? flowsError!}
+          t={error ? tForConnectionsErrors : tForFlowsErrors}
+          variant="inline"
+          fallbackKey="applications:onboarding.configure.SignInOptions.error"
+          fallbackDefaultValue="Failed to load authentication methods"
+          onRetry={() => {
+            void refetch();
+            void refetchFlows();
+          }}
+        />
+      </Box>
     );
   }
 

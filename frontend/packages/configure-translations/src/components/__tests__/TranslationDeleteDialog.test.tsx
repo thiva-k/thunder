@@ -110,16 +110,17 @@ describe('TranslationDeleteDialog', () => {
       expect(onSuccess).toHaveBeenCalled();
     });
 
-    it('shows an error alert on deletion failure', async () => {
-      mockMutate.mockImplementation((_lang: string, opts: {onError: () => void}) => {
-        opts.onError();
+    it('shows a resolved error alert on deletion failure, not raw server text', async () => {
+      mockMutate.mockImplementation((_lang: string, opts: {onError: (err: Error) => void}) => {
+        opts.onError(new Error('raw server text'));
       });
       const user = userEvent.setup();
       render(<TranslationDeleteDialog {...defaultProps} />);
 
       await user.click(screen.getByText(t('common:actions.delete')));
 
-      expect(screen.getByText('delete.error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to delete translations. Please try again.')).toBeInTheDocument();
+      expect(screen.queryByText('raw server text')).not.toBeInTheDocument();
     });
   });
 });

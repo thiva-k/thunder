@@ -32,8 +32,5 @@ export default function useDeleteVerifiableCredential(): UseMutationResult<void,
       });
       showToast(t('delete.success'), 'success');
     },
-    onError: () => {
-      showToast(t('delete.error'), 'error');
-    },
   });
 }

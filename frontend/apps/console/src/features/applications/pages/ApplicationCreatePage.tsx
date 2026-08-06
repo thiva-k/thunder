@@ -15,6 +15,7 @@ import {DefaultTheme, useGetTheme, type Theme} from '@thunderid/design';
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import type {EmbeddedFlowComponent} from '@thunderid/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress, IconButton, Typography} from '@wso2/oxygen-ui';
 import {ChevronLeft, ChevronRight, Home} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
@@ -738,7 +739,14 @@ export default function ApplicationCreatePage(): JSX.Element {
           handleCreateApplication(skipOAuthConfig, savedFlow.id);
         },
         onError: (err) => {
-          setError(err.message ?? 'Failed to generate authentication flow.');
+          setError(
+            getErrorMessage(
+              err,
+              (key, options) => t(key.includes(':') ? key : `flows:${key}`, options),
+              'applications:create.flowGenerationError',
+              'Failed to generate the authentication flow. Please try again.',
+            ),
+          );
         },
       });
     } else {

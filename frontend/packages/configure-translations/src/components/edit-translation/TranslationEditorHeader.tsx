@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {getDisplayNameForCode, toFlagEmoji} from '@thunderid/i18n';
-import {Box, Button, CircularProgress, IconButton, PageTitle, Typography} from '@wso2/oxygen-ui';
+import {Alert, Box, Button, CircularProgress, IconButton, PageTitle, Typography} from '@wso2/oxygen-ui';
 import {ArrowLeft} from '@wso2/oxygen-ui-icons-react';
 import {type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -25,6 +25,8 @@ export interface TranslationEditorHeaderProps {
   isFallbackLanguage: boolean;
   /** Whether a namespace is selected (required to enable Reset to Default). */
   hasNamespace: boolean;
+  /** Resolved error message from the last save or reset-to-default attempt, if any. */
+  error?: string;
   /** Called when the user clicks the back button. */
   onBack: () => void;
   /** Called when the user clicks Discard Changes. */
@@ -53,6 +55,7 @@ export default function TranslationEditorHeader({
   isSaving,
   isFallbackLanguage,
   hasNamespace,
+  error = undefined,
   onBack,
   onDiscard,
   onResetToDefault,
@@ -80,29 +83,36 @@ export default function TranslationEditorHeader({
         </Box>
       </PageTitle.Header>
       <PageTitle.Actions>
-        <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
-          {hasDirtyChanges && (
-            <Typography variant="caption" color="warning.main" sx={{fontWeight: 500}}>
-              {t('editor.unsavedCount', {count: dirtyCount})}
-            </Typography>
+        <Box sx={{display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end'}}>
+          {error && (
+            <Alert severity="error" sx={{py: 0}}>
+              {error}
+            </Alert>
           )}
-          <Button size="small" onClick={onDiscard} disabled={!hasDirtyChanges || isSaving}>
-            {t('actions.discardChanges')}
-          </Button>
-          {!isFallbackLanguage && (
-            <Button size="small" onClick={onResetToDefault} disabled={!hasNamespace || isSaving}>
-              {t('actions.resetToDefault')}
+          <Box sx={{display: 'flex', gap: 1, alignItems: 'center'}}>
+            {hasDirtyChanges && (
+              <Typography variant="caption" color="warning.main" sx={{fontWeight: 500}}>
+                {t('editor.unsavedCount', {count: dirtyCount})}
+              </Typography>
+            )}
+            <Button size="small" onClick={onDiscard} disabled={!hasDirtyChanges || isSaving}>
+              {t('actions.discardChanges')}
             </Button>
-          )}
-          <Button
-            size="small"
-            variant="contained"
-            onClick={onSave}
-            disabled={!hasDirtyChanges || isSaving}
-            startIcon={isSaving ? <CircularProgress size={14} color="inherit" /> : undefined}
-          >
-            {t('actions.saveChanges')}
-          </Button>
+            {!isFallbackLanguage && (
+              <Button size="small" onClick={onResetToDefault} disabled={!hasNamespace || isSaving}>
+                {t('actions.resetToDefault')}
+              </Button>
+            )}
+            <Button
+              size="small"
+              variant="contained"
+              onClick={onSave}
+              disabled={!hasDirtyChanges || isSaving}
+              startIcon={isSaving ? <CircularProgress size={14} color="inherit" /> : undefined}
+            >
+              {t('actions.saveChanges')}
+            </Button>
+          </Box>
         </Box>
       </PageTitle.Actions>
     </PageTitle>

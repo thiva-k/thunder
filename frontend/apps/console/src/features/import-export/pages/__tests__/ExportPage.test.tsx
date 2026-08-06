@@ -104,9 +104,9 @@ describe('ExportPage', () => {
       } as Partial<UseMutationResult<JSONExportResponse, Error, ExportRequest>>;
     });
 
-    it('renders error alert', () => {
+    it('renders the resolved error message', () => {
       render(<ExportPage />);
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText('export.page.loadError')).toBeInTheDocument();
     });
 
     it('does not render ConfigureExport on error', () => {

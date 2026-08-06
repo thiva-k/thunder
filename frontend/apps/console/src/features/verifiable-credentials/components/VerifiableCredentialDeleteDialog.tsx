@@ -1,8 +1,9 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
-import {useState, type JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useDeleteVerifiableCredential from '../api/useDeleteVerifiableCredential';
 
@@ -26,6 +27,15 @@ export default function VerifiableCredentialDeleteDialog({
   const deleteVC = useDeleteVerifiableCredential();
   const [error, setError] = useState<string | null>(null);
 
+  // Resolves an error through the `verifiable-credentials` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `verifiable-credentials:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `verifiable-credentials:${key}`, options),
+    [t],
+  );
+
   const handleCancel = (): void => {
     if (deleteVC.isPending) return;
     setError(null);
@@ -42,7 +52,7 @@ export default function VerifiableCredentialDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('verifiable-credentials:delete.error'));
+        setError(getErrorMessage(err, tForErrors, 'delete.error', 'Failed to delete credential template'));
       },
     });
   };

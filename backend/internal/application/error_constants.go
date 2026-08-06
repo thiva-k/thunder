@@ -287,19 +287,6 @@ var (
 			DefaultValue: "An application with the same client ID already exists",
 		},
 	}
-	// ErrorJWKSUriNotHTTPS is the error returned when jwks_uri does not use HTTPS.
-	ErrorJWKSUriNotHTTPS = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "APP-1022",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.applicationservice.invalid_jwks_uri_scheme",
-			DefaultValue: "Invalid JWKS URI scheme",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.applicationservice.invalid_jwks_uri_scheme_description",
-			DefaultValue: "'jwks_uri' must use HTTPS scheme",
-		},
-	}
 	// ErrorInvalidPublicClientConfiguration is the generic error returned for public client configuration issues.
 	ErrorInvalidPublicClientConfiguration = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,

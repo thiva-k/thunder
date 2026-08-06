@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplication} from '@thunderid/configure-applications';
 import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useLogger} from '@thunderid/logger/react';
@@ -90,8 +90,17 @@ export default function ApplicationEditPage() {
   const location = useLocation();
   const {applicationId} = useParams<{applicationId: string}>();
 
-  const {data: application, isLoading, error, isError, refetch} = useGetApplication(applicationId ?? '');
+  const {data: application, isLoading, error, refetch} = useGetApplication(applicationId ?? '');
   const updateApplication = useUpdateApplication();
+
+  // Resolves an error through the `applications` catalog. `t` defaults to the `common` namespace,
+  // so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `applications:`,
+  // per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `applications:${key}`, options),
+    [t],
+  );
 
   const justCreatedSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
   const [secretDialogOpen, setSecretDialogOpen] = useState(Boolean(justCreatedSecret));
@@ -175,20 +184,27 @@ export default function ApplicationEditPage() {
     return <PageLoadingAnimation />;
   }
 
-  if (isError || error) {
+  if (error) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {error?.message ?? t('applications:edit.page.error')}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch(() => null);
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('applications:edit.page.back')}
-        </Button>
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="block"
+          title={t('applications:edit.page.error', 'Failed to load application information')}
+          resolveErrorMessage={getApplicationErrorMessage}
+          onRetry={() => void refetch()}
+          action={
+            <Button
+              onClick={() => {
+                handleBack().catch(() => null);
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('applications:edit.page.back', 'Back to Applications')}
+            </Button>
+          }
+        />
       </PageContent>
     );
   }
