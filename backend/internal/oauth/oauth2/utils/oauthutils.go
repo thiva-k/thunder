@@ -141,17 +141,17 @@ func GenerateAuthorizationCode() (string, error) {
 }
 
 // SeparateOIDCAndNonOIDCScopes separates the given scopes into OIDC and non-OIDC scopes.
-// A scope is treated as OIDC if it is a standard OIDC scope or is present in the app's
-// custom scope_claims mapping.
+// A scope is OIDC if it is a standard OIDC scope or the app's scope-to-claims mapping defines it.
+// Anything else is a permission scope for the resource servers.
 func SeparateOIDCAndNonOIDCScopes(scopes string, scopeClaimsMapping map[string][]string) ([]string, []string) {
 	scopeSlice := utils.ParseStringArray(scopes, " ")
 	var oidcScopes []string
 	var nonOidcScopes []string
 
 	for _, scp := range scopeSlice {
+		_, isMapped := scopeClaimsMapping[scp]
 		_, isStandard := constants.StandardOIDCScopes[scp]
-		_, isCustomOIDC := scopeClaimsMapping[scp]
-		if isStandard || isCustomOIDC {
+		if isMapped || isStandard {
 			oidcScopes = append(oidcScopes, scp)
 		} else {
 			nonOidcScopes = append(nonOidcScopes, scp)
@@ -160,40 +160,33 @@ func SeparateOIDCAndNonOIDCScopes(scopes string, scopeClaimsMapping map[string][
 	return oidcScopes, nonOidcScopes
 }
 
-// FilterOIDCScopesByAllowedScopes filters requested OIDC scopes against the application's active scopes.
-func FilterOIDCScopesByAllowedScopes(oidcScopes []string, allowedScopes []string) []string {
-	if allowedScopes == nil {
-		return oidcScopes
+// ResolveScopeClaims returns the claims a scope releases. The app's mapping wins where it defines
+// the scope, so mapping it to a shorter list narrows what it releases; a standard OIDC scope the
+// app leaves unmapped falls back to its standard claims. Returns nil for an unmapped custom scope,
+// which therefore releases nothing.
+func ResolveScopeClaims(scope string, scopeClaimsMapping map[string][]string) []string {
+	if claims, ok := scopeClaimsMapping[scope]; ok {
+		return claims
 	}
-
-	allowedScopeSet := make(map[string]struct{}, len(allowedScopes))
-	for _, scope := range allowedScopes {
-		allowedScopeSet[scope] = struct{}{}
+	if standard, ok := constants.StandardOIDCScopes[scope]; ok {
+		return standard.Claims
 	}
-
-	filteredScopes := make([]string, 0, len(oidcScopes))
-	for _, scope := range oidcScopes {
-		if _, ok := allowedScopeSet[scope]; ok {
-			filteredScopes = append(filteredScopes, scope)
-		}
-	}
-	return filteredScopes
+	return nil
 }
 
-// ResolveEffectiveScopeClaims returns the scope-to-claims mapping as it is applied at runtime: the
-// standard OIDC defaults from StandardOIDCScopes, with any per-scope overrides from the stored mapping
-// applied on top and any custom scopes carried through.
-func ResolveEffectiveScopeClaims(stored map[string][]string) map[string][]string {
-	effective := make(map[string][]string, len(constants.StandardOIDCScopes)+len(stored))
+// DefaultScopeClaims returns the standard OIDC scope-to-claims mapping a client starts with when
+// created without one. openid is left out: it is always granted and carries no user attributes.
+func DefaultScopeClaims() map[string][]string {
+	defaults := make(map[string][]string, len(constants.StandardOIDCScopes))
 	for scope, def := range constants.StandardOIDCScopes {
+		if scope == constants.ScopeOpenID {
+			continue
+		}
 		claims := make([]string, len(def.Claims))
 		copy(claims, def.Claims)
-		effective[scope] = claims
+		defaults[scope] = claims
 	}
-	for scope, claims := range stored {
-		effective[scope] = claims
-	}
-	return effective
+	return defaults
 }
 
 // ParseClaimsRequest parses the claims parameter JSON string into a ClaimsRequest struct.

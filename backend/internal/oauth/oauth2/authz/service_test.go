@@ -171,7 +171,11 @@ func (suite *AuthorizeServiceTestSuite) testApp() *providers.OAuthClient {
 		RedirectURIs: []string{"https://client.example.com/callback"},
 		GrantTypes:   []providers.GrantType{providers.GrantTypeAuthorizationCode},
 		PKCERequired: false,
-		Scopes:       []string{"openid", "profile", "email"},
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name"},
+			"email":   {"email", "email_verified"},
+		},
 	}
 }
 
@@ -437,9 +441,9 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_OI
 	assert.Empty(suite.T(), captured.RuntimeData[flowcm.RuntimeKeyResourceServerIdentifier])
 }
 
-func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_FiltersOIDCScopesByAppScopes() {
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_NarrowsOIDCClaimsByScopeClaims() {
 	app := suite.testApp()
-	app.Scopes = []string{"profile"}
+	app.ScopeClaims = map[string][]string{"profile": {"name"}}
 	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
 	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
 		Return(false, "", "")
@@ -467,7 +471,8 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Fi
 
 	assert.Nil(suite.T(), authErr)
 	assert.NotNil(suite.T(), result)
-	assert.Equal(suite.T(), []string{"profile"}, captured.OAuthParameters.StandardScopes)
+	// email stays OIDC on its standard claims; the mapping only narrows profile.
+	assert.Equal(suite.T(), []string{"openid", "email", "profile"}, captured.OAuthParameters.StandardScopes)
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_InsecureRedirectURI() {
@@ -1102,8 +1107,9 @@ func (suite *AuthorizeServiceTestSuite) TestDetermineClaimsForTokens_NoOpenIDSco
 
 func (suite *AuthorizeServiceTestSuite) TestDetermineClaimsForTokens_StandardOIDCScopes_CodeFlow() {
 	app := &providers.OAuthClient{
-		ID:       "test-app",
-		ClientID: "test-client",
+		ID:          "test-app",
+		ClientID:    "test-client",
+		ScopeClaims: map[string][]string{"openid": {"sub"}, "email": {"email", "email_verified"}},
 		Token: &providers.OAuthTokenConfig{
 			IDToken: &providers.IDTokenConfig{
 				UserAttributes: []string{"email", "email_verified", "name"},
@@ -1131,8 +1137,9 @@ func (suite *AuthorizeServiceTestSuite) TestDetermineClaimsForTokens_StandardOID
 
 func (suite *AuthorizeServiceTestSuite) TestDetermineClaimsForTokens_StandardOIDCScopes_ImplicitFlow() {
 	app := &providers.OAuthClient{
-		ID:       "test-app",
-		ClientID: "test-client",
+		ID:          "test-app",
+		ClientID:    "test-client",
+		ScopeClaims: map[string][]string{"openid": {"sub"}, "email": {"email", "email_verified"}},
 		Token: &providers.OAuthTokenConfig{
 			IDToken: &providers.IDTokenConfig{
 				UserAttributes: []string{"email", "email_verified", "name"},
@@ -1326,6 +1333,11 @@ func (suite *AuthorizeServiceTestSuite) TestDetermineClaimsForTokens_MultipleSco
 	app := &providers.OAuthClient{
 		ID:       "test-app",
 		ClientID: "test-client",
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"email":   {"email", "email_verified"},
+			"profile": {"name", "picture"},
+		},
 		Token: &providers.OAuthTokenConfig{
 			AccessToken: &providers.AccessTokenConfig{
 				UserConfig: &providers.AccessTokenSubConfig{Attributes: []string{"user_id"}},
@@ -1495,8 +1507,9 @@ func (suite *AuthorizeServiceTestSuite) TestGetRequiredAttributes_AccessTokenOnl
 
 func (suite *AuthorizeServiceTestSuite) TestGetRequiredAttributes_CodeFlowWithScopes() {
 	app := &providers.OAuthClient{
-		ID:       "test-app",
-		ClientID: "test-client",
+		ID:          "test-app",
+		ClientID:    "test-client",
+		ScopeClaims: map[string][]string{"openid": {"sub"}, "email": {"email", "email_verified"}},
 		Token: &providers.OAuthTokenConfig{
 			AccessToken: &providers.AccessTokenConfig{
 				UserConfig: &providers.AccessTokenSubConfig{Attributes: []string{"user_id"}},
@@ -1531,8 +1544,9 @@ func (suite *AuthorizeServiceTestSuite) TestGetRequiredAttributes_CodeFlowIDToke
 	// Regression: in the code flow, a scope attribute allow-listed only for the ID token (and not for
 	// UserInfo) must still be resolved and cached so it can be surfaced in the ID token.
 	app := &providers.OAuthClient{
-		ID:       "test-app",
-		ClientID: "test-client",
+		ID:          "test-app",
+		ClientID:    "test-client",
+		ScopeClaims: map[string][]string{"openid": {"sub"}, "email": {"email", "email_verified"}},
 		Token: &providers.OAuthTokenConfig{
 			IDToken: &providers.IDTokenConfig{
 				UserAttributes: []string{"email", "email_verified"},
@@ -1785,14 +1799,6 @@ func (suite *AuthorizeServiceTestSuite) TestGetRequiredAttributes_NoOpenIDScope(
 	assert.Equal(suite.T(), "user_id", optional)
 }
 
-func (suite *AuthorizeServiceTestSuite) TestResolveScopeAttributes_UnknownScope() {
-	result := resolveScopeAttributes("unknown_scope", map[string][]string{
-		"custom": {"email"},
-	})
-
-	assert.Nil(suite.T(), result)
-}
-
 func (suite *AuthorizeServiceTestSuite) TestResolveAttrCacheTTL_RefreshAllowed_UsesMaxOfRefreshAndAccessValidity() {
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
@@ -1991,8 +1997,7 @@ func determineClaimsForTokens(oidcScopes []string, claimsRequest *oauth2model.Cl
 	}
 
 	for _, scope := range oidcScopes {
-		scopeAttributes := resolveScopeAttributes(scope, app.ScopeClaims)
-		for _, attribute := range scopeAttributes {
+		for _, attribute := range app.ScopeClaims[scope] {
 			if responseType == string(providers.ResponseTypeIDToken) {
 				if idTokenAllowedSet != nil && idTokenAllowedSet[attribute] {
 					idTokenClaims[attribute] = true

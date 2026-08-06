@@ -301,7 +301,6 @@ func (as *authorizeService) handleStandardAuthorizationRequest(
 	}
 
 	oidcScopes, nonOidcScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(scope, app.ScopeClaims)
-	oidcScopes = oauth2utils.FilterOIDCScopesByAllowedScopes(oidcScopes, app.Scopes)
 
 	// The single target resource server, downscoping, and audience binding are resolved in
 	// initiateFlowAndStoreRequest, the path shared by both standard and PAR-based requests.
@@ -974,27 +973,9 @@ func appendAttributesFromClaimsParameter(claimsRequest *oauth2model.ClaimsReques
 func appendAttributesFromScopes(oidcScopes []string, app *providers.OAuthClient,
 	idTokenAllowedSet, userInfoAllowedSet map[string]bool, optionalAttributes map[string]bool) {
 	for _, scope := range oidcScopes {
-		scopeAttributes := resolveScopeAttributes(scope, app.ScopeClaims)
-		appendAttributesForScope(scopeAttributes,
+		appendAttributesForScope(oauth2utils.ResolveScopeClaims(scope, app.ScopeClaims),
 			idTokenAllowedSet, userInfoAllowedSet, optionalAttributes)
 	}
-}
-
-// resolveScopeAttributes resolves attributes for a scope, checking app-specific mappings first.
-func resolveScopeAttributes(scope string, scopeAttributesMapping map[string][]string) []string {
-	// Check app-specific scope attributes mapping first
-	if scopeAttributesMapping != nil {
-		if appAttributes, exists := scopeAttributesMapping[scope]; exists {
-			return appAttributes
-		}
-	}
-
-	// Fall back to standard OIDC scopes
-	if standardScope, exists := oauth2const.StandardOIDCScopes[scope]; exists {
-		return standardScope.Claims
-	}
-
-	return nil
 }
 
 // appendAttributesForScope appends attributes for a particular scope, allow-listed for either the

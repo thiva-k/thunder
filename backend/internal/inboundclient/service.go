@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -141,8 +142,11 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 	if fkErr := s.validateFKs(ctx, client); fkErr != nil {
 		return fkErr
 	}
-	if err := s.validateUserAttributesAgainstAllowedTypes(
-		ctx, client.AllowedUserTypes, client.Assertion, oauthProfile); err != nil {
+	validAttrs, attrErr := s.resolveValidUserAttributes(ctx, client.AllowedUserTypes)
+	if attrErr != nil {
+		return attrErr
+	}
+	if err := validateUserAttributes(validAttrs, client.Assertion, oauthProfile); err != nil {
 		return err
 	}
 	if oauthProfile != nil {
@@ -154,6 +158,10 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
 		return err
 	}
+	// Must run before applyInboundDefaults: UserInfo inherits the ID token list there.
+	seeded := seedScopeClaims(oauthProfile)
+	pruneScopeClaims(oauthProfile, scopeClaimPruneSet(seeded, client.AllowedUserTypes, validAttrs))
+	seedIDTokenUserAttributes(oauthProfile, validAttrs)
 	applyInboundDefaults(client, oauthProfile)
 	oauthClientID := s.resolveClientID(ctx, client.ID)
 	if err := validateOAuthCertificateClientID(oauthProfile, oauthClientID); err != nil {
@@ -1346,21 +1354,29 @@ func (s *inboundClientService) validateUserAttributesAgainstAllowedTypes(
 	assertion *inboundmodel.AssertionConfig,
 	oauthProfile *providers.OAuthProfile,
 ) error {
-	if len(allowedEntityTypes) == 0 || s.entityType == nil {
+	// Skip the schema lookup entirely when there is nothing to validate.
+	if len(collectConfiguredUserAttributes(assertion, oauthProfile)) == 0 {
 		return nil
 	}
-
-	attrs := collectConfiguredUserAttributes(assertion, oauthProfile)
-	if len(attrs) == 0 {
-		return nil
-	}
-
 	validAttrs, err := s.resolveValidUserAttributes(ctx, allowedEntityTypes)
 	if err != nil {
 		return err
 	}
+	return validateUserAttributes(validAttrs, assertion, oauthProfile)
+}
 
-	for attr := range attrs {
+// validateUserAttributes checks the configured attribute lists against an already-resolved set of
+// valid attributes. A nil set means nothing to validate against, so anything is accepted.
+func validateUserAttributes(
+	validAttrs map[string]bool,
+	assertion *inboundmodel.AssertionConfig,
+	oauthProfile *providers.OAuthProfile,
+) error {
+	if validAttrs == nil {
+		return nil
+	}
+
+	for attr := range collectConfiguredUserAttributes(assertion, oauthProfile) {
 		if isComputedAttribute(attr) {
 			continue
 		}
@@ -1369,6 +1385,70 @@ func (s *inboundClientService) validateUserAttributesAgainstAllowedTypes(
 		}
 	}
 	return nil
+}
+
+// scopeClaimPruneSet returns the attribute set the mapping is pruned against. Defaults we seeded
+// for a client with no allowed user types are pruned against an empty set: the standard scopes are
+// kept, but none of their attributes are, since no schema declares them yet. A mapping the caller
+// supplied is never pruned this way, so it is still stored as sent.
+func scopeClaimPruneSet(seeded bool, allowedUserTypes []string, validAttrs map[string]bool) map[string]bool {
+	if seeded && len(allowedUserTypes) == 0 {
+		return map[string]bool{}
+	}
+	return validAttrs
+}
+
+// pruneScopeClaims drops attributes the allowed user types' schemas do not declare, keeping
+// computed ones. A scope emptied by the prune keeps its key, so it stays grantable with no claims.
+// A nil valid set leaves the mapping untouched.
+func pruneScopeClaims(oauthProfile *providers.OAuthProfile, validAttrs map[string]bool) {
+	if oauthProfile == nil || validAttrs == nil {
+		return
+	}
+	for scope, attrs := range oauthProfile.ScopeClaims {
+		kept := make([]string, 0, len(attrs))
+		for _, attr := range attrs {
+			if isComputedAttribute(attr) || validAttrs[attr] {
+				kept = append(kept, attr)
+			}
+		}
+		oauthProfile.ScopeClaims[scope] = kept
+	}
+}
+
+// seedIDTokenUserAttributes derives a new client's ID token attribute list from its scope-to-claims
+// mapping when the caller configured none. UserInfo inherits the list in applyInboundDefaults; the
+// access token and the assertion are not scope-driven and keep what was sent. Skipped without
+// allowed user types (nil validAttrs), since the mapping was then never pruned to a real schema.
+func seedIDTokenUserAttributes(oauthProfile *providers.OAuthProfile, validAttrs map[string]bool) {
+	if oauthProfile == nil || validAttrs == nil || len(oauthProfile.ScopeClaims) == 0 {
+		return
+	}
+	if oauthProfile.Token != nil && oauthProfile.Token.IDToken != nil &&
+		len(oauthProfile.Token.IDToken.UserAttributes) > 0 {
+		return
+	}
+
+	// The mapping is already seeded and pruned to the schema by this point.
+	derived := make(map[string]bool)
+	for _, attrs := range oauthProfile.ScopeClaims {
+		for _, attr := range attrs {
+			derived[attr] = true
+		}
+	}
+	if len(derived) == 0 {
+		return
+	}
+
+	attributes := slices.Collect(maps.Keys(derived))
+	slices.Sort(attributes)
+	if oauthProfile.Token == nil {
+		oauthProfile.Token = &providers.OAuthTokenConfig{}
+	}
+	if oauthProfile.Token.IDToken == nil {
+		oauthProfile.Token.IDToken = &providers.IDTokenConfig{}
+	}
+	oauthProfile.Token.IDToken.UserAttributes = attributes
 }
 
 // resolveValidUserAttributes returns the union of non-credential attribute names declared in the
@@ -1399,10 +1479,10 @@ func (s *inboundClientService) resolveValidUserAttributes(
 	return validAttrs, nil
 }
 
-// stripUndeclaredUserAttributes removes from the application's token allow-lists any user attribute
-// no longer declared in the schema of its allowed user types, keeping computed attributes. The lists
-// are left holding only attributes validateUserAttributesAgainstAllowedTypes accepts. No-op when
-// there are no allowed types or the entity-type service is unavailable (matches the validator's skip).
+// stripUndeclaredUserAttributes removes from the token allow-lists and the scope-to-claims mapping
+// any user attribute no longer declared in the allowed user types' schemas, keeping computed ones.
+// Both are pruned together so a scope can never expose an attribute the lists may not carry. No-op
+// when there are no allowed types or the entity-type service is unavailable.
 func (s *inboundClientService) stripUndeclaredUserAttributes(
 	ctx context.Context,
 	allowedEntityTypes []string,
@@ -1414,13 +1494,14 @@ func (s *inboundClientService) stripUndeclaredUserAttributes(
 	for _, list := range lists {
 		configured += len(*list)
 	}
-	if configured == 0 {
+	if configured == 0 && (oauthProfile == nil || len(oauthProfile.ScopeClaims) == 0) {
 		return nil
 	}
 	validAttrs, err := s.resolveValidUserAttributes(ctx, allowedEntityTypes)
 	if err != nil || validAttrs == nil {
 		return err
 	}
+	pruneScopeClaims(oauthProfile, validAttrs)
 
 	dropped := make(map[string]bool)
 	for _, list := range lists {
@@ -1523,8 +1604,19 @@ func applyInboundDefaults(c *inboundmodel.InboundClient, oauthProfile *providers
 		IDJAG:        resolveIDJAG(oauthProfile.Token),
 	}
 	oauthProfile.UserInfo = resolveUserInfo(oauthProfile.UserInfo, idToken)
-	// Persist the effective scope-to-claims mapping: standard OIDC defaults merged with any overrides.
-	oauthProfile.ScopeClaims = oauthutils.ResolveEffectiveScopeClaims(oauthProfile.ScopeClaims)
+}
+
+// seedScopeClaims gives a client the standard OIDC mapping when it is created without one; a
+// supplied mapping is stored exactly as sent. Create-only, so a scope removed later stays removed.
+// Declarative files are excluded by design: they are explicit configuration and get no defaults.
+// Reports whether the defaults were applied, so the caller can tell them apart from a mapping the
+// client supplied.
+func seedScopeClaims(oauthProfile *providers.OAuthProfile) bool {
+	if oauthProfile == nil || len(oauthProfile.ScopeClaims) > 0 {
+		return false
+	}
+	oauthProfile.ScopeClaims = oauthutils.DefaultScopeClaims()
+	return true
 }
 
 // getDefaultAssertionFromDeployment returns the assertion config from the deployment-level JWT settings.

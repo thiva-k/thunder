@@ -104,8 +104,7 @@ describe('EditTokensSettings', () => {
     expect(screen.queryByText(delegationLockMessage)).not.toBeInTheDocument();
   });
 
-  it('shows only the notice in place of token settings when Delegated mode is off', async () => {
-    const user = userEvent.setup();
+  it('omits the User audience when Delegated mode is off', () => {
     render(
       <EditTokensSettings
         agent={baseAgent}
@@ -115,32 +114,10 @@ describe('EditTokensSettings', () => {
       />,
     );
 
-    // The notice belongs to the User audience, so it stays out of the way until opened.
+    // Only the agent's own tokens apply, so there is no picker and no locked audience to explain.
+    expect(screen.queryByRole('tablist', {name: 'Issued to'})).not.toBeInTheDocument();
     expect(screen.queryByText(delegationLockMessage)).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', {name: 'User'}));
-
-    expect(screen.getByText(delegationLockMessage)).toBeInTheDocument();
     expect(screen.queryByTestId('token-settings')).not.toBeInTheDocument();
-  });
-
-  it('sends the user to the Advanced tab from the delegation notice', async () => {
-    const user = userEvent.setup();
-    const onNavigateToAdvanced = vi.fn();
-    render(
-      <EditTokensSettings
-        agent={baseAgent}
-        editedAgent={{}}
-        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
-        onFieldChange={mockOnFieldChange}
-        onNavigateToAdvanced={onNavigateToAdvanced}
-      />,
-    );
-
-    await user.click(screen.getByRole('tab', {name: 'User'}));
-    await user.click(screen.getByRole('button', {name: 'Advanced tab'}));
-
-    expect(onNavigateToAdvanced).toHaveBeenCalledTimes(1);
   });
 
   it('stays read-only when the agent is already read-only, even with Delegated mode on', async () => {

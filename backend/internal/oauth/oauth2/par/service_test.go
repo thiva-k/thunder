@@ -66,7 +66,11 @@ func (s *ServiceTestSuite) newTestApp() *providers.OAuthClient {
 		GrantTypes:              []providers.GrantType{providers.GrantTypeAuthorizationCode},
 		ResponseTypes:           []providers.ResponseType{providers.ResponseTypeCode},
 		TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodClientSecretBasic,
-		Scopes:                  []string{"openid", "profile", "email"},
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name"},
+			"email":   {"email", "email_verified"},
+		},
 	}
 }
 
@@ -399,7 +403,7 @@ func (s *ServiceTestSuite) TestHandlePAR_NoResourceWithDefaultSucceedsAtPush() {
 	assert.Empty(s.T(), captured.OAuthParameters.Resources)
 }
 
-func (s *ServiceTestSuite) TestHandlePAR_FiltersOIDCScopesByAppScopes() {
+func (s *ServiceTestSuite) TestHandlePAR_NarrowsOIDCClaimsByScopeClaims() {
 	store := newParStoreInterfaceMock(s.T())
 	var captured pushedAuthorizationRequest
 	store.EXPECT().Store(mock.Anything, mock.Anything, mock.Anything).
@@ -409,7 +413,7 @@ func (s *ServiceTestSuite) TestHandlePAR_FiltersOIDCScopesByAppScopes() {
 
 	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
 	app := s.newTestApp()
-	app.Scopes = []string{"profile"}
+	app.ScopeClaims = map[string][]string{"profile": {"name"}}
 	params := s.newValidParams()
 	params[oauth2const.RequestParamScope] = "openid email profile"
 
@@ -417,7 +421,8 @@ func (s *ServiceTestSuite) TestHandlePAR_FiltersOIDCScopesByAppScopes() {
 
 	assert.Empty(s.T(), errCode)
 	assert.NotNil(s.T(), resp)
-	assert.Equal(s.T(), []string{"profile"}, captured.OAuthParameters.StandardScopes)
+	// email stays OIDC on its standard claims; the mapping only narrows profile.
+	assert.Equal(s.T(), []string{"openid", "email", "profile"}, captured.OAuthParameters.StandardScopes)
 }
 
 func (s *ServiceTestSuite) TestHandlePAR_AcrValuesPropagated() {

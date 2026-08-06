@@ -8,6 +8,7 @@ import {
   useGetChildOrganizationUnits,
   useGetOrganizationUnit,
 } from '@thunderid/configure-organization-units';
+import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {useLogger} from '@thunderid/logger/react';
 import {useThunderID} from '@thunderid/react';
 import {getErrorMessage} from '@thunderid/utils';
@@ -51,6 +52,7 @@ export default function AgentCreatePage(): JSX.Element {
   } = useAgentCreate();
 
   const {data: agentTypesData} = useGetAgentTypes();
+  const {data: userTypesData} = useGetUserTypes();
   const {data: schemaDetails, isLoading: isSchemaLoading} = useGetAgentType(selectedSchema?.id);
   const {
     data: childOuData,
@@ -235,11 +237,18 @@ export default function AgentCreatePage(): JSX.Element {
       },
     ];
 
+    // The user types an agent may act on behalf of. With exactly one deployed there is nothing to
+    // choose, and sending it lets the server derive the agent's token attributes from its schema at
+    // creation, rather than leaving them empty until delegated mode is turned on later.
+    const userTypes = userTypesData?.types ?? [];
+    const allowedUserTypes = userTypes.length === 1 ? [userTypes[0].name] : undefined;
+
     const agentData = {
       ouId,
       type: selectedSchema.name,
       name: agentName,
       logoUrl: AgentConstants.DEFAULT_AVATAR,
+      ...(allowedUserTypes && {allowedUserTypes}),
       ...(selectedOwnerId && {owner: selectedOwnerId}),
       ...(Object.keys(filteredAttributes).length > 0 && {attributes: filteredAttributes}),
       inboundAuthConfig,

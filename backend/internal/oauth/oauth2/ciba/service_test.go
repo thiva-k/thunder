@@ -69,6 +69,11 @@ func (suite *CIBAServiceTestSuite) SetupTest() {
 		ID:         "app-1",
 		ClientID:   "client-1",
 		GrantTypes: []providers.GrantType{providers.GrantTypeCIBA},
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name", "given_name", "family_name", "picture"},
+			"email":   {"email", "email_verified"},
+		},
 	}
 }
 
@@ -696,6 +701,11 @@ func (suite *CIBAServiceTestSuite) TestGetRequiredOptionalAttributes_AccessToken
 
 func (suite *CIBAServiceTestSuite) TestGetRequiredOptionalAttributes_ScopeDerivedFilteredByUserInfo() {
 	app := &providers.OAuthClient{
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"email":   {"email", "email_verified"},
+			"profile": {"name", "picture"},
+		},
 		Token: &providers.OAuthTokenConfig{
 			AccessToken: &providers.AccessTokenConfig{
 				UserConfig: &providers.AccessTokenSubConfig{Attributes: []string{"user_id"}},
@@ -713,6 +723,7 @@ func (suite *CIBAServiceTestSuite) TestGetRequiredOptionalAttributes_ScopeDerive
 	// Regression: a scope attribute allow-listed only for the ID token (and not for UserInfo) must
 	// still be resolved and cached so the CIBA-issued ID token can surface it.
 	app := &providers.OAuthClient{
+		ScopeClaims: map[string][]string{"openid": {"sub"}, "email": {"email", "email_verified"}},
 		Token: &providers.OAuthTokenConfig{
 			IDToken: &providers.IDTokenConfig{
 				UserAttributes: []string{"email", "email_verified"},

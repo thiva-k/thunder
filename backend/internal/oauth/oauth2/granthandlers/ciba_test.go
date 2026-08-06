@@ -48,7 +48,14 @@ func (suite *CIBAGrantHandlerTestSuite) SetupTest() {
 	suite.mockResource = resourcemock.NewResourceServiceInterfaceMock(suite.T())
 	suite.handler = newCIBAGrantHandler(suite.mockCIBAService, suite.mockTokenBuilder,
 		suite.mockAttrCacheService, suite.mockResource)
-	suite.oauthApp = &providers.OAuthClient{ClientID: "client-1"}
+	suite.oauthApp = &providers.OAuthClient{
+		ClientID: "client-1",
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name", "given_name", "family_name", "picture"},
+			"email":   {"email", "email_verified"},
+		},
+	}
 	suite.tokenReq = &model.TokenRequest{
 		GrantType: string(providers.GrantTypeCIBA),
 		ClientID:  "client-1",

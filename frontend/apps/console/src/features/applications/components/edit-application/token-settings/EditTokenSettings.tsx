@@ -120,6 +120,17 @@ const areAttributesEqual = (arr1: string[], arr2: string[]): boolean => {
   return sorted1.every((val, index) => val === sorted2[index]);
 };
 
+/**
+ * Flattens a scope-to-claims mapping into the set of attributes it exposes. ScopeClaims values are
+ * optional, so the undefined entries are dropped here rather than at every call site.
+ */
+const collectMappedAttributes = (scopeClaims: ScopeClaims): Set<string> =>
+  new Set(
+    Object.values(scopeClaims)
+      .flat()
+      .filter((attr): attr is string => attr !== undefined),
+  );
+
 const areSetsEqual = (set1: Set<string>, set2: Set<string>): boolean => {
   if (set1.size !== set2.size) return false;
 
@@ -233,6 +244,10 @@ export default function EditTokenSettings({
   const currentAssertionRef = useRef(currentAssertion);
   const isFirstRenderRef = useRef(true);
   const prevSectionResetKeyRef = useRef(sectionResetKey);
+  // Attributes this editing session added to the token allow-lists on behalf of a scope mapping.
+  // Only these are auto-removed when the mapping drops them, so attributes added by hand in the
+  // advanced panel are never taken away.
+  const autoSyncedAttributes = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     oauth2ConfigRef.current = oauth2Config;
@@ -530,22 +545,54 @@ export default function EditTokenSettings({
     }
   };
 
-  const handleScopesChange = (newScopes: string[]) => {
-    const updatedConfig = {...oauth2Config, scopes: newScopes};
-    const updatedInboundAuth = application.inboundAuthConfig?.map((config) => {
-      if (config.type === 'oauth2') {
-        return {...config, config: updatedConfig};
-      }
-      return config;
-    });
-    onFieldChange('inboundAuthConfig', updatedInboundAuth);
-  };
-
   const handleScopeClaimsChange = (newScopeClaims: ScopeClaims) => {
+    const mappedBefore = collectMappedAttributes(oauth2Config?.scopeClaims ?? {});
+    const mappedAfter = collectMappedAttributes(newScopeClaims);
+
+    const added = [...mappedAfter].filter((attr) => !mappedBefore.has(attr));
+    // Only attributes this session added through the mapper are auto-removed: anything added by
+    // hand in the advanced panel stays, since it may be there for the claims request parameter.
+    const removed = [...mappedBefore].filter(
+      (attr) => !mappedAfter.has(attr) && autoSyncedAttributes.current.has(attr),
+    );
+
+    added.forEach((attr) => autoSyncedAttributes.current.add(attr));
+    removed.forEach((attr) => autoSyncedAttributes.current.delete(attr));
+
+    const syncList = (current: string[]): string[] => [
+      ...current.filter((attr) => !removed.includes(attr)),
+      ...added.filter((attr) => !current.includes(attr)),
+    ];
+
+    // The mapping and both allow-lists are written as one config object: writing them through
+    // separate onFieldChange calls would have each rebuild oauth2Config from the same stale copy,
+    // so the last write would drop the other's change.
+    const idTokenAttributes = syncList(currentIdTokenAttributes);
     const updatedConfig = {
       ...oauth2Config,
       scopeClaims: newScopeClaims,
+      token: {
+        ...oauth2Config?.token,
+        idToken: {
+          validityPeriod: oauth2Config?.token?.idToken?.validityPeriod ?? 3600,
+          ...oauth2Config?.token?.idToken,
+          userAttributes: idTokenAttributes,
+        },
+      },
+      userInfo: {
+        ...oauth2Config?.userInfo,
+        userAttributes: syncList(currentUserInfoAttributes),
+      },
     };
+
+    if (added.length > 0 || removed.length > 0) {
+      setHighlightedAttributesByToken((prev) => ({
+        ...prev,
+        id: new Set([...prev.id, ...added, ...removed]),
+        userinfo: new Set([...prev.userinfo, ...added, ...removed]),
+      }));
+    }
+
     const updatedInboundAuth = application.inboundAuthConfig?.map((config) => {
       if (config.type === 'oauth2') {
         return {...config, config: updatedConfig};
@@ -724,6 +771,16 @@ export default function EditTokenSettings({
             idToken: {...currentIdToken, userAttributes: nextAttrs},
           },
         };
+
+        // While User Info inherits from the ID token the two lists must stay identical, since the
+        // inherit toggle is derived from their equality. Writing only the ID token list would both
+        // flip the toggle off and leave User Info on the pre-edit list.
+        if (!isUserInfoCustomAttributes) {
+          updatedConfig = {
+            ...updatedConfig,
+            userInfo: {...updatedConfig.userInfo, userAttributes: nextAttrs},
+          };
+        }
       } else if (scope === 'userinfo') {
         updatedConfig = {
           ...updatedConfig,
@@ -816,7 +873,8 @@ export default function EditTokenSettings({
       {/* OAuth/OIDC Mode */}
       {isOAuthMode ? (
         <>
-          {/* Merged User Attributes (Access Token / ID Token / User Info tabs) */}
+          {/* Merged User Attributes (Access Token / ID Token / User Info tabs). The scope-to-claims
+              mapping is passed in as a slot so it renders once, under the two tabs it feeds. */}
           <TokenUserAttributesSection
             accessTokenAttributes={currentAccessTokenAttributes}
             idTokenAttributes={currentIdTokenAttributes}
@@ -847,18 +905,17 @@ export default function EditTokenSettings({
             userInfoEncryptionAlg={oauth2Config?.userInfo?.encryptionAlg}
             userInfoEncryptionEnc={oauth2Config?.userInfo?.encryptionEnc}
             onUserInfoConfigChange={handleUserInfoConfigChange}
-          />
-
-          {/* Scopes & Attribute Mapping */}
-          <ScopeSection
-            scopes={oauth2Config?.scopes ?? []}
-            scopeClaims={oauth2Config?.scopeClaims ?? {}}
-            userAttributes={userAttributes}
-            isLoadingUserAttributes={isLoadingUserAttributes}
-            onScopesChange={handleScopesChange}
-            onScopeClaimsChange={handleScopeClaimsChange}
-            entityLabel={entityLabel}
-            disabled={application.isReadOnly}
+            scopeMapping={
+              <ScopeSection
+                scopeClaims={oauth2Config?.scopeClaims ?? {}}
+                userAttributes={userAttributes}
+                isLoadingUserAttributes={isLoadingUserAttributes}
+                hasAllowedUserTypes={allowedUserTypes.length > 0}
+                onScopeClaimsChange={handleScopeClaimsChange}
+                entityLabel={entityLabel}
+                disabled={application.isReadOnly}
+              />
+            }
           />
 
           {/* Merged Token Validation (Access Token / ID Token tabs) */}

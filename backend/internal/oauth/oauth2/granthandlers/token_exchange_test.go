@@ -123,11 +123,16 @@ func (suite *TokenExchangeGrantHandlerTestSuite) SetupTest() {
 	}
 
 	suite.oauthApp = &providers.OAuthClient{
-		ID:                      "app123",
-		ClientID:                testClientID,
-		RedirectURIs:            []string{"https://example.com/callback"},
-		GrantTypes:              []providers.GrantType{providers.GrantTypeTokenExchange},
-		ResponseTypes:           []providers.ResponseType{providers.ResponseTypeCode},
+		ID:            "app123",
+		ClientID:      testClientID,
+		RedirectURIs:  []string{"https://example.com/callback"},
+		GrantTypes:    []providers.GrantType{providers.GrantTypeTokenExchange},
+		ResponseTypes: []providers.ResponseType{providers.ResponseTypeCode},
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name", "given_name", "family_name", "picture"},
+			"email":   {"email", "email_verified"},
+		},
 		TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodClientSecretBasic,
 		Token: &providers.OAuthTokenConfig{
 			AccessToken: &providers.AccessTokenConfig{
