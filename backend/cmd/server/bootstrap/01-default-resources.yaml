@@ -37,10 +37,6 @@ schema:
     type: string
     displayName: Mobile Number
     required: false
-  phone_number:
-    type: string
-    displayName: Phone Number
-    required: false
   sub:
     type: string
     displayName: Subject
@@ -4980,7 +4976,7 @@ attributes:
   name: Administrator
   given_name: Admin
   family_name: User
-  phone_number: "+12345678920"
+  mobile_number: "+12345678920"
 credentials:
   password: "{{ .ADMIN_PASSWORD }}"
 ---
