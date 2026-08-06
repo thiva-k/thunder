@@ -42,22 +42,22 @@ export default function NextStepsSection(): JSX.Element {
         initial="hidden"
         animate="visible"
       >
-        <Grid size={{xs: 12, sm: 6}}>
+        <Grid size={{xs: 12, md: 6}}>
           <MotionBox variants={cardVariants} sx={{height: '100%'}}>
             <InviteMembersCard />
           </MotionBox>
         </Grid>
-        <Grid size={{xs: 12, sm: 6}}>
+        <Grid size={{xs: 12, md: 6}}>
           <MotionBox variants={cardVariants} sx={{height: '100%'}}>
             <LoginBoxCard />
           </MotionBox>
         </Grid>
-        <Grid size={{xs: 12, sm: 6}}>
+        <Grid size={{xs: 12, md: 6}}>
           <MotionBox variants={cardVariants} sx={{height: '100%'}}>
             <ConnectionsCard />
           </MotionBox>
         </Grid>
-        <Grid size={{xs: 12, sm: 6}}>
+        <Grid size={{xs: 12, md: 6}}>
           <MotionBox variants={cardVariants} sx={{height: '100%'}}>
             <MFACard />
           </MotionBox>
