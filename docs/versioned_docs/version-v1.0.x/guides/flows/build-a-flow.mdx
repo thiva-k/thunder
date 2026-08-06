@@ -204,14 +204,14 @@ A flow has no effect until it is assigned to an application.
 
   To customize the user onboarding flow, you can either edit the default flow directly in the Console's Flow Builder, or create a new one via the `/flows` API. See [API Reference](../../../apis).
 
-  To set the flow as the active system-wide user onboarding flow, update `deployment.yaml`:
+  To set the flow as the active system-wide user onboarding flow, call the Server Configuration API:
 
-  ```yaml
-  flow:
-    user_onboarding_flow_handle: <your-flow-handle>
+  ```bash
+  curl -kL -X PUT https://localhost:8090/server-config/flow \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{ "userOnboardingFlow": { "defaultHandle": "<your-flow-handle>" } }'
   ```
-
-  Restart <ProductName /> for the change to take effect. All admin user creation actions, from the Console and the API, use the new flow.
 
 </details>
 

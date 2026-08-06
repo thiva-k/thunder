@@ -311,8 +311,6 @@ const translations = {
 
     'welcome.applicationTryout.scenarios.onboard.description':
       'Invite and onboard two new staff members entirely from the {{productName}} Console: Sam Rivera (Support) and Maya Patel (DestinationsAdmin). The admin picks the staff role and sends the invitation, and the matching role is attached automatically when the invitee completes their profile.',
-    'welcome.applicationTryout.scenarios.onboard.smtpNote':
-      "Before trying this flow, set flow.user_onboarding_flow_handle to wayfinder-onboarding-flow in {{productName}}'s deployment.yaml and restart the server.",
     'welcome.applicationTryout.scenarios.onboard.step1': 'Sign in to the {{productName}} Console as your admin user.',
     'welcome.applicationTryout.scenarios.onboard.step2': 'Navigate to Users and select Add User.',
     'welcome.applicationTryout.scenarios.onboard.step3': 'Select Staff as the user type.',

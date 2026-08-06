@@ -163,15 +163,6 @@ The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderi
 
 ### Manual Setup
 
-After the import, complete the following local configuration and restart the server:
-
-- Activate the Wayfinder onboarding flow. ThunderID permits only one `USER_ONBOARDING` flow at a time, selected by handle:
-
-  ```yaml
-  flow:
-    user_onboarding_flow_handle: "wayfinder-onboarding-flow"
-  ```
-
 - Configure SMTP so recovery and invitation emails can be delivered. The sample ships with a built-in local SMTP server (`smtp-server/`) that listens on `127.0.0.1:2525`. No external relay is required. The defaults below match its credentials exactly, so no further editing is needed for local development:
 
   ```yaml
