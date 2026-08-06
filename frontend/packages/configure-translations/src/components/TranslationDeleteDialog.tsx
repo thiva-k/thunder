@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {getDisplayNameForCode, useDeleteTranslations} from '@thunderid/i18n';
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
 import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -55,8 +56,8 @@ export default function TranslationDeleteDialog({
         onClose();
         onSuccess?.();
       },
-      onError: () => {
-        setError(t('delete.error'));
+      onError: (err) => {
+        setError(getErrorMessage(err, t, 'delete.error', 'Failed to delete translations. Please try again.'));
       },
     });
   };

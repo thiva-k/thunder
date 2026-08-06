@@ -102,22 +102,6 @@ var (
 			DefaultValue: "The user type is declarative and cannot be modified or deleted",
 		},
 	}
-	// ErrorResultLimitExceededInCompositeMode is the error returned when
-	// the result limit is exceeded in composite mode.
-	ErrorResultLimitExceededInCompositeMode = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "USRS-1009",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.entitytypeservice.result_limit_exceeded",
-			DefaultValue: "Result limit exceeded",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key: "error.entitytypeservice.result_limit_exceeded_description",
-			DefaultValue: "The combined result set from both file-based and database " +
-				"stores exceeds the maximum limit. Please refine your query to return " +
-				"fewer results.",
-		},
-	}
 	// ErrorInvalidDisplayAttribute is the error returned when the display attribute
 	// does not reference a valid top-level attribute in the schema.
 	ErrorInvalidDisplayAttribute = tidcommon.ServiceError{

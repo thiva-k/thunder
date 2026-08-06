@@ -125,6 +125,8 @@ const translations = {
 
     // Backend error code translations shared across services (per the shared service error envelope).
     'errors.SSE-4030': 'You do not have permission to perform this action in this organization unit.',
+    'errors.DCR-1002': 'This resource is managed declaratively and cannot be modified.',
+    'errors.DCR-1003': 'This resource is managed declaratively and cannot be deleted.',
 
     // External links
     learnMore: 'Learn more',
@@ -818,7 +820,6 @@ const translations = {
     'errors.USRS-1003': 'A user type with the same name already exists.',
     'errors.USRS-1004': 'The user type request is missing required fields or contains invalid data.',
     'errors.USRS-1008': 'This user type is managed by the system and cannot be modified or deleted.',
-    'errors.USRS-1009': 'Too many user types matched this request. Refine your search and try again.',
     'errors.USRS-1011': 'Display attribute must reference an attribute defined in the schema.',
     'errors.USRS-1012': 'Display attribute must reference a string or number type.',
     'errors.USRS-1013': 'Display attribute cannot reference a credential attribute.',
@@ -959,8 +960,8 @@ const translations = {
     'edit.tabs.general': 'General',
     'edit.tabs.schema': 'Schema',
     'edit.unsavedChanges': 'You have unsaved changes',
-    'edit.saveError': 'Failed to save agent type',
     'edit.loadError': 'Failed to load agent type information',
+    'edit.loadErrorTitle': 'Failed to load agent type',
     'edit.notFound': 'Agent type not found',
     'schemaChangeWarning.title': 'Confirm schema changes',
     'schemaChangeWarning.description':
@@ -1004,6 +1005,14 @@ const translations = {
     'removeCredentialDialog.description':
       'Removing the credential flag will cause this field to no longer be hashed or protected. Existing hashed values may become inaccessible. Are you sure you want to proceed?',
     'removeCredentialDialog.confirm': 'Remove Credential',
+
+    // Backend error code translations (per entitytype service error envelope, agent-type wording).
+    'errors.USRS-1002': 'This agent type no longer exists. It may have already been deleted.',
+    'errors.USRS-1004': 'The agent type request is missing required fields or contains invalid data.',
+    'errors.USRS-1008': 'This agent type is managed by the system and cannot be modified or deleted.',
+    'errors.USRS-1011': 'Display attribute must reference an attribute defined in the schema.',
+    'errors.USRS-1012': 'Display attribute must reference a string or number type.',
+    'errors.USRS-1013': 'Display attribute cannot reference a credential attribute.',
   },
 
   // ============================================================================
@@ -2171,6 +2180,7 @@ const translations = {
     'listing.columns.actions': 'Actions',
     'listing.columns.template': 'Type',
     'listing.search.placeholder': 'Search ..',
+    'listing.error': 'Failed to load applications',
     'delete.title': 'Delete Application',
     'delete.message': 'Are you sure you want to delete this application? This action cannot be undone.',
     'delete.disclaimer': 'Warning: All associated data, configurations, and access tokens will be permanently removed.',
@@ -2308,7 +2318,7 @@ const translations = {
     'onboarding.configure.SignInOptions.preConfiguredFlows.toggleLabel': 'Use a pre-configured flow instead',
     'onboarding.configure.SignInOptions.smsOtp': 'SMS OTP',
     'onboarding.configure.SignInOptions.loading': 'Loading...',
-    'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
+    'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods',
     'onboarding.configure.security.promptForCredentials.title': 'Prompt for Credentials',
     'onboarding.configure.security.passwordlessLogin.title': 'Passwordless Login',
     'onboarding.configure.security.socialLogin.title': 'Social Login',
@@ -3021,6 +3031,7 @@ const translations = {
     'edit.advanced.idJag.grantTypeHint': 'The token exchange grant type is enabled together with this feature.',
     'create.success': 'Application created successfully.',
     'create.error': 'Failed to create application. Please try again.',
+    'create.flowGenerationError': 'Failed to generate the authentication flow. Please try again.',
     'update.success': 'Application updated successfully.',
     'update.error': 'Failed to update application. Please try again.',
     'delete.success': 'Application deleted successfully.',
@@ -3030,7 +3041,6 @@ const translations = {
     'errors.APP-1015': 'The certificate value is invalid. Check the JWKS content and try again.',
     'errors.APP-1016': 'The JWKS URL is not valid.',
     'errors.APP-1020': 'An application with this name already exists. Choose a different name.',
-    'errors.APP-1022': 'The JWKS URL must use HTTPS.',
     'errors.APP-1030': 'This application is managed declaratively and cannot be edited or deleted.',
     'errors.APP-1035': 'One or more user attributes are not valid for the selected user types.',
     'errors.APP-1039':
@@ -3050,7 +3060,7 @@ const translations = {
 
     'export.page.title': 'Export Configuration',
     'export.page.loading': 'Loading export configuration...',
-    'export.page.loadError': 'Failed to load export configuration: {{message}}',
+    'export.page.loadError': 'Failed to load export configuration',
 
     'upload.breadcrumb.openProject': 'Import Configuration',
     'upload.title': 'Import Configuration',
@@ -3192,7 +3202,6 @@ const translations = {
     'summary.importTest.failedCount_plural': 'Import test failed for {{count}} resources',
     'summary.importTest.failedWithMessage': 'Import test failed: {{message}}',
     'summary.importTest.failures': 'Import Test failures',
-    'summary.importTest.failed': 'failed',
     'summary.import.tooltip.missingVariables':
       'Cannot import: {{count}} environment variable is missing. Edit the environment variables above to fix.',
     'summary.import.tooltip.missingVariables_plural':
@@ -3207,6 +3216,15 @@ const translations = {
     'summary.import.completedSuccessfully': 'Import completed successfully. {{count}} resource imported.',
     'summary.import.completedSuccessfully_plural': 'Import completed successfully. {{count}} resources imported.',
     'summary.import.failedRetry': 'Import failed. Please try again.',
+    'summary.importTest.itemFailedGeneric': 'This resource failed to import.',
+
+    // Backend error code translations (per importer/export service error envelopes).
+    'errors.IMP-1001': 'The import request is missing required fields or is malformed.',
+    'errors.IMP-1002': 'The uploaded YAML content could not be parsed.',
+    'errors.IMP-1003': 'One or more template variables could not be resolved.',
+    'errors.IMP-1004': 'The resource adapter required for this import is not configured.',
+    'errors.EXP-1001': 'The export request is invalid or malformed.',
+    'errors.EXP-1002': 'No resources were found for export.',
   },
 
   // ============================================================================
@@ -4094,6 +4112,10 @@ const translations = {
     'listing.addLanguage': 'Add Language',
     'listing.columns.language': 'Language',
     'listing.columns.actions': 'Actions',
+    'listing.error': 'Failed to load languages',
+
+    'page.loadErrorTitle': 'Failed to load translations',
+    'page.loadError': 'Failed to load translations',
 
     'language.selectPlaceholder': 'Select a language',
     'language.addOption': 'Add new language...',
@@ -4188,6 +4210,11 @@ const translations = {
       'Are you sure you want to delete all custom translations for "{{language}}"? This action cannot be undone.',
     'delete.disclaimer': 'All custom translations for this language will be permanently removed and reset to defaults.',
     'delete.error': 'Failed to delete translations. Please try again.',
+
+    // Backend error code translations (per i18n service error envelope).
+    'errors.I18N-1001': 'The language code must be a valid BCP 47 locale tag (e.g. en, es, fr-CA).',
+    'errors.I18N-1003': 'The key can only contain letters, numbers, dots, underscores, and hyphens.',
+    'errors.I18N-1005': 'A translation value is required for every key.',
   },
 
   design: {
@@ -4909,6 +4936,19 @@ const translations = {
     'delete.disclaimer': 'Login flows referencing this definition will stop working.',
     'delete.success': 'Presentation definition deleted',
     'delete.error': 'Failed to delete presentation definition',
+
+    // Verification failure (generic - the backend does not yet expose a per-reason code)
+    'verify.failedGeneric': 'The wallet could not complete verification. Please try again.',
+
+    // Backend error code translations (per presentation-definition service error envelope).
+    'errors.VP-2002': 'This presentation definition no longer exists. It may have already been deleted.',
+    'errors.VP-2003': 'A presentation definition with the same handle already exists.',
+    'errors.VP-2005': 'This presentation definition is managed declaratively and cannot be modified or deleted.',
+    'errors.VP-2006':
+      'The number of presentation definitions exceeds the supported limit. Use search to narrow the results.',
+    'errors.VP-2007': 'The specified organization unit is not valid.',
+    'errors.EUDI-1002': 'This verification request is no longer active. Start a new verification.',
+    'errors.EUDI-1004': 'This presentation definition is not registered for verification.',
   },
   'verifiable-credentials': {
     // List page
@@ -5012,6 +5052,14 @@ const translations = {
     'delete.disclaimer': 'Wallets will no longer be able to request this credential.',
     'delete.success': 'Credential template deleted',
     'delete.error': 'Failed to delete credential template',
+
+    // Backend error code translations (per credential-configuration service error envelope).
+    'errors.VCI-2002': 'This credential template no longer exists. It may have already been deleted.',
+    'errors.VCI-2003': 'A credential template with the same handle already exists.',
+    'errors.VCI-2005': 'This credential template is managed declaratively and cannot be modified or deleted.',
+    'errors.VCI-2006':
+      'The number of credential templates exceeds the supported limit. Use search to narrow the results.',
+    'errors.VCI-2007': 'The specified organization unit is not valid.',
   },
 
   // ============================================================================
@@ -5037,6 +5085,9 @@ const translations = {
     'cors.load.error': 'Failed to load allowed origins.',
     'cors.save.success': 'Allowed origins updated.',
     'cors.save.error': 'Failed to update allowed origins.',
+
+    // Backend error code translations (per server-config service error envelope).
+    'errors.SCF-1003': 'One or more origins are not valid. Enter a valid URL or regular expression.',
   },
 } as const;
 

@@ -2082,7 +2082,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByTestId('application-wizard-next-button'));
 
       await waitFor(() => {
-        expect(screen.getByText('Flow generation failed')).toBeInTheDocument();
+        expect(screen.getByText('Failed to generate the authentication flow. Please try again.')).toBeInTheDocument();
       });
     });
   });

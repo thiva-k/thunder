@@ -1,11 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard, UnsavedChangesBar} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
 import {getErrorMessage} from '@thunderid/utils';
-import {Alert, Box, Button, Divider, Skeleton, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {Box, Button, Divider, Skeleton, Stack, TextField, Typography} from '@wso2/oxygen-ui';
 import {InfoIcon, Plus} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
+import {useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import OriginRow from './OriginRow';
 import useGetCorsConfig from '../../api/useGetCorsConfig';
@@ -38,12 +39,27 @@ function OriginDisplayRow({value}: {value: string}): JSX.Element {
 
 export default function CorsSection(): JSX.Element {
   const {t} = useTranslation();
-  const {data, isLoading, error} = useGetCorsConfig();
+  const {data, isLoading, error, refetch} = useGetCorsConfig();
   const updateCors = useUpdateCorsConfig();
   const origins = useAllowedOriginsDraft(data);
 
+  // Resolves an error through the `settings` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `settings:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `settings:${key}`, options),
+    [t],
+  );
+
   const readOnlyOrigins: AllowedOrigin[] = data?.readOnly.allowedOrigins ?? [];
   const hasReadOnlyOrigins: boolean = readOnlyOrigins.length > 0;
+
+  // A previous save error is stale once the draft changes again.
+  const clearSaveError = (): void => {
+    if (updateCors.isError) {
+      updateCors.reset();
+    }
+  };
 
   const handleSave = (): void => {
     if (!origins.validateAll()) {
@@ -68,7 +84,16 @@ export default function CorsSection(): JSX.Element {
       </Stack>
     );
   } else if (error) {
-    body = <Alert severity="error">{getErrorMessage(error, t, 'settings:cors.load.error')}</Alert>;
+    body = (
+      <QueryErrorNotice
+        error={error}
+        t={tForErrors}
+        variant="inline"
+        fallbackKey="settings:cors.load.error"
+        fallbackDefaultValue="Failed to load allowed origins."
+        onRetry={() => void refetch()}
+      />
+    );
   } else {
     body = (
       <>
@@ -85,14 +110,29 @@ export default function CorsSection(): JSX.Element {
               error={origins.errors[index]}
               placeholder={t('settings:cors.originPlaceholder')}
               removeLabel={t('settings:cors.removeOrigin')}
-              onChange={(next) => origins.changeRow(index, next)}
+              onChange={(next) => {
+                clearSaveError();
+                origins.changeRow(index, next);
+              }}
               onBlur={() => origins.blurRow(index)}
-              onRemove={() => origins.removeRow(index)}
+              onRemove={() => {
+                clearSaveError();
+                origins.removeRow(index);
+              }}
             />
           ))}
         </Stack>
 
-        <Button variant="text" color="primary" startIcon={<Plus size={18} />} onClick={origins.addRow} sx={{mt: 2}}>
+        <Button
+          variant="text"
+          color="primary"
+          startIcon={<Plus size={18} />}
+          onClick={() => {
+            clearSaveError();
+            origins.addRow();
+          }}
+          sx={{mt: 2}}
+        >
           {t('settings:cors.addOrigin')}
         </Button>
 
@@ -126,7 +166,15 @@ export default function CorsSection(): JSX.Element {
           savingLabel={t('settings:cors.saving', 'Saving...')}
           isSaving={updateCors.isPending}
           saveDisabled={origins.hasErrors}
-          onReset={origins.reset}
+          error={
+            updateCors.error
+              ? getErrorMessage(updateCors.error, tForErrors, 'cors.save.error', 'Failed to update allowed origins.')
+              : undefined
+          }
+          onReset={() => {
+            clearSaveError();
+            origins.reset();
+          }}
           onSave={handleSave}
         />
       )}

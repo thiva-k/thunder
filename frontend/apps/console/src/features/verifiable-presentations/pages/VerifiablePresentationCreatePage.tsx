@@ -8,6 +8,7 @@ import {
   useHasMultipleOUs,
 } from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -92,6 +93,11 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
     void navigate(RouteConfig.verifiablePresentations.list());
   };
 
+  // A create error is stale once the user changes a field or moves between steps to fix something.
+  const clearCreateError = (): void => {
+    if (createVP.isError) createVP.reset();
+  };
+
   const handleCreate = (): void => {
     createVP.mutate(
       {
@@ -119,11 +125,13 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
       handleCreate();
       return;
     }
+    clearCreateError();
     setStep(stepOrder[stepIndex + 1]);
   };
 
   const handleBack = (): void => {
     if (stepIndex > 0) {
+      clearCreateError();
       setStep(stepOrder[stepIndex - 1]);
     }
   };
@@ -145,7 +153,10 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
         value={value}
         placeholder={placeholder}
         helperText={helperText}
-        onChange={(e: ChangeEvent<HTMLInputElement>): void => setValue(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLInputElement>): void => {
+          clearCreateError();
+          setValue(e.target.value);
+        }}
       />
     </FormControl>
   );
@@ -157,14 +168,23 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
           name={name}
           handle={handle}
           handleEdited={handleEdited}
-          onNameChange={setName}
-          onHandleChange={setHandle}
+          onNameChange={(value: string): void => {
+            clearCreateError();
+            setName(value);
+          }}
+          onHandleChange={(value: string): void => {
+            clearCreateError();
+            setHandle(value);
+          }}
           onHandleEditedChange={setHandleEdited}
           hasMultipleOUs={hasMultipleOUs}
           organizationUnitName={resolvedOrganizationUnit?.name}
           organizationUnitLogoUrl={resolvedOrganizationUnit?.logoUrl}
           isOrganizationUnitLoading={isResolvedOuLoading}
-          onChangeOu={() => setStep('ORGANIZATION_UNIT')}
+          onChangeOu={() => {
+            clearCreateError();
+            setStep('ORGANIZATION_UNIT');
+          }}
         />
       );
     }
@@ -174,7 +194,14 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
           {textField('vp-vct', t('form.vct.label'), vct, setVct, 'urn:eudi:pid:de:1', true, t('form.vct.hint'))}
           <FormControl fullWidth>
             <FormLabel htmlFor="vp-format">{t('form.format.label')}</FormLabel>
-            <Select id="vp-format" value={format} onChange={(e): void => setFormat(e.target.value)}>
+            <Select
+              id="vp-format"
+              value={format}
+              onChange={(e): void => {
+                clearCreateError();
+                setFormat(e.target.value);
+              }}
+            >
               <MenuItem value="dc+sd-jwt">{t('form.format.sdJwt')}</MenuItem>
             </Select>
             <FormHelperText>{t('form.format.hint')}</FormHelperText>
@@ -187,7 +214,13 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
         <Typography variant="body2" color="text.secondary">
           {t('create.claims.help')}
         </Typography>
-        <ClaimsEditor claims={claims} onChange={setClaims} />
+        <ClaimsEditor
+          claims={claims}
+          onChange={(rows: ClaimRow[]): void => {
+            clearCreateError();
+            setClaims(rows);
+          }}
+        />
       </Stack>
     );
   };
@@ -210,7 +243,10 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
           "Choose the organization unit that will own this verifiable presentation. You can't change this once created.",
         )}
         value={effectiveOuId}
-        onChange={setOuId}
+        onChange={(value: string): void => {
+          clearCreateError();
+          setOuId(value);
+        }}
         onBack={close}
         onContinue={handleNext}
         backLabel={t('common:actions.back', 'Back')}
@@ -226,7 +262,13 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
       breadcrumbItems={stepOrder.slice(0, stepIndex + 1).map((s, index, array) => ({
         key: s,
         label: stepLabels[s],
-        onClick: index < array.length - 1 ? () => setStep(s) : undefined,
+        onClick:
+          index < array.length - 1
+            ? () => {
+                clearCreateError();
+                setStep(s);
+              }
+            : undefined,
       }))}
       footer={
         <Stack direction="row" justifyContent="flex-end" spacing={2}>
@@ -263,7 +305,7 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
 
       {createVP.error && (
         <Alert severity="error" sx={{mb: 3}}>
-          {createVP.error.message}
+          {getErrorMessage(createVP.error, t, 'create.error', 'Failed to create presentation definition')}
         </Alert>
       )}
 

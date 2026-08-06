@@ -1,20 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
-import {
-  Alert,
-  AppBreadcrumbs,
-  Box,
-  CircularProgress,
-  IconButton,
-  LinearProgress,
-  Stack,
-  Typography,
-} from '@wso2/oxygen-ui';
+import {AppBreadcrumbs, Box, CircularProgress, IconButton, LinearProgress, Stack, Typography} from '@wso2/oxygen-ui';
 import {X} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
-import {useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
@@ -25,10 +17,9 @@ export default function ExportPage(): JSX.Element {
   const {t} = useTranslation('importExport');
   const navigate = useNavigate();
   const logger = useLogger('ExportPage');
-  const {mutate, data, isPending, isError, error} = useExportConfiguration();
+  const {mutate, data, isPending, error} = useExportConfiguration();
 
-  // Fetch export data on component mount
-  useEffect(() => {
+  const fetchExport = useCallback((): void => {
     mutate({
       applications: ['*'],
       connections: ['*'],
@@ -46,6 +37,11 @@ export default function ExportPage(): JSX.Element {
       serverConfigs: ['*'],
     });
   }, [mutate]);
+
+  // Fetch export data on component mount
+  useEffect(() => {
+    fetchExport();
+  }, [fetchExport]);
 
   // Extract resources and environment variables from API response
   const {resources, environmentVariables} = useMemo(() => {
@@ -122,13 +118,17 @@ export default function ExportPage(): JSX.Element {
             </Box>
           )}
 
-          {isError && (
+          {error && (
             <Box sx={{mb: 3}}>
-              <Alert severity="error">
-                <Typography variant="body2">
-                  {t('export.page.loadError', {message: error?.message ?? t('common:dictionary.unknown')})}
-                </Typography>
-              </Alert>
+              <QueryErrorNotice
+                error={error}
+                t={t}
+                variant="block"
+                title={t('export.page.title')}
+                fallbackKey="export.page.loadError"
+                fallbackDefaultValue="Failed to load export configuration"
+                onRetry={fetchExport}
+              />
             </Box>
           )}
 

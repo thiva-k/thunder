@@ -32,8 +32,5 @@ export default function useDeleteVerifiablePresentation(): UseMutationResult<voi
       });
       showToast(t('delete.success'), 'success');
     },
-    onError: () => {
-      showToast(t('delete.error'), 'error');
-    },
   });
 }

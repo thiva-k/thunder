@@ -23,20 +23,6 @@ var (
 		},
 	}
 
-	// ErrorConfigNotFound is the error returned when the requested config is not found.
-	ErrorConfigNotFound = common.ServiceError{
-		Type: common.ClientErrorType,
-		Code: "SCF-1002",
-		Error: common.I18nMessage{
-			Key:          "error.serverconfigservice.config_not_found",
-			DefaultValue: "Server configuration not found",
-		},
-		ErrorDescription: common.I18nMessage{
-			Key:          "error.serverconfigservice.config_not_found_description",
-			DefaultValue: "The requested server configuration does not exist",
-		},
-	}
-
 	// ErrorInvalidConfigValue is the error returned when the config value is invalid.
 	ErrorInvalidConfigValue = common.ServiceError{
 		Type: common.ClientErrorType,

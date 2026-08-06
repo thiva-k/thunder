@@ -3,6 +3,7 @@
 
 import {useToast, useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -580,7 +581,12 @@ export default function ImportConfigurationSummaryPage(): JSX.Element {
       setDryRunStatus('failed');
       setDryRunMessage(
         t('summary.importTest.failedWithMessage', {
-          message: error instanceof Error ? error.message : t('common:dictionary.unknown'),
+          message: getErrorMessage(
+            error as Error,
+            t,
+            'summary.importTest.itemFailedGeneric',
+            'This resource failed to import.',
+          ),
         }),
       );
       logger.error('Dry-run import failed', {error});
@@ -708,7 +714,6 @@ export default function ImportConfigurationSummaryPage(): JSX.Element {
       await navigate(RouteConfig.home.list());
     })().catch((_error: unknown) => {
       logger.error('Failed to import configuration', {error: _error});
-      showToast(t('summary.import.failedRetry'), 'error');
     });
   };
 
@@ -962,7 +967,12 @@ export default function ImportConfigurationSummaryPage(): JSX.Element {
                             <Typography key={JSON.stringify(result)} variant="caption" color="error.main">
                               {result.resourceType}
                               {result.resourceName ? ` (${result.resourceName})` : ''}:{' '}
-                              {result.message ?? t('summary.importTest.failed')}
+                              {t(`errors.${result.code}`, {
+                                defaultValue: t(
+                                  'summary.importTest.itemFailedGeneric',
+                                  'This resource failed to import.',
+                                ),
+                              })}
                             </Typography>
                           ))}
                         </Stack>
@@ -974,35 +984,47 @@ export default function ImportConfigurationSummaryPage(): JSX.Element {
             </Box>
           </Stack>
 
-          <Stack direction="row" spacing={2} justifyContent="flex-start">
-            <Tooltip
-              title={
-                missingEnvVariables.length > 0
-                  ? t('summary.import.tooltip.missingVariables', {count: missingEnvVariables.length})
-                  : !configContent
-                    ? t('summary.import.tooltip.configUnavailable')
-                    : effectiveDryRunStatus !== 'passed'
-                      ? t('summary.import.tooltip.runTestFirst')
-                      : ''
-              }
-              arrow
-              placement="top"
-            >
-              <span>
-                <Button
-                  variant="contained"
-                  onClick={handleProceed}
-                  disabled={
-                    missingEnvVariables.length > 0 ||
-                    !configContent ||
-                    effectiveDryRunStatus !== 'passed' ||
-                    importMutation.isPending
-                  }
-                >
-                  {importMutation.isPending ? t('summary.import.importing') : t('summary.import.action')}
-                </Button>
-              </span>
-            </Tooltip>
+          <Stack spacing={2}>
+            {importMutation.isError && (
+              <Alert severity="error">
+                {getErrorMessage(
+                  importMutation.error,
+                  t,
+                  'summary.import.failedRetry',
+                  'Import failed. Please try again.',
+                )}
+              </Alert>
+            )}
+            <Stack direction="row" spacing={2} justifyContent="flex-start">
+              <Tooltip
+                title={
+                  missingEnvVariables.length > 0
+                    ? t('summary.import.tooltip.missingVariables', {count: missingEnvVariables.length})
+                    : !configContent
+                      ? t('summary.import.tooltip.configUnavailable')
+                      : effectiveDryRunStatus !== 'passed'
+                        ? t('summary.import.tooltip.runTestFirst')
+                        : ''
+                }
+                arrow
+                placement="top"
+              >
+                <span>
+                  <Button
+                    variant="contained"
+                    onClick={handleProceed}
+                    disabled={
+                      missingEnvVariables.length > 0 ||
+                      !configContent ||
+                      effectiveDryRunStatus !== 'passed' ||
+                      importMutation.isPending
+                    }
+                  >
+                    {importMutation.isPending ? t('summary.import.importing') : t('summary.import.action')}
+                  </Button>
+                </span>
+              </Tooltip>
+            </Stack>
           </Stack>
         </Box>
       </Box>

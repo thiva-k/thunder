@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard, UnsavedChangesBar} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
 import {OrganizationUnitTreePicker, useHasMultipleOUs} from '@thunderid/configure-organization-units';
 import type {TrustAnchor, VerifiablePresentation} from '@thunderid/configure-verifiable-presentations';
 import {
@@ -57,6 +57,10 @@ export interface VerifiablePresentationFormProps {
   onSubmit: (data: CreateVerifiablePresentationRequest) => void;
   /** When provided (edit mode), renders a Danger Zone delete action in the General tab. */
   onDelete?: () => void;
+  /** Inline error to show above the save/reset actions when the last save attempt failed. */
+  error?: string;
+  /** Called whenever a field changes, so a stale save error can be cleared. */
+  onErrorClear?: () => void;
 }
 
 interface TabPanelProps {
@@ -87,6 +91,8 @@ export default function VerifiablePresentationForm({
   submitLabel,
   onSubmit,
   onDelete = undefined,
+  error = undefined,
+  onErrorClear = undefined,
 }: VerifiablePresentationFormProps): JSX.Element {
   const {t} = useTranslation('verifiable-presentations');
 
@@ -101,7 +107,12 @@ export default function VerifiablePresentationForm({
   const [enforceTrustedIssuer, setEnforceTrustedIssuer] = useState<boolean>(initial?.enforceTrustedIssuer ?? false);
   const [trustedAuthorities, setTrustedAuthorities] = useState<string[]>(initial?.trustedAuthorities ?? []);
 
-  const {data: trustAnchors = [], isLoading: trustAnchorsLoading} = useGetTrustAnchors();
+  const {
+    data: trustAnchors = [],
+    isLoading: trustAnchorsLoading,
+    error: trustAnchorsError,
+    refetch: refetchTrustAnchors,
+  } = useGetTrustAnchors();
 
   // Issuer-trust enforcement is only meaningful when trust anchors exist; without
   // any, the verifier rejects every presentation, so the toggle is disabled. Guard
@@ -202,6 +213,7 @@ export default function VerifiablePresentationForm({
     setClaims(definitionToClaimRows(initial));
     setEnforceTrustedIssuer(initial?.enforceTrustedIssuer ?? false);
     setTrustedAuthorities(initial?.trustedAuthorities ?? []);
+    onErrorClear?.();
   };
 
   const text = (
@@ -221,7 +233,10 @@ export default function VerifiablePresentationForm({
         value={value}
         placeholder={placeholder}
         helperText={helperText}
-        onChange={(e: ChangeEvent<HTMLInputElement>): void => setValue(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLInputElement>): void => {
+          onErrorClear?.();
+          setValue(e.target.value);
+        }}
       />
     </FormControl>
   );
@@ -314,7 +329,10 @@ export default function VerifiablePresentationForm({
                   <OrganizationUnitTreePicker
                     id="vp-ou-picker"
                     value={effectiveOuId}
-                    onChange={setOuId}
+                    onChange={(value: string): void => {
+                      onErrorClear?.();
+                      setOuId(value);
+                    }}
                     maxHeight={320}
                     helperText={t('form.organizationUnit.pickerHint')}
                   />
@@ -411,7 +429,14 @@ export default function VerifiablePresentationForm({
             {text('vp-vct', t('form.vct.label'), vct, setVct, 'urn:eudi:pid:de:1', true, t('form.vct.hint'))}
             <FormControl fullWidth>
               <FormLabel htmlFor="vp-format">{t('form.format.label')}</FormLabel>
-              <Select id="vp-format" value={format} onChange={(e): void => setFormat(e.target.value)}>
+              <Select
+                id="vp-format"
+                value={format}
+                onChange={(e): void => {
+                  onErrorClear?.();
+                  setFormat(e.target.value);
+                }}
+              >
                 <MenuItem value="dc+sd-jwt">{t('form.format.sdJwt')}</MenuItem>
               </Select>
               <FormHelperText>{t('form.format.hint')}</FormHelperText>
@@ -421,19 +446,36 @@ export default function VerifiablePresentationForm({
       </TabPanel>
 
       <TabPanel value={tab} index={2}>
-        <ClaimsEditor claims={claims} onChange={setClaims} />
+        <ClaimsEditor
+          claims={claims}
+          onChange={(rows: ClaimRow[]): void => {
+            onErrorClear?.();
+            setClaims(rows);
+          }}
+        />
       </TabPanel>
 
       <TabPanel value={tab} index={3}>
         <SettingsCard title={t('form.issuerTrust.title')} description={t('form.issuerTrust.description')}>
           <Stack spacing={3}>
+            {trustAnchorsError && (
+              <QueryErrorNotice
+                error={trustAnchorsError}
+                t={t}
+                variant="inline"
+                onRetry={() => void refetchTrustAnchors()}
+              />
+            )}
             <Box>
               <FormControlLabel
                 control={
                   <Switch
                     checked={effectiveEnforce}
                     disabled={trustAnchorsLoading || noTrustAnchors}
-                    onChange={(e: ChangeEvent<HTMLInputElement>): void => setEnforceTrustedIssuer(e.target.checked)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>): void => {
+                      onErrorClear?.();
+                      setEnforceTrustedIssuer(e.target.checked);
+                    }}
                   />
                 }
                 label={t('form.issuerTrust.enforce.label')}
@@ -453,9 +495,10 @@ export default function VerifiablePresentationForm({
                 value={trustAnchors.filter((anchor: TrustAnchor): boolean => trustedAuthorities.includes(anchor.name))}
                 isOptionEqualToValue={(option: TrustAnchor, val: TrustAnchor): boolean => option.name === val.name}
                 getOptionLabel={(option: TrustAnchor): string => option.name}
-                onChange={(_event: SyntheticEvent, newValue: TrustAnchor[]): void =>
-                  setTrustedAuthorities(newValue.map((anchor: TrustAnchor): string => anchor.name))
-                }
+                onChange={(_event: SyntheticEvent, newValue: TrustAnchor[]): void => {
+                  onErrorClear?.();
+                  setTrustedAuthorities(newValue.map((anchor: TrustAnchor): string => anchor.name));
+                }}
                 renderOption={(props, option: TrustAnchor) => (
                   <li {...props} key={option.name}>
                     <ListItemText
@@ -495,6 +538,7 @@ export default function VerifiablePresentationForm({
           savingLabel={t('common:status.saving')}
           isSaving={submitting}
           saveDisabled={!valid}
+          error={error}
           onReset={handleReset}
           onSave={handleSubmit}
         />
