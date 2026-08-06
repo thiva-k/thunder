@@ -3786,6 +3786,10 @@ const translations = {
     'core.validation.signOut.confirmInvalidTarget':
       'Sign-out button <code>{{id}}</code> does not lead to a session sign-out step, so it will not sign the user out. Connect it to one, or change its action.',
 
+    // Validation messages - rich text links
+    'core.validation.richText.actionNotConnected':
+      'Link <code>{{id}}</code> is not connected to a step, so clicking it will fail at runtime. Connect it to the step it should open, or turn off "Use as an interactive link".',
+
     // Elements - rich text
     'core.elements.richText.placeholder': 'Enter text here...',
     'core.elements.richText.resolvedI18nValue': 'Resolved i18n value',

@@ -2055,5 +2055,97 @@ describe('reactFlowTransformer', () => {
       expect(callNode.onSuccess).toBe('success-1');
       expect(callNode.onFailure).toBe('failure-1');
     });
+
+    describe('Rich Text Action Serialization', () => {
+      const richText = (action: unknown): Element =>
+        ({
+          id: 'rt-1',
+          type: ElementTypes.RichText,
+          category: ElementCategories.Display,
+          action,
+          label: '<p><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        }) as unknown as Element;
+
+      it('serialises a rich text whose action was toggled off', () => {
+        // The panel writes an explicit `null` when the toggle goes off. Reading `ref` off it
+        // threw and took the whole save down with it.
+        const canvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [richText(null)]} as StepData)],
+          edges: [],
+        };
+
+        const result = transformReactFlow(canvasData);
+        const viewNode = result.nodes.find((n) => n.id === 'view-1') as unknown as {
+          meta?: {components?: Record<string, unknown>[]};
+          prompts?: unknown[];
+        };
+
+        expect(viewNode.meta?.components?.[0].action).toBeUndefined();
+        expect(viewNode.prompts ?? []).toEqual([]);
+      });
+
+      it('serialises an empty ref as the label sentinel, on both the component and the prompt', () => {
+        // The runtime matches the clicked anchor's sentinel against the component's `action.ref`
+        // and looks the prompt up by the same value, so all three must agree.
+        const canvasData = {
+          nodes: [
+            createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [richText({ref: ''})]} as StepData),
+            createNode('call-1', StepTypes.Call),
+          ],
+          edges: [createEdge('e-1', 'view-1', 'call-1', `rt-1${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`)],
+        };
+
+        const result = transformReactFlow(canvasData);
+        const viewNode = result.nodes.find((n) => n.id === 'view-1') as unknown as {
+          meta?: {components?: Record<string, unknown>[]};
+          prompts?: {action: {ref: string; nextNode: string}}[];
+        };
+
+        expect(viewNode.meta?.components?.[0].action).toEqual({ref: 'action_recovery'});
+        expect(viewNode.prompts?.[0].action).toEqual({ref: 'action_recovery', nextNode: 'call-1'});
+        expect(viewNode.meta?.components?.[0].label).toContain('data-action-ref="action_recovery"');
+      });
+
+      it('falls back to the component id when the label carries no sentinel', () => {
+        const withoutSentinel = {...richText({ref: ''}), label: '<p><a href="#">Reset</a></p>'} as unknown as Element;
+        const canvasData = {
+          nodes: [
+            createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [withoutSentinel]} as StepData),
+            createNode('call-1', StepTypes.Call),
+          ],
+          edges: [createEdge('e-1', 'view-1', 'call-1', `rt-1${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`)],
+        };
+
+        const result = transformReactFlow(canvasData);
+        const viewNode = result.nodes.find((n) => n.id === 'view-1') as unknown as {
+          meta?: {components?: Record<string, unknown>[]};
+          prompts?: {action: {ref: string; nextNode: string}}[];
+        };
+
+        expect(viewNode.meta?.components?.[0].action).toEqual({ref: 'rt-1'});
+        expect(viewNode.prompts?.[0].action).toEqual({ref: 'rt-1', nextNode: 'call-1'});
+      });
+
+      it('serialises an action object that carries no ref of its own', () => {
+        // A prompt is emitted for any present action, so the component has to be given the
+        // same resolved ref, otherwise the prompt is unreachable at runtime.
+        const canvasData = {
+          nodes: [
+            createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [richText({})]} as StepData),
+            createNode('call-1', StepTypes.Call),
+          ],
+          edges: [createEdge('e-1', 'view-1', 'call-1', `rt-1${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`)],
+        };
+
+        const result = transformReactFlow(canvasData);
+        const viewNode = result.nodes.find((n) => n.id === 'view-1') as unknown as {
+          meta?: {components?: Record<string, unknown>[]};
+          prompts?: {action: {ref: string; nextNode: string}}[];
+        };
+
+        expect(viewNode.meta?.components?.[0].action).toEqual({ref: 'action_recovery'});
+        expect(viewNode.prompts?.[0].action).toEqual({ref: 'action_recovery', nextNode: 'call-1'});
+      });
+    });
   });
 });
