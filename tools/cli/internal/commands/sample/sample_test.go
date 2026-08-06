@@ -130,12 +130,14 @@ func TestSampleServicePorts(t *testing.T) {
 func TestWriteResources(t *testing.T) {
 	thunderRoot := t.TempDir()
 	yamlPath := filepath.Join(t.TempDir(), "resources.yaml")
+	// Sample configs declare resource_type as a plain key, the same form the server
+	// reads it in.
 	content := "" +
-		"# resource_type: application\n" +
+		"resource_type: application\n" +
 		"id: wayfinder-app\n" +
 		"clientId: \"{{.WAYFINDER_CLIENT_ID}}\"\n" +
 		"---\n" +
-		"# resource_type: user_type\n" +
+		"resource_type: user_type\n" +
 		"id: wayfinder-customer-type\n" +
 		"name: Customer\n"
 	if err := os.WriteFile(yamlPath, []byte(content), 0o644); err != nil {
@@ -167,5 +169,23 @@ func TestWriteResources(t *testing.T) {
 	// The legacy repository/resources path must no longer be used.
 	if _, err := os.Stat(filepath.Join(thunderRoot, "repository")); !os.IsNotExist(err) {
 		t.Errorf("resources written to legacy repository/ path")
+	}
+}
+
+// A commented-out marker is not a supported declaration and must be ignored.
+func TestWriteResourcesCommentedResourceType(t *testing.T) {
+	thunderIDRoot := t.TempDir()
+	yamlPath := filepath.Join(t.TempDir(), "resources.yaml")
+	content := "# resource_type: application\nid: legacy-app\n"
+	if err := os.WriteFile(yamlPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write yaml: %v", err)
+	}
+
+	if err := writeResources(yamlPath, nil, thunderIDRoot); err != nil {
+		t.Fatalf("writeResources: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(thunderIDRoot, "config", "resources")); !os.IsNotExist(err) {
+		t.Error("commented resource_type must not be written")
 	}
 }

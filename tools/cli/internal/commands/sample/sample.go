@@ -372,7 +372,7 @@ func writeResources(yamlPath string, vars map[string]string, thunderRoot string)
 	content := substituteVars(string(raw), vars)
 	docs := splitYAML(content)
 
-	reResourceType := regexp.MustCompile(`(?m)^#\s*resource_type:\s*(\S+)`)
+	reResourceType := regexp.MustCompile(`(?m)^resource_type:\s*(\S+)`)
 	reID := regexp.MustCompile(`(?m)^(?:id|handle):\s*(\S+)`)
 
 	for i, doc := range docs {
