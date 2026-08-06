@@ -972,6 +972,33 @@ func (suite *ClientAuthTestSuite) TestAuthenticate_PrivateKeyJWT_InvalidJSONPayl
 	assert.Equal(suite.T(), "Invalid client assertion", authErr.ErrorDescription)
 }
 
+func (suite *ClientAuthTestSuite) TestAuthenticate_PrivateKeyJWT_MissingClientAuth() {
+	// client_id only, no assertion/secret/basic auth, for a confidential client.
+	mockApp := &providers.OAuthClient{
+		ClientID:                testClientID,
+		TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodPrivateKeyJWT,
+		GrantTypes:              []providers.GrantType{providers.GrantTypeAuthorizationCode},
+	}
+	suite.mockInboundClient.On("GetOAuthClientByClientID", mock.Anything, testClientID).
+		Return(mockApp, nil).Once()
+
+	formData := url.Values{}
+	formData.Set("client_id", testClientID)
+
+	req, _ := http.NewRequest("POST", "/test", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	_ = req.ParseForm()
+
+	clientInfo, authErr := authenticate(
+		req.Context(), req,
+		suite.actorProvider(), suite.mockAuthnProvider, suite.mockJwtService, testIssuer)
+
+	assert.NotNil(suite.T(), authErr)
+	assert.Nil(suite.T(), clientInfo)
+	assert.Equal(suite.T(), errClientAuthRequired, authErr)
+	assert.Equal(suite.T(), constants.ErrorInvalidClient, authErr.ErrorCode)
+}
+
 // validateClientAssertion tests
 
 func (suite *ClientAuthTestSuite) TestValidateClientAssertion_NilCertificate() {

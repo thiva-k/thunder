@@ -693,12 +693,12 @@ func (ts *IDJAGConsumptionTestSuite) TestIDJAGConsumption_PublicClientConfigReje
 // TestIDJAGConsumption_UnauthenticatedClientRejected verifies that the jwt-bearer grant
 // rejects a request at the token endpoint that omits client authentication entirely for a
 // client registered as confidential (client_secret_basic): the client authentication layer
-// rejects it as unauthorized_client before the grant handler is ever reached.
+// rejects it as invalid_client before the grant handler is ever reached.
 func (ts *IDJAGConsumptionTestSuite) TestIDJAGConsumption_UnauthenticatedClientRejected() {
 	resp, statusCode, err := ts.consumeIDJAG(ts.buildIDJAGAssertion(), nil, consumptionClientID, "")
 	ts.Require().NoError(err)
-	ts.Equal(http.StatusBadRequest, statusCode)
-	ts.Equal("unauthorized_client", resp.Error)
+	ts.Equal(http.StatusUnauthorized, statusCode)
+	ts.Equal("invalid_client", resp.Error)
 }
 
 func (ts *IDJAGConsumptionTestSuite) TestIDJAGConsumption_MissingSubject() {
