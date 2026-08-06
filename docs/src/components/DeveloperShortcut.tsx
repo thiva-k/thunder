@@ -3,14 +3,13 @@
 
 import Link from '@docusaurus/Link';
 import {useWindowSize} from '@docusaurus/theme-common';
-import {AndroidLogo, FlutterLogo} from '@thunderid/components';
+import {AndroidLogo, FlutterLogo, LangChainLogo} from '@thunderid/components';
 import {Box, Chip, Typography} from '@wso2/oxygen-ui';
 import {Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
 import React, {useCallback} from 'react';
 import ExpressLogo from './icons/ExpressLogo';
 import IOSLogo from './icons/IOSLogo';
 import JavaScriptLogo from './icons/JavaScriptLogo';
-import LangChainLogo from './icons/LangChainLogo';
 import NextLogo from './icons/NextLogo';
 import NodeLogo from './icons/NodeLogo';
 import NuxtLogo from './icons/NuxtLogo';

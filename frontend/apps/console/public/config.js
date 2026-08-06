@@ -83,6 +83,7 @@ window.__THUNDERID_RUNTIME_CONFIG__ = {
       'applications.templates.flutter.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/flutter/redirect-based.txt',
       'applications.templates.mcpClient.docs': 'getting-started/connect-your-mcp/python/',
+      'agents.quickstarts.langchain.docs': 'getting-started/connect-your-agent/langchain/',
     },
   },
   client: {

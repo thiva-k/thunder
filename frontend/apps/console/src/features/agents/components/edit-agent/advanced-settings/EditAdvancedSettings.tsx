@@ -4,8 +4,10 @@
 import {OAuth2GrantTypes} from '@thunderid/configure-applications';
 import type {OAuth2Config} from '@thunderid/configure-applications';
 import {FormControlLabel, Stack, Switch} from '@wso2/oxygen-ui';
+import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import AllowedUserTypesSection from './AllowedUserTypesSection';
+import DangerZoneSection from './DangerZoneSection';
 import OperationModesSection from './OperationModesSection';
 import OwnerSection from './OwnerSection';
 import SecuritySection from './SecuritySection';
@@ -14,12 +16,14 @@ import AudienceSection from '../../../../applications/components/edit-applicatio
 import {applyGrantTypesChange} from '../../../../applications/utils/oauth2Rules';
 import {DELEGATED_ONLY_GRANTS} from '../../../constants/delegationGrants';
 import type {Agent, AgentInboundAuthConfig, OAuthAgentConfig} from '../../../models/agent';
+import AgentDeleteDialog from '../../AgentDeleteDialog';
 
 interface EditAdvancedSettingsProps {
   agent: Agent;
   editedAgent: Partial<Agent>;
   oauth2Config?: OAuthAgentConfig;
   onFieldChange: (field: keyof Agent, value: unknown) => void;
+  onDeleteSuccess?: () => void;
 }
 
 export default function EditAdvancedSettings({
@@ -27,8 +31,10 @@ export default function EditAdvancedSettings({
   editedAgent,
   oauth2Config = undefined,
   onFieldChange,
+  onDeleteSuccess = undefined,
 }: EditAdvancedSettingsProps) {
   const {t} = useTranslation();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const isUnlocked = oauth2Config?.grantTypes?.includes(OAuth2GrantTypes.AUTHORIZATION_CODE) ?? false;
 
   const handleOAuth2ConfigChange = (updates: Partial<OAuth2Config>) => {
@@ -106,6 +112,14 @@ export default function EditAdvancedSettings({
           disabled={agent.isReadOnly}
         />
       )}
+      {!agent.isReadOnly && <DangerZoneSection onDeleteClick={() => setDeleteDialogOpen(true)} />}
+
+      <AgentDeleteDialog
+        open={deleteDialogOpen}
+        agentId={agent.id}
+        onClose={() => setDeleteDialogOpen(false)}
+        onSuccess={onDeleteSuccess}
+      />
     </Stack>
   );
 }

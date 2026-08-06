@@ -68,14 +68,8 @@ vi.mock('../../api/useUpdateAgent', () => ({
 }));
 
 // Mock heavy child components — focus on page wiring.
-vi.mock('../../components/edit-agent/general/EditGeneralSettings', () => ({
-  default: ({onDeleteSuccess}: {onDeleteSuccess?: () => void}) => (
-    <div data-testid="edit-general">
-      <button type="button" onClick={() => onDeleteSuccess?.()}>
-        Delete Successful
-      </button>
-    </div>
-  ),
+vi.mock('../../components/edit-agent/overview/AgentOverview', () => ({
+  default: () => <div data-testid="agent-overview" />,
 }));
 
 vi.mock('../../components/edit-agent/attributes/EditAgentAttributes', () => ({
@@ -105,7 +99,13 @@ vi.mock('../../components/edit-agent/access/EditAccessSettings', () => ({
 }));
 
 vi.mock('../../components/edit-agent/advanced-settings/EditAdvancedSettings', () => ({
-  default: () => <div data-testid="edit-advanced" />,
+  default: ({onDeleteSuccess}: {onDeleteSuccess?: () => void}) => (
+    <div data-testid="edit-advanced">
+      <button type="button" onClick={() => onDeleteSuccess?.()}>
+        Delete Successful
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -225,12 +225,13 @@ describe('AgentEditPage', () => {
   });
 
   describe('Tabs', () => {
-    it('renders General, Attributes, and Access tabs by default', () => {
+    it('renders Overview, Attributes, Access, and Advanced tabs by default', () => {
       render(<AgentEditPage />);
 
-      expect(screen.getByRole('tab', {name: 'General'})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: 'Overview'})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'Attributes'})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: /Access/i})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /Advanced/i})).toBeInTheDocument();
     });
 
     it('does not render icons on any tab', () => {
@@ -247,14 +248,13 @@ describe('AgentEditPage', () => {
       expect(screen.getByRole('tab', {name: /Credentials/i})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'Flows'})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'Tokens'})).toBeInTheDocument();
-      expect(screen.getByRole('tab', {name: /Advanced/i})).toBeInTheDocument();
     });
 
-    it('orders tabs as General, Attributes, Credentials, Access, Flows, Tokens, Advanced', () => {
+    it('orders tabs as Overview, Attributes, Credentials, Access, Flows, Tokens, Advanced', () => {
       render(<AgentEditPage />);
 
       const tabNames = screen.getAllByRole('tab').map((tab) => tab.textContent);
-      expect(tabNames).toEqual(['General', 'Attributes', 'Credentials', 'Access', 'Flows', 'Tokens', 'Advanced']);
+      expect(tabNames).toEqual(['Overview', 'Attributes', 'Credentials', 'Access', 'Flows', 'Tokens', 'Advanced']);
     });
 
     it('switches tabs when clicked', async () => {
@@ -280,9 +280,9 @@ describe('AgentEditPage', () => {
       expect(screen.queryByRole('tab', {name: /Credentials/i})).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', {name: 'Flows'})).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', {name: 'Tokens'})).not.toBeInTheDocument();
-      expect(screen.queryByRole('tab', {name: /Advanced/i})).not.toBeInTheDocument();
-      // Access still renders — groups/roles apply regardless of OAuth.
+      // Access and Advanced still render — groups/roles and owner/danger-zone apply regardless of OAuth.
       expect(screen.getByRole('tab', {name: /Access/i})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /Advanced/i})).toBeInTheDocument();
     });
   });
 
@@ -383,10 +383,11 @@ describe('AgentEditPage', () => {
   });
 
   describe('Delete success', () => {
-    it('navigates back to /agents when EditGeneralSettings reports onDeleteSuccess', async () => {
+    it('navigates back to /agents when EditAdvancedSettings reports onDeleteSuccess', async () => {
       const user = userEvent.setup();
       render(<AgentEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: /Advanced/i}));
       await user.click(screen.getByText('Delete Successful'));
 
       await waitFor(() => {

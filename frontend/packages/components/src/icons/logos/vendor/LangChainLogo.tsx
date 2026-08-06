@@ -1,7 +1,14 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-export default function LangChainLogo({size = 64}: {size?: number}) {
+import type {JSX} from 'react';
+
+export interface LangChainLogoProps {
+  size?: number;
+}
+
+/** LangChain's logo, used to identify LangChain quickstart guides. */
+export default function LangChainLogo({size = 64}: LangChainLogoProps): JSX.Element {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path
