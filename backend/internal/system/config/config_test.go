@@ -824,6 +824,81 @@ func (suite *ConfigTestSuite) TestMergeStructs_PrimitiveTypes() {
 	assert.Equal(suite.T(), 2.71, base.Float64Field)         // Overridden
 }
 
+// TestMergeConfigs_BoolPointerOverride guards the fix for the bug where plain bool config fields
+// defaulting to true in default.json could not be overridden to false via deployment.yaml (a user
+// false was indistinguishable from the zero value and silently dropped). The affected fields use
+// *bool so an explicit false overrides while an absent value keeps the default.
+func (suite *ConfigTestSuite) TestMergeConfigs_BoolPointerOverride() {
+	newBase := func() *Config {
+		return &Config{
+			Notification: NotificationConfig{OTP: OTPConfig{UseNumericOnly: boolPtr(true)}},
+			OpenID4VP:    OpenID4VPConfig{EnforceKeyBinding: boolPtr(true)},
+			OAuth: engineconfig.OAuthConfig{
+				RefreshToken:    engineconfig.RefreshTokenConfig{RevokePreviousOnRenew: boolPtr(true)},
+				TokenRevocation: engineconfig.OAuthTokenRevocationConfig{Enabled: boolPtr(true)},
+				Logout:          engineconfig.LogoutConfig{Enabled: boolPtr(true)},
+				Revocation: engineconfig.RevocationConfig{TokenFamily: engineconfig.TokenFamilyRevocationConfig{
+					OnRefreshReplay:  boolPtr(true),
+					OnExplicitRevoke: boolPtr(true),
+					OnCodeReplay:     boolPtr(true),
+				}},
+			},
+			Server: engineconfig.ServerConfig{SecurityConfig: engineconfig.SecurityConfig{
+				TokenRevocation: engineconfig.TokenRevocationConfig{Enabled: boolPtr(true)},
+			}},
+		}
+	}
+
+	suite.Run("explicit false overrides the true default", func() {
+		base := newBase()
+		user := &Config{
+			Notification: NotificationConfig{OTP: OTPConfig{UseNumericOnly: boolPtr(false)}},
+			OpenID4VP:    OpenID4VPConfig{EnforceKeyBinding: boolPtr(false)},
+			OAuth: engineconfig.OAuthConfig{
+				RefreshToken:    engineconfig.RefreshTokenConfig{RevokePreviousOnRenew: boolPtr(false)},
+				TokenRevocation: engineconfig.OAuthTokenRevocationConfig{Enabled: boolPtr(false)},
+				Logout:          engineconfig.LogoutConfig{Enabled: boolPtr(false)},
+				Revocation: engineconfig.RevocationConfig{TokenFamily: engineconfig.TokenFamilyRevocationConfig{
+					OnRefreshReplay:  boolPtr(false),
+					OnExplicitRevoke: boolPtr(false),
+					OnCodeReplay:     boolPtr(false),
+				}},
+			},
+			Server: engineconfig.ServerConfig{SecurityConfig: engineconfig.SecurityConfig{
+				TokenRevocation: engineconfig.TokenRevocationConfig{Enabled: boolPtr(false)},
+			}},
+		}
+
+		mergeConfigs(base, user)
+
+		assert.False(suite.T(), base.Notification.OTP.UsesNumericOnly())
+		assert.False(suite.T(), base.OpenID4VP.EnforceKeyBindingEnabled())
+		assert.False(suite.T(), base.OAuth.RefreshToken.RevokePreviousOnRenewEnabled())
+		assert.False(suite.T(), base.OAuth.TokenRevocation.IsEnabled())
+		assert.False(suite.T(), base.OAuth.Logout.IsEnabled())
+		assert.False(suite.T(), base.OAuth.Revocation.TokenFamily.OnRefreshReplayEnabled())
+		assert.False(suite.T(), base.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
+		assert.False(suite.T(), base.OAuth.Revocation.TokenFamily.OnCodeReplayEnabled())
+		assert.False(suite.T(), base.Server.SecurityConfig.TokenRevocation.IsEnabled())
+	})
+
+	suite.Run("absent value keeps the true default", func() {
+		base := newBase()
+
+		mergeConfigs(base, &Config{})
+
+		assert.True(suite.T(), base.Notification.OTP.UsesNumericOnly())
+		assert.True(suite.T(), base.OpenID4VP.EnforceKeyBindingEnabled())
+		assert.True(suite.T(), base.OAuth.RefreshToken.RevokePreviousOnRenewEnabled())
+		assert.True(suite.T(), base.OAuth.TokenRevocation.IsEnabled())
+		assert.True(suite.T(), base.OAuth.Logout.IsEnabled())
+		assert.True(suite.T(), base.OAuth.Revocation.TokenFamily.OnRefreshReplayEnabled())
+		assert.True(suite.T(), base.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
+		assert.True(suite.T(), base.OAuth.Revocation.TokenFamily.OnCodeReplayEnabled())
+		assert.True(suite.T(), base.Server.SecurityConfig.TokenRevocation.IsEnabled())
+	})
+}
+
 func (suite *ConfigTestSuite) TestMergeStructs_SliceHandling() {
 	// Test non-empty slice override
 	type SliceConfig struct {
@@ -1477,7 +1552,7 @@ flow:
 func (suite *ConfigTestSuite) TestOTPConfig_Validate_Defaults() {
 	cfg := &OTPConfig{
 		Length:                6,
-		UseNumericOnly:        true,
+		UseNumericOnly:        boolPtr(true),
 		ValidityPeriodSeconds: 120,
 	}
 	assert.NoError(suite.T(), cfg.Validate())
