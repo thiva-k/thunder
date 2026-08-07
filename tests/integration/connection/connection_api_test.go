@@ -378,6 +378,17 @@ func (s *ConnectionAPITestSuite) TestUsagesOnIdPInstance() {
 	s.Equal(http.StatusOK, res.status, string(res.body))
 }
 
+func (s *ConnectionAPITestSuite) TestUsagesOnSMSInstance() {
+	created := s.createConnection("sms-gateway", smsGatewayConnectionRequest{
+		Name: "Usages SMS Gateway", URL: "https://sms.example.com/usages", HTTPMethod: "POST",
+	})
+	defer s.deleteConnection("sms-gateway", created.ID)
+
+	res, err := doRequest(http.MethodGet, "/connections/sms-gateway/"+created.ID+"/usages", nil)
+	s.Require().NoError(err)
+	s.Equal(http.StatusOK, res.status, string(res.body))
+}
+
 // --- Listing: pagination, category filtering, and negatives ---
 
 func (s *ConnectionAPITestSuite) TestListConnectionsFiltersByCategory() {

@@ -607,3 +607,52 @@ func (s *SMSHandlerTestSuite) TestDeleteSuccess() {
 	s.handler.deleteSMSInstance(stubProvider)(rr, req)
 	s.Equal(http.StatusNoContent, rr.Code)
 }
+
+func (s *SMSHandlerTestSuite) TestUsagesEmptyID() {
+	req := httptest.NewRequest(http.MethodGet, "/connections/twilio//usages", nil)
+	rr := httptest.NewRecorder()
+	s.handler.usagesSMSInstance(stubProvider)(rr, req)
+	s.Equal(http.StatusBadRequest, rr.Code)
+	s.mockNotif.AssertNotCalled(s.T(), "GetSenderUsages", mock.Anything, mock.Anything)
+}
+
+func (s *SMSHandlerTestSuite) TestUsagesServiceError() {
+	s.mockNotif.On("GetSender", mock.Anything, "missing").
+		Return((*ncommon.NotificationSenderDTO)(nil), &notification.ErrorSenderNotFound)
+
+	req := httptest.NewRequest(http.MethodGet, "/connections/twilio/missing/usages", nil)
+	req.SetPathValue("id", "missing")
+	rr := httptest.NewRecorder()
+	s.handler.usagesSMSInstance(stubProvider)(rr, req)
+	s.Equal(http.StatusNotFound, rr.Code)
+}
+
+func (s *SMSHandlerTestSuite) TestUsagesSuccess() {
+	total := 1
+	usages := &resourcedependency.DependenciesResponse{
+		TotalResults: &total,
+		Count:        1,
+		Summary:      map[string]int{"flow": 1},
+		Usages: []resourcedependency.ResourceDependency{
+			{ResourceType: "flow", ID: "flow-1", DisplayName: "SMS OTP", BehaviorOnDelete: "restrict"},
+		},
+	}
+	s.mockNotif.On("GetSender", mock.Anything, "tw-1").Return(&ncommon.NotificationSenderDTO{
+		ID: "tw-1", Type: ncommon.NotificationSenderTypeMessage, Provider: stubProvider,
+	}, (*tidcommon.ServiceError)(nil))
+	s.mockNotif.On("GetSenderUsages", mock.Anything, "tw-1").Return(usages, (*tidcommon.ServiceError)(nil))
+
+	req := httptest.NewRequest(http.MethodGet, "/connections/twilio/tw-1/usages", nil)
+	req.SetPathValue("id", "tw-1")
+	rr := httptest.NewRecorder()
+	s.handler.usagesSMSInstance(stubProvider)(rr, req)
+
+	s.Equal(http.StatusOK, rr.Code)
+	var resp resourcedependency.DependenciesResponse
+	s.Require().NoError(json.NewDecoder(rr.Body).Decode(&resp))
+	s.Require().NotNil(resp.TotalResults)
+	s.Equal(1, *resp.TotalResults)
+	s.Require().Len(resp.Usages, 1)
+	s.Equal("flow-1", resp.Usages[0].ID)
+	s.Equal("restrict", resp.Usages[0].BehaviorOnDelete)
+}

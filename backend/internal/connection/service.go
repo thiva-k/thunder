@@ -279,3 +279,13 @@ func (s *service) usagesByType(ctx context.Context, idpType providers.IDPType, i
 	}
 	return s.idpService.GetIDPUsages(ctx, id)
 }
+
+// usagesSMSByProvider verifies the sender is of the expected provider, then returns the resources
+// that reference it. Drives the pre-delete confirmation dialog.
+func (s *service) usagesSMSByProvider(ctx context.Context, provider ncommon.MessageProviderType, id string) (
+	*resourcedependency.DependenciesResponse, *tidcommon.ServiceError) {
+	if _, svcErr := s.getSMSByProvider(ctx, provider, id); svcErr != nil {
+		return nil, svcErr
+	}
+	return s.notificationService.GetSenderUsages(ctx, id)
+}
