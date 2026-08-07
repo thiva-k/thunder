@@ -355,3 +355,55 @@ func (suite *CallbackDispatcherTestSuite) TestWriteErrorPageRedirect_WithoutStat
 	suite.Contains(resp.RedirectURI, "errorCode="+oauth2const.ErrorServerError)
 	suite.NotContains(resp.RedirectURI, "state=")
 }
+
+// --- handleFlowCallback: failure outcomes ---
+//
+// Success and failure assertions share the assertion field, and the dispatcher passes it through
+// opaquely, so a failure produces exactly the same routing as any other error from the grant-type
+// handler (covered above). Which branch the assertion takes is decided inside the services, and is
+// tested in authz/service_test.go and ciba/service_test.go. Only the outcomes those tests cannot
+// reach from the service layer live here.
+
+// TestHandleFlowCallback_SuppressedServerErrorNeverContactsClient covers the dispatcher half of
+// oauth.send_server_errors_to_client: a server_error that is not for the client goes to the error
+// page and the client redirect URI, though present on the error, is not used.
+func (suite *CallbackDispatcherTestSuite) TestHandleFlowCallback_SuppressedServerErrorNeverContactsClient() {
+	authErr := &oauth2authz.AuthorizationError{
+		Code:              oauth2const.ErrorServerError,
+		Message:           "Flow engine failure",
+		SendErrorToClient: false,
+		ClientRedirectURI: "https://client.example.com/cb",
+		State:             "state-abc",
+	}
+	suite.mockAuthZ.EXPECT().
+		HandleAuthorizationCallback(mock.Anything, "auth-1", "the-assertion").
+		Return("", authErr)
+
+	w := suite.postCallback(`{"authId":"auth-1","assertion":"the-assertion"}`)
+
+	suite.Equal(http.StatusOK, w.Code)
+	var resp oauth2authz.AuthZPostResponse
+	suite.NoError(json.NewDecoder(w.Body).Decode(&resp))
+	suite.Contains(resp.RedirectURI, "/error")
+	suite.Contains(resp.RedirectURI, "errorCode="+oauth2const.ErrorServerError)
+	suite.NotContains(resp.RedirectURI, "client.example.com")
+}
+
+// TestHandleFlowCallback_CIBA_ServerError_Returns500 pins the status mapping a CIBA server-side flow
+// failure relies on: the polling client must see a 500, not the 400 every other CIBA error produces.
+func (suite *CallbackDispatcherTestSuite) TestHandleFlowCallback_CIBA_ServerError_Returns500() {
+	suite.mockCIBA.EXPECT().
+		HandleCallback(mock.Anything, "auth-req-1", "the-assertion").
+		Return(&ciba.CIBAError{Code: oauth2const.ErrorServerError, Message: "flow failed"})
+
+	w := suite.postCallback(
+		`{"authId":"auth-req-1","assertion":"the-assertion","type":"urn:openid:params:grant-type:ciba"}`)
+
+	suite.Equal(http.StatusInternalServerError, w.Code)
+	var body map[string]string
+	suite.NoError(json.NewDecoder(w.Body).Decode(&body))
+	suite.Equal(oauth2const.ErrorServerError, body["error"])
+	// The CIBA client is never redirected; it learns the outcome by polling the token endpoint.
+	suite.mockAuthZ.AssertNotCalled(suite.T(), "HandleAuthorizationCallback",
+		mock.Anything, mock.Anything, mock.Anything)
+}

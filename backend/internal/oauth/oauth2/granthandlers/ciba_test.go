@@ -194,6 +194,18 @@ func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Denied() {
 	suite.Equal(constants.ErrorAccessDenied, errResp.Error)
 }
 
+func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Failed() {
+	// A server-side flow failure surfaces as server_error, which the token endpoint maps to HTTP 500.
+	record := suite.pendingRecord()
+	record.State = ciba.CIBAStateFailed
+	suite.mockCIBAService.EXPECT().GetByAuthReqID(mock.Anything, "auth-req-1").Return(record, nil)
+
+	resp, errResp := suite.handler.HandleGrant(context.Background(), suite.tokenReq, suite.oauthApp)
+	suite.Nil(resp)
+	suite.NotNil(errResp)
+	suite.Equal(constants.ErrorServerError, errResp.Error)
+}
+
 func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Consumed() {
 	record := suite.pendingRecord()
 	record.State = ciba.CIBAStateConsumed

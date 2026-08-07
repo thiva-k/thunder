@@ -594,7 +594,8 @@ func (suite *JWTServiceTestSuite) TestGenerateJWTScenarios() {
 				err = json.Unmarshal(payloadBytes, &payload)
 				assert.NoError(t, err)
 
-				assert.Equal(t, "", payload["sub"])
+				_, hasSub := payload["sub"]
+				assert.False(t, hasSub, "sub claim should be omitted when the subject is empty")
 			},
 		},
 		{

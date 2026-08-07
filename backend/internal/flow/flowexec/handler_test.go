@@ -6,6 +6,7 @@ package flowexec
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,13 +49,13 @@ func (s *HandlerTestSuite) TestHandleFlowError_ClientError_Returns400() {
 			DefaultValue: "bad request",
 		},
 	}
-	handleFlowError(context.Background(), w, svcErr)
+	handleFlowError(context.Background(), w, svcErr, "")
 	s.Equal(http.StatusBadRequest, w.Code)
 }
 
 func (s *HandlerTestSuite) TestHandleFlowError_ForbiddenError_Returns403() {
 	w := httptest.NewRecorder()
-	handleFlowError(context.Background(), w, &ErrorDirectFlowInitiationNotPermitted)
+	handleFlowError(context.Background(), w, &ErrorDirectFlowInitiationNotPermitted, "")
 	s.Equal(http.StatusForbidden, w.Code)
 }
 
@@ -68,7 +69,7 @@ func (s *HandlerTestSuite) TestHandleFlowError_ServerError_Returns500() {
 			DefaultValue: "internal error",
 		},
 	}
-	handleFlowError(context.Background(), w, svcErr)
+	handleFlowError(context.Background(), w, svcErr, "")
 	s.Equal(http.StatusInternalServerError, w.Code)
 }
 
@@ -251,4 +252,48 @@ func (s *HandlerTestSuite) TestHandleFlowExecutionRequest_StepWithError() {
 
 	h.HandleFlowExecutionRequest(w, req)
 	s.Equal(http.StatusOK, w.Code)
+}
+
+func (s *HandlerTestSuite) TestHandleFlowError_WithErrorAssertion_IncludesAssertionInBody() {
+	w := httptest.NewRecorder()
+	svcErr := &tidcommon.ServiceError{
+		Code: "FES-1013",
+		Type: tidcommon.ClientErrorType,
+		Error: tidcommon.I18nMessage{
+			Key:          "client.error",
+			DefaultValue: "bad request",
+		},
+	}
+
+	handleFlowError(context.Background(), w, svcErr, "signed-error-assertion")
+
+	s.Equal(http.StatusBadRequest, w.Code)
+
+	var body map[string]interface{}
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &body))
+	s.Equal("FES-1013", body["code"])
+	s.Equal("signed-error-assertion", body["errorAssertion"])
+	s.NotNil(body["message"])
+}
+
+func (s *HandlerTestSuite) TestHandleFlowError_WithoutErrorAssertion_OmitsAssertionField() {
+	w := httptest.NewRecorder()
+	svcErr := &tidcommon.ServiceError{
+		Code: "FES-4001",
+		Type: tidcommon.ClientErrorType,
+		Error: tidcommon.I18nMessage{
+			Key:          "client.error",
+			DefaultValue: "bad request",
+		},
+	}
+
+	handleFlowError(context.Background(), w, svcErr, "")
+
+	s.Equal(http.StatusBadRequest, w.Code)
+
+	var body map[string]interface{}
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &body))
+	s.Equal("FES-4001", body["code"])
+	_, hasAssertion := body["errorAssertion"]
+	s.False(hasAssertion)
 }

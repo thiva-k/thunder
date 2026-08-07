@@ -262,13 +262,26 @@ type FlowAction struct {
 
 // FlowStep represents a single step in a flow execution
 type FlowStep struct {
-	ExecutionID    string              `json:"executionId"`
-	FlowStatus     string              `json:"flowStatus"`
-	Type           string              `json:"type"`
-	Data           *FlowData           `json:"data,omitempty"`
-	Assertion      string              `json:"assertion,omitempty"`
+	ExecutionID string    `json:"executionId"`
+	FlowStatus  string    `json:"flowStatus"`
+	Type        string    `json:"type"`
+	Data        *FlowData `json:"data,omitempty"`
+	Assertion   string    `json:"assertion,omitempty"`
+	// ErrorAssertion is the signed error assertion minted when an OAuth-initiated flow terminates in
+	// failure. It is relayed to /oauth2/auth/callback in the same field as a success assertion.
+	ErrorAssertion string              `json:"errorAssertion,omitempty"`
 	Error          *FlowExecutionError `json:"error,omitempty"`
 	ChallengeToken string              `json:"challengeToken,omitempty"`
+}
+
+// FlowErrorResponse is the body returned when flow execution fails at the engine level (4xx/5xx),
+// which has no flow response to carry the assertion. Message and Description are i18n objects, so
+// they are left raw; tests assert on the code and the assertion.
+type FlowErrorResponse struct {
+	Code           string          `json:"code"`
+	Message        json.RawMessage `json:"message"`
+	Description    json.RawMessage `json:"description"`
+	ErrorAssertion string          `json:"errorAssertion,omitempty"`
 }
 
 // Flow represents a flow definition

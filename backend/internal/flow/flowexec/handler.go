@@ -64,7 +64,11 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 		flowSecret, attestationToken)
 
 	if flowErr != nil {
-		handleFlowError(r.Context(), w, flowErr)
+		errorAssertion := ""
+		if flowStep != nil {
+			errorAssertion = flowStep.ErrorAssertion
+		}
+		handleFlowError(r.Context(), w, flowErr, errorAssertion)
 		return
 	}
 
@@ -96,6 +100,7 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 		Type:           string(flowStep.Type),
 		Data:           flowStep.Data,
 		Assertion:      flowStep.Assertion,
+		ErrorAssertion: flowStep.ErrorAssertion,
 		Error:          stepErrorResp,
 		ChallengeToken: flowStep.ChallengeToken,
 	}
@@ -106,8 +111,17 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 		log.String(log.LoggerKeyExecutionID, flowResp.ExecutionID))
 }
 
+// flowErrorResponse is the error body for a failed flow execution. It carries the standard API error
+// plus a signed error assertion (when the flow was OAuth-initiated) that the Gate/SDK relays to the
+// OAuth callback so the failure reaches the waiting authorization request.
+type flowErrorResponse struct {
+	apierror.ErrorResponse
+	ErrorAssertion string `json:"errorAssertion,omitempty"`
+}
+
 // handleFlowError handles errors that occur during flow execution as an API error response.
-func handleFlowError(ctx context.Context, w http.ResponseWriter, flowErr *tidcommon.ServiceError) {
+func handleFlowError(ctx context.Context, w http.ResponseWriter, flowErr *tidcommon.ServiceError,
+	errorAssertion string) {
 	errResp := apierror.ErrorResponse{
 		Code:        flowErr.Code,
 		Message:     flowErr.Error,
@@ -125,6 +139,12 @@ func handleFlowError(ctx context.Context, w http.ResponseWriter, flowErr *tidcom
 		default:
 			statusCode = http.StatusBadRequest
 		}
+	}
+
+	if errorAssertion != "" {
+		sysutils.WriteSuccessResponse(ctx, w, statusCode,
+			flowErrorResponse{ErrorResponse: errResp, ErrorAssertion: errorAssertion})
+		return
 	}
 
 	sysutils.WriteErrorResponse(ctx, w, statusCode, errResp)

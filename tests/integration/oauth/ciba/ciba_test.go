@@ -43,8 +43,14 @@ const (
 
 type CIBATestSuite struct {
 	suite.Suite
-	ouID   string
-	client *http.Client
+	ouID       string
+	client     *http.Client
+	mockServer *testutils.MockNotificationServer
+	senderID   string
+	userTypeID string
+	userID     string
+	flowID     string
+	appID      string
 }
 
 func TestCIBATestSuite(t *testing.T) {
@@ -62,27 +68,11 @@ func (ts *CIBATestSuite) SetupSuite() {
 	})
 	ts.Require().NoError(err, "Failed to create test organization unit")
 	ts.ouID = ouID
-}
 
-func (ts *CIBATestSuite) TearDownSuite() {
-	if ts.ouID != "" {
-		if err := testutils.DeleteOrganizationUnit(ts.ouID); err != nil {
-			ts.T().Logf("Failed to delete test organization unit: %v", err)
-		}
-	}
-}
-
-// TestCIBAGrantFlow exercises the full Client-Initiated Backchannel Authentication (CIBA) grant
-// end to end: it initiates a backchannel request, recovers the server-initiated flow's executionId
-// from an out-of-band notification, completes the authentication flow, drives the state machine
-// (PENDING -> AUTHENTICATED -> CONSUMED) through the callback and token endpoints, and asserts the
-// one-time-use enforcement backed by the runtime store's CompareFieldAndSwap primitive.
-func (ts *CIBATestSuite) TestCIBAGrantFlow() {
 	// Mock notification server captures the CIBA notification (which carries the invite link with
 	// the executionId). It is a plain HTTP server; the sender below is pointed at it via the API.
-	mockServer := testutils.NewMockNotificationServer(cibaMockNotificationServerPort)
-	ts.Require().NoError(mockServer.Start(), "Failed to start mock notification server")
-	defer func() { _ = mockServer.Stop() }()
+	ts.mockServer = testutils.NewMockNotificationServer(cibaMockNotificationServerPort)
+	ts.Require().NoError(ts.mockServer.Start(), "Failed to start mock notification server")
 	time.Sleep(100 * time.Millisecond)
 
 	// A custom notification sender that POSTs rendered messages to the mock server. This is a DB
@@ -92,13 +82,13 @@ func (ts *CIBATestSuite) TestCIBAGrantFlow() {
 		Description: "Sender for CIBA integration test",
 		Provider:    "custom",
 		Properties: []testutils.SenderProperty{
-			{Name: "url", Value: mockServer.GetSendSMSURL()},
+			{Name: "url", Value: ts.mockServer.GetSendSMSURL()},
 			{Name: "http_method", Value: "POST"},
 			{Name: "content_type", Value: "JSON"},
 		},
 	})
 	ts.Require().NoError(err, "Failed to create notification sender")
-	defer func() { _ = testutils.DeleteNotificationSender(senderID) }()
+	ts.senderID = senderID
 
 	// User type + user. mobile_number is the recipient the SMS executor resolves from the
 	// identified user; username/password back the credential confirmation step.
@@ -113,7 +103,7 @@ func (ts *CIBATestSuite) TestCIBAGrantFlow() {
 		},
 	})
 	ts.Require().NoError(err, "Failed to create CIBA test user type")
-	defer func() { _ = testutils.DeleteUserType(userTypeID) }()
+	ts.userTypeID = userTypeID
 
 	userID, err := testutils.CreateUser(testutils.User{
 		OUID: ts.ouID,
@@ -126,7 +116,7 @@ func (ts *CIBATestSuite) TestCIBAGrantFlow() {
 		}`),
 	})
 	ts.Require().NoError(err, "Failed to create CIBA test user")
-	defer func() { _ = testutils.DeleteUser(userID) }()
+	ts.userID = userID
 
 	// CIBA authentication flow. bc-authorize runs this server-side with login_hint. The
 	// IdentifyingExecutor resolves the user (login_hint -> username), the InviteExecutor mints a
@@ -265,10 +255,52 @@ func (ts *CIBATestSuite) TestCIBAGrantFlow() {
 		},
 	})
 	ts.Require().NoError(err, "Failed to create CIBA auth flow")
-	defer func() { _ = testutils.DeleteFlow(flowID) }()
+	ts.flowID = flowID
 
-	appID := ts.createCIBATestApplication(flowID)
-	defer func() { _ = testutils.DeleteApplication(appID) }()
+	ts.appID = ts.createCIBATestApplication(flowID)
+}
+
+// SetupTest drops notifications captured by earlier tests, so that each test recovers the executionId
+// of its own backchannel request from the shared mock server.
+func (ts *CIBATestSuite) SetupTest() {
+	if ts.mockServer != nil {
+		ts.mockServer.ClearMessages()
+	}
+}
+
+func (ts *CIBATestSuite) TearDownSuite() {
+	if ts.appID != "" {
+		_ = testutils.DeleteApplication(ts.appID)
+	}
+	if ts.flowID != "" {
+		_ = testutils.DeleteFlow(ts.flowID)
+	}
+	if ts.userID != "" {
+		_ = testutils.DeleteUser(ts.userID)
+	}
+	if ts.userTypeID != "" {
+		_ = testutils.DeleteUserType(ts.userTypeID)
+	}
+	if ts.senderID != "" {
+		_ = testutils.DeleteNotificationSender(ts.senderID)
+	}
+	if ts.mockServer != nil {
+		_ = ts.mockServer.Stop()
+	}
+	if ts.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.ouID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit: %v", err)
+		}
+	}
+}
+
+// TestCIBAGrantFlow exercises the full Client-Initiated Backchannel Authentication (CIBA) grant
+// end to end: it initiates a backchannel request, recovers the server-initiated flow's executionId
+// from an out-of-band notification, completes the authentication flow, drives the state machine
+// (PENDING -> AUTHENTICATED -> CONSUMED) through the callback and token endpoints, and asserts the
+// one-time-use enforcement backed by the runtime store's CompareFieldAndSwap primitive.
+func (ts *CIBATestSuite) TestCIBAGrantFlow() {
+	mockServer := ts.mockServer
 
 	// Step 1: Backchannel authorization request.
 	status, bcResp := ts.cibaBackchannelAuthorize(cibaTestUsername, "openid")
@@ -331,12 +363,70 @@ func (ts *CIBATestSuite) TestCIBAGrantFlow() {
 
 	claims, err := testutils.DecodeJWT(tokenRes.accessToken)
 	ts.Require().NoError(err, "issued access token should be a decodable JWT")
-	ts.Require().Equal(userID, claims.Sub, "token subject should be the CIBA user")
+	ts.Require().Equal(ts.userID, claims.Sub, "token subject should be the CIBA user")
 
 	// Step 7: A second poll is rejected — the request is CONSUMED (one-time use).
 	reuse := ts.cibaPollToken(bcResp.AuthReqID)
 	ts.Require().Equal(http.StatusBadRequest, reuse.statusCode)
 	ts.Require().Equal("invalid_grant", reuse.errorCode, "a consumed request must not issue tokens again")
+}
+
+// TestCIBAFlowFailureDeniesRequest verifies that a terminal flow failure is propagated to the polling
+// client instead of leaving the request PENDING until it expires. The flow mints a signed error
+// assertion, the gate relays it to the callback in the same field a success assertion uses, and the
+// request transitions to DENIED so the next token poll returns access_denied.
+//
+// The trigger is a bogus inviteToken: InviteExecutor's verify mode fails, and verify_invite has no
+// onFailure target, so the flow terminates in ERROR.
+func (ts *CIBATestSuite) TestCIBAFlowFailureDeniesRequest() {
+	// Step 1: Backchannel authorization request.
+	status, bcResp := ts.cibaBackchannelAuthorize(cibaTestUsername, "openid")
+	ts.Require().Equal(http.StatusOK, status, "bc-authorize should succeed")
+	ts.Require().NotEmpty(bcResp.AuthReqID, "bc-authorize response should carry auth_req_id")
+
+	// Step 2: Baseline — before the failure the client is told nothing but "keep waiting".
+	pending := ts.cibaPollToken(bcResp.AuthReqID)
+	ts.Require().Equal(http.StatusBadRequest, pending.statusCode)
+	ts.Require().Equal("authorization_pending", pending.errorCode)
+
+	// Step 3: Recover the executionId from the notification captured for this request.
+	var executionID string
+	ts.Require().Eventually(func() bool {
+		msg := ts.mockServer.GetLastMessage()
+		if msg == nil {
+			return false
+		}
+		if extractCIBALinkParam(msg.Message, "auth_req_id") != bcResp.AuthReqID {
+			return false
+		}
+		executionID = extractCIBALinkParam(msg.Message, "executionId")
+		return executionID != ""
+	}, 5*time.Second, 100*time.Millisecond, "Expected CIBA notification carrying the executionId")
+
+	// Step 4: Fail the flow at the invite-verify node.
+	flowStep, err := testutils.ExecuteAuthenticationFlow(executionID,
+		map[string]string{"inviteToken": "bogus-invite-token"}, "")
+	ts.Require().NoError(err, "Flow step should be returned for an invalid invite token")
+	ts.Require().Equal("ERROR", flowStep.FlowStatus, "Flow should terminate in ERROR")
+	ts.Require().NotEmpty(flowStep.ErrorAssertion,
+		"A CIBA-initiated flow failure must mint an error assertion")
+	ts.Require().Empty(flowStep.Assertion, "A failed flow must not produce an authentication assertion")
+
+	// Step 5: Relay the error assertion. The callback op itself succeeds; the outcome lives in the
+	// request state, which is why this is a 200 and not an error status.
+	ts.Require().Equal(http.StatusOK, ts.cibaPostCallback(bcResp.AuthReqID, flowStep.ErrorAssertion),
+		"CIBA callback should accept the error assertion")
+
+	// Step 6: The polling client now learns the outcome instead of hanging on authorization_pending.
+	denied := ts.cibaPollToken(bcResp.AuthReqID)
+	if denied.statusCode == http.StatusBadRequest && denied.errorCode == "slow_down" {
+		time.Sleep(cibaPollIntervalSeconds * time.Second)
+		denied = ts.cibaPollToken(bcResp.AuthReqID)
+	}
+	ts.Require().Equal(http.StatusBadRequest, denied.statusCode)
+	ts.Require().Equal("access_denied", denied.errorCode,
+		"An end-user flow failure must surface as access_denied, not authorization_pending")
+	ts.Require().Empty(denied.accessToken, "A denied request must not issue tokens")
 }
 
 // createCIBATestApplication creates an OAuth application that allows the CIBA grant and is bound to
