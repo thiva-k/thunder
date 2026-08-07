@@ -51,16 +51,6 @@ const ATTRIBUTES: LibraryAttribute[] = [
     regex: '',
   },
   {
-    name: 'phone',
-    displayName: 'Phone Number',
-    type: 'string',
-    required: false,
-    unique: false,
-    credential: false,
-    enum: [],
-    regex: '',
-  },
-  {
     name: 'password',
     displayName: 'Password',
     type: 'string',
@@ -241,7 +231,7 @@ const ATTRIBUTES: LibraryAttribute[] = [
     regex: '',
   },
   {
-    name: 'locality',
+    name: 'city',
     displayName: 'City',
     type: 'string',
     required: false,

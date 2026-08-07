@@ -7,6 +7,7 @@ import {ArrowRight} from '@wso2/oxygen-ui-icons-react';
 import {JSX, useEffect, useState} from 'react';
 import {CATEGORY_LABELS, EcosystemItem} from './data';
 import useIsDarkMode from '../../hooks/useIsDarkMode';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 interface VersionChipProps {
   item: EcosystemItem;
@@ -85,6 +86,7 @@ function VersionChip({item, isLight}: VersionChipProps): JSX.Element | null {
 export default function EcosystemCard({item}: {item: EcosystemItem}): JSX.Element {
   const theme = useTheme();
   const isLight = !useIsDarkMode();
+  const docsUrl = useDocsUrl();
   const Icon = item.icon;
 
   const content = (
@@ -221,7 +223,7 @@ export default function EcosystemCard({item}: {item: EcosystemItem}): JSX.Elemen
   return (
     <Box
       component={Link}
-      to={item.href}
+      to={docsUrl(item.href)}
       target={isExternal ? '_blank' : undefined}
       rel={isExternal ? 'noopener noreferrer' : undefined}
       sx={{textDecoration: 'none', display: 'block', height: '100%'}}

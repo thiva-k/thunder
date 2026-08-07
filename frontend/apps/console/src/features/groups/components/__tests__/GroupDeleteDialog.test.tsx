@@ -8,9 +8,11 @@ import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import GroupDeleteDialog from '../GroupDeleteDialog';
 
 const mockMutate = vi.fn();
+const mockReset = vi.fn();
 vi.mock('../../api/useDeleteGroup', () => ({
   default: () => ({
     mutate: mockMutate,
+    reset: mockReset,
     isPending: false,
   }),
 }));

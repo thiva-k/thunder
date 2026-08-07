@@ -92,4 +92,29 @@ describe('AttributesSummarySection', () => {
 
     expect(screen.getByText('Email Address')).toBeInTheDocument();
   });
+
+  describe('variant="bare"', () => {
+    it('renders each attribute as a single "label: value" chip, with no card title', () => {
+      render(<AttributesSummarySection agent={baseAgent} variant="bare" />);
+
+      expect(screen.getByText('email: a@b.com')).toBeInTheDocument();
+      expect(screen.getByText('count: 5')).toBeInTheDocument();
+      expect(screen.getByText('isAdmin: Yes')).toBeInTheDocument();
+      expect(screen.getByText('tags: a, b')).toBeInTheDocument();
+      expect(screen.queryByText('Attributes')).not.toBeInTheDocument();
+    });
+
+    it('still shows the empty state when there are no attribute values', () => {
+      render(<AttributesSummarySection agent={{...baseAgent, attributes: {}}} variant="bare" />);
+
+      expect(screen.getByText('No attributes available.')).toBeInTheDocument();
+    });
+
+    it('still shows a loading spinner while the schema is loading', () => {
+      mockUseGetAgentType.mockReturnValue({data: undefined, isLoading: true});
+      render(<AttributesSummarySection agent={baseAgent} variant="bare" />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+  });
 });

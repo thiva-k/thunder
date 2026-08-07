@@ -7,7 +7,10 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   FormLabel,
+  MenuItem,
+  Select,
   Stack,
   Switch,
   TextField,
@@ -15,6 +18,7 @@ import {
 } from '@wso2/oxygen-ui';
 import {type JSX, type ReactNode, useMemo, useState} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
+import KeyValuePairsField from './KeyValuePairsField';
 import MaskedSecretField from './MaskedSecretField';
 import ReadOnlyCopyField from './ReadOnlyCopyField';
 import {fieldsForMode, type ConnectionFieldDef} from '../config/connectionFormFields';
@@ -148,6 +152,42 @@ export default function ConnectionForm({
               error={fieldError(field.name)}
               hint={field.hintKey ? t(field.hintKey) : undefined}
             />
+          );
+        } else if (field.kind === 'key-value') {
+          fieldContent = (
+            <KeyValuePairsField
+              id={`connection-field-${field.name}`}
+              label={label}
+              value={values[field.name] ?? ''}
+              onChange={(next) => setField(field.name, next)}
+              hint={field.hintKey ? renderHint(field.hintKey) : undefined}
+              namePlaceholder={field.placeholder}
+              addLabel={field.addLabelKey ? t(field.addLabelKey) : t('form.keyValue.add')}
+            />
+          );
+        } else if (field.kind === 'select') {
+          const error: string | undefined = fieldError(field.name);
+          fieldContent = (
+            <FormControl fullWidth required={isRequiredNow(field)} error={Boolean(error)}>
+              <FormLabel htmlFor={`connection-field-${field.name}`}>{label}</FormLabel>
+              <Select
+                id={`connection-field-${field.name}`}
+                value={values[field.name] ?? ''}
+                onChange={(e) => setField(field.name, e.target.value)}
+                data-testid={`connection-field-select-${field.name}`}
+              >
+                {(field.options ?? []).map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {error ? (
+                <FormHelperText>{error}</FormHelperText>
+              ) : (
+                field.hintKey && <FormHelperText>{t(field.hintKey)}</FormHelperText>
+              )}
+            </FormControl>
           );
         } else if (field.kind === 'readonly-copy') {
           fieldContent = (

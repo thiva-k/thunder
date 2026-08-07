@@ -19,10 +19,6 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
     useToast: () => ({showToast}),
   };
 });
-vi.mock('@thunderid/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@thunderid/utils')>();
-  return {...actual, getErrorMessage: vi.fn().mockReturnValue('generic error')};
-});
 
 describe('useCreateConnection', () => {
   beforeEach(() => {
@@ -60,12 +56,12 @@ describe('useCreateConnection', () => {
     expect(showToast).not.toHaveBeenCalled();
   });
 
-  it('toasts a generic error for non-conflict failures', async () => {
+  it('does NOT toast on a non-conflict failure (handled inline by the caller)', async () => {
     mockHttpRequest.mockRejectedValue({response: {status: 500}});
     const {result} = renderHook(() => useCreateConnection('oidc'));
     result.current.mutate({name: 'x', clientId: 'x', redirectUri: 'https://r'} as never);
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('generic error', 'error');
+    expect(showToast).not.toHaveBeenCalled();
   });
 });

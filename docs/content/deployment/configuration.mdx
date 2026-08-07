@@ -181,7 +181,7 @@ Stores identity provider configurations, applications, and authentication flows.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `database.config.sqlite.path` | `database/configdb.db` | SQLite database file path |
-| `database.config.sqlite.options` | `_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)` | SQLite connection options |
+| `database.config.sqlite.options` | `_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)` | SQLite connection options |
 | `database.config.sqlite.max_open_conns` | `500` | Maximum number of open connections |
 | `database.config.sqlite.max_idle_conns` | `100` | Maximum number of idle connections |
 | `database.config.sqlite.conn_max_lifetime` | `3600` | Maximum connection lifetime in seconds |
@@ -219,7 +219,7 @@ Stores short-lived runtime data such as authorization codes, authorization reque
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `database.runtime_transient.sqlite.path` | `database/runtime_transient.db` | SQLite database file path |
-| `database.runtime_transient.sqlite.options` | `_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)` | SQLite connection options |
+| `database.runtime_transient.sqlite.options` | `_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)` | SQLite connection options |
 | `database.runtime_transient.sqlite.max_open_conns` | `500` | Maximum number of open connections |
 | `database.runtime_transient.sqlite.max_idle_conns` | `100` | Maximum number of idle connections |
 | `database.runtime_transient.sqlite.conn_max_lifetime` | `3600` | Maximum connection lifetime in seconds |
@@ -291,7 +291,7 @@ Stores user profiles and credentials.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `database.entity.sqlite.path` | `database/entitydb.db` | SQLite database file path |
-| `database.entity.sqlite.options` | `_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)` | SQLite connection options |
+| `database.entity.sqlite.options` | `_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)` | SQLite connection options |
 | `database.entity.sqlite.max_open_conns` | `500` | Maximum number of open connections |
 | `database.entity.sqlite.max_idle_conns` | `100` | Maximum number of idle connections |
 | `database.entity.sqlite.conn_max_lifetime` | `3600` | Maximum connection lifetime in seconds |
@@ -329,7 +329,7 @@ Stores SSO sessions, revoked tokens, and consent records. This database is requi
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `database.runtime_persistent.sqlite.path` | `database/runtime_persistent.db` | SQLite database file path |
-| `database.runtime_persistent.sqlite.options` | `_journal_mode=WAL&_busy_timeout=5000&_pragma=foreign_keys(1)` | SQLite connection options |
+| `database.runtime_persistent.sqlite.options` | `_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)` | SQLite connection options |
 | `database.runtime_persistent.sqlite.max_open_conns` | `500` | Maximum number of open connections |
 | `database.runtime_persistent.sqlite.max_idle_conns` | `100` | Maximum number of idle connections |
 | `database.runtime_persistent.sqlite.conn_max_lifetime` | `3600` | Maximum connection lifetime in seconds |
@@ -452,6 +452,7 @@ OAuth 2.0 and OpenID Connect settings.
 | `oauth.refresh_token.revoke_previous_on_renew` | `true` | If `true`, revokes the consumed refresh token after a successful renewal. Applies when `renew_on_grant` is enabled |
 | `oauth.refresh_token.validity_period` | `86400` | Refresh token validity period in seconds (24 hours) |
 | `oauth.authorization_code.validity_period` | `600` | Authorization code validity period in seconds (10 minutes) |
+| `oauth.authorization_request.validity_period` | `3600` | How long the authorization request context stays valid while the user completes the login flow, in seconds (60 minutes). A non-positive value falls back to the default |
 | `oauth.dcr.enabled` | `true` | If `true`, enables the Dynamic Client Registration endpoint |
 | `oauth.dcr.insecure` | `false` | If `true`, allows insecure dynamic client registration (development only) |
 | `oauth.allowed_auth_methods` | `["client_secret_basic", "client_secret_post", "private_key_jwt", "none"]` | Client token endpoint authentication methods allowed during client registration |
@@ -942,7 +943,7 @@ Configure flow defaults in either of these ways:
   value:
     authFlow:
       defaultHandle: default-flow
-      expirySeconds: 1800
+      expirySeconds: 3600
     registrationFlow:
       expirySeconds: 3600
     recoveryFlow:
@@ -956,7 +957,7 @@ Configure flow defaults in either of these ways:
   Content-Type: application/json
 
   {
-    "authFlow": { "defaultHandle": "default-flow", "expirySeconds": 1800 },
+    "authFlow": { "defaultHandle": "default-flow", "expirySeconds": 3600 },
     "registrationFlow": { "expirySeconds": 3600 }
   }
   ```

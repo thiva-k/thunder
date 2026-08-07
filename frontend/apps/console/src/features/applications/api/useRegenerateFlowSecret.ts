@@ -6,7 +6,6 @@ import {ApplicationQueryKeys} from '@thunderid/configure-applications';
 import type {Application} from '@thunderid/configure-applications';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 
 /**
@@ -135,9 +134,6 @@ export default function useRegenerateFlowSecret(): UseMutationResult<
         // Ignore invalidation errors
       });
       showToast(t('regenerateFlowSecret.snackbar.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'regenerateFlowSecret.dialog.error'), 'error');
     },
   });
 }

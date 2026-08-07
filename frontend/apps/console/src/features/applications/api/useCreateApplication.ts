@@ -8,7 +8,6 @@ import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import type {CreateApplicationRequest} from '../models/requests';
-import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 
 /**
  * Custom React hook to create a new application in the server.
@@ -75,9 +74,6 @@ export default function useCreateApplication(): UseMutationResult<Application, E
         // Ignore invalidation errors
       });
       showToast(t('create.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getApplicationErrorMessage(error, t, 'create.error'), 'error', 12000);
     },
   });
 }

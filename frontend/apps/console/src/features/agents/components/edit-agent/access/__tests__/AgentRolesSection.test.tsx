@@ -26,7 +26,13 @@ describe('AgentRolesSection', () => {
   });
 
   it('shows an error message instead of the empty-state placeholder when the request fails', () => {
-    mockUseGetAgentRoles.mockReturnValue({data: undefined, isLoading: false, isError: true});
+    mockUseGetAgentRoles.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Boom'),
+      refetch: vi.fn(),
+    });
     render(<AgentRolesSection agentId="agent-1" />);
 
     expect(screen.getByText('Failed to load roles for this agent.')).toBeInTheDocument();

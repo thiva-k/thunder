@@ -8,6 +8,7 @@ import {
   useHasMultipleOUs,
 } from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -53,6 +54,36 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
   const [claims, setClaims] = useState<ClaimRow[]>(credentialToClaimRows(undefined));
 
   const effectiveOuId: string = ouId !== '' ? ouId : !hasMultipleOUs && ouList.length === 1 ? ouList[0].id : '';
+
+  // A create error is stale once the wizard's data changes.
+  const clearCreateError = (): void => {
+    if (createVC.isError) createVC.reset();
+  };
+
+  const handleNameChange = (v: string): void => {
+    clearCreateError();
+    setName(v);
+  };
+  const handleHandleChange = (v: string): void => {
+    clearCreateError();
+    setHandle(v);
+  };
+  const handleOuIdChange = (v: string): void => {
+    clearCreateError();
+    setOuId(v);
+  };
+  const handleVctChange = (v: string): void => {
+    clearCreateError();
+    setVct(v);
+  };
+  const handleFormatChange = (v: string): void => {
+    clearCreateError();
+    setFormat(v);
+  };
+  const handleClaimsChange = (v: ClaimRow[]): void => {
+    clearCreateError();
+    setClaims(v);
+  };
 
   // The organization unit whose name is shown in the Details step's summary chip.
   const {data: resolvedOrganizationUnit, isLoading: isResolvedOuLoading} = useGetOrganizationUnit(
@@ -157,8 +188,8 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
           name={name}
           handle={handle}
           handleEdited={handleEdited}
-          onNameChange={setName}
-          onHandleChange={setHandle}
+          onNameChange={handleNameChange}
+          onHandleChange={handleHandleChange}
           onHandleEditedChange={setHandleEdited}
           hasMultipleOUs={hasMultipleOUs}
           organizationUnitName={resolvedOrganizationUnit?.name}
@@ -171,10 +202,18 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
     if (effectiveStep === 'DETAILS') {
       return (
         <Stack spacing={3}>
-          {textField('vc-vct', t('form.vct.label'), vct, setVct, 'urn:eudi:pid:de:1', true, t('form.vct.hint'))}
+          {textField(
+            'vc-vct',
+            t('form.vct.label'),
+            vct,
+            handleVctChange,
+            'urn:eudi:pid:de:1',
+            true,
+            t('form.vct.hint'),
+          )}
           <FormControl fullWidth>
             <FormLabel htmlFor="vc-format">{t('form.format.label')}</FormLabel>
-            <Select id="vc-format" value={format} onChange={(e): void => setFormat(e.target.value)}>
+            <Select id="vc-format" value={format} onChange={(e): void => handleFormatChange(e.target.value)}>
               <MenuItem value="dc+sd-jwt">{t('form.format.sdJwt')}</MenuItem>
             </Select>
             <FormHelperText>{t('form.format.hint')}</FormHelperText>
@@ -187,7 +226,7 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
         <Typography variant="body2" color="text.secondary">
           {t('create.claims.help')}
         </Typography>
-        <ClaimsEditor claims={claims} onChange={setClaims} />
+        <ClaimsEditor claims={claims} onChange={handleClaimsChange} />
       </Stack>
     );
   };
@@ -210,7 +249,7 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
           "Choose the organization unit that will own this verifiable credential. You can't change this once created.",
         )}
         value={effectiveOuId}
-        onChange={setOuId}
+        onChange={handleOuIdChange}
         onBack={close}
         onContinue={handleNext}
         backLabel={t('common:actions.back', 'Back')}
@@ -263,7 +302,7 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
 
       {createVC.error && (
         <Alert severity="error" sx={{mb: 3}}>
-          {createVC.error.message}
+          {getErrorMessage(createVC.error, t, 'create.error', 'Failed to create credential template')}
         </Alert>
       )}
 

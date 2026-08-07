@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {QrCode} from '@thunderid/design';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -71,7 +72,7 @@ function decodeResult(token: string): DecodedResult | null {
  */
 export default function VerificationDialog({open, handle, onClose}: VerificationDialogProps): JSX.Element {
   const {t} = useTranslation('verifiable-presentations');
-  const {mutate, reset, data, isPending, error} = useInitiateVerification();
+  const {mutate, reset, data, isPending, isError, error} = useInitiateVerification();
 
   const txnId: string | null = data?.txn_id ?? null;
   const walletUrl: string = data?.wallet_url ?? '';
@@ -105,7 +106,7 @@ export default function VerificationDialog({open, handle, onClose}: Verification
   }, []);
 
   const handleClose = (): void => {
-    reset();
+    if (isError) reset();
     setCopied(false);
     onClose();
   };
@@ -113,6 +114,9 @@ export default function VerificationDialog({open, handle, onClose}: Verification
   const statusValue: string | undefined = status.data?.status;
   const decoded: DecodedResult | null =
     statusValue === 'COMPLETED' && status.data?.result_token ? decodeResult(status.data.result_token) : null;
+  // The poll query itself failing (network error, 5xx) is distinct from a completed verification
+  // that reports FAILED — without this, the spinner would run forever with no feedback.
+  const pollError: boolean = status.isError && !status.data;
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -125,7 +129,12 @@ export default function VerificationDialog({open, handle, onClose}: Verification
         )}
         {error && (
           <Alert severity="warning" sx={{mb: 2}}>
-            {t('verify.notConfigured')}
+            {getErrorMessage(
+              error,
+              t,
+              'verify.notConfigured',
+              'Presentation verification is not enabled. Configure a verifier signing key to start verification requests.',
+            )}
           </Alert>
         )}
         {!isPending && walletUrl && (
@@ -163,7 +172,12 @@ export default function VerificationDialog({open, handle, onClose}: Verification
               sx={{'& input': {fontFamily: 'monospace', fontSize: '0.75rem'}}}
             />
 
-            {(!statusValue || statusValue === 'PENDING') && (
+            {pollError && (
+              <Alert severity="error" sx={{width: '100%'}}>
+                {t('verify.failedGeneric', 'The wallet could not complete verification. Please try again.')}
+              </Alert>
+            )}
+            {!pollError && (!statusValue || statusValue === 'PENDING') && (
               <Stack direction="row" spacing={1} alignItems="center">
                 <CircularProgress size={16} />
                 <Typography variant="body2" color="text.secondary">
@@ -178,7 +192,7 @@ export default function VerificationDialog({open, handle, onClose}: Verification
             )}
             {statusValue === 'FAILED' && (
               <Alert severity="error" sx={{width: '100%'}}>
-                {status.data?.error ?? t('verify.failed')}
+                {t('verify.failedGeneric', 'The wallet could not complete verification. Please try again.')}
               </Alert>
             )}
             {statusValue === 'COMPLETED' && (

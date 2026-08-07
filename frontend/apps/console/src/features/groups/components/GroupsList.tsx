@@ -1,9 +1,10 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {IconButton, Typography, Tooltip, DataGrid, ListingTable, Box} from '@wso2/oxygen-ui';
+import {IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
 import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useMemo, useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -30,7 +31,7 @@ export default function GroupsList(): JSX.Element {
     }),
     [paginationModel],
   );
-  const {data, isLoading, error} = useGetGroups(groupsParams);
+  const {data, isLoading, error, refetch} = useGetGroups(groupsParams);
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -138,14 +139,13 @@ export default function GroupsList(): JSX.Element {
 
   if (error) {
     return (
-      <Box sx={{textAlign: 'center', py: 8}}>
-        <Typography variant="h6" color="error" gutterBottom>
-          {t('groups:listing.error')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error.message ?? t('common:messages.somethingWentWrong')}
-        </Typography>
-      </Box>
+      <QueryErrorNotice
+        error={error}
+        t={t}
+        variant="block"
+        title={t('groups:listing.error', 'Failed to load groups')}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

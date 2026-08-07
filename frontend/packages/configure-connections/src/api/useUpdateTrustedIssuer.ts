@@ -9,14 +9,13 @@ import ConnectionQueryKeys from '../constants/query-keys';
 import type {ConnectionResponse} from '../models/connection';
 import {ConnectionTypes} from '../models/connection';
 import type {TrustedIssuer, TrustedIssuerFormData} from '../models/trusted-issuer';
-import isConflictError from '../utils/isConflictError';
 import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
 
 /**
  * Update a trusted issuer (PUT /connections/oidc/{id}).
  *
- * Conflicts (409 duplicate name) are not toasted here — the caller surfaces them inline next
- * to the name field.
+ * Failures are not toasted here — the caller surfaces them inline next to the name field
+ * (409 duplicate name) or next to the save action (any other failure).
  *
  * @example
  * ```tsx
@@ -64,11 +63,6 @@ export default function useUpdateTrustedIssuer(
           // Ignore invalidation errors
         });
       showToast(t('trustedIssuers:update.success', 'Trusted issuer updated successfully.'), 'success');
-    },
-    onError: (error) => {
-      if (!isConflictError(error)) {
-        showToast(t('trustedIssuers:update.error', 'Failed to update trusted issuer. Please try again.'), 'error');
-      }
     },
   });
 }

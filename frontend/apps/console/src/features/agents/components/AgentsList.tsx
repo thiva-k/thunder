@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ResourceAvatar} from '@thunderid/components';
+import {QueryErrorNotice, ResourceAvatar} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {Box, IconButton, Tooltip, Typography, ListingTable, DataGrid} from '@wso2/oxygen-ui';
@@ -20,7 +20,15 @@ export default function AgentsList(): JSX.Element {
   const {t} = useTranslation();
   const logger = useLogger('AgentsList');
   const dataGridLocaleText = useDataGridLocaleText();
-  const {data, isLoading, error} = useGetAgents();
+  const {data, isLoading, error, refetch} = useGetAgents();
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -137,14 +145,13 @@ export default function AgentsList(): JSX.Element {
 
   if (error) {
     return (
-      <Box sx={{textAlign: 'center', py: 8}}>
-        <Typography variant="h6" color="error" gutterBottom>
-          {t('agents:listing.loadError', 'Failed to load agents')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error.message ?? 'Unknown error'}
-        </Typography>
-      </Box>
+      <QueryErrorNotice
+        error={error}
+        t={tForErrors}
+        variant="block"
+        title={t('agents:listing.loadError', 'Failed to load agents')}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

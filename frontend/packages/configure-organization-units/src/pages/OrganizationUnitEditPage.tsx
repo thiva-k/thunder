@@ -1,9 +1,9 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
-import {isEqualIgnoringEmpty} from '@thunderid/utils';
+import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -14,7 +14,6 @@ import {
   IconButton,
   Tabs,
   Tab,
-  Snackbar,
   PageContent,
   PageTitle,
 } from '@wso2/oxygen-ui';
@@ -85,6 +84,15 @@ export default function OrganizationUnitEditPage({
   const {t} = useTranslation();
   const logger = useLogger('OrganizationUnitEditPage');
 
+  // Resolves an error through the `organizationUnits` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `organizationUnits:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `organizationUnits:${key}`, options),
+    [t],
+  );
+
   // Check if we came from another OU (via parent or child OU link)
   const navigationState = location.state as OUNavigationState | null;
   const fromOU = navigationState?.fromOU;
@@ -96,7 +104,6 @@ export default function OrganizationUnitEditPage({
   const [activeTab, setActiveTab] = useState(0);
   const [editedOU, setEditedOU] = useState<Partial<OrganizationUnit>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [snackbar, setSnackbar] = useState<{open: boolean; message: string}>({open: false, message: ''});
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -113,15 +120,19 @@ export default function OrganizationUnitEditPage({
 
   const backButtonText = fromOU
     ? t('organizationUnits:edit.page.backToOU', {name: fromOU.name})
-    : t('organizationUnits:edit.page.back');
+    : t('organizationUnits:edit.page.back', 'Back to Organization Units');
 
   const handleTabChange = (_event: SyntheticEvent, newValue: number): void => {
     setActiveTab(newValue);
   };
 
-  const handleFieldChange = useCallback((field: keyof OrganizationUnit, value: unknown): void => {
-    setEditedOU((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof OrganizationUnit, value: unknown): void => {
+      updateOrganizationUnit.reset(); // a save error is stale once the form changes
+      setEditedOU((prev) => ({...prev, [field]: value}));
+    },
+    [updateOrganizationUnit],
+  );
 
   const commitDescription = useCallback(
     (value: string): void => {
@@ -191,10 +202,6 @@ export default function OrganizationUnitEditPage({
     });
   };
 
-  const handleDeleteError = (message: string): void => {
-    setSnackbar({open: true, message});
-  };
-
   if (isLoading) {
     return <PageLoadingAnimation />;
   }
@@ -202,19 +209,27 @@ export default function OrganizationUnitEditPage({
   if (fetchError) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {fetchError.message ?? t('organizationUnits:edit.page.error')}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch((error: unknown) => {
-              logger.error('Failed to navigate back', {error});
-            });
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('organizationUnits:edit.page.back')}
-        </Button>
+        <QueryErrorNotice
+          error={fetchError}
+          t={tForErrors}
+          variant="block"
+          title={t('organizationUnits:edit.page.errorTitle', 'Failed to load organization unit')}
+          fallbackKey="organizationUnits:edit.page.error"
+          fallbackDefaultValue="Failed to load organization unit information"
+          onRetry={() => void refetch()}
+          action={
+            <Button
+              onClick={() => {
+                handleBack().catch((error: unknown) => {
+                  logger.error('Failed to navigate back', {error});
+                });
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('organizationUnits:edit.page.back', 'Back to Organization Units')}
+            </Button>
+          }
+        />
       </PageContent>
     );
   }
@@ -233,7 +248,7 @@ export default function OrganizationUnitEditPage({
           }}
           startIcon={<ArrowLeft size={16} />}
         >
-          {t('organizationUnits:edit.page.back')}
+          {t('organizationUnits:edit.page.back', 'Back to Organization Units')}
         </Button>
       </PageContent>
     );
@@ -260,7 +275,8 @@ export default function OrganizationUnitEditPage({
             value={editedOU.logoUrl ?? organizationUnit.logoUrl ?? undefined}
             fallback={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
             editAriaLabel={t('organizationUnits:edit.page.logoUpdate.label', 'Update Logo')}
-            onSelect={(newLogoUrl: string) =>
+            onSelect={(newLogoUrl: string) => {
+              updateOrganizationUnit.reset(); // a save error is stale once the form changes
               setEditedOU((prev) => {
                 if (newLogoUrl === organizationUnit.logoUrl) {
                   const {logoUrl, ...rest} = prev;
@@ -268,8 +284,8 @@ export default function OrganizationUnitEditPage({
                   return rest;
                 }
                 return {...prev, logoUrl: newLogoUrl};
-              })
-            }
+              });
+            }}
             onSave={handleSave}
           />
         </PageTitle.Avatar>
@@ -474,19 +490,7 @@ export default function OrganizationUnitEditPage({
         organizationUnitId={id ?? null}
         onClose={() => setDeleteDialogOpen(false)}
         onSuccess={handleDeleteSuccess}
-        onError={handleDeleteError}
       />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar((prev) => ({...prev, open: false}))}
-        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-      >
-        <Alert onClose={() => setSnackbar((prev) => ({...prev, open: false}))} severity="error" sx={{width: '100%'}}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
 
       {/* Floating Action Bar */}
       {hasChanges && (
@@ -497,7 +501,20 @@ export default function OrganizationUnitEditPage({
           savingLabel={t('organizationUnits:edit.actions.saving.label')}
           isSaving={updateOrganizationUnit.isPending}
           saveDisabled={organizationUnit.isReadOnly === true}
-          onReset={() => setEditedOU({})}
+          error={
+            updateOrganizationUnit.error
+              ? getErrorMessage(
+                  updateOrganizationUnit.error,
+                  tForErrors,
+                  'update.error',
+                  'Failed to update organization unit. Please try again.',
+                )
+              : undefined
+          }
+          onReset={() => {
+            setEditedOU({});
+            updateOrganizationUnit.reset();
+          }}
           onSave={() => {
             // Errors are handled in handleSave
             handleSave().catch(() => null);

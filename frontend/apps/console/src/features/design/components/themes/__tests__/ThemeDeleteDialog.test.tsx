@@ -2,28 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen, waitFor} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import ThemeDeleteDialog from '../ThemeDeleteDialog';
 
 const mockMutate = vi.fn();
+const mockReset = vi.fn();
+const mockUseDeleteTheme = {
+  mutate: mockMutate,
+  reset: mockReset,
+  isPending: false,
+  isError: false,
+};
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, opts?: string | Record<string, unknown>) =>
-        typeof opts === 'object' && opts !== null && 'name' in opts ? String(opts.name) : key,
+      t: (key: string, opts?: string | Record<string, unknown>) => {
+        if (typeof opts === 'object' && opts !== null) {
+          if ('name' in opts) return String(opts.name);
+          if ('defaultValue' in opts) return (opts.defaultValue as string) ?? '';
+        }
+        return key;
+      },
     }),
   };
 });
 
 vi.mock('@thunderid/design', () => ({
-  useDeleteTheme: vi.fn(() => ({
-    mutate: mockMutate,
-    isPending: false,
-  })),
+  useDeleteTheme: () => mockUseDeleteTheme,
   useGetThemeUsages: vi.fn(() => ({
     data: undefined,
     isLoading: false,
@@ -33,6 +42,9 @@ vi.mock('@thunderid/design', () => ({
 describe('ThemeDeleteDialog', () => {
   beforeEach(() => {
     mockMutate.mockReset();
+    mockReset.mockReset();
+    mockUseDeleteTheme.isPending = false;
+    mockUseDeleteTheme.isError = false;
   });
 
   describe('Rendering', () => {
@@ -110,12 +122,8 @@ describe('ThemeDeleteDialog', () => {
   });
 
   describe('Loading state', () => {
-    it('disables buttons when isPending is true', async () => {
-      const {useDeleteTheme} = await import('@thunderid/design');
-      (useDeleteTheme as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        mutate: mockMutate,
-        isPending: true,
-      });
+    it('disables buttons when isPending is true', () => {
+      mockUseDeleteTheme.isPending = true;
 
       render(<ThemeDeleteDialog open themeId="theme-1" themeName="Test" onClose={vi.fn()} />);
 
@@ -145,6 +153,66 @@ describe('ThemeDeleteDialog', () => {
         expect(onSuccess).toHaveBeenCalledOnce();
         expect(onClose).toHaveBeenCalledOnce();
       });
+    });
+  });
+
+  describe('Error handling', () => {
+    it('displays a resolved error message on deletion failure, never the raw server text', async () => {
+      mockMutate.mockImplementation((_: unknown, callbacks: {onError?: (err: Error) => void}) => {
+        callbacks?.onError?.(new Error('Network error'));
+      });
+
+      const user = userEvent.setup();
+      render(<ThemeDeleteDialog open themeId="theme-1" themeName="My Theme" onClose={vi.fn()} />);
+
+      const deleteBtn = screen.getByText('common:actions.delete');
+      await user.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to delete theme. Please try again.')).toBeInTheDocument();
+        expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+      });
+    });
+
+    it('clears the error and resets the mutation when the dialog is cancelled', async () => {
+      mockMutate.mockImplementation((_: unknown, callbacks: {onError?: (err: Error) => void}) => {
+        callbacks?.onError?.(new Error('Network error'));
+      });
+
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      render(<ThemeDeleteDialog open themeId="theme-1" themeName="My Theme" onClose={onClose} />);
+
+      const deleteBtn = screen.getByText('common:actions.delete');
+      await user.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to delete theme. Please try again.')).toBeInTheDocument();
+      });
+
+      // Simulate the mutation now being in an errored state, as it would be after onError fires.
+      mockUseDeleteTheme.isError = true;
+
+      const cancelBtn = screen.getByText('common:actions.cancel');
+      await user.click(cancelBtn);
+
+      expect(mockReset).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('does not reset the mutation on cancel while a delete is still pending', () => {
+      mockUseDeleteTheme.isPending = true;
+      mockUseDeleteTheme.isError = true;
+
+      render(<ThemeDeleteDialog open themeId="theme-1" themeName="My Theme" onClose={vi.fn()} />);
+
+      // The cancel button is disabled while pending, but the underlying handler also guards on
+      // isPending directly: resetting a still-pending mutation would flip isPending back to false
+      // before the in-flight request settles.
+      const cancelBtn = screen.getByText('common:actions.cancel');
+      fireEvent.click(cancelBtn);
+
+      expect(mockReset).not.toHaveBeenCalled();
     });
   });
 });

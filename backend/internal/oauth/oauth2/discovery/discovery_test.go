@@ -81,8 +81,8 @@ func (suite *DiscoveryTestSuite) SetupTest() {
 				},
 			},
 			DCR:             engineconfig.DCRConfig{Enabled: boolPtr(true)},
-			TokenRevocation: engineconfig.OAuthTokenRevocationConfig{Enabled: true},
-			Logout:          engineconfig.LogoutConfig{Enabled: true},
+			TokenRevocation: engineconfig.OAuthTokenRevocationConfig{Enabled: boolPtr(true)},
+			Logout:          engineconfig.LogoutConfig{Enabled: boolPtr(true)},
 		},
 	}
 	_ = config.InitializeServerRuntime("test", testConfig)

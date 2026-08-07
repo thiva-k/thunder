@@ -1,0 +1,36 @@
+# Integrate {{productName}} Authentication in Android Application
+
+## Context
+I have an Android application (Kotlin, Jetpack Compose) and I want to integrate {{productName}}'s authentication system using the {{productName}} Android SDK, with sign-in and sign-up forms rendered natively in the app (app-native authentication).
+
+## Requirements
+- Use the `dev.thunderid:compose` Gradle dependency for authentication
+- Use app-native authentication through the Flow Execution API (no OAuth 2.0 client ID, no redirect URI)
+- Implement sign-in and sign-up with the prebuilt `SignIn`/`SignUp` composables
+- Guard content with the `SignedIn`/`SignedOut` composables
+- Display the signed-in user's profile information
+- Implement sign-out with the prebuilt `SignOutButton` composable
+
+## Configuration
+- **Application ID**: {{applicationId}}
+- **Base URL**: https://localhost:8090 (or your {{productName}} instance URL)
+- **SDK**: dev.thunderid:compose
+
+## IMPORTANT Configuration Rules
+- Add the {{productName}} Maven repository (`https://maven.thunderid.dev/releases`) to `settings.gradle.kts` before adding the dependency
+- Wrap the content passed to `setContent` with the `ThunderIDProvider` composable, configured with `ThunderIDConfig(baseUrl, scopes, applicationId)`
+- Access authentication state via `LocalThunderID.current`, not a separate hook or singleton
+- Required scopes: at minimum `"openid"`
+- Use `applicationId`, NOT a client ID or redirect URI — this SDK only supports app-native authentication
+
+## Implementation Steps
+1. Create a new Android Studio project using the Empty Activity template with Kotlin and Jetpack Compose
+2. Add the {{productName}} Maven repository to `settings.gradle.kts`
+3. Add the `dev.thunderid:compose` dependency to `build.gradle.kts`
+4. Wrap your `setContent` content with `ThunderIDProvider`, configured with `baseUrl`, `scopes`, and `applicationId`
+5. Build a root composable that checks `thunder.isInitialized` and renders a `SignedIn`/fallback split
+6. Build an auth screen using the `SignIn` composable, passing the `applicationId`
+7. Build a home screen that reads `LocalThunderID.current.user` to display the signed-in user's name and email, with a `SignOutButton`
+8. Run the app on an API 24+ emulator or device
+
+Please provide complete, working code with proper configuration for {{productName}} authentication using the {{productName}} Android SDK for Jetpack Compose.

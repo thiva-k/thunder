@@ -166,11 +166,26 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           // Edit URL for the "edit this page" feature.
           editUrl: productConfig.project.source.github.editUrls.content,
           // Versioning.
-          lastVersion: 'current',
+          lastVersion: 'v1.0.x',
           versions: {
             current: {
               label: 'Next',
               path: 'next',
+              // The current docs are the future/upcoming version, not an archive.
+              banner: 'unreleased',
+              // No "Version: Next" pill at the top of every doc page.
+              badge: false,
+            },
+            'v1.0.x': {
+              label: 'v1.0.x',
+              // Explicit URL segment so the stable release lives at /docs/v1.0.x/
+              // instead of the bare doc root. The version tracks the 1.0 minor line
+              // (1.0.0, 1.0.1, ...), so patch releases reuse these docs.
+              path: 'v1.0.x',
+              // Current stable release: not archived, so no "unmaintained" banner.
+              banner: 'none',
+              // No "Version: v1.0.x" pill at the top of every doc page.
+              badge: false,
             },
           },
           // Replace {{ProductName}}, {{productSlug}}, and local-URL placeholders inside code blocks at build time.

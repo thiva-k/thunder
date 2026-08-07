@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard, getInitials} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard, getInitials} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {Box, DataGrid, Avatar} from '@wso2/oxygen-ui';
 import {useMemo, type JSX} from 'react';
@@ -34,7 +34,7 @@ export default function ManageGroupsSection({organizationUnitId}: ManageGroupsSe
   const {t} = useTranslation();
   const dataGridLocaleText = useDataGridLocaleText();
 
-  const {data: groupsData, isLoading} = useGetOrganizationUnitGroups(organizationUnitId);
+  const {data: groupsData, isLoading, error, refetch} = useGetOrganizationUnitGroups(organizationUnitId);
 
   const columns: DataGrid.GridColDef<Group>[] = useMemo(
     () => [
@@ -86,10 +86,34 @@ export default function ManageGroupsSection({organizationUnitId}: ManageGroupsSe
     [t],
   );
 
+  if (error) {
+    return (
+      <SettingsCard
+        title={t('organizationUnits:edit.groups.sections.manage.title', 'Groups')}
+        description={t(
+          'organizationUnits:edit.groups.sections.manage.description',
+          'View groups belonging to this organization unit',
+        )}
+      >
+        <QueryErrorNotice
+          error={error}
+          t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
+          variant="inline"
+          onRetry={() => void refetch()}
+          fallbackKey="organizationUnits:edit.groups.sections.manage.error"
+          fallbackDefaultValue="Failed to load groups"
+        />
+      </SettingsCard>
+    );
+  }
+
   return (
     <SettingsCard
-      title={t('organizationUnits:edit.groups.sections.manage.title')}
-      description={t('organizationUnits:edit.groups.sections.manage.description')}
+      title={t('organizationUnits:edit.groups.sections.manage.title', 'Groups')}
+      description={t(
+        'organizationUnits:edit.groups.sections.manage.description',
+        'View groups belonging to this organization unit',
+      )}
       slotProps={{
         content: {
           sx: {

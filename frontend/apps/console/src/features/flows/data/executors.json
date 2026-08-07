@@ -112,8 +112,7 @@
       "properties": {
         "idpId": "{{IDP_ID}}",
         "allowAuthenticationWithoutLocalUser": false,
-        "allowRegistrationWithExistingUser": false,
-        "allowCrossOUProvisioning": false
+        "allowRegistrationWithExistingUser": false
       }
     }
   },
@@ -141,8 +140,7 @@
       "properties": {
         "idpId": "{{IDP_ID}}",
         "allowAuthenticationWithoutLocalUser": false,
-        "allowRegistrationWithExistingUser": false,
-        "allowCrossOUProvisioning": false
+        "allowRegistrationWithExistingUser": false
       }
     }
   },
@@ -170,8 +168,7 @@
       "properties": {
         "idpId": "{{IDP_ID}}",
         "allowAuthenticationWithoutLocalUser": false,
-        "allowRegistrationWithExistingUser": false,
-        "allowCrossOUProvisioning": false
+        "allowRegistrationWithExistingUser": false
       }
     }
   },
@@ -200,8 +197,7 @@
       "properties": {
         "idpId": "{{IDP_ID}}",
         "allowAuthenticationWithoutLocalUser": false,
-        "allowRegistrationWithExistingUser": false,
-        "allowCrossOUProvisioning": false
+        "allowRegistrationWithExistingUser": false
       }
     }
   },

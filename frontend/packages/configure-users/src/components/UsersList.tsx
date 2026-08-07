@@ -1,10 +1,10 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ResourceAvatar, getInitials} from '@thunderid/components';
+import {QueryErrorNotice, ResourceAvatar, getInitials} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {IconButton, Tooltip, Typography, Snackbar, Alert, ListingTable, DataGrid} from '@wso2/oxygen-ui';
+import {IconButton, Tooltip, Typography, ListingTable, DataGrid} from '@wso2/oxygen-ui';
 import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useMemo, useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -22,26 +22,10 @@ export default function UsersList() {
   const dataGridLocaleText = useDataGridLocaleText();
   const routes = useUserRoutes();
 
-  const {data: userData, isLoading, error: usersRequestError} = useGetUsers();
+  const {data: userData, isLoading, error, refetch} = useGetUsers();
 
-  const error = usersRequestError;
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  // Show snackbar when error occurs
-  const [prevError, setPrevError] = useState<typeof error>(null);
-  if (prevError !== error) {
-    setPrevError(error);
-    if (error) {
-      setSnackbarOpen(true);
-    }
-  }
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
 
   const handleDeleteClick = useCallback((userId: string): void => {
     setSelectedUserId(userId);
@@ -164,6 +148,18 @@ export default function UsersList() {
     [handleDeleteClick, handleEditClick, t],
   );
 
+  if (error) {
+    return (
+      <QueryErrorNotice
+        error={error}
+        t={t}
+        variant="block"
+        title={t('users:listing.error', 'Failed to load users')}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   return (
     <>
       <ListingTable.Provider variant="data-grid-card" loading={isLoading}>
@@ -195,17 +191,6 @@ export default function UsersList() {
 
       {/* Delete Confirmation Dialog */}
       <UserDeleteDialog open={deleteDialogOpen} userId={selectedUserId} onClose={handleDeleteCancel} />
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-      >
-        <Alert onClose={handleCloseSnackbar} severity="error" sx={{width: '100%'}}>
-          {error?.message ?? t('common:messages.saveError')}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

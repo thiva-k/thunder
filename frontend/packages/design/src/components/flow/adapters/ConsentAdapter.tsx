@@ -47,8 +47,10 @@ interface ConsentAdapterProps {
   onInputChange: (name: string, value: string) => void;
 }
 
+// Permissions are opt-in: an absent form value means the user has not granted the permission. This
+// must match how the SDK compiles consent_decisions on submit, or the screen and the token disagree.
 function isPermissionChecked(formValues: Record<string, string>, purposeId: string, name: string): boolean {
-  return formValues[getConsentOptionalKey(purposeId, name)] !== 'false';
+  return formValues[getConsentOptionalKey(purposeId, name)] === 'true';
 }
 
 // collectDescendants returns the transitive set of descendants of `name` per the parent index.

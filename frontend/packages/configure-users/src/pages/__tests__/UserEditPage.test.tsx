@@ -69,6 +69,7 @@ interface UseGetUserTypesReturn {
   data: UserTypeListResponse | undefined;
   isLoading: boolean;
   error: Error | null;
+  refetch: ReturnType<typeof vi.fn>;
 }
 
 interface UseGetUserTypeReturn {
@@ -102,6 +103,7 @@ interface UseDeleteUserReturn {
 }
 
 const mockRefetch = vi.fn();
+const mockRefetchUserTypes = vi.fn();
 const mockUseGetUser = vi.fn<() => UseGetUserReturn>();
 const mockUseGetUserTypes = vi.fn<() => UseGetUserTypesReturn>();
 const mockUseGetUserType = vi.fn<() => UseGetUserTypeReturn>();
@@ -236,6 +238,7 @@ describe('UserEditPage', () => {
       data: mockSchemasData,
       isLoading: false,
       error: null,
+      refetch: mockRefetchUserTypes,
     });
     mockUseGetUserType.mockReturnValue({
       data: mockSchemaData,
@@ -272,6 +275,50 @@ describe('UserEditPage', () => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 
+    it('displays loading spinner when the user type list is loading', () => {
+      mockUseGetUserTypes.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+        refetch: mockRefetchUserTypes,
+      });
+
+      render(<UserEditPage />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('displays error alert when the user type list fails to load', () => {
+      mockUseGetUserTypes.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('User types list failed'),
+        refetch: mockRefetchUserTypes,
+      });
+
+      render(<UserEditPage />);
+
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: /back to users/i})).toBeInTheDocument();
+    });
+
+    it('retries the user type list query when Refresh is clicked', async () => {
+      const user = userEvent.setup();
+      mockUseGetUserTypes.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('User types list failed'),
+        refetch: mockRefetchUserTypes,
+      });
+
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('button', {name: /refresh/i}));
+
+      expect(mockRefetchUserTypes).toHaveBeenCalledTimes(1);
+    });
+
     it('displays error alert when user fails to load', () => {
       mockUseGetUser.mockReturnValue({
         data: undefined,
@@ -282,7 +329,8 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('User not found');
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
       expect(screen.getByRole('button', {name: /back to users/i})).toBeInTheDocument();
     });
 
@@ -320,10 +368,11 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('Schema not found');
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
     });
 
-    it('displays generic error message when error message is empty', () => {
+    it('displays the generic fallback message when the error has no mapped code', () => {
       mockUseGetUser.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -333,7 +382,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('');
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
     });
 
     it('displays warning when user is null but no error', () => {
@@ -389,7 +438,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
     });
   });
 
@@ -499,6 +548,7 @@ describe('UserEditPage', () => {
         data: {...mockSchemasData, types: [{...mockSchemasData.types[0], ouId: ''}]},
         isLoading: false,
         error: null,
+        refetch: mockRefetchUserTypes,
       });
 
       render(<UserEditPage />);
@@ -610,6 +660,7 @@ describe('UserEditPage', () => {
         data: {...mockSchemasData, types: [{...mockSchemasData.types[0], ouId: 'schema-ou'}]},
         isLoading: false,
         error: null,
+        refetch: mockRefetchUserTypes,
       });
 
       render(<UserEditPage />);
@@ -631,6 +682,7 @@ describe('UserEditPage', () => {
         data: {...mockSchemasData, types: [{...mockSchemasData.types[0], ouId: ''}]},
         isLoading: false,
         error: null,
+        refetch: mockRefetchUserTypes,
       });
 
       render(<UserEditPage />);
@@ -858,7 +910,7 @@ describe('UserEditPage', () => {
       await user.click(confirmButton);
 
       await waitFor(() => {
-        expect(within(dialog).getByText('Failed to delete user')).toBeInTheDocument();
+        expect(within(dialog).getByText('Failed to delete user. Please try again.')).toBeInTheDocument();
       });
     });
 
@@ -896,7 +948,7 @@ describe('UserEditPage', () => {
       await user.click(confirmButton);
 
       await waitFor(() => {
-        expect(within(dialog).getByText('Delete failed')).toBeInTheDocument();
+        expect(within(dialog).getByText('Failed to delete user. Please try again.')).toBeInTheDocument();
       });
     });
 
@@ -916,7 +968,7 @@ describe('UserEditPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(within(dialog).getByText('Delete failed')).toBeInTheDocument();
+        expect(within(dialog).getByText('Failed to delete user. Please try again.')).toBeInTheDocument();
       });
     });
   });

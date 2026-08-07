@@ -8,6 +8,7 @@ import {JSX} from 'react';
 import useIsDarkMode from '../../hooks/useIsDarkMode';
 import useScrollAnimation from '../../hooks/useScrollAnimation';
 import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 interface CommunityCardProps {
   icon: JSX.Element;
@@ -153,6 +154,7 @@ function IssueIcon() {
 export default function CommunitySection(): JSX.Element {
   const theme = useTheme();
   const {ref, isVisible} = useScrollAnimation({threshold: 0.15});
+  const docsUrl = useDocsUrl();
   const {siteConfig} = useDocusaurusContext();
   const productName = (siteConfig.customFields?.product as DocusaurusProductConfig).project.name;
   const discussionsUrl = (siteConfig.customFields?.product as DocusaurusProductConfig).project.source.github
@@ -225,7 +227,7 @@ export default function CommunitySection(): JSX.Element {
               title="Contribute"
               description={`Help shape ${productName} by submitting features, fixes, or improvements.`}
               linkLabel="Start Contributing"
-              href="/docs/next/community/contributing/contribute-ideas"
+              href={docsUrl('/docs/next/community/contributing/contribute-ideas')}
             />
             <CommunityCard
               icon={<IssueIcon />}

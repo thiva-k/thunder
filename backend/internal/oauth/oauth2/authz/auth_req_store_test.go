@@ -55,9 +55,17 @@ func (suite *AuthorizationRequestStoreTestSuite) SetupTest() {
 }
 
 func (suite *AuthorizationRequestStoreTestSuite) TestNewAuthorizationRequestStore() {
-	store := newAuthorizationRequestStore(inmemory.Initialize("test-deployment"))
+	store := newAuthorizationRequestStore(inmemory.Initialize("test-deployment"), 900)
 	assert.NotNil(suite.T(), store)
 	assert.Implements(suite.T(), (*authorizationRequestStoreInterface)(nil), store)
+	assert.Equal(suite.T(), 15*time.Minute, store.(*authorizationRequestStore).validityPeriod)
+}
+
+func (suite *AuthorizationRequestStoreTestSuite) TestNewAuthorizationRequestStore_NonPositiveUsesDefault() {
+	for _, configured := range []int64{0, -1} {
+		store := newAuthorizationRequestStore(inmemory.Initialize("test-deployment"), configured)
+		assert.Equal(suite.T(), defaultAuthzRequestValidity, store.(*authorizationRequestStore).validityPeriod)
+	}
 }
 
 // Tests for AddRequest

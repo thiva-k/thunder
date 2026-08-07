@@ -1,11 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useGetVerifiablePresentations} from '@thunderid/configure-verifiable-presentations';
 import type {VerifiablePresentationSummary} from '@thunderid/configure-verifiable-presentations';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {Box, IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
+import {IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
 import {Pencil, QrCode as QrCodeIcon, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useMemo, useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -23,7 +24,16 @@ export default function VerifiablePresentationsList(): JSX.Element {
   const logger = useLogger('VerifiablePresentationsList');
   const dataGridLocaleText = useDataGridLocaleText();
 
-  const {data, isLoading, error} = useGetVerifiablePresentations();
+  // Resolves an error through the `verifiable-presentations` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `verifiable-presentations:${key}`, options),
+    [t],
+  );
+
+  const {data, isLoading, error, refetch} = useGetVerifiablePresentations();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -126,14 +136,13 @@ export default function VerifiablePresentationsList(): JSX.Element {
 
   if (error) {
     return (
-      <Box sx={{textAlign: 'center', py: 8}}>
-        <Typography variant="h6" color="error" gutterBottom>
-          {t('verifiable-presentations:listing.error')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error.message ?? t('common:messages.somethingWentWrong')}
-        </Typography>
-      </Box>
+      <QueryErrorNotice
+        error={error}
+        t={tForErrors}
+        variant="block"
+        title={t('verifiable-presentations:listing.error', 'Failed to load presentation definitions')}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

@@ -9,7 +9,7 @@ import {
 } from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
-import {Box, Typography, Button, CircularProgress, Alert, Snackbar} from '@wso2/oxygen-ui';
+import {Box, Button, CircularProgress, Alert} from '@wso2/oxygen-ui';
 import {Home} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useEffect, useMemo} from 'react';
 import type {JSX} from 'react';
@@ -47,9 +47,6 @@ export default function CreateRolePage(): JSX.Element {
     resolvedOuId,
     Boolean(resolvedOuId),
   );
-
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const [stepReady, setStepReady] = useState<Record<RoleCreateFlowStep, boolean>>({
     ORGANIZATION_UNIT: false,
@@ -93,19 +90,16 @@ export default function CreateRolePage(): JSX.Element {
   );
 
   const handleSubmit = async (): Promise<void> => {
-    setValidationError(null);
     setError(null);
 
     if (!name.trim()) {
-      setValidationError(t('create.form.name.required', 'Role name is required'));
-      setSnackbarOpen(true);
+      setError(t('create.form.name.required', 'Role name is required'));
       return;
     }
 
     const selectedOuId = hasMultipleOUs ? ouId : ouList[0]?.id;
     if (!selectedOuId) {
-      setValidationError(t('create.form.organizationUnit.required', 'Organization unit is required'));
-      setSnackbarOpen(true);
+      setError(t('create.form.organizationUnit.required', 'Organization unit is required'));
       return;
     }
 
@@ -120,6 +114,7 @@ export default function CreateRolePage(): JSX.Element {
       await navigate(listUrl);
     } catch (submitError) {
       logger.error('Failed to create role or navigate', {error: submitError});
+      setError(getErrorMessage(submitError as Error, t, 'create.error', 'Failed to create role. Please try again.'));
     }
   };
 
@@ -210,61 +205,40 @@ export default function CreateRolePage(): JSX.Element {
   }
 
   return (
-    <>
-      <FullScreenCreationWizardLayout
-        onClose={handleClose}
-        progress={getStepProgress()}
-        breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
-          key: step,
-          label: steps[step]?.label ?? step,
-          onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
-        }))}
-        footer={
-          <Box sx={{display: 'flex', justifyContent: 'flex-end', gap: 2}}>
-            {activeSteps.indexOf(currentStep) > 0 && (
-              <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createRole.isPending}>
-                {t('common:actions.back')}
-              </Button>
-            )}
-
-            <Button
-              variant="contained"
-              disabled={!stepReady[currentStep] || createRole.isPending || isOuLoading}
-              sx={{minWidth: 100}}
-              onClick={handleNextStep}
-            >
-              {createRole.isPending ? t('common:status.saving') : t('common:actions.continue')}
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={getStepProgress()}
+      breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
+        key: step,
+        label: steps[step]?.label ?? step,
+        onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
+      }))}
+      footer={
+        <Box sx={{display: 'flex', justifyContent: 'flex-end', gap: 2}}>
+          {activeSteps.indexOf(currentStep) > 0 && (
+            <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createRole.isPending}>
+              {t('common:actions.back', 'Back')}
             </Button>
-          </Box>
-        }
-      >
-        {error && (
-          <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+          )}
 
-        {createRole.error && (
-          <Alert severity="error" sx={{mb: 3}}>
-            <Typography variant="body2" sx={{fontWeight: 'bold', mb: 0.5}}>
-              {getErrorMessage(createRole.error, t, 'create.error')}
-            </Typography>
-          </Alert>
-        )}
-
-        {renderStepContent()}
-      </FullScreenCreationWizardLayout>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-      >
-        <Alert onClose={() => setSnackbarOpen(false)} severity="error" sx={{width: '100%'}}>
-          {validationError}
+          <Button
+            variant="contained"
+            disabled={!stepReady[currentStep] || createRole.isPending || isOuLoading}
+            sx={{minWidth: 100}}
+            onClick={handleNextStep}
+          >
+            {createRole.isPending ? t('common:status.saving', 'Saving...') : t('common:actions.continue', 'Continue')}
+          </Button>
+        </Box>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+          {error}
         </Alert>
-      </Snackbar>
-    </>
+      )}
+
+      {renderStepContent()}
+    </FullScreenCreationWizardLayout>
   );
 }

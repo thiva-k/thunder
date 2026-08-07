@@ -32,6 +32,19 @@ export default function GroupCreateProvider({children}: PropsWithChildren) {
   const [ouId, setOuId] = useState<string>(INITIAL_STATE.ouId);
   const [error, setError] = useState<string | null>(INITIAL_STATE.error);
 
+  // A create failure goes stale the moment any wizard input changes, so any edit clears it.
+  // currentStep is deliberately excluded: stepping back and forth is navigation, not a field edit.
+  // Adjusted during render (React's documented pattern for state that must stay in sync with
+  // another value) rather than in an effect, since a useEffect here would run a fully committed
+  // render with the stale error still visible before clearing it a tick later.
+  const formFingerprint = JSON.stringify([name, description, ouId]);
+  const [prevFormFingerprint, setPrevFormFingerprint] = useState(formFingerprint);
+
+  if (formFingerprint !== prevFormFingerprint) {
+    setPrevFormFingerprint(formFingerprint);
+    setError(null);
+  }
+
   const reset = useCallback((): void => {
     setCurrentStep(INITIAL_STATE.currentStep);
     setName(INITIAL_STATE.name);

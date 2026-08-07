@@ -79,13 +79,34 @@ describe('SetDefaultResourceServerDialog', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('shows an error toast on a failed mutation', () => {
-    mockMutate.mockImplementation((_vars, opts: {onError: (err: Error) => void}) => opts.onError(new Error('nope')));
+  it('shows the resolved catalog message inline, never the raw server text, on a failed mutation, and keeps the dialog open', () => {
+    const rawServerMessage = 'raw backend set-default failure detail';
+    mockMutate.mockImplementation((_vars, opts: {onError: (err: Error) => void}) =>
+      opts.onError(new Error(rawServerMessage)),
+    );
+    const onClose = vi.fn();
 
-    renderWithProviders(<SetDefaultResourceServerDialog open resourceServer={resourceServer} onClose={vi.fn()} />);
+    renderWithProviders(<SetDefaultResourceServerDialog open resourceServer={resourceServer} onClose={onClose} />);
 
     fireEvent.click(screen.getByRole('button', {name: 'Set as default'}));
 
-    expect(mockShowToast).toHaveBeenCalledWith('Failed to set the default resource server.', 'error');
+    expect(screen.getByText('Failed to set the default resource server.')).toBeInTheDocument();
+    expect(screen.queryByText(rawServerMessage)).not.toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('clears the error and closes when Cancel is clicked after a failed mutation', () => {
+    mockMutate.mockImplementation((_vars, opts: {onError: (err: Error) => void}) => opts.onError(new Error('nope')));
+    const onClose = vi.fn();
+
+    renderWithProviders(<SetDefaultResourceServerDialog open resourceServer={resourceServer} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Set as default'}));
+    expect(screen.getByText('Failed to set the default resource server.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
+
+    expect(onClose).toHaveBeenCalled();
   });
 });

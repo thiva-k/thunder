@@ -24,8 +24,21 @@ const (
 	PropIDJagEnabled          = "id_jag_enabled"
 )
 
-// defaultOIDCScopes is seeded for OIDC and Google connections when no scopes are supplied.
-const defaultOIDCScopes = "openid,email,profile"
+// Claims and scopes shared by the OIDC-style providers. A claim is what the provider emits; a scope
+// only asks for it.
+const (
+	emailClaim        = "email"
+	emailScope        = "email"
+	defaultOIDCScopes = "openid,email,profile"
+)
+
+// Local attribute names, as declared by user type schemas.
+// TODO: Drop these once schemas can declare attribute types (EMAIL, MOBILE, ...) as a first class
+// concept, so the attribute carrying an email can be found rather than named here.
+const (
+	defaultAccountLinkingAttribute = "email"
+	localUsernameAttribute         = "username"
+)
 
 // Known endpoints for Google OAuth2/OIDC.
 const (
@@ -35,12 +48,17 @@ const (
 	googleJwksEndpoint          = "https://www.googleapis.com/oauth2/v3/certs"
 )
 
-// Known endpoints for GitHub OAuth.
+// Known endpoints, claims and scopes for GitHub OAuth.
 const (
 	gitHubAuthorizationEndpoint = "https://github.com/login/oauth/authorize"
 	gitHubTokenEndpoint         = "https://github.com/login/oauth/access_token" // #nosec G101
 	gitHubUserInfoEndpoint      = "https://api.github.com/user"
 	gitHubUserEmailEndpoint     = "https://api.github.com/user/emails"
+
+	gitHubLoginClaim     = "login"
+	gitHubUserScope      = "user"
+	gitHubUserEmailScope = "user:email"
+	defaultGitHubScopes  = gitHubUserEmailScope
 )
 
 // idpPropertyConfig defines the required and optional properties for an IDP type,

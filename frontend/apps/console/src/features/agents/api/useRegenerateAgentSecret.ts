@@ -4,7 +4,6 @@
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 import AgentQueryKeys from '../constants/agent-query-keys';
 import type {Agent, AgentInboundAuthConfig} from '../models/agent';
@@ -94,9 +93,6 @@ export default function useRegenerateAgentSecret(): UseMutationResult<
       queryClient.invalidateQueries({queryKey: [AgentQueryKeys.AGENT, variables.agentId]}).catch(() => undefined);
       queryClient.invalidateQueries({queryKey: [AgentQueryKeys.AGENTS]}).catch(() => undefined);
       showToast(t('regenerateSecret.snackbar.success', 'Client secret regenerated successfully'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'regenerateSecret.dialog.error'), 'error');
     },
   });
 }

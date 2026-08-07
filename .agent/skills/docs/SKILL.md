@@ -1,6 +1,6 @@
 ---
 name: docs
-description: Handles every ThunderID documentation task in one skill: scaffolding a new page, writing content into an existing page, checking structural standards, reviewing writing quality/tone/AI-vocabulary, verifying technical accuracy, reviewing API documentation (OpenAPI specs and SDK reference pages) for consistency and accuracy, checking SEO/discoverability, or running the full pre-merge review. Use whenever asked to create, write, add, or fill in documentation; check, lint, or verify a doc page's standards; review a doc's style, tone, or quality; verify a doc's technical accuracy; review an OpenAPI spec or SDK API reference page; check a doc's SEO; or do a full/complete review before merging a doc PR.
+description: Handles every ThunderID documentation task in one skill: scaffolding a new page, writing content into an existing page, checking structural standards, reviewing writing quality/tone/AI-vocabulary, verifying technical accuracy, reviewing API documentation (OpenAPI specs and SDK reference pages) for consistency and accuracy, checking SEO/discoverability, or running the full pre-merge review. Use whenever asked to create, write, add, or fill in documentation; check, lint, or verify a doc page's standards; review a doc's style, tone, or quality; verify a doc's technical accuracy; review an OpenAPI spec or SDK API reference page; check a doc's SEO; do a full/complete review before merging a doc PR; or structure or audit a use-case section (`docs/content/use-cases/<pattern>/`) for page order, diagram design, jargon literacy, and a quality-bar score.
 allowed-tools: Read Write Edit Bash WebFetch WebSearch
 ---
 
@@ -26,6 +26,7 @@ If invoked as `/docs <action> [file-path]`, or the request plainly names one of 
 | `api` | `api.md` |
 | `seo` | `seo.md` |
 | `review` | `review.md` |
+| `use-case` | `use-case.md` |
 
 ### Natural-language form
 
@@ -42,6 +43,7 @@ Otherwise, match the request's intent:
 | Check SEO / discoverability | `seo.md` |
 | Run the full pre-merge review (structure + style + tech together) | `review.md` |
 | Review my changes / review the diff / review before I open a PR, no file named | `review.md` (diff mode — reads every changed file, including uncommitted, instead of one named file) |
+| Structure or audit a use-case section (`docs/content/use-cases/<pattern>/`): page order, diagram design, jargon literacy, scoring rubric | `use-case.md` |
 
 Default to `review.md` if the request just says "review this doc" without naming a dimension or an action word.
 

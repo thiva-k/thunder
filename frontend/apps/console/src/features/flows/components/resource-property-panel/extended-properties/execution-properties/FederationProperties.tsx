@@ -124,15 +124,6 @@ function FederationProperties({resource, onChange}: CommonResourcePropertiesProp
               'Allow existing users to proceed through registration flows.',
             )}
           />
-          <CheckboxWithHint
-            checked={!!properties.allowCrossOUProvisioning}
-            onChange={(checked) => handleBooleanPropertyChange('allowCrossOUProvisioning', checked)}
-            label={t('flows:core.executions.federation.allowCrossOUProvisioning.label', 'Allow Cross-OU Provisioning')}
-            hint={t(
-              'flows:core.executions.federation.allowCrossOUProvisioning.hint',
-              'Allow creating a user in a different organizational unit.',
-            )}
-          />
         </Stack>
       )}
     </Stack>

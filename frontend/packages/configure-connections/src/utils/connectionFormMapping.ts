@@ -11,12 +11,13 @@ export const MASKED_SECRET = '******';
 export type ConnectionFormValues = Record<string, string>;
 
 /**
- * Build empty form values for a create form (all fields blank except the derived redirect URI).
+ * Build empty form values for a create form (all fields blank except the derived redirect URI
+ * and fields carrying a default value).
  */
 export function emptyFormValues(fields: ConnectionFieldDef[], redirectUri: string): ConnectionFormValues {
   const values: ConnectionFormValues = {};
   for (const field of fields) {
-    values[field.name] = field.name === 'redirectUri' ? redirectUri : '';
+    values[field.name] = field.name === 'redirectUri' ? redirectUri : (field.defaultValue ?? '');
   }
   return values;
 }
@@ -24,7 +25,8 @@ export function emptyFormValues(fields: ConnectionFieldDef[], redirectUri: strin
 /**
  * Map a fetched connection response into editable form values. Secrets are never prefilled
  * (the masked "******" is display-only and handled by the secret field's "stored" state).
- * The redirect URI falls back to the derived value if the API didn't store one.
+ * The redirect URI falls back to the derived value if the API didn't store one; other fields
+ * fall back to their default value.
  */
 export function responseToFormValues(
   response: ConnectionResponse,
@@ -50,7 +52,7 @@ export function responseToFormValues(
       values[field.name] = raw === true ? 'true' : 'false';
       continue;
     }
-    values[field.name] = typeof raw === 'string' ? raw : '';
+    values[field.name] = typeof raw === 'string' && raw !== '' ? raw : (field.defaultValue ?? '');
   }
   return values;
 }

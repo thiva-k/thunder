@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useIdentityProviders, useSMSProviders} from '@thunderid/configure-connections';
 import {Alert, Box, Snackbar, Stack} from '@wso2/oxygen-ui';
 import type {Edge, Node, NodeChange} from '@xyflow/react';
@@ -60,10 +61,23 @@ function FlowBuilder() {
   const [isBaselineRebasePending, setIsBaselineRebasePending] = useState<boolean>(false);
 
   // Fetch the existing flow if flowId is provided (editing an existing flow)
-  const {data: existingFlowData, isLoading: isLoadingExistingFlow} = useGetFlowById(flowId);
+  const {
+    data: existingFlowData,
+    isLoading: isLoadingExistingFlow,
+    error: flowLoadError,
+    refetch: refetchFlow,
+  } = useGetFlowById(flowId);
 
   // Determine if we're editing an existing flow
   const isEditingExistingFlow = Boolean(flowId && existingFlowData);
+
+  // Resolves an error through the `flows` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `flows:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `flows:${key}`, options),
+    [t],
+  );
 
   // Flow naming hook
   const {flowName, flowHandle, needsAutoLayout, setNeedsAutoLayout, handleFlowNameChange} = useFlowNaming({
@@ -619,6 +633,18 @@ function FlowBuilder() {
       sso.handleDisableRequest,
     ],
   );
+
+  if (flowLoadError) {
+    return (
+      <QueryErrorNotice
+        error={flowLoadError}
+        t={tForErrors}
+        variant="block"
+        title={t('flows:core.loginFlowBuilder.errors.loadFailed', 'Failed to load flow')}
+        onRetry={() => void refetchFlow()}
+      />
+    );
+  }
 
   return (
     <Box

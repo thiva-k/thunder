@@ -1,9 +1,9 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {getInitials} from '@thunderid/components';
-import {useGetUsers} from '@thunderid/configure-users';
-import {Avatar, Box, Skeleton, Stack, Typography} from '@wso2/oxygen-ui';
+import {getInitials, ResourceAvatar} from '@thunderid/components';
+import {UserConstants, useGetUsers} from '@thunderid/configure-users';
+import {Box, Skeleton, Stack, Typography} from '@wso2/oxygen-ui';
 import {UsersRound} from '@wso2/oxygen-ui-icons-react';
 import {motion} from 'framer-motion';
 import type {JSX} from 'react';
@@ -21,7 +21,7 @@ const avatarVariants = {
 interface MembersPreviewProps {
   isLoading: boolean;
   isEmpty: boolean;
-  users: {id: string; display?: string}[];
+  users: {id: string; display?: string; attributes?: Record<string, unknown>}[];
   extraCount: number;
   emptyLabel: string;
   countLabel: string;
@@ -47,38 +47,36 @@ function MembersPreview({isLoading, isEmpty, users, extraCount, emptyLabel, coun
   }
 
   return (
-    <Stack direction="row" spacing={0.5} alignItems="center">
+    <Box sx={{display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5}}>
       <Stack
         component={motion.div}
         variants={{visible: {transition: {staggerChildren: 0.06}}}}
         direction="row"
         spacing={0.5}
       >
-        {users.map((user) => (
-          <motion.div key={user.id} variants={avatarVariants}>
-            <Avatar
-              sx={{
-                width: 32,
-                height: 32,
-                fontSize: '0.7rem',
-                bgcolor: 'primary.light',
-                color: 'primary.contrastText',
-              }}
-            >
-              {getInitials(user.display)}
-            </Avatar>
-          </motion.div>
-        ))}
+        {users.map((user) => {
+          const picture = user.attributes?.picture;
+
+          return (
+            <motion.div key={user.id} variants={avatarVariants}>
+              <ResourceAvatar
+                value={typeof picture === 'string' ? picture : undefined}
+                size={32}
+                fallback={`${UserConstants.DEFAULT_AVATAR_PREFIX}${getInitials(user.display)}`}
+              />
+            </motion.div>
+          );
+        })}
       </Stack>
       {extraCount > 0 && (
-        <Typography variant="caption" color="text.secondary" sx={{ml: 0.5}}>
+        <Typography variant="caption" color="text.secondary" sx={{whiteSpace: 'nowrap'}}>
           +{extraCount}
         </Typography>
       )}
-      <Typography variant="caption" color="text.secondary" sx={{ml: 1}}>
+      <Typography variant="caption" color="text.secondary" sx={{ml: 0.5, whiteSpace: 'nowrap'}}>
         {countLabel}
       </Typography>
-    </Stack>
+    </Box>
   );
 }
 

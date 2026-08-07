@@ -1,8 +1,12 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {AndroidLogo, AppleIcon, FlutterLogo} from '@thunderid/components';
 import {MCP} from '@wso2/oxygen-ui-icons-react';
+import AndroidTemplate from '../data/application-templates/technology-based/android.json';
 import ExpressTemplate from '../data/application-templates/technology-based/express.json';
+import FlutterTemplate from '../data/application-templates/technology-based/flutter.json';
+import IOSTemplate from '../data/application-templates/technology-based/ios.json';
 import MCPClientTemplate from '../data/application-templates/technology-based/mcp-client.json';
 import NextJSTemplate from '../data/application-templates/technology-based/nextjs.json';
 import NodeTemplate from '../data/application-templates/technology-based/node.json';
@@ -164,6 +168,30 @@ const TechnologyBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Te
     descriptionKey: 'applications:onboarding.configure.stack.technology.nodejs.description',
     template: NodeTemplate as ApplicationTemplate,
     categories: ['backend'],
+  },
+  {
+    value: TechnologyApplicationTemplate.IOS,
+    icon: <AppleIcon size={40} />,
+    titleKey: 'applications:onboarding.configure.stack.technology.ios.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.ios.description',
+    template: IOSTemplate as ApplicationTemplate,
+    categories: ['mobile'],
+  },
+  {
+    value: TechnologyApplicationTemplate.ANDROID,
+    icon: <AndroidLogo size={40} />,
+    titleKey: 'applications:onboarding.configure.stack.technology.android.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.android.description',
+    template: AndroidTemplate as ApplicationTemplate,
+    categories: ['mobile'],
+  },
+  {
+    value: TechnologyApplicationTemplate.FLUTTER,
+    icon: <FlutterLogo size={40} />,
+    titleKey: 'applications:onboarding.configure.stack.technology.flutter.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.flutter.description',
+    template: FlutterTemplate as ApplicationTemplate,
+    categories: ['mobile'],
   },
   {
     value: TechnologyApplicationTemplate.MCP_CLIENT,

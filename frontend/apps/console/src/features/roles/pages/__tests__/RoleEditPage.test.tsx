@@ -69,9 +69,44 @@ vi.mock('../../components/edit-role/permissions-settings/EditPermissionsSettings
   ),
 }));
 
-vi.mock('@thunderid/components', () => ({
+vi.mock('@thunderid/components', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/components')>()),
   CopyableId: vi.fn(() => null),
   PageLoadingAnimation: vi.fn(() => <div data-testid="page-loading-animation" />),
+  UnsavedChangesBar: vi.fn(
+    ({
+      message,
+      resetLabel,
+      saveLabel,
+      savingLabel,
+      isSaving,
+      saveDisabled,
+      error,
+      onReset,
+      onSave,
+    }: {
+      message: string;
+      resetLabel: string;
+      saveLabel: string;
+      savingLabel: string;
+      isSaving: boolean;
+      saveDisabled?: boolean;
+      error?: string;
+      onReset: () => void;
+      onSave: () => void;
+    }) => (
+      <div data-testid="unsaved-changes-bar">
+        {error && <div role="alert">{error}</div>}
+        <span>{message}</span>
+        <button type="button" onClick={onReset}>
+          {resetLabel}
+        </button>
+        <button type="button" onClick={onSave} disabled={isSaving || saveDisabled}>
+          {isSaving ? savingLabel : saveLabel}
+        </button>
+      </div>
+    ),
+  ),
 }));
 
 vi.mock('react-router', async () => {
@@ -173,7 +208,7 @@ describe('RoleEditPage', () => {
   });
 
   describe('Error State', () => {
-    it('should show error alert when fetch fails', () => {
+    it('should show the error in place of the page content, with a way back', () => {
       vi.mocked(useGetRole).mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -183,7 +218,8 @@ describe('RoleEditPage', () => {
 
       render(<RoleEditPage />);
 
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load role')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Back to Roles'})).toBeInTheDocument();
     });
   });
 
@@ -238,24 +274,23 @@ describe('RoleEditPage', () => {
   });
 
   describe('Save Error Flow', () => {
-    it('should show a generic toast when save fails', async () => {
+    it('should display the generic error inline in the save bar, not a toast', async () => {
       const user = userEvent.setup();
-      const mockMutateAsync = vi.fn().mockRejectedValue(new Error('Network error'));
       vi.mocked(useUpdateRole).mockReturnValue({
         mutate: vi.fn(),
-        mutateAsync: mockMutateAsync,
+        mutateAsync: vi.fn(),
         isPending: false,
-        isError: false,
+        isError: true,
         isSuccess: false,
-        error: null,
+        error: new Error('Request failed'),
         data: undefined,
         reset: vi.fn(),
         context: undefined,
-        failureCount: 0,
+        failureCount: 1,
         failureReason: null,
-        isIdle: true,
+        isIdle: false,
         isPaused: false,
-        status: 'idle',
+        status: 'error',
         submittedAt: 0,
         variables: undefined,
       } as unknown as ReturnType<typeof useUpdateRole>);
@@ -270,34 +305,31 @@ describe('RoleEditPage', () => {
       await user.type(nameInput, 'New Name');
       await user.tab();
 
-      const saveButton = screen.getByRole('button', {name: 'Save Changes'});
-      await user.click(saveButton);
-
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith('Failed to update role. Please try again.', 'error');
+        expect(screen.getByText('Failed to update role. Please try again.')).toBeInTheDocument();
       });
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
-    it('should show a mapped toast when the role name conflicts on save', async () => {
+    it('should display the mapped error inline when the role name conflicts on save', async () => {
       const user = userEvent.setup();
       const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
       error.response = {data: {code: 'ROL-1004'}};
-      const mockMutateAsync = vi.fn().mockRejectedValue(error);
       vi.mocked(useUpdateRole).mockReturnValue({
         mutate: vi.fn(),
-        mutateAsync: mockMutateAsync,
+        mutateAsync: vi.fn(),
         isPending: false,
-        isError: false,
+        isError: true,
         isSuccess: false,
-        error: null,
+        error,
         data: undefined,
         reset: vi.fn(),
         context: undefined,
-        failureCount: 0,
+        failureCount: 1,
         failureReason: null,
-        isIdle: true,
+        isIdle: false,
         isPaused: false,
-        status: 'idle',
+        status: 'error',
         submittedAt: 0,
         variables: undefined,
       } as unknown as ReturnType<typeof useUpdateRole>);
@@ -312,15 +344,12 @@ describe('RoleEditPage', () => {
       await user.type(nameInput, 'New Name');
       await user.tab();
 
-      const saveButton = screen.getByRole('button', {name: 'Save Changes'});
-      await user.click(saveButton);
-
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(
-          'A role with this name already exists in this organization unit. Choose a different name.',
-          'error',
-        );
+        expect(
+          screen.getByText('A role with this name already exists in this organization unit. Choose a different name.'),
+        ).toBeInTheDocument();
       });
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
   });
 

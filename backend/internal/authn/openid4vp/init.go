@@ -97,7 +97,7 @@ func Initialize(
 		ResultRedirectURIBase: cfg.ResultRedirectURI,
 		ResultTokenValidity:   resultTokenValidity,
 		VerifierInfo:          verifierInfo,
-		EnforceKeyBinding:     cfg.EnforceKeyBinding,
+		EnforceKeyBinding:     cfg.EnforceKeyBindingEnabled(),
 	}, newOpenID4VPStore(configCrypto, store), clientID,
 		cryptoProvider, providers.KeyRef{KeyID: cfg.SigningKeyID}, signingKey.Algorithm, x5c,
 		trust, defSvc, jwtService, base)

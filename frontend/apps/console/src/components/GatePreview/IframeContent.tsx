@@ -8,7 +8,8 @@ import {
   DesignProvider,
   AuthPageLayout,
   AuthCardLayout,
-  GoogleFontLoader,
+  FontImporter,
+  getFontImportURL,
   type Theme,
   type DesignResolveResponse,
   type Stylesheet,
@@ -133,6 +134,7 @@ export default function IframeContent({
 
   const themeTypography = (hasTheme ? theme : baseTheme)?.typography as {fontFamily?: string} | undefined;
   const fontFamily = themeTypography?.fontFamily;
+  const fontImportURL = getFontImportURL(hasTheme ? theme : baseTheme);
 
   // Inject custom stylesheets into the iframe document (not the parent).
   const serializedSheets = JSON.stringify(stylesheets);
@@ -175,7 +177,7 @@ export default function IframeContent({
 
   return (
     <CacheProvider value={cache}>
-      <GoogleFontLoader fontFamily={fontFamily} targetDocument={iframeDoc} />
+      <FontImporter fontFamily={fontFamily} importURL={fontImportURL} targetDocument={iframeDoc} />
       <DesignProvider
         shouldResolveDesignInternally={false}
         design={hasTheme ? ({theme: sanitizeThemeForMui(theme!)} as DesignResolveResponse) : undefined}

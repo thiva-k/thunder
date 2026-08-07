@@ -141,13 +141,16 @@ export default function ExternalLinkConfirmDialog({
               flexShrink: 0,
             }}
           >
-            <AlertTriangle size={28} color={theme.palette.warning.main} />
+            <AlertTriangle size={50} color={theme.palette.warning.main} />
           </Box>
           <Typography variant="h6" component="h2">
             {t('common:externalLink.title', {productName})}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t('common:externalLink.message', {productName})}{' '}
+            {t(
+              'common:externalLink.message',
+              'This link leads to an external site. Please verify the destination before proceeding:',
+            )}{' '}
             <Box component="span" sx={{fontWeight: 700, color: 'text.primary'}}>
               {hostname}
             </Box>

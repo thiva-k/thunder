@@ -122,6 +122,21 @@ vi.mock('@wso2/oxygen-ui', async () => {
       ),
       CellIcon: ({primary}: {primary: string}) => <span>{primary}</span>,
       RowActions: ({children}: {children: React.ReactNode}): React.ReactElement => children as React.ReactElement,
+      EmptyState: ({
+        title = '',
+        description = '',
+        action = null,
+      }: {
+        title?: string;
+        description?: string;
+        action?: React.ReactNode;
+      }) => (
+        <div>
+          {title && <div>{title}</div>}
+          {description && <div>{description}</div>}
+          {action}
+        </div>
+      ),
     },
   };
 });
@@ -327,9 +342,7 @@ describe('UsersList', () => {
     });
   });
 
-  it('closes snackbar when close button is clicked', async () => {
-    const user = userEvent.setup();
-
+  it('renders the error in place of the grid, not a dismissible snackbar', async () => {
     mockUseGetUsers.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -342,12 +355,7 @@ describe('UsersList', () => {
       expect(screen.getByText('Failed to load users')).toBeInTheDocument();
     });
 
-    const closeButton = screen.getByLabelText(/close/i);
-    await user.click(closeButton);
-
-    await waitFor(() => {
-      expect(screen.queryByText('Failed to load users')).not.toBeInTheDocument();
-    });
+    expect(screen.queryByTestId('data-grid')).not.toBeInTheDocument();
   });
 
   it('handles error when row click navigation fails', async () => {

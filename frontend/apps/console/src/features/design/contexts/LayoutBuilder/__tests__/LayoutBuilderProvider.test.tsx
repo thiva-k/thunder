@@ -95,6 +95,49 @@ describe('LayoutBuilderProvider', () => {
     });
   });
 
+  describe('Error state', () => {
+    it('renders a read error instead of the provider tree when the layout fetch fails', () => {
+      mockUseGetLayout.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Network error'),
+        refetch: vi.fn(),
+      });
+
+      render(
+        <LayoutBuilderProvider>
+          <span data-testid="child">Child</span>
+        </LayoutBuilderProvider>,
+      );
+
+      expect(screen.getByText('Failed to load layout')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('child')).not.toBeInTheDocument();
+    });
+
+    it('retries the fetch when the read error action is clicked', async () => {
+      const mockRefetch = vi.fn();
+      mockUseGetLayout.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Network error'),
+        refetch: mockRefetch,
+      });
+
+      const user = userEvent.setup();
+      render(
+        <LayoutBuilderProvider>
+          <span data-testid="child">Child</span>
+        </LayoutBuilderProvider>,
+      );
+
+      await user.click(screen.getByRole('button', {name: 'Refresh'}));
+
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Loaded state', () => {
     beforeEach(() => {
       mockUseGetLayout.mockReturnValue({

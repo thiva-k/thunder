@@ -249,17 +249,6 @@ func runWithResult(
 		}
 	}
 
-	// Seed database on first run.
-	if _, err := os.Stat(filepath.Join(sampleDir, "backend", "wayfinder.sqlite")); os.IsNotExist(err) {
-		progress("Seeding database...")
-		seedCmd := exec.Command("npm", "run", "seed")
-		seedCmd.Dir = filepath.Join(sampleDir, "backend")
-		if out, seedErr := seedCmd.CombinedOutput(); seedErr != nil {
-			return proc, meta.sampleURL, serverURL,
-				fmt.Errorf("seed failed: %w\n%s", seedErr, out)
-		}
-	}
-
 	// Write service .env files so each process starts with the right credentials.
 	aiEnabled := hasFeature(opts, "ai")
 	if err := writeFrontendEnv(sampleDir, serverURL, aiEnabled); err != nil {
@@ -383,7 +372,7 @@ func writeResources(yamlPath string, vars map[string]string, thunderRoot string)
 	content := substituteVars(string(raw), vars)
 	docs := splitYAML(content)
 
-	reResourceType := regexp.MustCompile(`(?m)^#\s*resource_type:\s*(\S+)`)
+	reResourceType := regexp.MustCompile(`(?m)^resource_type:\s*(\S+)`)
 	reID := regexp.MustCompile(`(?m)^(?:id|handle):\s*(\S+)`)
 
 	for i, doc := range docs {

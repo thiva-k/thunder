@@ -3,9 +3,20 @@
 
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
-import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography} from '@wso2/oxygen-ui';
+import {getErrorMessage} from '@thunderid/utils';
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  Typography,
+} from '@wso2/oxygen-ui';
 import {Star} from '@wso2/oxygen-ui-icons-react';
-import type {JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useSetDefaultResourceServer from '../api/useSetDefaultResourceServer';
 import type {ResourceServer} from '../models/resource-server';
@@ -27,6 +38,22 @@ export default function SetDefaultResourceServerDialog({
   const {showToast} = useToast();
   const logger = useLogger('SetDefaultResourceServerDialog');
   const setDefault = useSetDefaultResourceServer();
+  const [error, setError] = useState<string | null>(null);
+
+  // Resolves an error through the `resourceServers` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `resourceServers:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `resourceServers:${key}`, options),
+    [t],
+  );
+
+  const handleClose = (): void => {
+    if (setDefault.isPending) return;
+    setError(null);
+    onClose();
+  };
 
   const handleConfirm = (): void => {
     if (!resourceServer) return;
@@ -35,6 +62,7 @@ export default function SetDefaultResourceServerDialog({
       {resourceServerId: resourceServer.id},
       {
         onSuccess: () => {
+          setError(null);
           showToast(
             t('resourceServers:setDefault.success', '{{name}} is now the default resource server.', {
               name: resourceServer.name,
@@ -46,14 +74,14 @@ export default function SetDefaultResourceServerDialog({
         },
         onError: (err: Error) => {
           logger.error('Failed to set default resource server', {error: err});
-          showToast(t('resourceServers:setDefault.error', 'Failed to set the default resource server.'), 'error');
+          setError(getErrorMessage(err, tForErrors, 'setDefault.error', 'Failed to set the default resource server.'));
         },
       },
     );
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <Box
@@ -82,9 +110,14 @@ export default function SetDefaultResourceServerDialog({
             'will become the default resource server. Requests without a resource parameter will fall back to it.',
           )}
         </Typography>
+        {error && (
+          <Alert severity="error" sx={{mt: 2}}>
+            {error}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" onClick={onClose} disabled={setDefault.isPending}>
+        <Button variant="outlined" onClick={handleClose} disabled={setDefault.isPending}>
           {t('common:cancel', 'Cancel')}
         </Button>
         <Button variant="contained" onClick={handleConfirm} disabled={setDefault.isPending}>

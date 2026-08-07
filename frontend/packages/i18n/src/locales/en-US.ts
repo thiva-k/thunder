@@ -123,10 +123,15 @@ const translations = {
     'messages.somethingWentWrong': 'Something went wrong',
     'messages.tryAgain': 'Please try again',
 
+    // Backend error code translations shared across services (per the shared service error envelope).
+    'errors.SSE-4030': 'You do not have permission to perform this action in this organization unit.',
+    'errors.DCR-1002': 'This resource is managed declaratively and cannot be modified.',
+    'errors.DCR-1003': 'This resource is managed declaratively and cannot be deleted.',
+
     // External links
     learnMore: 'Learn more',
     'externalLink.title': 'You are leaving {{productName}}',
-    'externalLink.message': 'This link leads to an external site that {{productName}} does not control:',
+    'externalLink.message': 'This link leads to an external site. Please verify the destination before proceeding:',
 
     // Navigation
     'navigation.home': 'Home',
@@ -703,24 +708,6 @@ const translations = {
     'createUser.title': 'Create User',
     'createUser.subtitle': 'Add a new user to your organization',
 
-    // Create wizard steps
-    'createWizard.steps.userType': 'User Type',
-    'createWizard.steps.organizationUnit': 'Organization Unit',
-    'createWizard.steps.userDetails': 'User Details',
-    'createWizard.selectUserType.title': 'Select a user type',
-    'createWizard.selectUserType.subtitle': 'Choose a user type (schema) for the new user.',
-    'createWizard.selectUserType.fieldLabel': 'User Type',
-    'createWizard.selectUserType.placeholder': 'Select a user type',
-    'createWizard.selectOrganizationUnit.title': 'Select an organization unit',
-    'createWizard.selectOrganizationUnit.subtitle': 'Choose which organization unit this user should belong to.',
-    'createWizard.selectOrganizationUnit.fieldLabel': 'Organization Unit',
-    'createWizard.userDetails.title': 'Enter user details',
-    'createWizard.userDetails.subtitle': 'Fill in the required information for the new user.',
-    'createWizard.validationErrors.userTypeRequired': 'Please select a user type before proceeding.',
-    'createWizard.validationErrors.ouIdMissing': 'Organization unit ID is missing for the selected user type.',
-    'createWizard.errors.noOuAccess':
-      'You do not have permission to access the organization units for the selected user type, and no organization unit could be resolved.',
-    'createWizard.errors.childOuProbeFailed': 'Unable to retrieve organization units for the selected user type.',
     'create.success': 'User created successfully.',
     'create.error': 'Failed to create user. Please try again.',
     'update.success': 'User updated successfully.',
@@ -749,9 +736,23 @@ const translations = {
     'updateCredentials.error': 'Failed to update credentials. Please try again.',
 
     // Backend error code translations (per user service error envelope).
+    'errors.USR-1003': 'This user no longer exists. It may have already been deleted.',
+    'errors.USR-1005': 'The organization unit for this user no longer exists. Refresh and try again.',
     'errors.USR-1014': 'A user with the same unique attribute value already exists.',
     'errors.USR-1019':
       "Some attributes no longer match this user type's schema. Review the user type or the user's attributes.",
+    'errors.USR-1021': 'The user type for this user no longer exists. Refresh and try again.',
+    'errors.USR-1023': 'This organization unit is not allowed for the selected user type.',
+    'errors.USR-1024': 'One or more credential fields are not valid for this user type.',
+    'errors.USR-1025': 'This user is managed declaratively and cannot be edited or deleted.',
+    'errors.USR-1027':
+      'This user cannot be deleted because {{dependencies}} depend on it. Remove or reassign them first.',
+    'errors.USR-1028': 'Credentials for this user cannot be updated here.',
+
+    // Read failures
+    'listing.error': 'Failed to load users',
+    'manageUser.loadError': 'Failed to load user information',
+    'manageUser.notFound': 'User not found',
   },
 
   // ============================================================================
@@ -807,6 +808,7 @@ const translations = {
     'validationErrors.duplicateProperties': 'Duplicate property names found: {{duplicates}}',
     'errors.organizationUnitsFailedTitle': 'Failed to load organization units',
     noUserTypes: 'No user types found',
+    'listing.error': 'Failed to load user types',
     'listing.columns.name': 'Name',
     'listing.columns.id': 'User Type ID',
     'listing.columns.organizationUnit': 'Organization Unit',
@@ -814,6 +816,13 @@ const translations = {
     'listing.columns.actions': 'Actions',
     noOrganizationUnits: 'No organization units available',
     confirmDeleteUserType: 'Are you sure you want to delete this user type?',
+    'errors.USRS-1002': 'This user type no longer exists. It may have already been deleted.',
+    'errors.USRS-1003': 'A user type with the same name already exists.',
+    'errors.USRS-1004': 'The user type request is missing required fields or contains invalid data.',
+    'errors.USRS-1008': 'This user type is managed by the system and cannot be modified or deleted.',
+    'errors.USRS-1011': 'Display attribute must reference an attribute defined in the schema.',
+    'errors.USRS-1012': 'Display attribute must reference a string or number type.',
+    'errors.USRS-1013': 'Display attribute cannot reference a credential attribute.',
 
     // Edit page
     'manageUserType.title': 'Manage User Type',
@@ -828,6 +837,7 @@ const translations = {
     'edit.unsavedChanges': 'You have unsaved changes',
     'edit.saveError': 'Failed to save user type',
     'edit.loadError': 'Failed to load user type information',
+    'edit.loadErrorTitle': 'Failed to load user type',
     'edit.notFound': 'User type not found',
     'schemaChangeWarning.title': 'Confirm schema changes',
     'schemaChangeWarning.description':
@@ -950,8 +960,8 @@ const translations = {
     'edit.tabs.general': 'General',
     'edit.tabs.schema': 'Schema',
     'edit.unsavedChanges': 'You have unsaved changes',
-    'edit.saveError': 'Failed to save agent type',
     'edit.loadError': 'Failed to load agent type information',
+    'edit.loadErrorTitle': 'Failed to load agent type',
     'edit.notFound': 'Agent type not found',
     'schemaChangeWarning.title': 'Confirm schema changes',
     'schemaChangeWarning.description':
@@ -995,6 +1005,14 @@ const translations = {
     'removeCredentialDialog.description':
       'Removing the credential flag will cause this field to no longer be hashed or protected. Existing hashed values may become inaccessible. Are you sure you want to proceed?',
     'removeCredentialDialog.confirm': 'Remove Credential',
+
+    // Backend error code translations (per entitytype service error envelope, agent-type wording).
+    'errors.USRS-1002': 'This agent type no longer exists. It may have already been deleted.',
+    'errors.USRS-1004': 'The agent type request is missing required fields or contains invalid data.',
+    'errors.USRS-1008': 'This agent type is managed by the system and cannot be modified or deleted.',
+    'errors.USRS-1011': 'Display attribute must reference an attribute defined in the schema.',
+    'errors.USRS-1012': 'Display attribute must reference a string or number type.',
+    'errors.USRS-1013': 'Display attribute cannot reference a credential attribute.',
   },
 
   // ============================================================================
@@ -1076,12 +1094,12 @@ const translations = {
       "Store the new client secret somewhere safe. If you lose it, you'll need to regenerate it again.",
 
     // Edit page (header)
-    'edit.page.error': 'Failed to load agent',
+    'edit.page.errorTitle': 'Failed to load agent',
     'edit.page.notFound': 'Agent not found',
     'edit.page.back': 'Back to agents',
     'edit.page.description.empty': 'No description',
     'edit.page.description.placeholder': 'Add a description',
-    'edit.page.tabs.general': 'General',
+    'edit.page.tabs.overview': 'Overview',
     'edit.page.tabs.attributes': 'Attributes',
     'edit.page.tabs.credentials': 'Credentials',
     'edit.page.tabs.access': 'Access',
@@ -1108,30 +1126,48 @@ const translations = {
     'edit.attributes.noSchema': 'No schema available for editing',
 
     // Edit page - General tab
-    'edit.general.sections.quickCopy.title': 'Identifier',
-    'edit.general.sections.quickCopy.description': 'The unique identifier for this agent.',
     'edit.general.labels.agentId': 'Agent ID',
     'edit.general.labels.ownerId': 'Owner ID',
-    'edit.general.agentId.hint': 'Unique identifier for this agent',
-    'edit.general.clientId.hint': 'OAuth2 client identifier used by this agent to obtain tokens',
-    'edit.general.owner.hint': 'Identifier of the user that owns this agent',
-    'edit.general.owner.empty': 'No owner assigned',
     'edit.general.sections.owner.title': 'Owner',
     'edit.general.sections.owner.description': 'The user accountable for this agent.',
     'edit.general.sections.owner.label': 'Owner',
-    'edit.general.sections.owner.summaryDescription':
-      'The user who is accountable for this agent, shown in audit records and used as the contact point for questions about what this agent does. Assigning an owner does not give that user any special access to the agent. Manage this from the Advanced tab.',
+    'edit.general.owner.empty': 'No owner assigned',
     'edit.general.sections.attributes.title': 'Attributes',
     'edit.general.sections.attributes.description':
       "A preview of this agent's attribute values. Manage them from the Attributes tab.",
-    'edit.general.sections.organizationUnit.title': 'Organization Unit',
-    'edit.general.sections.organizationUnit.description': 'The organization unit this agent belongs to.',
     'edit.general.sections.dangerZone.title': 'Danger Zone',
     'edit.general.sections.dangerZone.description': 'Actions here are permanent. Make sure before you proceed.',
     'edit.general.dangerZone.deleteAgent.title': 'Delete Agent',
     'edit.general.dangerZone.deleteAgent.description':
       'Permanently deletes this agent and immediately invalidates any tokens it has issued. This action cannot be undone.',
     'edit.general.dangerZone.deleteAgent.button': 'Delete Agent',
+
+    // Edit page - Overview tab
+    'edit.overview.agentDetails.title': 'Agent details',
+    'edit.overview.agentDetails.description': 'Identifiers used in your integration code.',
+    'edit.overview.agentDetails.organizationUnitId': 'Organization Unit ID',
+    'edit.overview.agentDetails.organizationUnitHandle': 'Organization Unit Handle',
+    'edit.overview.endpoints.title': 'Useful Endpoints',
+    'edit.overview.endpoints.description': 'For authenticating this agent, on its own or on behalf of a user.',
+    'edit.overview.endpoints.wellknown': 'OpenID configuration',
+    'edit.overview.endpoints.authorization': 'Authorization endpoint',
+    'edit.overview.endpoints.token': 'Token endpoint',
+    'edit.overview.endpoints.userinfo': 'Userinfo endpoint',
+    'edit.overview.endpoints.jwks': 'JWKS URI',
+    'edit.overview.attributes.title': 'Attributes',
+    'edit.overview.attributes.description':
+      "A preview of this agent's attribute values. Manage them from the Attributes tab.",
+    'edit.overview.accessMode.title': 'Access mode',
+    'edit.overview.accessMode.description': 'How this agent is allowed to authenticate.',
+    'edit.overview.accessMode.editAdvanced': 'Edit in Advanced',
+    'edit.overview.accessMode.own': 'Own identity',
+    'edit.overview.accessMode.delegated': 'On behalf of a user',
+    'edit.overview.accessMode.allowedUserTypes': 'Allowed user types',
+    'edit.overview.signInPreview.notConfigured': 'Not configured',
+    'edit.overview.quickstart.title': 'Connect with LangChain',
+    'edit.overview.quickstart.description':
+      "Register this agent and call it from a LangChain app, running under its own identity or a user's delegated authority.",
+    'edit.overview.quickstart.action': 'Open quickstart',
 
     // Edit page - Credentials tab
     'edit.credentials.clientId.title': 'Client ID',
@@ -1271,12 +1307,14 @@ const translations = {
     'errors.AGT-1032': 'The specified theme does not exist.',
     'errors.AGT-1033': 'The specified layout does not exist.',
     'errors.AGT-1034': 'One or more provided response types are invalid.',
-    'errors.AGT-1035': 'Failed to sync agent attribute changes with the consent service.',
     'errors.AGT-1036': 'A certificate operation failed due to invalid input.',
     'errors.AGT-1037': 'An entity with the same client ID already exists.',
     'errors.AGT-1038': 'An entity may have at most one inbound auth config per protocol.',
     'errors.AGT-1039': 'The specified owner does not match any known user, application, or agent.',
     'errors.AGT-1040': 'One or more user attributes are not valid for the configured allowed user types.',
+    'errors.AGT-1041': 'The provided logo URL is not valid.',
+    'errors.AGT-1042':
+      'The subject attribute mapping must reference an attribute that is unique, required, and string typed in an allowed agent type.',
   },
 
   // ============================================================================
@@ -1317,7 +1355,7 @@ const translations = {
 
     /* -------------------- Edit page -------------------- */
     // Common
-    'edit.page.error': 'Failed to load organization unit',
+    'edit.page.error': 'Failed to load organization unit information',
     'edit.page.notFound': 'Organization unit not found',
     'edit.page.logoUpdate.label': 'Update Logo',
     'edit.page.copyOuId': 'Copy Organization Unit ID',
@@ -1435,6 +1473,29 @@ const translations = {
     'update.error': 'Failed to update organization unit. Please try again.',
     'delete.success': 'Organization unit deleted successfully.',
     'delete.error': 'Failed to delete organization unit. Please try again.',
+
+    // Edit page - read error
+    'edit.page.errorTitle': 'Failed to load organization unit',
+
+    // Tab sections - read errors
+    'edit.users.sections.manage.error': 'Failed to load users',
+    'edit.groups.sections.manage.error': 'Failed to load groups',
+    'edit.childOUs.sections.manage.error': 'Failed to load child organization units',
+
+    // Backend error codes (organization unit service)
+    'errors.OU-1003': 'This organization unit no longer exists. It may have already been deleted.',
+    'errors.OU-1004': 'An organization unit with the same name already exists under the same parent.',
+    'errors.OU-1005': 'The selected parent organization unit could not be found.',
+    'errors.OU-1006':
+      'This organization unit has child units, users, or groups and cannot be deleted while they exist.',
+    'errors.OU-1007': 'This parent selection would create a circular dependency in the organization hierarchy.',
+    'errors.OU-1008': 'An organization unit with the same handle already exists under the same parent.',
+    'errors.OU-1012': 'This organization unit is managed by configuration and cannot be modified or deleted.',
+    'errors.OU-1013': 'Too many results were returned for this request. Please narrow your search and try again.',
+    'errors.OU-1015': 'The selected sign-in flow could not be found. Refresh and try again.',
+    'errors.OU-1016': 'The selected sign-up flow could not be found. Refresh and try again.',
+    'errors.OU-1017': 'The selected recovery flow could not be found. Refresh and try again.',
+    'errors.OU-1018': 'The selected sign-out flow could not be found. Refresh and try again.',
   },
 
   // ============================================================================
@@ -1691,6 +1752,7 @@ const translations = {
     'listing.empty.title': 'No connections match your filters',
     'listing.empty.description':
       'Try a different search term, or clear the active filters to see all available connections.',
+    'listing.loadError': 'Failed to load connections',
 
     // Filters / categories
     'categories.all': 'All',
@@ -1718,7 +1780,7 @@ const translations = {
     'vendor.oauth.description': 'Connect any OAuth 2.0 identity provider.',
     'vendor.twilio.description': 'Send SMS one-time passcodes via Twilio.',
     'vendor.vonage.description': 'Deliver SMS and email passcodes through Vonage.',
-    'vendor.custom-sms.description': 'Route SMS through your own HTTP gateway.',
+    'vendor.sms-gateway.description': 'Route SMS through your own HTTP gateway.',
     'vendor.trustedIdp.description': 'Trusted token issuer for token exchange and ID-JAG.',
 
     // Add custom connection wizard
@@ -1761,6 +1823,9 @@ const translations = {
 
     // Connection detail / edit page
     'detail.backToConnections': 'Back to Connections',
+    'detail.loadError.title': 'Failed to load connection',
+    'detail.notFound.title': 'Connection not found',
+    'detail.notFound.description': 'This connection may have been deleted or the link is incorrect.',
     'detail.tabs.general': 'General',
     'detail.tabs.attributeMapping': 'Attribute Configuration',
     'detail.quickCopy.title': 'Quick copy',
@@ -1827,6 +1892,20 @@ const translations = {
     'form.fields.apiSecret.hint': 'Vonage API secret used to authenticate API requests.',
     'form.fields.senderId.label': 'Sender ID',
     'form.fields.senderId.hint': 'Phone number or alphanumeric sender ID messages are sent from.',
+    'form.fields.smsGatewayUrl.label': 'Gateway URL',
+    'form.fields.smsGatewayUrl.hint': 'HTTP endpoint ThunderID calls to send an SMS.',
+    'form.fields.httpMethod.label': 'HTTP method',
+    'form.fields.httpMethod.hint': 'Method used to call the gateway URL.',
+    'form.fields.contentType.label': 'Content type',
+    'form.fields.contentType.hint': 'Format of the request body sent to the gateway.',
+    'form.fields.httpHeaders.label': 'HTTP headers',
+    'form.fields.httpHeaders.hint':
+      'Optional headers sent with every request. Commas are not supported in a name or value.',
+    'form.fields.httpHeaders.add': 'Add header',
+    'form.keyValue.name': 'Name',
+    'form.keyValue.value': 'Value',
+    'form.keyValue.add': 'Add',
+    'form.keyValue.remove': 'Remove',
     'form.sections.federation': 'Federation',
     'form.secret.update': 'Update',
     'form.secret.keepHelp': 'Leave unchanged to keep the stored secret.',
@@ -1899,6 +1978,31 @@ const translations = {
     'validation.required': 'This field is required.',
     'validation.url': 'Enter a valid URL.',
     'validation.accountSid': 'Enter a valid Account SID: “AC” followed by 32 hexadecimal characters.',
+
+    // Error codes (backend)
+    'errors.CON-1001': 'The requested connection category is not supported.',
+    'errors.CON-1002': 'The limit parameter must be a positive integer.',
+    'errors.CON-1003': 'The offset parameter must be a non-negative integer.',
+    'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
+    'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
+    'errors.IDP-1003': 'The identity provider name is invalid or missing.',
+    'errors.IDP-1004': 'The identity provider type is invalid or missing.',
+    'errors.IDP-1005': 'An identity provider with the same name already exists.',
+    'errors.IDP-1006': 'One or more identity provider properties are invalid or missing.',
+    'errors.IDP-1007': 'One or more identity provider properties are not supported.',
+    'errors.IDP-1008': 'The identity provider data is missing.',
+    'errors.IDP-1009': 'The request body is malformed or contains invalid data.',
+    'errors.IDP-1010': 'This identity provider is managed declaratively and cannot be modified or deleted.',
+    'errors.IDP-1011': 'The number of records exceeds the maximum allowed in composite mode.',
+    'errors.IDP-1012': "This identity provider's attribute configuration is invalid.",
+    'errors.IDP-1013':
+      'This identity provider cannot be deleted because other resources depend on it. Remove or reassign them first.',
+    'errors.MNS-1001': 'This connection no longer exists. It may have already been deleted.',
+    'errors.MNS-1002': 'The connection ID is invalid or missing.',
+    'errors.MNS-1004': 'The selected SMS provider is invalid or unsupported.',
+    'errors.MNS-1005': 'A connection with this name already exists.',
+    'errors.MNS-1016':
+      'This connection cannot be deleted because other resources depend on it. Remove or reassign them first.',
   },
 
   // ============================================================================
@@ -1953,6 +2057,27 @@ const translations = {
     'create.error': 'Failed to create trusted issuer. Please try again.',
     'update.success': 'Trusted issuer updated successfully.',
     'update.error': 'Failed to update trusted issuer. Please try again.',
+    'delete.error': 'Failed to delete trusted issuer. Please try again.',
+
+    // Not found
+    'detail.notFound.title': 'Trusted issuer not found',
+    'detail.notFound.description': 'This trusted issuer may have been deleted or the link is incorrect.',
+
+    // Error codes (backend)
+    'errors.IDP-1001': 'This trusted issuer no longer exists. It may have already been deleted.',
+    'errors.IDP-1002': 'The trusted issuer ID is invalid or missing.',
+    'errors.IDP-1003': 'The trusted issuer name is invalid or missing.',
+    'errors.IDP-1004': 'The trusted issuer type is invalid or missing.',
+    'errors.IDP-1005': 'A trusted issuer with the same name already exists.',
+    'errors.IDP-1006': 'One or more trusted issuer properties are invalid or missing.',
+    'errors.IDP-1007': 'One or more trusted issuer properties are not supported.',
+    'errors.IDP-1008': 'The trusted issuer data is missing.',
+    'errors.IDP-1009': 'The request body is malformed or contains invalid data.',
+    'errors.IDP-1010': 'This trusted issuer is managed declaratively and cannot be modified or deleted.',
+    'errors.IDP-1011': 'The number of records exceeds the maximum allowed in composite mode.',
+    'errors.IDP-1012': "This trusted issuer's attribute configuration is invalid.",
+    'errors.IDP-1013':
+      'This trusted issuer cannot be deleted because other resources depend on it. Remove or reassign them first.',
   },
 
   // ============================================================================
@@ -2055,6 +2180,7 @@ const translations = {
     'listing.columns.actions': 'Actions',
     'listing.columns.template': 'Type',
     'listing.search.placeholder': 'Search ..',
+    'listing.error': 'Failed to load applications',
     'delete.title': 'Delete Application',
     'delete.message': 'Are you sure you want to delete this application? This action cannot be undone.',
     'delete.disclaimer': 'Warning: All associated data, configurations, and access tokens will be permanently removed.',
@@ -2192,7 +2318,7 @@ const translations = {
     'onboarding.configure.SignInOptions.preConfiguredFlows.toggleLabel': 'Use a pre-configured flow instead',
     'onboarding.configure.SignInOptions.smsOtp': 'SMS OTP',
     'onboarding.configure.SignInOptions.loading': 'Loading...',
-    'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
+    'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods',
     'onboarding.configure.security.promptForCredentials.title': 'Prompt for Credentials',
     'onboarding.configure.security.passwordlessLogin.title': 'Passwordless Login',
     'onboarding.configure.security.socialLogin.title': 'Social Login',
@@ -2245,6 +2371,8 @@ const translations = {
     'onboarding.configure.stack.technology.ios.description': 'Native iOS application (Swift or Objective-C)',
     'onboarding.configure.stack.technology.android.title': 'Android',
     'onboarding.configure.stack.technology.android.description': 'Native Android application (Kotlin or Java)',
+    'onboarding.configure.stack.technology.flutter.title': 'Flutter',
+    'onboarding.configure.stack.technology.flutter.description': 'Cross-platform mobile application built with Flutter',
     'onboarding.configure.stack.technology.springboot.title': 'Spring Boot',
     'onboarding.configure.stack.technology.springboot.description': 'Java backend application with Spring Boot',
     'onboarding.configure.stack.technology.nodejs.title': 'Node.js',
@@ -2586,7 +2714,7 @@ const translations = {
     'edit.page.logoUpdate.label': 'Update Logo',
     'edit.page.description.empty': 'No description',
     'edit.page.description.placeholder': 'Add a description',
-    'edit.page.tabs.overview': 'Guide',
+    'edit.page.tabs.overview': 'Overview',
     'edit.page.tabs.general': 'General',
     'edit.page.tabs.flows': 'Flows',
     'edit.page.tabs.customization': 'Customization',
@@ -2613,11 +2741,45 @@ const translations = {
     'edit.mcp.connect.clientUri.error.invalid': 'Please enter a valid URL',
 
     // Overview section
-    'edit.overview.noGuides': 'No integration guides available for this application type.',
+    'edit.overview.stackblitz.heading': 'Try the live quickstart',
+    'edit.overview.stackblitz.subheading': 'Run {{name}} in StackBlitz',
+    'edit.overview.stackblitz.cta': 'Open on StackBlitz',
+    'edit.overview.readGuide.title': 'Read the quickstart guide',
+    'edit.overview.readGuide.description': 'Step-by-step integration guide on the docs site.',
+    'edit.overview.readGuide.titleFor': '{{label}} quickstart guide',
+    'edit.overview.readGuide.descriptionFor': 'Step-by-step {{label}} integration guide on the docs site.',
+    'edit.overview.readGuide.action': 'Open quickstart',
+    'edit.overview.agentPrompt.title': 'Integrate with a coding agent',
+    'edit.overview.agentPrompt.badge': 'AI',
+    'edit.overview.agentPrompt.description': 'Copy a ready-made prompt for Claude, Cursor, or any agent.',
+    'edit.overview.agentPrompt.action': 'Copy prompt',
+    'edit.overview.signInPreview.title': 'Preview',
+    'edit.overview.signInPreview.description': 'What users see when they sign in to {{name}}.',
+    'edit.overview.signInPreview.themeLabel': 'Theme used',
+    'edit.overview.signInPreview.defaultTheme': 'Default',
+    'edit.overview.signInPreview.flowsLabel': 'Flows',
+    'edit.overview.signInPreview.flows.signIn': 'Sign-in',
+    'edit.overview.signInPreview.flows.signUp': 'Sign-up',
+    'edit.overview.signInPreview.flows.recovery': 'Password recovery',
+    'edit.overview.signInPreview.flows.signOut': 'Sign-out',
+    'edit.overview.signInPreview.notConfigured': 'Not configured',
+    'edit.overview.signInPreview.editCustomization': 'Edit in Customization',
+    'edit.overview.signInPreview.editFlows': 'Edit in Flows',
+    'edit.overview.appDetails.title': 'Application details',
+    'edit.overview.appDetails.description': 'Identifiers used in your integration code.',
+    'edit.overview.endpoints.appNativeTitle': 'Useful Endpoints',
+    'edit.overview.endpoints.appNativeDescription': 'For driving sign-in and registration with a fully custom UI.',
+    'edit.overview.endpoints.wellknown': 'OpenID configuration',
+    'edit.overview.endpoints.authorization': 'Authorization endpoint',
+    'edit.overview.endpoints.token': 'Token endpoint',
+    'edit.overview.endpoints.userinfo': 'Userinfo endpoint',
+    'edit.overview.endpoints.jwks': 'JWKS URI',
+    'edit.overview.endpoints.flowExecute': 'Flow execution endpoint',
+    'edit.overview.endpoints.flowMeta': 'Flow metadata endpoint',
+    'edit.overview.endpoints.passkeyRegisterStart': 'Passkey registration (start)',
+    'edit.overview.endpoints.passkeyRegisterFinish': 'Passkey registration (finish)',
 
     // General section
-    'edit.general.sections.quickCopy': 'Quick Copy',
-    'edit.general.sections.quickCopy.description': 'Copy application identifiers for use in your code.',
     'edit.general.sections.access': 'Access',
     'edit.general.sections.access.description': "Configure who can access this application, where it's hosted, etc.",
     'edit.general.sections.contacts': 'Contacts',
@@ -2627,8 +2789,6 @@ const translations = {
     'edit.general.labels.allowedUserTypes': 'Allowed User Types',
     'edit.general.labels.applicationUrl': 'Application URL',
     'edit.general.labels.contacts': 'Contacts',
-    'edit.general.applicationId.hint': 'Unique identifier for your application',
-    'edit.general.clientId.hint': 'OAuth2 client identifier used for authentication',
     'edit.general.noUserTypes': 'No user types configured',
     'edit.general.contacts.placeholder': 'Type an email and press Enter',
     'edit.general.contacts.hint': 'Type a valid email address and press <0>Enter</0> to add it',
@@ -2871,6 +3031,7 @@ const translations = {
     'edit.advanced.idJag.grantTypeHint': 'The token exchange grant type is enabled together with this feature.',
     'create.success': 'Application created successfully.',
     'create.error': 'Failed to create application. Please try again.',
+    'create.flowGenerationError': 'Failed to generate the authentication flow. Please try again.',
     'update.success': 'Application updated successfully.',
     'update.error': 'Failed to update application. Please try again.',
     'delete.success': 'Application deleted successfully.',
@@ -2880,7 +3041,6 @@ const translations = {
     'errors.APP-1015': 'The certificate value is invalid. Check the JWKS content and try again.',
     'errors.APP-1016': 'The JWKS URL is not valid.',
     'errors.APP-1020': 'An application with this name already exists. Choose a different name.',
-    'errors.APP-1022': 'The JWKS URL must use HTTPS.',
     'errors.APP-1030': 'This application is managed declaratively and cannot be edited or deleted.',
     'errors.APP-1035': 'One or more user attributes are not valid for the selected user types.',
     'errors.APP-1039':
@@ -2900,7 +3060,7 @@ const translations = {
 
     'export.page.title': 'Export Configuration',
     'export.page.loading': 'Loading export configuration...',
-    'export.page.loadError': 'Failed to load export configuration: {{message}}',
+    'export.page.loadError': 'Failed to load export configuration',
 
     'upload.breadcrumb.openProject': 'Import Configuration',
     'upload.title': 'Import Configuration',
@@ -3042,7 +3202,6 @@ const translations = {
     'summary.importTest.failedCount_plural': 'Import test failed for {{count}} resources',
     'summary.importTest.failedWithMessage': 'Import test failed: {{message}}',
     'summary.importTest.failures': 'Import Test failures',
-    'summary.importTest.failed': 'failed',
     'summary.import.tooltip.missingVariables':
       'Cannot import: {{count}} environment variable is missing. Edit the environment variables above to fix.',
     'summary.import.tooltip.missingVariables_plural':
@@ -3057,6 +3216,15 @@ const translations = {
     'summary.import.completedSuccessfully': 'Import completed successfully. {{count}} resource imported.',
     'summary.import.completedSuccessfully_plural': 'Import completed successfully. {{count}} resources imported.',
     'summary.import.failedRetry': 'Import failed. Please try again.',
+    'summary.importTest.itemFailedGeneric': 'This resource failed to import.',
+
+    // Backend error code translations (per importer/export service error envelopes).
+    'errors.IMP-1001': 'The import request is missing required fields or is malformed.',
+    'errors.IMP-1002': 'The uploaded YAML content could not be parsed.',
+    'errors.IMP-1003': 'One or more template variables could not be resolved.',
+    'errors.IMP-1004': 'The resource adapter required for this import is not configured.',
+    'errors.EXP-1001': 'The export request is invalid or malformed.',
+    'errors.EXP-1002': 'No resources were found for export.',
   },
 
   // ============================================================================
@@ -3067,6 +3235,8 @@ const translations = {
     'errors.signin.failed.description': 'We are sorry, something has gone wrong here. Please try again.',
     'errors.signin.timeout': 'Time allowed to complete the step has expired.',
     'errors.signin.session.expired': 'Your session has expired. Please return to the application and sign in again.',
+    'errors.signin.returnToApplication': 'Return to application',
+    'errors.signin.returnToApplicationUnavailable': 'Please return to the application and try again.',
     'errors.passkey.failed': 'Passkey authentication failed. Please try again.',
     'redirect.to.signup': "Don't have an account? <1>Sign up</1>",
     heading: 'Sign In',
@@ -3881,8 +4051,39 @@ const translations = {
     'core.loginFlowBuilder.errors.validationRequired': 'Please fix all validation errors before saving.',
     'core.loginFlowBuilder.errors.structureValidationFailed': 'Flow structure validation failed: {{error}}',
     'core.loginFlowBuilder.errors.saveFailed': 'Failed to save flow. Please try again.',
+    'core.loginFlowBuilder.errors.loadFailed': 'Failed to load flow',
     'core.loginFlowBuilder.success.flowCreated': 'Flow created successfully.',
     'core.loginFlowBuilder.success.flowUpdated': 'Flow updated successfully.',
+
+    // I18n configuration card
+    'core.elements.textPropertyField.i18nCard.createError': 'Failed to create translation. Please try again.',
+
+    // Backend error code translations (per flow management service error envelope).
+    'errors.FLM-1001': 'The request body is malformed or contains invalid data.',
+    'errors.FLM-1002': 'The flow ID must be provided.',
+    'errors.FLM-1003': 'This flow no longer exists. It may have already been deleted.',
+    'errors.FLM-1004': 'The specified flow type is invalid.',
+    'errors.FLM-1005': 'The flow definition contains invalid data.',
+    'errors.FLM-1006': 'The limit parameter must be a positive integer.',
+    'errors.FLM-1007': 'The offset parameter must be a non-negative integer.',
+    'errors.FLM-1010': 'The flow handle must be provided.',
+    'errors.FLM-1011': 'The flow name must be provided.',
+    'errors.FLM-1012': 'The flow type cannot be changed once created.',
+    'errors.FLM-1013': 'A flow with this handle already exists for the given flow type.',
+    'errors.FLM-1014': 'The flow handle cannot be modified after creation.',
+    'errors.FLM-1015': 'The flow handle must be lowercase, alphanumeric, and can only contain underscores or dashes.',
+    'errors.FLM-1017': 'This flow is managed declaratively and cannot be modified or deleted.',
+    'errors.FLM-1018': 'The flow ID must be a valid UUID.',
+    'errors.FLM-1019': 'A flow with the specified ID already exists.',
+    'errors.FLM-1020':
+      'The flow definition has structural issues, such as a missing or duplicate start or end node, or an unreachable node.',
+    'errors.FLM-1021': 'One or more nodes have an invalid configuration.',
+    'errors.FLM-1022': 'A node or interceptor references a node that does not exist.',
+    'errors.FLM-1023': 'One or more executor configurations are invalid.',
+    'errors.FLM-1024': 'One or more input configurations are invalid.',
+    'errors.FLM-1025': 'A CALL node references a flow that does not exist.',
+    'errors.FLM-1026':
+      'This update was rejected because a resource that references this flow would be left in an inconsistent state.',
   },
 
   // ============================================================================
@@ -3911,6 +4112,10 @@ const translations = {
     'listing.addLanguage': 'Add Language',
     'listing.columns.language': 'Language',
     'listing.columns.actions': 'Actions',
+    'listing.error': 'Failed to load languages',
+
+    'page.loadErrorTitle': 'Failed to load translations',
+    'page.loadError': 'Failed to load translations',
 
     'language.selectPlaceholder': 'Select a language',
     'language.addOption': 'Add new language...',
@@ -4005,6 +4210,11 @@ const translations = {
       'Are you sure you want to delete all custom translations for "{{language}}"? This action cannot be undone.',
     'delete.disclaimer': 'All custom translations for this language will be permanently removed and reset to defaults.',
     'delete.error': 'Failed to delete translations. Please try again.',
+
+    // Backend error code translations (per i18n service error envelope).
+    'errors.I18N-1001': 'The language code must be a valid BCP 47 locale tag (e.g. en, es, fr-CA).',
+    'errors.I18N-1003': 'The key can only contain letters, numbers, dots, underscores, and hyphens.',
+    'errors.I18N-1005': 'A translation value is required for every key.',
   },
 
   design: {
@@ -4014,6 +4224,7 @@ const translations = {
     'themes.actions.add.label': 'Add Theme',
     'themes.empty_state.message': 'No themes yet',
     'themes.show_more.label': 'Show {{count}} more',
+    'themes.builder.errors.load.title': 'Failed to load theme',
     'themes.builder.actions.delete.label': 'Delete',
     'themes.builder.actions.save.label': 'Save',
     'themes.builder.actions.revert.label': 'Revert',
@@ -4031,6 +4242,7 @@ const translations = {
     'themes.builder.sections.typography.description': 'Font family & type scale',
     'themes.config.select_theme.message': 'Select a theme to view configuration',
     'themes.config.errors.load.message': 'Failed to load theme configuration.',
+    'themes.config.errors.save.message': 'Failed to save theme. Please try again.',
     'themes.createWizard.steps.name': 'Details',
     'themes.forms.configure_name.title': "Let's collect some details about your theme",
     'themes.forms.configure_name.fieldLabel': 'Theme name',
@@ -4079,8 +4291,19 @@ const translations = {
     'themes.forms.shape_builder.fields.style.options.dotted.label': 'Dotted',
     'themes.forms.shape_builder.fields.style.options.none.label': 'None',
     'themes.forms.typography_builder.font_family.title': 'Font Family',
-    'themes.forms.typography_builder.fields.font_family.placeholder': 'e.g. Inter, Arial, sans-serif',
-    'themes.forms.typography_builder.fields.font_family.helper_text': 'Choose a preset or type any CSS font stack',
+    'themes.forms.typography_builder.font_family.modes.web_safe': 'Use a web-safe font',
+    'themes.forms.typography_builder.font_family.modes.import': 'Use a Custom Font',
+    'themes.forms.typography_builder.fields.font_family.placeholder': 'Select a font',
+    'themes.forms.typography_builder.fields.font_family.helper_text': 'Choose from the available web-safe fonts',
+    'themes.forms.typography_builder.fields.font_import_url.label': 'Font Import URL',
+    'themes.forms.typography_builder.fields.font_import_url.placeholder':
+      'E.g., https://fonts.googleapis.com/css2?family=Poppins',
+    'themes.forms.typography_builder.fields.font_import_url.helper_text':
+      'Enter a URL to import a custom font from a font service.',
+    'themes.forms.typography_builder.fields.font_family_input.label': 'Font Family',
+    'themes.forms.typography_builder.fields.font_family_input.placeholder': 'E.g. Poppins',
+    'themes.forms.typography_builder.fields.font_family_input.helper_text':
+      'Enter the font family name documented by the font service above.',
     'themes.forms.typography_builder.fields.preview.label': 'Preview',
     'themes.forms.typography_builder.font_weights.title': 'Font Weights',
     'themes.forms.typography_builder.fields.light.label': 'Light',
@@ -4116,6 +4339,7 @@ const translations = {
     'themes.delete.usages.title': 'The following applications will revert to the default theme:',
     'themes.delete.usages.more': '+{{count}} more',
     'layouts.section.title': 'Layouts',
+    'layouts.errors.create_failed.message': 'Failed to create layout. Please try again.',
     'layouts.presets.centered.label': 'Centered',
     'layouts.presets.split_screen.label': 'Split Screen',
     'layouts.presets.full_screen.label': 'Full Screen',
@@ -4123,6 +4347,7 @@ const translations = {
     'layouts.badges.coming_soon.label': 'Coming Soon',
     'layouts.config.select_layout.message': 'Select a layout to view constraints',
     'layouts.config.errors.load.message': 'Failed to load layout configuration.',
+    'layouts.config.errors.save.message': 'Failed to save layout. Please try again.',
     'layouts.config.no_screen_selected.message': 'No screen selected.',
     'layouts.preview.labels.base_layout': 'Base layout',
     'layouts.preview.labels.screen_variants': 'Screen variants',
@@ -4137,6 +4362,7 @@ const translations = {
     'layouts.preview.slots.links.label': 'Links',
     'layouts.preview.errors.load.message': 'Failed to load layout',
     'layouts.preview.select_layout.message': 'Select a layout to preview',
+    'layouts.builder.errors.load.title': 'Failed to load layout',
     'layouts.builder.actions.back_to_design.tooltip': 'Back to Design',
     'layouts.builder.actions.save.label': 'Save',
     'layouts.config.custom_css.title': 'Custom CSS',
@@ -4225,6 +4451,37 @@ const translations = {
     'common.preview.toolbar.actions.cycle_color_scheme.tooltip': 'Toggle color scheme',
     'common.item_card.actions.open_in_builder.label': 'Open in builder',
     'common.section_header.badges.coming_soon.label': 'COMING SOON',
+
+    // Backend error code translations (per theme and layout management service error envelope).
+    'errors.THM-1001': 'The provided theme data is invalid.',
+    'errors.THM-1002': 'The provided theme ID is invalid.',
+    'errors.THM-1003': 'The requested theme was not found.',
+    'errors.THM-1005': 'The theme display name is required.',
+    'errors.THM-1006': 'The theme configuration is required.',
+    'errors.THM-1007': 'The theme must be a valid JSON object.',
+    'errors.THM-1008': 'The limit parameter must be within the valid range.',
+    'errors.THM-1009': 'The offset parameter must be non-negative.',
+    'errors.THM-1010': 'The limit parameter must be a valid integer.',
+    'errors.THM-1011': 'The offset parameter must be a valid integer.',
+    'errors.THM-1014': 'This theme is declarative and cannot be modified or deleted.',
+    'errors.THM-1015': 'A theme with the same handle already exists.',
+    'errors.THM-1016': 'The theme handle is required.',
+    'errors.THM-1017': 'The theme handle cannot be changed after creation.',
+    'errors.LAY-1001': 'The provided layout data is invalid.',
+    'errors.LAY-1002': 'The provided layout ID is invalid.',
+    'errors.LAY-1003': 'The requested layout was not found.',
+    'errors.LAY-1004': 'A layout with the same ID already exists.',
+    'errors.LAY-1005': 'The layout display name is required.',
+    'errors.LAY-1006': 'The layout configuration is required.',
+    'errors.LAY-1007': 'The layout must be a valid JSON object.',
+    'errors.LAY-1009': 'The limit parameter must be within the valid range.',
+    'errors.LAY-1010': 'The offset parameter must be non-negative.',
+    'errors.LAY-1011': 'The limit parameter must be a valid integer.',
+    'errors.LAY-1012': 'The offset parameter must be a valid integer.',
+    'errors.LAY-1015': 'This layout is declarative and cannot be modified or deleted.',
+    'errors.LAY-1016': 'A layout with the same handle already exists.',
+    'errors.LAY-1017': 'The layout handle is required.',
+    'errors.LAY-1018': 'The layout handle cannot be changed after creation.',
   },
 
   // ============================================================================
@@ -4237,11 +4494,12 @@ const translations = {
     'greeting.subtitle': 'What do you want to secure today?',
 
     // Start Building section
+    'start_building.hero.eyebrow': 'Get Started',
     'start_building.hero.title': 'Integrate {{product}} into your application',
     'start_building.hero.description':
       'Add secure sign-in, token management, and user sessions to your app in minutes.',
     'start_building.hero.actions.create.label': 'Create Application',
-    'start_building.frameworks.label': 'Start with a framework',
+    'start_building.frameworks.label': 'Start with a Template',
 
     // Next Steps section
     'next_steps.section.title': 'Quick Links',
@@ -4368,7 +4626,7 @@ const translations = {
     'listing.columns.actions': 'Actions',
     'listing.systemResourceServer': 'System resource server',
     'listing.default': 'Default',
-    'listing.error': 'Failed to load resource servers.',
+    'listing.error': 'Failed to load resource servers',
     'actions.setAsDefault': 'Set as default',
     'setDefault.title': 'Set default resource server',
     'setDefault.message':
@@ -4381,6 +4639,7 @@ const translations = {
     'delete.message': 'Are you sure you want to delete this resource server? This action cannot be undone.',
     'delete.disclaimer':
       'Warning: All associated resources, actions, and permission strings will be permanently removed.',
+    'delete.error': 'Failed to delete resource server. Please try again.',
     'create.steps.type': 'Type',
     'create.steps.name': 'Details',
     'create.steps.separator': 'Permission Delimiter',
@@ -4471,6 +4730,7 @@ const translations = {
     'create.separator.underscore': 'Underscore ( _ )',
     'create.success': 'Resource server created successfully.',
     'create.successMcp': 'MCP server created successfully.',
+    'create.error': 'Failed to create resource server. Please try again.',
     'create.creating': 'Creating…',
     'create.submit': 'Create resource server',
     'create.submitMcp': 'Create MCP server',
@@ -4480,6 +4740,7 @@ const translations = {
     'edit.defaultBadgeManaged': 'Managed by server configuration.',
     'edit.back': 'Back to resource servers',
     'edit.identifierRequired': 'Identifier is required.',
+    'edit.errorTitle': 'Failed to load resource server',
     'edit.notFound': 'Resource server not found.',
     'edit.systemResourceServer': 'System',
     'edit.tabs': 'Resource server settings',
@@ -4531,6 +4792,29 @@ const translations = {
     'permissionCatalog.loadError': 'Failed to load permissions for this resource server.',
     'permissionCatalog.loadServersError': 'Failed to load resource servers.',
     'permissionCatalog.serverNotFound': 'Resource server not found',
+
+    // Backend error code translations (per resource server service error envelope).
+    'errors.RES-1001': 'The request body is malformed or contains invalid data.',
+    'errors.RES-1002': 'An ID is required for this request.',
+    'errors.RES-1003': 'This resource server no longer exists. It may have already been deleted.',
+    'errors.RES-1004': 'A resource server with the same name already exists.',
+    'errors.RES-1005': 'The specified parent resource does not exist.',
+    'errors.RES-1006': 'This cannot be deleted because it still has resources or actions. Remove them first.',
+    'errors.RES-1008': 'This resource no longer exists. It may have already been deleted.',
+    'errors.RES-1009': 'This action no longer exists. It may have already been deleted.',
+    'errors.RES-1010': 'The specified organization unit does not exist.',
+    'errors.RES-1011': 'The limit parameter must be a positive integer.',
+    'errors.RES-1012': 'The offset parameter must be a non-negative integer.',
+    'errors.RES-1013': 'A resource server with the same identifier already exists.',
+    'errors.RES-1014': 'A resource or action with the same handle already exists under this parent.',
+    'errors.RES-1015': 'The delimiter must be a single valid character: . _ : - /',
+    'errors.RES-1016': 'The handle must be under 100 characters and contain only letters, numbers, and . _ : - /',
+    'errors.RES-1017': 'The handle cannot contain the delimiter character.',
+    'errors.RES-1018': 'This resource server is managed declaratively and cannot be modified.',
+    'errors.RES-1019': 'This resource is managed declaratively and cannot be modified.',
+    'errors.RES-1020': 'This action is managed declaratively and cannot be modified.',
+    'errors.RES-1021': 'The number of records exceeds the maximum allowed in composite mode.',
+    'errors.RES-1023': 'A resource server with the specified ID already exists.',
   },
 
   // ============================================================================
@@ -4664,6 +4948,19 @@ const translations = {
     'delete.disclaimer': 'Login flows referencing this definition will stop working.',
     'delete.success': 'Presentation definition deleted',
     'delete.error': 'Failed to delete presentation definition',
+
+    // Verification failure (generic - the backend does not yet expose a per-reason code)
+    'verify.failedGeneric': 'The wallet could not complete verification. Please try again.',
+
+    // Backend error code translations (per presentation-definition service error envelope).
+    'errors.VP-2002': 'This presentation definition no longer exists. It may have already been deleted.',
+    'errors.VP-2003': 'A presentation definition with the same handle already exists.',
+    'errors.VP-2005': 'This presentation definition is managed declaratively and cannot be modified or deleted.',
+    'errors.VP-2006':
+      'The number of presentation definitions exceeds the supported limit. Use search to narrow the results.',
+    'errors.VP-2007': 'The specified organization unit is not valid.',
+    'errors.EUDI-1002': 'This verification request is no longer active. Start a new verification.',
+    'errors.EUDI-1004': 'This presentation definition is not registered for verification.',
   },
   'verifiable-credentials': {
     // List page
@@ -4767,6 +5064,14 @@ const translations = {
     'delete.disclaimer': 'Wallets will no longer be able to request this credential.',
     'delete.success': 'Credential template deleted',
     'delete.error': 'Failed to delete credential template',
+
+    // Backend error code translations (per credential-configuration service error envelope).
+    'errors.VCI-2002': 'This credential template no longer exists. It may have already been deleted.',
+    'errors.VCI-2003': 'A credential template with the same handle already exists.',
+    'errors.VCI-2005': 'This credential template is managed declaratively and cannot be modified or deleted.',
+    'errors.VCI-2006':
+      'The number of credential templates exceeds the supported limit. Use search to narrow the results.',
+    'errors.VCI-2007': 'The specified organization unit is not valid.',
   },
 
   // ============================================================================
@@ -4792,6 +5097,9 @@ const translations = {
     'cors.load.error': 'Failed to load allowed origins.',
     'cors.save.success': 'Allowed origins updated.',
     'cors.save.error': 'Failed to update allowed origins.',
+
+    // Backend error code translations (per server-config service error envelope).
+    'errors.SCF-1003': 'One or more origins are not valid. Enter a valid URL or regular expression.',
   },
 } as const;
 

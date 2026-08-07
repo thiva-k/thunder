@@ -39,8 +39,6 @@ const MIN_CONTENT_HEIGHT = 700;
  */
 const IFRAME_INITIAL_HTML = [
   '<!DOCTYPE html><html style="height:100%"><head>',
-  '<link rel="preconnect" href="https://fonts.googleapis.com">',
-  '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
   '<style>body{margin:0;height:100%}#root,#root>*{height:100%}</style>',
   '</head><body><div id="root"></div></body></html>',
 ].join('');
@@ -94,6 +92,13 @@ export interface GatePreviewProps {
    * its container edge to edge. Useful when the host provides its own window chrome.
    */
   frameless?: boolean;
+  /**
+   * The device chrome drawn around the preview. `'browser'` (default) renders a desktop browser
+   * window (traffic-light dots + fake address bar). `'phone'` renders a dark rounded phone bezel
+   * with a status-bar notch instead, for previews of app-native (embedded) sign-in flows. Has no
+   * effect when `frameless` is set.
+   */
+  frameStyle?: 'browser' | 'phone';
   /** Base theme the resolved design is merged over. Defaults to Acrylic Orange. */
   baseTheme?: Theme;
   /**
@@ -140,6 +145,7 @@ export default function GatePreview({
   onComponentHover = undefined,
   additionalData = undefined,
   frameless = false,
+  frameStyle = 'browser',
   baseTheme = undefined,
   themelessBranding = false,
   toolbarStart = undefined,
@@ -312,23 +318,30 @@ export default function GatePreview({
           overflow: 'hidden',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           p: frameless ? 0 : 2,
         }}
       >
         <Box
           sx={{
-            backgroundColor: toolbarVariant === 'minimal' ? resolvedPageBackground : 'background.paper',
-            borderRadius: frameless ? 0 : 1,
+            backgroundColor:
+              !frameless && frameStyle === 'phone'
+                ? '#0a0a0a'
+                : toolbarVariant === 'minimal'
+                  ? resolvedPageBackground
+                  : 'background.paper',
+            borderRadius: frameless ? 0 : frameStyle === 'phone' ? '32px' : 1,
+            p: !frameless && frameStyle === 'phone' ? '10px' : 0,
             width: frameless ? '100%' : (viewport?.width ?? VIEWPORT_WIDTHS[viewportState]),
             height: frameless ? '100%' : (viewport?.height ?? VIEWPORT_HEIGHTS[viewportState]),
+            maxHeight: '100%',
             transition: 'width 0.2s ease, height 0.2s ease',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
           {/* Browser chrome */}
-          {!frameless && (
+          {!frameless && frameStyle === 'browser' && (
             <Box
               sx={{
                 px: 3,
@@ -365,13 +378,21 @@ export default function GatePreview({
             </Box>
           )}
 
-          {/* Canvas — fills the browser chrome frame like a real viewport */}
+          {/* Phone chrome — a status-bar notch instead of a browser address bar */}
+          {!frameless && frameStyle === 'phone' && (
+            <Box sx={{display: 'flex', justifyContent: 'center', pb: 1, pt: 0.5, flexShrink: 0}}>
+              <Box sx={{width: 56, height: 5, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.25)'}} />
+            </Box>
+          )}
+
+          {/* Canvas — fills the chrome frame like a real viewport */}
           <Box
             ref={canvasRef}
             sx={{
               flex: 1,
               overflow: 'hidden',
               position: 'relative',
+              borderRadius: !frameless && frameStyle === 'phone' ? '22px' : 0,
             }}
           >
             {!frameless && (

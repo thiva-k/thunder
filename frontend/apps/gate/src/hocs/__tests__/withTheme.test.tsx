@@ -26,7 +26,8 @@ vi.mock('@thunderid/design', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   useDesign: () => mockUseDesign(),
   StylesheetInjector: () => null,
-  GoogleFontLoader: () => null,
+  FontImporter: () => null,
+  getFontImportURL: () => undefined,
   DefaultTheme: {},
 }));
 

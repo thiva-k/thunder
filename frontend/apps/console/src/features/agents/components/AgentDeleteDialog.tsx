@@ -1,8 +1,9 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
-import {useState, type JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useDeleteAgent from '../api/useDeleteAgent';
 
@@ -23,6 +24,14 @@ export default function AgentDeleteDialog({
   const deleteAgent = useDeleteAgent();
   const [error, setError] = useState<string | null>(null);
 
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
+
   const handleCancel = (): void => {
     if (deleteAgent.isPending) return;
     setError(null);
@@ -39,7 +48,7 @@ export default function AgentDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('agents:delete.error', 'Failed to delete agent. Please try again.'));
+        setError(getErrorMessage(err, tForErrors, 'delete.error', 'Failed to delete agent. Please try again.'));
       },
     });
   };

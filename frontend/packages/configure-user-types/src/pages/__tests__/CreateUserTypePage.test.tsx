@@ -674,7 +674,52 @@ describe('CreateUserTypePage', () => {
 
     await pickOrganizationUnit(user);
 
-    expect(screen.getByText('Failed to create user type')).toBeInTheDocument();
+    expect(screen.getByText('Failed to create user type. Please try again.')).toBeInTheDocument();
+  });
+
+  it('resets the create error as soon as a field changes', async () => {
+    const user = userEvent.setup();
+    const mockReset = vi.fn();
+    const error = new Error('Failed to create user type');
+
+    mockUseCreateUserType.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+      error,
+      isError: true,
+      reset: mockReset,
+    } as unknown as ReturnType<typeof useCreateUserTypeHook>);
+
+    renderPage();
+
+    await pickOrganizationUnit(user);
+
+    expect(screen.getByText('Failed to create user type. Please try again.')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/User Type Name/i), 'A');
+
+    expect(mockReset).toHaveBeenCalled();
+  });
+
+  it('does not reset a pending create mutation when a field changes', async () => {
+    const user = userEvent.setup();
+    const mockReset = vi.fn();
+
+    mockUseCreateUserType.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: true,
+      error: null,
+      isError: false,
+      reset: mockReset,
+    } as unknown as ReturnType<typeof useCreateUserTypeHook>);
+
+    renderPage();
+
+    await pickOrganizationUnit(user);
+
+    await user.type(screen.getByLabelText(/User Type Name/i), 'A');
+
+    expect(mockReset).not.toHaveBeenCalled();
   });
 
   it('shows loading state during submission on last step', async () => {

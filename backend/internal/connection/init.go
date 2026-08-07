@@ -24,7 +24,7 @@ func Initialize(mux *http.ServeMux, idpService idp.IDPServiceInterface,
 	h := newHandler(svc)
 	registerRoutes(mux, h)
 
-	if err := loadDeclarativeResources(); err != nil {
+	if err := loadDeclarativeResources(idpService); err != nil {
 		return nil, err
 	}
 

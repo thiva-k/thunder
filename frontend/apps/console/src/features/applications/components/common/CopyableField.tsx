@@ -34,10 +34,9 @@ export interface CopyableFieldProps {
 }
 
 /**
- * Read-only monospace field with a copy-to-clipboard affordance, matching
- * `QuickCopySection`'s field pattern. Shared by the mcp-client template's create-flow
- * Connect completion screen and edit-page Connect tab for the Application ID, Client ID,
- * client secret, and discovery endpoint fields.
+ * Read-only monospace field with a copy-to-clipboard affordance. Shared by the mcp-client
+ * template's create-flow Connect completion screen and edit-page Connect tab for the
+ * Application ID, Client ID, client secret, and discovery endpoint fields.
  *
  * @param props - The component props
  * @param props.id - The `id`/`htmlFor` used to associate the field's label with its input

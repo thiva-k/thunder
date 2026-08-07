@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Link from '@docusaurus/Link';
+import {AndroidLogo, FlutterLogo} from '@thunderid/components';
 import {Box, Container, Typography} from '@wso2/oxygen-ui';
 import {JSX, useState} from 'react';
-import AndroidLogo from '../icons/AndroidLogo';
 import ExpressLogo from '../icons/ExpressLogo';
-import FlutterLogo from '../icons/FlutterLogo';
 import IOSLogo from '../icons/IOSLogo';
 import JavaScriptLogo from '../icons/JavaScriptLogo';
 import NextLogo from '../icons/NextLogo';
@@ -15,6 +14,7 @@ import NuxtLogo from '../icons/NuxtLogo';
 import ReactLogo from '../icons/ReactLogo';
 import VueLogo from '../icons/VueLogo';
 import useIsDarkMode from '@site/src/hooks/useIsDarkMode';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 const SDKS = [
   {
@@ -83,6 +83,7 @@ export default function SDKShowcaseSection(): JSX.Element {
    
   const [hoveredIndex, rawSet] = useState<number | null>(null);
   const isDark = useIsDarkMode();
+  const docsUrl = useDocsUrl();
   const setHoveredIndex = rawSet as (v: number | null) => void;
   const isHovering = hoveredIndex !== null;
   const hoveredSdk = SDKS.find((_, i) => i === hoveredIndex);
@@ -198,7 +199,7 @@ export default function SDKShowcaseSection(): JSX.Element {
                 const isActive = hoveredIndex === index;
 
                 return (
-                  <Link key={sdk.name} to={sdk.href} title={sdk.name} style={{textDecoration: 'none', display: 'block'}}>
+                  <Link key={sdk.name} to={docsUrl(sdk.href)} title={sdk.name} style={{textDecoration: 'none', display: 'block'}}>
                     <Box
                       onMouseEnter={() => {
                         setHoveredIndex(index);

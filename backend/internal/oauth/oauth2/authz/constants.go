@@ -3,6 +3,12 @@
 
 package authz
 
+import "time"
+
+// defaultAuthzRequestValidity is the authorization request context validity used when
+// oauth.authorization_request.validity_period is not configured.
+const defaultAuthzRequestValidity = 60 * time.Minute
+
 // Authorization code states.
 const (
 	AuthCodeStateActive   = "ACTIVE"

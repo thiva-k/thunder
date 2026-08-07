@@ -85,8 +85,5 @@ export default function useUpdateOrganizationUnit(): UseMutationResult<
         });
       showToast(t('update.success'), 'success');
     },
-    onError: () => {
-      showToast(t('update.error'), 'error');
-    },
   });
 }

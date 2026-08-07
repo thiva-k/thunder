@@ -382,6 +382,7 @@ Every flow you deploy must reference only executors that are registered on the s
 | **Send Email** | Sends email using configured templates. | Email service configured |
 | **Send SMS** | Sends SMS using configured templates and sender. | SMS sender configured |
 | **Auth Assertion Generator** | Generates the final authentication assertion on successful flow completion. | User authenticated; assertion settings configured |
+| **End Session** | Terminates the SSO session established by the authentication flow and clears its session cookie. | - |
 | **HTTP Request** | Makes HTTP requests to external endpoints. | - |
 
 :::tip 
@@ -576,7 +577,6 @@ Authenticates users via a generic OAuth 2.0 provider. After the OAuth redirect, 
 | `idpId` | Connection | Yes | The identity provider ID configured in <ProductName /> |
 | `allowAuthenticationWithoutLocalUser` | Allow Authentication Without Local User | No | Allow authentication when no local user exists (creates federated link) |
 | `allowRegistrationWithExistingUser` | Allow Registration With Existing User | No | Allow registration if the account already exists |
-| `allowCrossOUProvisioning` | Allow Cross-OU Provisioning | No | Allow creating user in a different OU from the default |
 
 **Input Configuration:**
 - `code` (required): the authorization code returned by the OAuth provider after redirect. Default: `code`. If not provided, the executor redirects to the OAuth provider to start the authorization flow and get a code.
@@ -590,8 +590,7 @@ Authenticates users via a generic OAuth 2.0 provider. After the OAuth redirect, 
   "properties": {
     "idpId": "<idp-id>",
     "allowAuthenticationWithoutLocalUser": false,
-    "allowRegistrationWithExistingUser": false,
-    "allowCrossOUProvisioning": false
+    "allowRegistrationWithExistingUser": false
   },
   "executor": {
     "name": "OAuthExecutor"
@@ -627,7 +626,6 @@ Authenticates users via a generic OIDC provider. After the OIDC redirect, <Produ
 | `idpId` | Connection | Yes | The identity provider ID configured in <ProductName /> |
 | `allowAuthenticationWithoutLocalUser` | Allow Authentication Without Local User | No | Allow authentication when no local user exists (creates federated link) |
 | `allowRegistrationWithExistingUser` | Allow Registration With Existing User | No | Allow registration if the account already exists |
-| `allowCrossOUProvisioning` | Allow Cross-OU Provisioning | No | Allow creating user in a different OU from the default |
 
 **Input Configuration:**
 - `code` (required): the authorization code returned by the OIDC provider after redirect. Default: `code`. If not provided, the executor redirects to the OIDC provider to start the authorization flow and get a code.
@@ -641,8 +639,7 @@ Authenticates users via a generic OIDC provider. After the OIDC redirect, <Produ
   "properties": {
     "idpId": "<idp-id>",
     "allowAuthenticationWithoutLocalUser": false,
-    "allowRegistrationWithExistingUser": false,
-    "allowCrossOUProvisioning": false
+    "allowRegistrationWithExistingUser": false
   },
   "executor": {
     "name": "OIDCAuthExecutor"
@@ -678,7 +675,6 @@ Authenticates users via Google OIDC. After the OAuth redirect, <ProductName /> e
 | `idpId` | Connection | Yes | The identity provider ID configured in <ProductName /> |
 | `allowAuthenticationWithoutLocalUser` | Allow Authentication Without Local User | No | Allow authentication when no local user exists (creates federated link) |
 | `allowRegistrationWithExistingUser` | Allow Registration With Existing User | No | Allow registration if the account already exists |
-| `allowCrossOUProvisioning` | Allow Cross-OU Provisioning | No | Allow creating user in a different OU from the default |
 
 **Input Configuration:**
 - `code` (required): the authorization code returned by Google after user consent. Default: `code`
@@ -692,8 +688,7 @@ Authenticates users via Google OIDC. After the OAuth redirect, <ProductName /> e
   "properties": {
     "idpId": "<idp-id>",
     "allowAuthenticationWithoutLocalUser": false,
-    "allowRegistrationWithExistingUser": false,
-    "allowCrossOUProvisioning": false
+    "allowRegistrationWithExistingUser": false
   },
   "executor": {
     "name": "GoogleOIDCAuthExecutor"
@@ -729,7 +724,6 @@ Authenticates users via GitHub OAuth 2.0. After the redirect, <ProductName /> ex
 | `idpId` | Connection | Yes | The identity provider ID configured in <ProductName /> |
 | `allowAuthenticationWithoutLocalUser` | Allow Authentication Without Local User | No | Allow authentication when no local user exists (creates federated link) |
 | `allowRegistrationWithExistingUser` | Allow Registration With Existing User | No | Allow registration if the account already exists |
-| `allowCrossOUProvisioning` | Allow Cross-OU Provisioning | No | Allow creating user in a different OU from the default |
 
 **Input Configuration:**
 - `code` (required): the authorization code returned by GitHub after user authorization. Default: `code`
@@ -743,8 +737,7 @@ Authenticates users via GitHub OAuth 2.0. After the redirect, <ProductName /> ex
   "properties": {
     "idpId": "<idp-id>",
     "allowAuthenticationWithoutLocalUser": false,
-    "allowRegistrationWithExistingUser": false,
-    "allowCrossOUProvisioning": false
+    "allowRegistrationWithExistingUser": false
   },
   "executor": {
     "name": "GithubOAuthExecutor"
@@ -2247,7 +2240,7 @@ GET /oauth2/authorize
   &nonce=xyz789
 ```
 
-ACR filtering only takes effect when the flow contains a [`LOGIN_OPTIONS` PROMPT node](#login-options-variant) with `authMethodMapping` configured. Without it, `acr_values` have no effect on the flow.
+ACR filtering only takes effect when the flow contains a [`LOGIN_OPTIONS` PROMPT node](#prompt-node) with `authMethodMapping` configured. Without it, `acr_values` have no effect on the flow.
 
 **Using `acr_values` with the `LOGIN_OPTIONS` node**
 

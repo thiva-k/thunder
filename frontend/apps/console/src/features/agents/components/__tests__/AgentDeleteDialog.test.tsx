@@ -179,12 +179,12 @@ describe('AgentDeleteDialog', () => {
   });
 
   describe('Delete Error Flow', () => {
-    it('should display error message when delete fails', async () => {
+    it('should display the resolved catalog message, never the raw server error text, when delete fails', async () => {
       const user = userEvent.setup();
-      const errorMessage = 'Failed to delete agent';
+      const rawServerMessage = 'raw backend delete failure detail';
 
       mockMutate.mockImplementation((_, options: {onError?: (error: Error) => void}) => {
-        options?.onError?.(new Error(errorMessage));
+        options?.onError?.(new Error(rawServerMessage));
       });
 
       renderWithProviders();
@@ -193,8 +193,9 @@ describe('AgentDeleteDialog', () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
+        expect(screen.getByText('Failed to delete agent. Please try again.')).toBeInTheDocument();
       });
+      expect(screen.queryByText(rawServerMessage)).not.toBeInTheDocument();
 
       expect(mockOnClose).not.toHaveBeenCalled();
       expect(mockOnSuccess).not.toHaveBeenCalled();
@@ -213,7 +214,7 @@ describe('AgentDeleteDialog', () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Delete failed')).toBeInTheDocument();
+        expect(screen.getByText('Failed to delete agent. Please try again.')).toBeInTheDocument();
       });
 
       const cancelButton = screen.getByRole('button', {name: 'Cancel'});

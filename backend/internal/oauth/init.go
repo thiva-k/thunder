@@ -65,13 +65,13 @@ func Initialize(
 	discoveryService := discovery.Initialize(mux, runtimeCrypto, jweService, cfg)
 	var enforcementService revocation.EnforcementServiceInterface
 	var revocationSvc revocation.RevocationServiceInterface
-	if cfg.OAuth.TokenRevocation.Enabled {
+	if cfg.OAuth.TokenRevocation.IsEnabled() {
 		// The enforcement service (revocation read path) is built before the token service so it can be
 		// injected into the validator, which enforces the deny list as the final step of every validation.
 		tokenFamilyRevocationTTL := time.Duration(cfg.OAuth.RefreshToken.ValidityPeriod) * time.Second
 		enforcementService, revocationSvc = revocation.Initialize(
 			mux, jwtService, actorProvider, authnProvider, discoveryService, observabilitySvc,
-			tokenFamilyRevocationTTL, cfg.OAuth.Revocation.TokenFamily.OnExplicitRevoke)
+			tokenFamilyRevocationTTL, cfg.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
 	}
 
 	jtiStore := jti.Initialize(runtimeStore)
@@ -105,7 +105,7 @@ func Initialize(
 		discoveryService, dpopVerifier, cfg)
 	callback.Initialize(mux, oauth2AuthzService, cibaService, cfg)
 
-	if cfg.OAuth.Logout.Enabled {
+	if cfg.OAuth.Logout.IsEnabled() {
 		oauth2logout.Initialize(mux, jwtService, actorProvider, flowExecService, runtimeStore, cfg)
 	}
 	return nil

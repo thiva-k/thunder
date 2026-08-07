@@ -169,15 +169,17 @@ vi.mock('@thunderid/configure-organization-units', () => ({
 // "application-configure-name" (rather than the real component's "application-configure-details")
 // to avoid colliding with the CONFIGURE step's mock below, which never renders at the same time
 // but shares the same real-component testid convention.
-vi.mock('../../components/create-application/ConfigureApplicationDetails', () => ({
-  default: ({
+vi.mock('../../components/create-application/ConfigureApplicationDetails', async () => {
+  const {useEffect} = await import('react');
+  const MockConfigureApplicationDetails = ({
     hasMultipleOUs,
     onChangeOu,
     appName,
     onAppNameChange,
     appLogo,
     onLogoSelect,
-    onReadyChange,
+    onReadyChange = undefined,
+    existingAppNames = [],
   }: {
     hasMultipleOUs: boolean;
     onChangeOu: () => void;
@@ -186,29 +188,37 @@ vi.mock('../../components/create-application/ConfigureApplicationDetails', () =>
     appLogo: string | null;
     onLogoSelect: (logo: string) => void;
     onReadyChange?: (ready: boolean) => void;
-  }) => (
-    <div data-testid="application-configure-name">
-      {hasMultipleOUs && (
-        <button type="button" onClick={onChangeOu}>
-          Change
+    existingAppNames?: string[];
+  }) => {
+    // Mirror the real component: readiness is broadcast from an effect (including on mount) and a
+    // name already in the list is treated as a duplicate that blocks readiness.
+    const isDuplicate = appName.length > 0 && existingAppNames.includes(appName);
+    useEffect(() => {
+      onReadyChange?.(appName.trim().length > 0 && !isDuplicate);
+    }, [appName, isDuplicate, onReadyChange]);
+    return (
+      <div data-testid="application-configure-name" data-existing-names={existingAppNames.join(',')}>
+        {hasMultipleOUs && (
+          <button type="button" onClick={onChangeOu}>
+            Change
+          </button>
+        )}
+        {appLogo ? <span data-testid="preview-logo">{appLogo}</span> : null}
+        <button type="button" data-testid="logo-select-btn" onClick={() => onLogoSelect('test-logo.png')}>
+          Select Logo
         </button>
-      )}
-      {appLogo ? <span data-testid="preview-logo">{appLogo}</span> : null}
-      <button type="button" data-testid="logo-select-btn" onClick={() => onLogoSelect('test-logo.png')}>
-        Select Logo
-      </button>
-      <input
-        data-testid="app-name-input"
-        value={appName}
-        onChange={(e) => {
-          onAppNameChange(e.target.value);
-          onReadyChange?.(e.target.value.length > 0);
-        }}
-        placeholder="Enter app name"
-      />
-    </div>
-  ),
-}));
+        <input
+          data-testid="app-name-input"
+          value={appName}
+          onChange={(e) => onAppNameChange(e.target.value)}
+          placeholder="Enter app name"
+        />
+        {isDuplicate ? <span data-testid="app-name-duplicate-error">duplicate</span> : null}
+      </div>
+    );
+  };
+  return {default: MockConfigureApplicationDetails};
+});
 
 // The Design step now also hosts the sign-in approach picker (hosted pages vs. embedded) that used
 // to live on a separate Experience step, so this mock folds what used to be the ConfigureExperience
@@ -241,7 +251,7 @@ function DefaultConfigureDesignImpl({
       <button type="button" data-testid="select-embedded-approach" onClick={() => onApproachChange('EMBEDDED')}>
         Select Embedded
       </button>
-      <button type="button" data-testid="select-inbuilt-approach" onClick={() => onApproachChange('INBUILT')}>
+      <button type="button" data-testid="select-inbuilt-approach" onClick={() => onApproachChange('REDIRECT_BASED')}>
         Select Inbuilt
       </button>
       <button type="button" data-testid="select-theme-btn" onClick={() => onThemeSelect?.('theme-1', {} as Theme)}>
@@ -341,7 +351,9 @@ vi.mock('../../components/create-application/ConfigureDetails', () => ({
 }));
 
 vi.mock('../../../../components/GatePreview/GatePreview', () => ({
-  default: () => <div data-testid="preview" />,
+  default: ({showToolbar, viewport}: {showToolbar?: boolean; viewport?: {width: string; height: string}}) => (
+    <div data-testid="preview" data-show-toolbar={String(showToolbar)} data-viewport-width={viewport?.width ?? ''} />
+  ),
 }));
 
 vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
@@ -491,6 +503,33 @@ function TemplateSeeder(): JSX.Element {
         }
       >
         Select Browser
+      </button>
+      <button
+        type="button"
+        aria-label="seed android technology template"
+        data-testid="select-android-technology"
+        onClick={() =>
+          seed('ANDROID', null, {
+            id: 'android',
+            type: 'mobile',
+            previewDevice: 'mobile',
+            creationFlow: {
+              steps: ['ORGANIZATION_UNIT', 'DETAILS', 'SECURITY', 'DESIGN', 'CONFIGURE', 'COMPLETE'],
+              previewSteps: ['DETAILS', 'SECURITY', 'DESIGN'],
+            },
+            defaults: {
+              signInApproach: 'EMBEDDED',
+              inboundAuthConfig: [
+                {
+                  type: 'oauth2',
+                  config: {grantTypes: ['authorization_code'], responseTypes: ['code'], publicClient: true},
+                },
+              ],
+            },
+          })
+        }
+      >
+        Select Android
       </button>
       <button
         type="button"
@@ -1086,6 +1125,18 @@ describe('ApplicationCreatePage', () => {
       expect(screen.getByTestId('allow-embedded-approach')).toHaveTextContent('true');
     });
 
+    it('should offer the embedded approach for the Android technology template', async () => {
+      // Android (like iOS/Flutter) is a public client for the same reason browser SPAs are, but
+      // it's a native app-native flow, not a redirect-only one — the embedded approach must still
+      // be offered, matching the generic Mobile platform template's behavior.
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-android-technology'));
+      await goToDesignStep();
+
+      expect(screen.getByTestId('allow-embedded-approach')).toHaveTextContent('true');
+    });
+
     it('should show the CONFIGURE step after DESIGN for the wallet platform', async () => {
       renderWithProviders();
 
@@ -1149,6 +1200,40 @@ describe('ApplicationCreatePage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Preview Device', () => {
+    it('always hides the preview toolbar', async () => {
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-browser-platform'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('preview')).toHaveAttribute('data-show-toolbar', 'false');
+      });
+    });
+
+    it('renders the mobile-sized viewport for the Android technology template', async () => {
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-android-technology'));
+
+      await waitFor(() => {
+        const preview = screen.getByTestId('preview');
+        expect(preview).toHaveAttribute('data-show-toolbar', 'false');
+        expect(preview).toHaveAttribute('data-viewport-width', '40%');
+      });
+    });
+
+    it('renders the default desktop-sized viewport for non-mobile templates', async () => {
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-browser-platform'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('preview')).toHaveAttribute('data-viewport-width', '');
       });
     });
   });
@@ -1382,6 +1467,81 @@ describe('ApplicationCreatePage', () => {
       await waitFor(() => {
         expect(screen.queryByText(/failed to create application/i)).not.toBeInTheDocument();
       });
+    });
+
+    it('should show the duplicate name message and return to the details step on APP-1020', async () => {
+      const duplicateError = Object.assign(new Error('Bad Request'), {
+        response: {status: 400, data: {code: 'APP-1020', message: 'Application already exists'}},
+      });
+      mockCreateApplication.mockImplementation((_data, {onError}: {onError: (error: Error) => void}) => {
+        onError(duplicateError);
+      });
+
+      renderWithProviders();
+
+      await goToDesignStep();
+      // DESIGN → CONFIGURE
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+      });
+      // CONFIGURE → Create (rejected with APP-1020)
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/an application with this name already exists/i)).toBeInTheDocument();
+        },
+        {timeout: 10000},
+      );
+      expect(screen.queryByText(/bad request/i)).not.toBeInTheDocument();
+      // The wizard navigates back to the details step, which hosts the name field.
+      expect(screen.getByTestId('application-configure-name')).toBeInTheDocument();
+    });
+
+    it('should block resubmitting the same name after APP-1020 until it is edited', async () => {
+      const duplicateError = Object.assign(new Error('Bad Request'), {
+        response: {status: 400, data: {code: 'APP-1020', message: 'Application already exists'}},
+      });
+      mockCreateApplication.mockImplementation((_data, {onError}: {onError: (error: Error) => void}) => {
+        onError(duplicateError);
+      });
+
+      renderWithProviders();
+
+      await goToDesignStep();
+      // DESIGN → CONFIGURE
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+      });
+      // CONFIGURE → Create (rejected with APP-1020)
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+
+      // Back on the details step, the rejected name is now treated as existing: flagged as a
+      // duplicate and Continue disabled, so the same name cannot be resubmitted.
+      await waitFor(() => {
+        expect(screen.getByTestId('application-configure-name')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('application-configure-name')).toHaveAttribute(
+        'data-existing-names',
+        expect.stringContaining('My App'),
+      );
+      expect(screen.getByTestId('app-name-duplicate-error')).toBeInTheDocument();
+      expect(screen.getByTestId('application-wizard-next-button')).toBeDisabled();
+      expect(screen.getByText(/an application with this name already exists/i)).toBeInTheDocument();
+
+      // Editing to a new name clears the duplicate flag and re-enables Continue. The stale create
+      // error is cleared too, by the provider's form fingerprint.
+      await user.type(screen.getByTestId('app-name-input'), ' v2');
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('app-name-duplicate-error')).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText(/an application with this name already exists/i)).not.toBeInTheDocument();
+      expect(screen.getByTestId('application-wizard-next-button')).toBeEnabled();
     });
   });
 
@@ -1922,7 +2082,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByTestId('application-wizard-next-button'));
 
       await waitFor(() => {
-        expect(screen.getByText('Flow generation failed')).toBeInTheDocument();
+        expect(screen.getByText('Failed to generate the authentication flow. Please try again.')).toBeInTheDocument();
       });
     });
   });

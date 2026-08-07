@@ -33,6 +33,10 @@ const mockLocationState = {
 
 let mockPathname = '/import/summary';
 
+const IMPORT_EXPORT_TRANSLATIONS: Record<string, string> = {
+  'errors.IMP-1002': 'The uploaded YAML content could not be parsed.',
+};
+
 vi.mock('react-router', async () => {
   const actual = await vi.importActual<typeof import('react-router')>('react-router');
   return {
@@ -51,7 +55,11 @@ vi.mock('../../api/useImportConfiguration', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) => {
+    t: (key: string, paramsOrDefaultValue?: string | Record<string, unknown>) => {
+      if (IMPORT_EXPORT_TRANSLATIONS[key] !== undefined) {
+        return IMPORT_EXPORT_TRANSLATIONS[key];
+      }
+      const params = typeof paramsOrDefaultValue === 'object' ? paramsOrDefaultValue : undefined;
       if (key === 'summary.resourceCount' && params?.count !== undefined) {
         const count = typeof params.count === 'number' ? params.count : Number(params.count);
         return `${count} resources`;
@@ -60,6 +68,12 @@ vi.mock('react-i18next', () => ({
         const resolved = typeof params.resolved === 'number' ? params.resolved : Number(params.resolved);
         const total = typeof params.total === 'number' ? params.total : Number(params.total);
         return `${resolved} of ${total} resolved`;
+      }
+      if (typeof paramsOrDefaultValue === 'string') {
+        return paramsOrDefaultValue;
+      }
+      if (typeof params?.defaultValue === 'string') {
+        return params.defaultValue;
       }
       return key;
     },
@@ -550,7 +564,7 @@ describe('ImportConfigurationSummaryPage', () => {
       });
     });
 
-    it('shows failed results list when dry run fails with results', async () => {
+    it('shows failed results list, resolving a mapped code instead of raw server text', async () => {
       const failedResponse: ImportResponse = {
         summary: {totalDocuments: 1, imported: 0, failed: 1, importedAt: new Date().toISOString()},
         results: [
@@ -559,7 +573,8 @@ describe('ImportConfigurationSummaryPage', () => {
             resourceId: 'app1',
             resourceName: 'MyApp',
             status: 'failed',
-            message: 'Bad config',
+            code: 'IMP-1002',
+            message: 'raw server text',
           },
         ],
       };
@@ -572,7 +587,31 @@ describe('ImportConfigurationSummaryPage', () => {
       await waitFor(() => {
         expect(screen.getByText(/summary\.importTest\.failures/)).toBeInTheDocument();
         expect(screen.getByText(/MyApp/)).toBeInTheDocument();
-        expect(screen.getByText(/Bad config/)).toBeInTheDocument();
+        expect(screen.getByText(/The uploaded YAML content could not be parsed\./)).toBeInTheDocument();
+        expect(screen.queryByText(/raw server text/)).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows a generic fallback for a failed result with no mapped code', async () => {
+      const failedResponse: ImportResponse = {
+        summary: {totalDocuments: 1, imported: 0, failed: 1, importedAt: new Date().toISOString()},
+        results: [
+          {
+            resourceType: 'application',
+            resourceId: 'app1',
+            resourceName: 'MyApp',
+            status: 'failed',
+          },
+        ],
+      };
+      mockMutateAsync.mockResolvedValue(failedResponse);
+      mockLocationState.configContent = noTemplateState.configContent;
+      mockLocationState.envData = noTemplateState.envData;
+
+      render(<ImportConfigurationSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/This resource failed to import\./)).toBeInTheDocument();
       });
     });
 

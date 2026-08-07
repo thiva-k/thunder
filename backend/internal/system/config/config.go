@@ -104,9 +104,17 @@ func (c *NotificationConfig) Validate() error {
 
 // OTPConfig holds the OTP generation configuration details.
 type OTPConfig struct {
-	Length                int  `yaml:"length"                  json:"length"`
-	UseNumericOnly        bool `yaml:"use_numeric_only"        json:"use_numeric_only"`
-	ValidityPeriodSeconds int  `yaml:"validity_period_seconds" json:"validity_period_seconds"`
+	Length int `yaml:"length"                  json:"length"`
+	// UseNumericOnly uses a pointer so an explicit false in deployment.yaml overrides the
+	// default.json default of true; a nil pointer means "not set" and keeps the default.
+	UseNumericOnly        *bool `yaml:"use_numeric_only"        json:"use_numeric_only"`
+	ValidityPeriodSeconds int   `yaml:"validity_period_seconds" json:"validity_period_seconds"`
+}
+
+// UsesNumericOnly reports whether OTPs use a numeric-only character set,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c OTPConfig) UsesNumericOnly() bool {
+	return derefBool(c.UseNumericOnly)
 }
 
 // Validate ensures OTP configuration values are within accepted bounds.
@@ -213,7 +221,15 @@ type OpenID4VPConfig struct {
 	ResultTokenValiditySeconds int                  `yaml:"result_token_validity_seconds" json:"result_token_validity_seconds"` //nolint:lll
 	RegistrationCertFile       string               `yaml:"registration_cert_file" json:"registration_cert_file"`
 	TrustedAnchors             []TrustedAnchorEntry `yaml:"trusted_anchors" json:"trusted_anchors"` //nolint:lll
-	EnforceKeyBinding          bool                 `yaml:"enforce_key_binding" json:"enforce_key_binding"`
+	// EnforceKeyBinding uses a pointer so an explicit false in deployment.yaml overrides the
+	// default.json default of true; a nil pointer means "not set" and keeps the default.
+	EnforceKeyBinding *bool `yaml:"enforce_key_binding" json:"enforce_key_binding"`
+}
+
+// EnforceKeyBindingEnabled reports whether a Key Binding JWT is required, defaulting to false
+// when unset (an explicit default lives in default.json).
+func (c OpenID4VPConfig) EnforceKeyBindingEnabled() bool {
+	return derefBool(c.EnforceKeyBinding)
 }
 
 // TrustedAnchorEntry is a trust anchor (root CA) whose PEM certificate roots the

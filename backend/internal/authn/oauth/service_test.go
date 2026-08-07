@@ -976,7 +976,8 @@ func (suite *OAuthAuthnServiceTestSuite) TestBuildFederatedAuthResultAppliesMapp
 		context.Background(), testIDPID, testSub, map[string]interface{}{"given_name": "Jane", "sub": testSub})
 	suite.Nil(svcErr)
 	suite.Equal("Jane", result.AuthenticatedClaims["firstName"])
-	suite.NotContains(result.AuthenticatedClaims, "given_name")
+	// Mappings copy rather than rename, so the source claim survives alongside the local attribute.
+	suite.Equal("Jane", result.AuthenticatedClaims["given_name"])
 	// No account linking configured, so the lookup falls back to sub without a query.
 	suite.Equal(testSub, result.Token["sub"])
 }

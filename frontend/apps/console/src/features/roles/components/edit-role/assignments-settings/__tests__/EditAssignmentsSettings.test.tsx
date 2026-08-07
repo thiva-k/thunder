@@ -44,16 +44,20 @@ vi.mock('../AddAssignmentDialog', () => ({
     onClose,
     onAdd,
     initialTab,
+    error,
   }: {
     open: boolean;
     roleId: string;
     onClose: () => void;
     onAdd: (assignments: RoleAssignment[]) => void;
     initialTab?: number;
+    error?: string | null;
+    isSubmitting?: boolean;
   }) =>
     open ? (
       <div data-testid="add-dialog" role="dialog">
         <span data-testid="initial-tab">{initialTab}</span>
+        {error && <div role="alert">{error}</div>}
         <button type="button" onClick={() => onAdd([{id: 'user-3', type: 'user'}])} data-testid="confirm-add">
           Confirm Add
         </button>
@@ -269,10 +273,10 @@ describe('EditAssignmentsSettings', () => {
       );
     });
 
-    it('should clear error on successful remove', async () => {
+    it('should clear the remove error on a successful remove retry', async () => {
       const user = userEvent.setup();
 
-      mockAddMutate.mockImplementation(
+      mockRemoveMutate.mockImplementationOnce(
         (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
           options?.onError?.(new Error('Some error'));
         },
@@ -280,11 +284,10 @@ describe('EditAssignmentsSettings', () => {
 
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
-      await user.click(screen.getByTestId('confirm-add'));
+      await user.click(screen.getByTestId('remove-btn'));
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to add assignment. Please try again.')).toBeInTheDocument();
+        expect(screen.getByText('Failed to remove assignment. Please try again.')).toBeInTheDocument();
       });
 
       mockRemoveMutate.mockImplementation(
@@ -298,6 +301,38 @@ describe('EditAssignmentsSettings', () => {
       await waitFor(() => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       });
+    });
+
+    it('should not clear an unrelated add error still shown in the open dialog on a successful remove', async () => {
+      const user = userEvent.setup();
+
+      mockAddMutate.mockImplementation(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          options?.onError?.(new Error('Some error'));
+        },
+      );
+      mockRemoveMutate.mockImplementation(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          options?.onSuccess?.();
+        },
+      );
+
+      renderComponent();
+
+      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByTestId('confirm-add'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to add assignment. Please try again.')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId('remove-btn'));
+
+      await waitFor(() => {
+        expect(mockRemoveMutate).toHaveBeenCalled();
+      });
+      // The add dialog's own error is unrelated to the remove action and stays visible.
+      expect(screen.getByText('Failed to add assignment. Please try again.')).toBeInTheDocument();
     });
 
     it('should show error alert on remove failure', async () => {
@@ -364,12 +399,48 @@ describe('EditAssignmentsSettings', () => {
       });
     });
 
-    it('should clear error on successful add', async () => {
+    it('should clear the add error and close the dialog on a successful add', async () => {
+      const user = userEvent.setup();
+
+      mockAddMutate.mockImplementationOnce(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          options?.onError?.(new Error('Previous error'));
+        },
+      );
+
+      renderComponent();
+
+      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByTestId('confirm-add'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to add assignment. Please try again.')).toBeInTheDocument();
+      });
+
+      mockAddMutate.mockImplementation(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          options?.onSuccess?.();
+        },
+      );
+
+      await user.click(screen.getByTestId('confirm-add'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('add-dialog')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should not clear an unrelated remove error on a successful add', async () => {
       const user = userEvent.setup();
 
       mockRemoveMutate.mockImplementation(
         (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
           options?.onError?.(new Error('Previous error'));
+        },
+      );
+      mockAddMutate.mockImplementation(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          options?.onSuccess?.();
         },
       );
 
@@ -381,18 +452,14 @@ describe('EditAssignmentsSettings', () => {
         expect(screen.getByText('Failed to remove assignment. Please try again.')).toBeInTheDocument();
       });
 
-      mockAddMutate.mockImplementation(
-        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
-          options?.onSuccess?.();
-        },
-      );
-
       await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('add-dialog')).not.toBeInTheDocument();
       });
+      // The tab's remove error is unrelated to the add action and stays visible.
+      expect(screen.getByText('Failed to remove assignment. Please try again.')).toBeInTheDocument();
     });
   });
 });

@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {GitHub, Google, KeyRound, MessageSquare, Send, ShieldCheck} from '@wso2/oxygen-ui-icons-react';
+import {GitHub, Google, KeyRound, MessageSquare, MessagesSquare, Send, ShieldCheck} from '@wso2/oxygen-ui-icons-react';
 import {CONNECTION_CATEGORIES} from '../constants/connection-categories';
 import {type ConnectionCategory, ConnectionTypes, type ConnectionVendorMeta} from '../models/connection';
 
@@ -72,6 +72,15 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     logo: <Send />,
     categories: ['sms'],
     presentation: 'branded',
+  },
+  {
+    key: 'sms-gateway',
+    backendType: ConnectionTypes.SMS_GATEWAY,
+    displayName: 'SMS Gateway',
+    descriptionKey: 'connections:vendor.sms-gateway.description',
+    logo: <MessagesSquare />,
+    categories: ['sms', 'custom'],
+    presentation: 'custom',
   },
 ];
 

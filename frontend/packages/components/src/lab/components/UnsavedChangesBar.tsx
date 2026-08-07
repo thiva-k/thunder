@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
+import {Alert, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 
 export interface UnsavedChangesBarProps {
   /** Label for the unsaved changes message. */
@@ -16,6 +16,8 @@ export interface UnsavedChangesBarProps {
   isSaving: boolean;
   /** Whether the save button should be disabled (e.g. due to validation errors). */
   saveDisabled?: boolean;
+  /** Inline error to show above the actions when the last save attempt failed. */
+  error?: string;
   /** Called when the reset button is clicked. */
   onReset: () => void;
   /** Called when the save button is clicked. */
@@ -33,6 +35,7 @@ export default function UnsavedChangesBar({
   savingLabel,
   isSaving,
   saveDisabled = false,
+  error = undefined,
   onReset,
   onSave,
 }: UnsavedChangesBarProps) {
@@ -45,6 +48,7 @@ export default function UnsavedChangesBar({
         right: 0,
         p: 2,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 2,
@@ -54,6 +58,11 @@ export default function UnsavedChangesBar({
         bgcolor: 'background.paper',
       }}
     >
+      {error && (
+        <Alert severity="error" sx={{width: '100%', maxWidth: 720}}>
+          {error}
+        </Alert>
+      )}
       <Stack direction="row" spacing={2} alignItems="center">
         <Typography variant="body2" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
           <Box

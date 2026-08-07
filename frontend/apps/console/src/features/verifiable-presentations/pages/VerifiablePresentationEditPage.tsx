@@ -1,10 +1,11 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice} from '@thunderid/components';
+import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Button, IconButton, PageContent, PageTitle, Stack, TextField, Typography} from '@wso2/oxygen-ui';
 import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
-import {useState, type JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
 import useGetVerifiablePresentation from '../api/useGetVerifiablePresentation';
@@ -20,7 +21,16 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
   const navigate = useNavigate();
   const {t} = useTranslation();
 
-  const {data, isLoading, error} = useGetVerifiablePresentation(vpId);
+  // Resolves an error through the `verifiable-presentations` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `verifiable-presentations:${key}`, options),
+    [t],
+  );
+
+  const {data, isLoading, error, refetch} = useGetVerifiablePresentation(vpId);
   const updateVP = useUpdateVerifiablePresentation();
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
 
@@ -68,15 +78,25 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
   if (error) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {error.message ?? t('verifiable-presentations:edit.loadError')}
-        </Alert>
-        {backButton}
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="block"
+          title={t('verifiable-presentations:edit.loadError', 'Failed to load presentation definition')}
+          onRetry={() => void refetch()}
+          action={backButton}
+        />
       </PageContent>
     );
   }
 
   if (!data) {
+    // A disabled query (no vpId yet) reaches here too — that's not "not found", it just hasn't
+    // fetched anything.
+    if (!vpId) {
+      return <PageLoadingAnimation />;
+    }
+
     return (
       <PageContent>
         <Alert severity="warning" sx={{mb: 2}}>
@@ -103,6 +123,7 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
                 onBlur={() => {
                   const trimmed = tempName.trim();
                   if (trimmed && trimmed !== name.trim()) {
+                    if (updateVP.isError) updateVP.reset();
                     setName(trimmed);
                   }
                   setIsEditingName(false);
@@ -111,6 +132,7 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
                   if (e.key === 'Enter') {
                     const trimmed = tempName.trim();
                     if (trimmed && trimmed !== name.trim()) {
+                      if (updateVP.isError) updateVP.reset();
                       setName(trimmed);
                     }
                     setIsEditingName(false);
@@ -152,6 +174,7 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
                 onBlur={() => {
                   const trimmed = tempDescription.trim();
                   if (trimmed !== description.trim()) {
+                    if (updateVP.isError) updateVP.reset();
                     setDescription(trimmed);
                   }
                   setIsEditingDescription(false);
@@ -160,6 +183,7 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
                   if (e.key === 'Enter' && e.ctrlKey) {
                     const trimmed = tempDescription.trim();
                     if (trimmed !== description.trim()) {
+                      if (updateVP.isError) updateVP.reset();
                       setDescription(trimmed);
                     }
                     setIsEditingDescription(false);
@@ -207,6 +231,14 @@ export default function VerifiablePresentationEditPage(): JSX.Element {
         submitLabel={t('common:actions.save')}
         onSubmit={handleSubmit}
         onDelete={(): void => setDeleteOpen(true)}
+        error={
+          updateVP.error
+            ? getErrorMessage(updateVP.error, tForErrors, 'update.error', 'Failed to update presentation definition')
+            : undefined
+        }
+        onErrorClear={() => {
+          if (updateVP.isError) updateVP.reset();
+        }}
       />
 
       <VerifiablePresentationDeleteDialog

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useGetLanguages, useGetTranslations, useUpdateTranslation} from '@thunderid/i18n';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Autocomplete,
@@ -101,6 +102,14 @@ export function I18nConfigurationCardContent({
   const [selectedLanguage, setSelectedLanguage] = useState<string>(FlowI18nConstants.DEFAULT_LANGUAGE);
   const [error, setError] = useState<string | null>(null);
 
+  // Resolves an error through the `flows` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `flows:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `flows:${key}`, options),
+    [t],
+  );
+
   useEffect(() => {
     onCreateModeChange?.(isCreateMode);
   }, [isCreateMode, onCreateModeChange]);
@@ -192,11 +201,18 @@ export function I18nConfigurationCardContent({
           handleExitCreateMode();
         },
         onError: (err: Error) => {
-          setError(err.message || t('common:errors.unknown'));
+          setError(
+            getErrorMessage(
+              err,
+              tForErrors,
+              'core.elements.textPropertyField.i18nCard.createError',
+              'Failed to create translation. Please try again.',
+            ),
+          );
         },
       },
     );
-  }, [newKey, newTranslationValue, selectedLanguage, updateTranslation, onChange, handleExitCreateMode, t]);
+  }, [newKey, newTranslationValue, selectedLanguage, updateTranslation, onChange, handleExitCreateMode, t, tForErrors]);
 
   const renderLoadingContent = (): ReactElement => (
     <Box sx={{display: 'flex', justifyContent: 'center', p: 2}}>

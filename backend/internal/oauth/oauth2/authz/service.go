@@ -139,7 +139,7 @@ func (as *authorizeService) GetAuthorizationCodeDetails(
 // redemption to recover the tfid and drop the whole family. It is best-effort: a missing marker or a
 // failed revoke is logged and does not change the replay rejection.
 func (as *authorizeService) revokeTokenFamilyOnCodeReplay(ctx context.Context, code string) {
-	if as.criteriaRevoker == nil || !as.cfg.OAuth.Revocation.TokenFamily.OnCodeReplay {
+	if as.criteriaRevoker == nil || !as.cfg.OAuth.Revocation.TokenFamily.OnCodeReplayEnabled() {
 		return
 	}
 	tokenFamilyID, found, err := as.authCodeStore.ConsumedTokenFamily(ctx, code)

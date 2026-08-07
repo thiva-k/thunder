@@ -4,6 +4,7 @@
 import {zodResolver} from '@hookform/resolvers/zod';
 import {NameSuggestion} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -99,6 +100,7 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
   };
 
   const handleNameChange = (newName: string): void => {
+    setError(null); // a create error is stale once the form changes
     setValue('name', newName, {shouldValidate: true});
     // Auto-generate handle if user hasn't manually edited it
     if (!isHandleManuallyEditedRef.current) {
@@ -107,11 +109,18 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
   };
 
   const handleHandleChange = (newHandle: string): void => {
+    setError(null); // a create error is stale once the form changes
     setValue('handle', newHandle, {shouldValidate: true});
     isHandleManuallyEditedRef.current = true;
   };
 
+  const handleDescriptionChange = (newDescription: string): void => {
+    setError(null); // a create error is stale once the form changes
+    setValue('description', newDescription);
+  };
+
   const handleNameSuggestionSelect = (suggestion: string): void => {
+    setError(null); // a create error is stale once the form changes
     setValue('name', suggestion, {shouldValidate: true});
     // Auto-generate handle from suggestion if user hasn't manually edited it
     if (!isHandleManuallyEditedRef.current) {
@@ -139,7 +148,14 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
         });
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('organizationUnits:create.error'));
+        setError(
+          getErrorMessage(
+            err,
+            (key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options),
+            'create.error',
+            'Failed to create organization unit. Please try again.',
+          ),
+        );
       },
     });
   };
@@ -272,6 +288,7 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
                             {...field}
                             fullWidth
                             id="ou-description-input"
+                            onChange={(e) => handleDescriptionChange(e.target.value)}
                             placeholder={t('organizationUnits:edit.general.description.placeholder')}
                             multiline
                             rows={3}

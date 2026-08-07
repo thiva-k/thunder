@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ResourceAvatar} from '@thunderid/components';
+import {QueryErrorNotice, ResourceAvatar} from '@thunderid/components';
 import {useGetApplications} from '@thunderid/configure-applications';
 import type {BasicApplication} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
@@ -9,12 +9,13 @@ import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {Box, Chip, IconButton, Tooltip, Typography, ListingTable, DataGrid} from '@wso2/oxygen-ui';
 import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
-import {useMemo, useCallback, useState, type JSX} from 'react';
+import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import ApplicationDeleteDialog from './ApplicationDeleteDialog';
 import RouteConfig from '../../../configs/RouteConfig';
 import ApplicationConstants from '../constants/application-constants';
+import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
 
 export default function ApplicationsList(): JSX.Element {
@@ -23,8 +24,17 @@ export default function ApplicationsList(): JSX.Element {
   const {t} = useTranslation();
   const logger = useLogger('ApplicationsList');
   const dataGridLocaleText = useDataGridLocaleText();
-  const {data, isLoading, error} = useGetApplications();
+  const {data, isLoading, error, refetch} = useGetApplications();
   const systemConsoleClientId = (config?.client?.client_id ?? 'CONSOLE').toUpperCase();
+
+  // Resolves an error through the `applications` catalog. `t` defaults to the `common` namespace,
+  // so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `applications:`,
+  // per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `applications:${key}`, options),
+    [t],
+  );
 
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -162,14 +172,13 @@ export default function ApplicationsList(): JSX.Element {
 
   if (error) {
     return (
-      <Box sx={{textAlign: 'center', py: 8}}>
-        <Typography variant="h6" color="error" gutterBottom>
-          Failed to load applications
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error.message ?? 'Unknown error'}
-        </Typography>
-      </Box>
+      <QueryErrorNotice
+        error={error}
+        t={tForErrors}
+        title={t('applications:listing.error', 'Failed to load applications')}
+        resolveErrorMessage={getApplicationErrorMessage}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

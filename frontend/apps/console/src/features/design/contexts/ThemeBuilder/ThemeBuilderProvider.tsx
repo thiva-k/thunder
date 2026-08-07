@@ -1,8 +1,10 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useGetTheme, type Theme} from '@thunderid/design';
 import {useState, useMemo, useCallback, type PropsWithChildren} from 'react';
+import {useTranslation} from 'react-i18next';
 import {useParams} from 'react-router';
 import ThemeBuilderContext, {type ThemeBuilderContextType} from './ThemeBuilderContext';
 import type {ThemeSection, Viewport} from '../../models/theme-builder';
@@ -44,8 +46,9 @@ export type ThemeBuilderProviderProps = PropsWithChildren;
  * @public
  */
 export default function ThemeBuilderProvider({children}: ThemeBuilderProviderProps) {
+  const {t} = useTranslation('design');
   const {themeId = ''} = useParams<{themeId: string}>();
-  const {data: themeData, isLoading} = useGetTheme(themeId);
+  const {data: themeData, isLoading, error, refetch} = useGetTheme(themeId);
 
   const [draftTheme, setDraftTheme] = useState<Theme | null>(() => themeData?.theme ?? null);
   const [isDirty, setIsDirty] = useState<boolean>(false);
@@ -151,6 +154,18 @@ export default function ThemeBuilderProvider({children}: ThemeBuilderProviderPro
       updateDraftTheme,
     ],
   );
+
+  if (error) {
+    return (
+      <QueryErrorNotice
+        error={error}
+        t={t}
+        variant="block"
+        title={t('themes.builder.errors.load.title', 'Failed to load theme')}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading) {
     return null; // or a loading spinner

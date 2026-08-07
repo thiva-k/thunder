@@ -37,10 +37,6 @@ vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
   useGetApplications: (args: unknown) => mockUseGetApplications(args) as unknown,
 }));
 
-vi.mock('../HomeFloatingLogos', () => ({
-  default: () => <div data-testid="home-floating-logos" />,
-}));
-
 describe('StartBuildingSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -90,6 +86,12 @@ describe('StartBuildingSection', () => {
       render(<StartBuildingSection />);
       expect(screen.queryByRole('button', {name: 'Create Application'})).not.toBeInTheDocument();
     });
+
+    it('navigates to /applications when the application count is clicked', () => {
+      render(<StartBuildingSection />);
+      fireEvent.click(screen.getByText('start_building.hero.status.app_count'));
+      expect(mockNavigate).toHaveBeenCalledWith('/applications');
+    });
   });
 
   describe('Content', () => {
@@ -98,11 +100,6 @@ describe('StartBuildingSection', () => {
       expect(
         screen.getByText('Add secure login, token management, and user sessions to your app in minutes.'),
       ).toBeInTheDocument();
-    });
-
-    it('renders the floating logos decorator', () => {
-      render(<StartBuildingSection />);
-      expect(screen.getByTestId('home-floating-logos')).toBeInTheDocument();
     });
   });
 });

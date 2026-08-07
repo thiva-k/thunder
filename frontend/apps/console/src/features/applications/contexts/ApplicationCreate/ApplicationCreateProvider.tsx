@@ -101,7 +101,7 @@ const INITIAL_STATE: {
   isSmsOtpMfaEnabled: false,
   smsOtpSenderId: '',
   selectedAuthFlow: null,
-  signInApproach: ApplicationCreateFlowSignInApproach.INBUILT as ApplicationCreateFlowSignInApproach,
+  signInApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED as ApplicationCreateFlowSignInApproach,
   registrationFlowId: null,
   isRegistrationFlowEnabled: false,
   recoveryFlowId: null,
@@ -201,6 +201,54 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
   const [relyingPartyId, setRelyingPartyId] = useState<string>('');
   const [relyingPartyName, setRelyingPartyName] = useState<string>('');
   const [error, setError] = useState<string | null>(INITIAL_STATE.error);
+
+  // A create failure goes stale the moment any wizard input changes, so any edit clears it.
+  // JSON.stringify compares by value (integrations/redirectUris/etc. are rebuilt on every
+  // change), and object-valued fields contribute only their id since they move in lockstep
+  // with it. currentStep is deliberately excluded: stepping back and forth is navigation,
+  // not a field edit, and shouldn't wipe an error the user still needs to read.
+  const formFingerprint = JSON.stringify([
+    appName,
+    ouId,
+    themeId,
+    appLogo,
+    selectedColor,
+    integrations,
+    isEmailOtpMfaEnabled,
+    isSmsOtpMfaEnabled,
+    smsOtpSenderId,
+    selectedAuthFlow?.id ?? null,
+    signInApproach,
+    layoutId,
+    registrationFlowId,
+    isRegistrationFlowEnabled,
+    recoveryFlowId,
+    isRecoveryFlowEnabled,
+    signOutFlowId,
+    isSignOutFlowEnabled,
+    redirectUris,
+    postLogoutRedirectUris,
+    corsOrigins,
+    ouDefaults,
+    selectedTechnology,
+    selectedPlatform,
+    selectedTemplateConfig?.id ?? null,
+    mcpClientType,
+    mcpRedirectUris,
+    hostingUrl,
+    callbackUrlFromConfig,
+    relyingPartyId,
+    relyingPartyName,
+  ]);
+
+  // Adjusted during render (React's documented pattern for state that must stay in sync with
+  // another value) rather than in an effect, since a `useEffect` here would run a fully
+  // committed render with the stale error still visible before clearing it a tick later.
+  const [prevFormFingerprint, setPrevFormFingerprint] = useState(formFingerprint);
+  if (formFingerprint !== prevFormFingerprint) {
+    setPrevFormFingerprint(formFingerprint);
+    setError(null);
+  }
 
   // Derive onboarding completion status from fetched applications data
   const hasCompletedOnboarding = useMemo(() => {

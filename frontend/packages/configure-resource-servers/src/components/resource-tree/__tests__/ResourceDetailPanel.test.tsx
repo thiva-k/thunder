@@ -288,6 +288,96 @@ describe('ResourceDetailPanel', () => {
     fireEvent.change(input, {target: {value: 'Renamed Again'}});
     await waitFor(() => expect(screen.getByRole('button', {name: /Save/i})).toBeInTheDocument());
   });
+
+  it('shows the resolved catalog message inline, never the raw server text, when a server save fails', async () => {
+    mockUpdateResourceServerMutate.mockImplementation((_vars: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error('raw backend save failure detail'));
+    });
+
+    const selectedNode: SelectedNode = {
+      type: 'server',
+      id: 'rs-1',
+      data: mockResourceServer,
+    };
+
+    renderWithProviders(
+      <ResourceDetailPanel selectedNode={selectedNode} resourceServer={mockResourceServer} onRefresh={vi.fn()} />,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('https://api.example.com'), {
+      target: {value: 'https://new-api.example.com'},
+    });
+
+    await waitFor(() => expect(screen.getByRole('button', {name: /Save/i})).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', {name: /Save/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to save.')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('raw backend save failure detail')).not.toBeInTheDocument();
+  });
+
+  it('clears the save error when the identifier field is edited again', async () => {
+    mockUpdateResourceServerMutate.mockImplementation((_vars: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error('boom'));
+    });
+
+    const selectedNode: SelectedNode = {
+      type: 'server',
+      id: 'rs-1',
+      data: mockResourceServer,
+    };
+
+    renderWithProviders(
+      <ResourceDetailPanel selectedNode={selectedNode} resourceServer={mockResourceServer} onRefresh={vi.fn()} />,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('https://api.example.com'), {
+      target: {value: 'https://new-api.example.com'},
+    });
+    await waitFor(() => expect(screen.getByRole('button', {name: /Save/i})).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', {name: /Save/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to save.')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByDisplayValue('https://new-api.example.com'), {
+      target: {value: 'https://newer-api.example.com'},
+    });
+
+    expect(screen.queryByText('Failed to save.')).not.toBeInTheDocument();
+  });
+
+  it('clears the save error when Reset is clicked after a failed save', async () => {
+    mockUpdateResourceServerMutate.mockImplementation((_vars: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error('boom'));
+    });
+
+    const selectedNode: SelectedNode = {
+      type: 'server',
+      id: 'rs-1',
+      data: mockResourceServer,
+    };
+
+    renderWithProviders(
+      <ResourceDetailPanel selectedNode={selectedNode} resourceServer={mockResourceServer} onRefresh={vi.fn()} />,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('https://api.example.com'), {
+      target: {value: 'https://new-api.example.com'},
+    });
+    await waitFor(() => expect(screen.getByRole('button', {name: /Save/i})).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', {name: /Save/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to save.')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', {name: /Reset/i}));
+
+    expect(screen.queryByText('Failed to save.')).not.toBeInTheDocument();
+  });
 });
 
 describe('ResourceDetailPanel (MCP non-server node)', () => {

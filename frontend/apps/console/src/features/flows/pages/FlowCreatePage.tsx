@@ -3,9 +3,10 @@
 
 import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
-import {useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useCreateFlow from '../api/useCreateFlow';
@@ -55,6 +56,26 @@ export default function FlowCreatePage(): JSX.Element {
     void navigate(flowRoutes.flows.list());
   };
 
+  // Resolves an error through the `flows` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `flows:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `flows:${key}`, options),
+    [t],
+  );
+
+  // A create failure is stale once the user edits any field feeding the create request, so every
+  // field-change path below clears both the validation error and the mutation's own error before
+  // applying the change. Only reset the mutation once it has actually failed: resetting while it's
+  // still pending would flip isPending back to false and re-enable the submit button before the
+  // in-flight request settles, letting the user fire a second concurrent create.
+  const clearCreateError = useCallback((): void => {
+    setError(null);
+    if (createFlow.isError) {
+      createFlow.reset();
+    }
+  }, [createFlow]);
+
   const handleNextStep = (): void => {
     if (currentStep === FlowCreateStep.TYPE) {
       setCurrentStep(FlowCreateStep.TEMPLATE);
@@ -82,7 +103,9 @@ export default function FlowCreatePage(): JSX.Element {
           });
         },
         onError: (err) => {
-          setError(err.message ?? t('flows:create.error.createFailed', 'Failed to create flow. Please try again.'));
+          setError(
+            getErrorMessage(err, tForErrors, 'create.error.createFailed', 'Failed to create flow. Please try again.'),
+          );
         },
       });
     }
@@ -94,12 +117,19 @@ export default function FlowCreatePage(): JSX.Element {
   };
 
   const handleTypeChange = (type: FlowType): void => {
+    clearCreateError();
     setSelectedType(type);
     setSelectedTemplate(null);
   };
 
   const handleTemplateChange = (template: FlowTemplate): void => {
+    clearCreateError();
     setSelectedTemplate(template);
+  };
+
+  const handleNameValueChange = (value: ConfigureFlowNameValue): void => {
+    clearCreateError();
+    setNameValue(value);
   };
 
   const getStepProgress = (): number => {
@@ -138,7 +168,7 @@ export default function FlowCreatePage(): JSX.Element {
       );
     }
     if (currentStep === FlowCreateStep.CONFIGURE) {
-      return <ConfigureFlowName value={nameValue} onChange={setNameValue} onReadyChange={setNameReady} />;
+      return <ConfigureFlowName value={nameValue} onChange={handleNameValueChange} onReadyChange={setNameReady} />;
     }
     return null;
   };
@@ -177,7 +207,7 @@ export default function FlowCreatePage(): JSX.Element {
       }
     >
       {error && (
-        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{mb: 3}} onClose={clearCreateError}>
           {error}
         </Alert>
       )}

@@ -33,6 +33,8 @@ const {
   mockValidateEdges,
   mockIsFlowValid,
   mockExistingFlowData,
+  mockGetFlowByIdError,
+  mockRefetchFlowById,
   mockIsVerboseMode,
   mockEdgeStyle,
   mockUseFlowConfig,
@@ -60,6 +62,8 @@ const {
     mockValidateEdges: vi.fn((edges: Edge[]) => edges),
     mockIsFlowValid: {value: true},
     mockExistingFlowData: {value: null as unknown},
+    mockGetFlowByIdError: {value: null as Error | null},
+    mockRefetchFlowById: vi.fn(),
     mockIsVerboseMode: isVerboseModeObj,
     mockEdgeStyle: edgeStyleObj,
     // Note: This mock reads values dynamically at call time
@@ -77,7 +81,13 @@ const {
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: string | Record<string, unknown>) => {
+      if (typeof options === 'string') return options || key;
+      if (options && typeof options === 'object' && 'defaultValue' in options) {
+        return (options.defaultValue as string) || '';
+      }
+      return key;
+    },
   }),
 }));
 
@@ -528,6 +538,8 @@ vi.mock('@/features/flows/api/useGetFlowById', () => ({
   default: () => ({
     data: mockExistingFlowData.value,
     isLoading: false,
+    error: mockGetFlowByIdError.value,
+    refetch: mockRefetchFlowById,
   }),
 }));
 
@@ -1069,8 +1081,8 @@ describe('Update Existing Flow', () => {
     };
 
     // Make updateFlow.mutate call the onError callback
-    mockUpdateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockUpdateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -1107,8 +1119,8 @@ describe('Update Existing Flow', () => {
     mockExistingFlowData.value = null;
 
     // Make createFlow.mutate call the onError callback
-    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -1173,8 +1185,8 @@ describe('Snackbar Close Handlers', () => {
 
   it('should show error snackbar on save failure', async () => {
     mockIsFlowValid.value = true;
-    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -2623,8 +2635,8 @@ describe('Snackbar Close Handler Functions', () => {
 
   it('should trigger error snackbar on save failure', async () => {
     mockIsFlowValid.value = true;
-    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -3626,8 +3638,8 @@ describe('Snackbar State Management - Close Handlers', () => {
   it('should show error snackbar on save failure and allow closing', async () => {
     mockIsFlowValid.value = true;
 
-    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -5517,10 +5529,10 @@ describe('Update Flow - Callbacks', () => {
     };
 
     let onErrorCalled = false;
-    mockUpdateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
+    mockUpdateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
       if (options?.onError) {
         onErrorCalled = true;
-        options.onError();
+        options.onError(new Error('Save failed'));
       }
     });
 
@@ -5578,10 +5590,10 @@ describe('Update Flow - Callbacks', () => {
     mockExistingFlowData.value = null;
 
     let onErrorCalled = false;
-    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
+    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
       if (options?.onError) {
         onErrorCalled = true;
-        options.onError();
+        options.onError(new Error('Save failed'));
       }
     });
 
@@ -5756,8 +5768,8 @@ describe('Snackbar Display and Close - Branch Coverage', () => {
   it('should display error snackbar when flow save fails and close it', async () => {
     mockIsFlowValid.value = true;
     mockValidateFlowGraph.mockReturnValue([]);
-    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockCreateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -5825,8 +5837,8 @@ describe('Snackbar Display and Close - Branch Coverage', () => {
       handle: 'existing-flow',
       nodes: [],
     };
-    mockUpdateFlowMutate.mockImplementation((_data: unknown, options: {onError?: () => void}) => {
-      options?.onError?.();
+    mockUpdateFlowMutate.mockImplementation((_data: unknown, options: {onError?: (err: Error) => void}) => {
+      options?.onError?.(new Error('Save failed'));
     });
 
     render(<FlowBuilder />);
@@ -6399,5 +6411,47 @@ describe('Verbose Mode Node and Edge Filtering', () => {
     render(<FlowBuilder />);
 
     expect(screen.getByTestId('edges-count')).toHaveTextContent('1');
+  });
+});
+
+describe('Read Error State', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({flowId: 'flow-1'});
+    mockUseNodesState.mockReturnValue([[], mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([[], mockSetEdges, vi.fn()]);
+    mockUseUpdateNodeInternals.mockReturnValue(vi.fn());
+    mockIsFlowValid.value = true;
+    mockExistingFlowData.value = null;
+    mockGetFlowByIdError.value = null;
+  });
+
+  afterEach(() => {
+    mockGetFlowByIdError.value = null;
+  });
+
+  it('should render QueryErrorNotice instead of the canvas when the flow fails to load', () => {
+    mockGetFlowByIdError.value = new Error('Internal server error');
+
+    render(<FlowBuilder />);
+
+    expect(screen.queryByTestId('flow-builder')).not.toBeInTheDocument();
+    expect(screen.getByText('Failed to load flow')).toBeInTheDocument();
+  });
+
+  it('should call refetch when the retry action is clicked', () => {
+    mockGetFlowByIdError.value = new Error('Internal server error');
+
+    render(<FlowBuilder />);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+
+    expect(mockRefetchFlowById).toHaveBeenCalledTimes(1);
+  });
+
+  it('should render the canvas normally when there is no load error', () => {
+    render(<FlowBuilder />);
+
+    expect(screen.getByTestId('flow-builder')).toBeInTheDocument();
   });
 });

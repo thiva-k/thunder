@@ -223,16 +223,18 @@ describe('ViewAgentTypePage', () => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 
-    it('renders error message and back button on fetch error', () => {
+    it('renders a resolved error message and back button on fetch error, not raw server text', () => {
       mockUseGetAgentType.mockReturnValue({
         data: undefined,
         isLoading: false,
         error: new Error('Boom'),
+        refetch: vi.fn(),
       });
 
       render(<ViewAgentTypePage />);
 
-      expect(screen.getByText('Boom')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load agent type information')).toBeInTheDocument();
+      expect(screen.queryByText('Boom')).not.toBeInTheDocument();
       expect(screen.getByRole('button', {name: /Back to Agents/i})).toBeInTheDocument();
     });
 
@@ -401,7 +403,7 @@ describe('ViewAgentTypePage', () => {
       expect(screen.queryByText(/Confirm schema changes/i)).not.toBeInTheDocument();
     });
 
-    it('shows a toast on duplicate property names', async () => {
+    it('shows the duplicate-property validation error inline, not as a toast', async () => {
       const user = userEvent.setup();
       render(<ViewAgentTypePage />);
 
@@ -411,40 +413,68 @@ describe('ViewAgentTypePage', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'error');
+        expect(screen.getByText('Duplicate property names found: email')).toBeInTheDocument();
       });
 
       expect(mockMutateAsync).not.toHaveBeenCalled();
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
-    it('shows a toast on save error', async () => {
+    it('shows the mutation error inline via the unsaved changes bar, not as a toast', async () => {
       const user = userEvent.setup();
-      mockMutateAsync.mockRejectedValueOnce(new Error('Save failed'));
+      mockUseUpdateAgentType.mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        error: new Error('Save failed'),
+        isError: true,
+        reset: mockResetUpdate,
+      });
 
       render(<ViewAgentTypePage />);
 
       await user.click(screen.getByText('Update Properties'));
-      await user.click(await screen.findByRole('button', {name: /^Save$/i}));
-      await user.click(await screen.findByRole('button', {name: /^Continue$/i}));
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith('Save failed', 'error');
+        expect(screen.getByText('Failed to update agent type. Please try again.')).toBeInTheDocument();
       });
+      expect(screen.queryByText('Save failed')).not.toBeInTheDocument();
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
     it('falls back to a generic error message for non-Error rejections', async () => {
       const user = userEvent.setup();
-      mockMutateAsync.mockRejectedValueOnce('string error');
+      mockUseUpdateAgentType.mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        error: 'string error' as unknown as Error,
+        isError: true,
+        reset: mockResetUpdate,
+      });
 
       render(<ViewAgentTypePage />);
 
       await user.click(screen.getByText('Update Properties'));
-      await user.click(await screen.findByRole('button', {name: /^Save$/i}));
-      await user.click(await screen.findByRole('button', {name: /^Continue$/i}));
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('Failed to save agent type'), 'error');
+        expect(screen.getByText('Failed to update agent type. Please try again.')).toBeInTheDocument();
       });
+    });
+
+    it('resets the save error as soon as the schema changes', async () => {
+      const user = userEvent.setup();
+      mockUseUpdateAgentType.mockReturnValue({
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        error: new Error('Save failed'),
+        isError: true,
+        reset: mockResetUpdate,
+      });
+
+      render(<ViewAgentTypePage />);
+
+      await user.click(screen.getByText('Update Properties'));
+
+      expect(mockResetUpdate).toHaveBeenCalled();
     });
 
     it('shows the saving state while the mutation is pending', async () => {

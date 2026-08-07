@@ -80,9 +80,6 @@ func handleError(ctx context.Context, w http.ResponseWriter, svcErr *common.Serv
 	statusCode := http.StatusInternalServerError
 	if svcErr.Type == common.ClientErrorType {
 		statusCode = http.StatusBadRequest
-		if svcErr.Code == ErrorConfigNotFound.Code {
-			statusCode = http.StatusNotFound
-		}
 	}
 
 	errResp := apierror.ErrorResponse{

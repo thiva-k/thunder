@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
 import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -43,7 +44,14 @@ export default function UserTypeDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('userTypes:delete.error', 'Failed to delete user type'));
+        setError(
+          getErrorMessage(
+            err,
+            (key, options) => t(key.includes(':') ? key : `userTypes:${key}`, options),
+            'delete.error',
+            'Failed to delete user type. Please try again.',
+          ),
+        );
       },
     });
   };

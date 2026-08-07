@@ -71,6 +71,26 @@ func DecodeJWT(token string) (*JWTClaims, error) {
 	return &claims, nil
 }
 
+// DecodeJWTHeaderMap decodes the header of a JWT token without signature verification.
+func DecodeJWTHeaderMap(token string) (map[string]interface{}, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT format: expected 3 parts, got %d", len(parts))
+	}
+
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JWT header: %w", err)
+	}
+
+	var header map[string]interface{}
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
+		return nil, fmt.Errorf("failed to parse JWT header: %w", err)
+	}
+
+	return header, nil
+}
+
 // ValidateJWTClaims validates that the JWT contains the expected claims.
 func ValidateJWTClaims(claims *JWTClaims, expectedSub, expectedAud, expectedUserType, expectedOUID string) error {
 	if claims.Sub != expectedSub {

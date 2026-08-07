@@ -10,7 +10,6 @@ import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import AccessSection from './AccessSection';
 import DangerZoneSection from './DangerZoneSection';
-import QuickCopySection from './QuickCopySection';
 import resolveApplicationType, {isClientCredentialsOnlyGrantSet} from '../../../utils/resolveApplicationType';
 import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';
@@ -45,16 +44,6 @@ interface EditGeneralSettingsProps {
    */
   sectionResetKey?: number;
   /**
-   * The name of the field that was recently copied to clipboard
-   */
-  copiedField: string | null;
-  /**
-   * Callback function to copy text to clipboard
-   * @param text - The text to copy
-   * @param fieldName - The name of the field being copied
-   */
-  onCopyToClipboard: (text: string, fieldName: string) => Promise<void>;
-  /**
    * Callback invoked after the application is successfully deleted
    */
   onDeleteSuccess?: () => void;
@@ -74,7 +63,6 @@ interface EditGeneralSettingsProps {
  * Container component for general application settings.
  *
  * Displays sections for:
- * - Quick copy of application credentials (ID, Client ID)
  * - Access configuration (URL, redirect URIs, allowed user types)
  * - Danger zone (regenerate client secret)
  *
@@ -87,8 +75,6 @@ export default function EditGeneralSettings({
   onFieldChange,
   oauth2Config = undefined,
   sectionResetKey = 0,
-  copiedField,
-  onCopyToClipboard,
   onDeleteSuccess = undefined,
   onValidationChange = undefined,
   showUserAccessConfig = true,
@@ -153,12 +139,6 @@ export default function EditGeneralSettings({
   return (
     <>
       <Stack spacing={3}>
-        <QuickCopySection
-          application={application}
-          oauth2Config={oauth2Config}
-          copiedField={copiedField}
-          onCopyToClipboard={onCopyToClipboard}
-        />
         <AccessSection
           key={sectionResetKey}
           application={application}

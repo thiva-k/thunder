@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplication} from '@thunderid/configure-applications';
 import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useLogger} from '@thunderid/logger/react';
@@ -42,7 +42,7 @@ import ApplicationConstants from '../constants/application-constants';
 import TemplateConstants from '../constants/template-constants';
 import {McpClientTypes} from '../models/mcp-client';
 import deriveMcpClientType from '../utils/deriveMcpClientType';
-import {getIntegrationGuideForTemplate} from '../utils/getIntegrationGuidesForTemplate';
+import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';
 import getTemplateFieldConstraints from '../utils/getTemplateFieldConstraints';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
@@ -90,8 +90,17 @@ export default function ApplicationEditPage() {
   const location = useLocation();
   const {applicationId} = useParams<{applicationId: string}>();
 
-  const {data: application, isLoading, error, isError, refetch} = useGetApplication(applicationId ?? '');
+  const {data: application, isLoading, error, refetch} = useGetApplication(applicationId ?? '');
   const updateApplication = useUpdateApplication();
+
+  // Resolves an error through the `applications` catalog. `t` defaults to the `common` namespace,
+  // so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `applications:`,
+  // per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `applications:${key}`, options),
+    [t],
+  );
 
   const justCreatedSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
   const [secretDialogOpen, setSecretDialogOpen] = useState(Boolean(justCreatedSecret));
@@ -102,7 +111,6 @@ export default function ApplicationEditPage() {
   // clean form — they keep local state (redirect URI list, react-hook-form defaults) that a
   // `setEditedApp({})` alone wouldn't reset.
   const [sectionResetKey, setSectionResetKey] = useState(0);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -121,24 +129,6 @@ export default function ApplicationEditPage() {
     setActiveTab(newValue);
   };
 
-  const handleCopyToClipboard = useCallback(
-    async (text: string, fieldName: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopiedField(fieldName);
-        setTimeout(() => setCopiedField(null), 2000);
-      } catch {
-        logger.error('Failed to copy to clipboard');
-      }
-    },
-    [logger],
-  );
-
-  const hasIntegrationGuides = useMemo(
-    () => Boolean(application && getIntegrationGuideForTemplate(application.template)),
-    [application],
-  );
-
   const oauth2Constraints = useMemo(
     () => getTemplateFieldConstraints(application?.template)?.oauth2,
     [application?.template],
@@ -150,9 +140,14 @@ export default function ApplicationEditPage() {
     [application?.template],
   );
 
-  const handleFieldChange = useCallback((field: keyof Application, value: unknown) => {
-    setEditedApp((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof Application, value: unknown) => {
+      // A previous save error is stale the moment the form changes again.
+      updateApplication.reset();
+      setEditedApp((prev) => ({...prev, [field]: value}));
+    },
+    [updateApplication],
+  );
 
   const handleSave = useCallback(async () => {
     if (!application || !applicationId) return;
@@ -189,20 +184,27 @@ export default function ApplicationEditPage() {
     return <PageLoadingAnimation />;
   }
 
-  if (isError || error) {
+  if (error) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {error?.message ?? t('applications:edit.page.error')}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch(() => null);
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('applications:edit.page.back')}
-        </Button>
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="block"
+          title={t('applications:edit.page.error', 'Failed to load application information')}
+          resolveErrorMessage={getApplicationErrorMessage}
+          onRetry={() => void refetch()}
+          action={
+            <Button
+              onClick={() => {
+                handleBack().catch(() => null);
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('applications:edit.page.back', 'Back to Applications')}
+            </Button>
+          }
+        />
       </PageContent>
     );
   }
@@ -266,7 +268,7 @@ export default function ApplicationEditPage() {
   const unsavedChangesMessage =
     validationIssues.length > 0 ? validationIssues.join(' ') : t('applications:edit.page.unsavedChanges');
 
-  const mcpTabs: McpTabConfig[] = isMcpClient
+  const baseMcpTabs: McpTabConfig[] = isMcpClient
     ? (
         [
           {
@@ -315,6 +317,7 @@ export default function ApplicationEditPage() {
               <EditTokenSettings
                 sectionResetKey={sectionResetKey}
                 application={application}
+                editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
                 onValidationChange={setHasValidationErrors}
@@ -343,6 +346,29 @@ export default function ApplicationEditPage() {
       ).filter((tab) => !tab.hidden)
     : [];
 
+  const mcpFlowsTabIndex = baseMcpTabs.findIndex((tab) => tab.key === 'flows');
+  const mcpCustomizationTabIndex = baseMcpTabs.findIndex((tab) => tab.key === 'customization');
+
+  const mcpTabs: McpTabConfig[] = isMcpClient
+    ? [
+        {
+          key: 'overview',
+          label: t('applications:edit.page.tabs.overview'),
+          panel: (
+            <IntegrationGuides
+              application={application}
+              oauth2Config={oauth2Config}
+              onGoToFlows={mcpFlowsTabIndex >= 0 ? () => setActiveTab(mcpFlowsTabIndex + 1) : undefined}
+              onGoToCustomization={
+                mcpCustomizationTabIndex >= 0 ? () => setActiveTab(mcpCustomizationTabIndex + 1) : undefined
+              }
+            />
+          ),
+        },
+        ...baseMcpTabs,
+      ]
+    : [];
+
   const safeActiveTab = mcpTabs.length > 0 ? Math.min(activeTab, mcpTabs.length - 1) : 0;
 
   return (
@@ -366,7 +392,10 @@ export default function ApplicationEditPage() {
             value={editedApp.logoUrl ?? application.logoUrl}
             fallback={ApplicationConstants.DEFAULT_AVATAR}
             editAriaLabel={t('applications:edit.page.logoUpdate.label', 'Update Logo')}
-            onSelect={(newLogoUrl: string) =>
+            onSelect={(newLogoUrl: string) => {
+              // Can't go through handleFieldChange: reverting to the original logo drops the key
+              // rather than setting it, so the stale save error has to be cleared here too.
+              updateApplication.reset();
               setEditedApp((prev) => {
                 if (newLogoUrl === application.logoUrl) {
                   const {logoUrl, ...rest} = prev;
@@ -374,8 +403,8 @@ export default function ApplicationEditPage() {
                   return rest;
                 }
                 return {...prev, logoUrl: newLogoUrl};
-              })
-            }
+              });
+            }}
             onSave={handleSave}
           />
         </PageTitle.Avatar>
@@ -533,42 +562,40 @@ export default function ApplicationEditPage() {
         <>
           {/* Tabs */}
           <Tabs value={activeTab} onChange={handleTabChange} aria-label="application settings tabs">
-            {hasIntegrationGuides && (
-              <Tab
-                label={t('applications:edit.page.tabs.overview')}
-                id="edit-tab-0"
-                aria-controls="edit-tabpanel-0"
-                sx={{textTransform: 'none'}}
-              />
-            )}
+            <Tab
+              label={t('applications:edit.page.tabs.overview')}
+              id="edit-tab-0"
+              aria-controls="edit-tabpanel-0"
+              sx={{textTransform: 'none'}}
+            />
             <Tab
               label={t('applications:edit.page.tabs.general')}
-              id={`edit-tab-${hasIntegrationGuides ? 1 : 0}`}
-              aria-controls={`edit-tabpanel-${hasIntegrationGuides ? 1 : 0}`}
+              id="edit-tab-1"
+              aria-controls="edit-tabpanel-1"
               sx={{textTransform: 'none'}}
             />
             <Tab
               label={t('applications:edit.page.tabs.flows')}
-              id={`edit-tab-${hasIntegrationGuides ? 2 : 1}`}
-              aria-controls={`edit-tabpanel-${hasIntegrationGuides ? 2 : 1}`}
+              id="edit-tab-2"
+              aria-controls="edit-tabpanel-2"
               sx={{textTransform: 'none'}}
             />
             <Tab
               label={t('applications:edit.page.tabs.customization')}
-              id={`edit-tab-${hasIntegrationGuides ? 3 : 2}`}
-              aria-controls={`edit-tabpanel-${hasIntegrationGuides ? 3 : 2}`}
+              id="edit-tab-3"
+              aria-controls="edit-tabpanel-3"
               sx={{textTransform: 'none'}}
             />
             <Tab
               label={t('applications:edit.page.tabs.token')}
-              id={`edit-tab-${hasIntegrationGuides ? 4 : 3}`}
-              aria-controls={`edit-tabpanel-${hasIntegrationGuides ? 4 : 3}`}
+              id="edit-tab-4"
+              aria-controls="edit-tabpanel-4"
               sx={{textTransform: 'none'}}
             />
             <Tab
               label={t('applications:edit.page.tabs.advanced')}
-              id={`edit-tab-${hasIntegrationGuides ? 5 : 4}`}
-              aria-controls={`edit-tabpanel-${hasIntegrationGuides ? 5 : 4}`}
+              id="edit-tab-5"
+              aria-controls="edit-tabpanel-5"
               sx={{textTransform: 'none'}}
             />
           </Tabs>
@@ -576,21 +603,22 @@ export default function ApplicationEditPage() {
           {/* Tab Panels */}
           <>
             {/* Overview Tab */}
-            {hasIntegrationGuides && (
-              <TabPanel value={activeTab} index={0}>
-                <IntegrationGuides application={application} oauth2Config={oauth2Config} />
-              </TabPanel>
-            )}
+            <TabPanel value={activeTab} index={0}>
+              <IntegrationGuides
+                application={application}
+                oauth2Config={oauth2Config}
+                onGoToFlows={() => setActiveTab(2)}
+                onGoToCustomization={() => setActiveTab(3)}
+              />
+            </TabPanel>
 
             {/* General Tab */}
-            <TabPanel value={activeTab} index={hasIntegrationGuides ? 1 : 0}>
+            <TabPanel value={activeTab} index={1}>
               <EditGeneralSettings
                 application={application}
                 editedApp={editedApp}
                 onFieldChange={handleFieldChange}
                 oauth2Config={oauth2Config}
-                copiedField={copiedField}
-                onCopyToClipboard={handleCopyToClipboard}
                 onDeleteSuccess={() => {
                   handleBack().catch(() => null);
                 }}
@@ -601,7 +629,7 @@ export default function ApplicationEditPage() {
             </TabPanel>
 
             {/* Flows Tab */}
-            <TabPanel value={activeTab} index={hasIntegrationGuides ? 2 : 1}>
+            <TabPanel value={activeTab} index={2}>
               <SettingsLockNotice isUnlocked={userAccessUnlocked} message={userAccessLockMessage}>
                 <EditFlowsSettings
                   application={userGatedApplication}
@@ -612,7 +640,7 @@ export default function ApplicationEditPage() {
             </TabPanel>
 
             {/* Customization Tab */}
-            <TabPanel value={activeTab} index={hasIntegrationGuides ? 3 : 2}>
+            <TabPanel value={activeTab} index={3}>
               <SettingsLockNotice isUnlocked={userAccessUnlocked} message={userAccessLockMessage}>
                 <EditCustomizationSettings
                   application={userGatedApplication}
@@ -625,10 +653,11 @@ export default function ApplicationEditPage() {
             </TabPanel>
 
             {/* Token Tab */}
-            <TabPanel value={activeTab} index={hasIntegrationGuides ? 4 : 3}>
+            <TabPanel value={activeTab} index={4}>
               <EditTokenSettingsTabs
                 sectionResetKey={sectionResetKey}
                 application={application}
+                editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
                 onValidationChange={setHasValidationErrors}
@@ -636,7 +665,7 @@ export default function ApplicationEditPage() {
             </TabPanel>
 
             {/* Advanced Settings Tab */}
-            <TabPanel value={activeTab} index={hasIntegrationGuides ? 5 : 4}>
+            <TabPanel value={activeTab} index={5}>
               <EditAdvancedSettings
                 application={application}
                 editedApp={editedApp}
@@ -669,7 +698,18 @@ export default function ApplicationEditPage() {
             isMissingCertificate ||
             application.isReadOnly === true
           }
+          error={
+            updateApplication.error
+              ? getApplicationErrorMessage(
+                  updateApplication.error,
+                  (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
+                  'update.error',
+                  'Failed to update application. Please try again.',
+                )
+              : undefined
+          }
           onReset={() => {
+            updateApplication.reset();
             setEditedApp({});
             setHasValidationErrors(false);
             setMcpAccessInvalid(false);

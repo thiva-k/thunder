@@ -149,7 +149,7 @@ func initRevocationCache(ctx context.Context, logger *log.Logger,
 	cfg *config.Config) (revocationcache.EnforcerInterface, revocationcache.Syncer) {
 	rc := cfg.Server.SecurityConfig.TokenRevocation
 	enforcer, syncer, err := revocationcache.Initialize(revocationcache.Config{
-		Enabled:      rc.Enabled,
+		Enabled:      rc.IsEnabled(),
 		Source:       rc.Source,
 		SyncInterval: time.Duration(rc.SyncIntervalSeconds) * time.Second,
 	})
@@ -232,11 +232,12 @@ func createHTTPServer(ctx context.Context, logger *log.Logger, cfg *config.Confi
 	securityMiddleware := createSecurityMiddleware(ctx, logger, mux, jwtService, revocationEnforcer)
 
 	// Build the middleware chain with proper execution order.
-	// Request flow: CorrelationID (outermost) -> AccessLog -> Security -> Route Handler (innermost)
+	// Request flow: CorrelationID (outermost) -> SecurityHeaders -> AccessLog -> Security -> Route Handler (innermost)
 	// Note: Middlewares are wrapped in reverse order - the last added will execute first.
 	// The Gate and Console frontend paths are always excluded from the access log to keep it
 	// focused on API traffic. Additional prefixes can be excluded via log.access.exclude_paths.
 	handler := log.AccessLogHandler(logger, accessLogExcludePaths(cfg.Log.Access.ExcludePaths), securityMiddleware)
+	handler = middleware.SecurityHeadersMiddleware()(handler)
 	handler = middleware.CorrelationIDMiddleware(handler)
 
 	// Build the server address using hostname and port from the configurations.

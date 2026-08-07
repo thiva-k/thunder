@@ -3,10 +3,24 @@
 
 import {type ConnectionType, ConnectionTypes} from '../models/connection';
 
-export type ConnectionFieldKind = 'text' | 'url' | 'secret' | 'scopes' | 'readonly-copy' | 'switch';
+export type ConnectionFieldKind =
+  | 'text'
+  | 'url'
+  | 'secret'
+  | 'scopes'
+  | 'readonly-copy'
+  | 'switch'
+  | 'select'
+  | 'key-value';
 
 /** Which form mode renders a field. Defaults to 'both' when unset. */
 export type ConnectionFieldVisibility = 'create' | 'edit' | 'both';
+
+/** One choice of a 'select' field. Values are sent to the API verbatim. */
+export interface ConnectionFieldOption {
+  value: string;
+  label: string;
+}
 
 export interface ConnectionFieldDef {
   /** Request payload property this field maps to. */
@@ -18,6 +32,12 @@ export interface ConnectionFieldDef {
   /** Required on create. Secret fields are required on create but optional (omit-to-keep) on edit. */
   required?: boolean;
   placeholder?: string;
+  /** Choices of a 'select' field. */
+  options?: ConnectionFieldOption[];
+  /** i18n key for the add-row button of a 'key-value' field. */
+  addLabelKey?: string;
+  /** Value prefilled on create (and used when the API returns none). */
+  defaultValue?: string;
   /** Format the value must match (checked only when non-empty). Mirrors backend validation. */
   pattern?: RegExp;
   /** i18n key for the error shown when {@link pattern} does not match. */
@@ -307,6 +327,47 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       kind: 'text',
       required: true,
       placeholder: '+15005550006',
+    },
+  ],
+  [ConnectionTypes.SMS_GATEWAY]: [
+    NAME_FIELD('Custom SMS Sender'),
+    {
+      name: 'url',
+      labelKey: 'connections:form.fields.smsGatewayUrl.label',
+      hintKey: 'connections:form.fields.smsGatewayUrl.hint',
+      kind: 'url',
+      required: true,
+      placeholder: 'https://sms.example.com/send',
+    },
+    {
+      name: 'httpMethod',
+      labelKey: 'connections:form.fields.httpMethod.label',
+      hintKey: 'connections:form.fields.httpMethod.hint',
+      kind: 'select',
+      defaultValue: 'POST',
+      options: [
+        {value: 'POST', label: 'POST'},
+        {value: 'GET', label: 'GET'},
+      ],
+    },
+    {
+      name: 'contentType',
+      labelKey: 'connections:form.fields.contentType.label',
+      hintKey: 'connections:form.fields.contentType.hint',
+      kind: 'select',
+      defaultValue: 'JSON',
+      options: [
+        {value: 'JSON', label: 'JSON'},
+        {value: 'FORM', label: 'FORM'},
+      ],
+    },
+    {
+      name: 'httpHeaders',
+      labelKey: 'connections:form.fields.httpHeaders.label',
+      hintKey: 'connections:form.fields.httpHeaders.hint',
+      kind: 'key-value',
+      placeholder: 'X-API-Key',
+      addLabelKey: 'connections:form.fields.httpHeaders.add',
     },
   ],
 };

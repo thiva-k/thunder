@@ -4,7 +4,7 @@
 package flowexec
 
 const (
-	defaultAuthFlowExpiry           int64 = 1800  // 30 minutes in seconds
+	defaultAuthFlowExpiry           int64 = 3600  // 60 minutes in seconds
 	defaultRegistrationFlowExpiry   int64 = 3600  // 60 minutes in seconds
 	defaultUserOnboardingFlowExpiry int64 = 86400 // 24 hours in seconds
 	defaultRecoveryFlowExpiry       int64 = 1800  // 30 minutes in seconds

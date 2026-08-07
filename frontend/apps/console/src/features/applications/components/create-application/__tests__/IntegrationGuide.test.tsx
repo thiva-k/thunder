@@ -93,16 +93,8 @@ describe('IntegrationGuide', () => {
         integrationGuides: {
           react: {
             llm_prompt: {
-              id: 'test-guide',
-              title: 'Test Guide',
-              description: 'Test description',
-              type: 'llm' as const,
-              icon: 'test-icon',
-              overview: 'Test overview',
-              prerequisites: [],
-              steps: [],
+              docsUrl: 'https://example.com/docs/test-guide',
             },
-            manual_steps: [],
           },
         },
       };
@@ -453,16 +445,8 @@ describe('IntegrationGuide', () => {
         integrationGuides: {
           react: {
             llm_prompt: {
-              id: 'test-guide',
-              title: 'Test Guide',
-              description: 'Test description',
-              type: 'llm' as const,
-              icon: 'test-icon',
-              overview: 'Test overview',
-              prerequisites: [],
-              steps: [],
+              docsUrl: 'https://example.com/docs/test-guide',
             },
-            manual_steps: [],
           },
         },
       };
@@ -495,16 +479,8 @@ describe('IntegrationGuide', () => {
         integrationGuides: {
           react: {
             llm_prompt: {
-              id: 'test-guide',
-              title: 'Test Guide',
-              description: 'Test description',
-              type: 'llm' as const,
-              icon: 'test-icon',
-              overview: 'Test overview',
-              prerequisites: [],
-              steps: [],
+              docsUrl: 'https://example.com/docs/test-guide',
             },
-            manual_steps: [],
           },
         },
       };

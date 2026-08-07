@@ -1,0 +1,59 @@
+resource_type: server_config
+name: csp
+value:
+  # Enforcing. This policy applies only to the Console and Gate applications (/console/ and /gate/);
+  # all other responses (APIs, OAuth2 endpoints) receive no Content-Security-Policy header at all.
+  # Each path policy's directives replace the matching baseline directives for that path.
+  reportOnly: false
+  paths:
+    # Console application.
+    - location: "/console/"
+      directives:
+        # 'unsafe-inline' is TEMPORARY: it covers oxygen-ui/MUI/Emotion inline style injection until
+        # nonce-based styling is introduced. Remove 'unsafe-inline' once inline styles are nonce-tagged.
+        style-src:
+          - "'self'"
+          - "'unsafe-inline'"
+          - "https://fonts.googleapis.com"
+        # 'data:' covers inline library images; 'https:' is a TEMPORARY broad allowance for arbitrary
+        # tenant-supplied images. Tighten to a proxy or operator allowlist later.
+        img-src:
+          - "'self'"
+          - "data:"
+          - "https:"
+        # 'data:' covers a bundled library font self-hosted as a base64 URI.
+        # fonts.gstatic.com serves the actual font files referenced by the fonts.googleapis.com stylesheet.
+        font-src:
+          - "'self'"
+          - "data:"
+          - "https://fonts.gstatic.com"
+        # The Console welcome page fetches release metadata from thunderid.dev.
+        # fonts.googleapis.com and fonts.gstatic.com are needed for the GatePreview iframe's preconnect.
+        connect-src:
+          - "'self'"
+          - "https://thunderid.dev"
+          - "https://fonts.googleapis.com"
+          - "https://fonts.gstatic.com"
+        # The Monaco code editor instantiates web workers, which the build may emit as blob URLs.
+        worker-src:
+          - "'self'"
+          - "blob:"
+    # Gate application.
+    - location: "/gate/"
+      directives:
+        # See the Console entry above: 'unsafe-inline' is TEMPORARY (oxygen-ui/MUI/Emotion).
+        style-src:
+          - "'self'"
+          - "'unsafe-inline'"
+          - "https://fonts.googleapis.com"
+        # TEMPORARY broad allowance for arbitrary tenant-supplied images.
+        img-src:
+          - "'self'"
+          - "data:"
+          - "https:"
+        # 'data:' covers a bundled library font self-hosted as a base64 URI.
+        # fonts.gstatic.com serves the actual font files referenced by the fonts.googleapis.com stylesheet.
+        font-src:
+          - "'self'"
+          - "data:"
+          - "https://fonts.gstatic.com"

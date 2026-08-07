@@ -60,8 +60,5 @@ export default function useUpdateAgentType(): UseMutationResult<ApiAgentType, Er
       });
       showToast(t('update.success'), 'success');
     },
-    onError: () => {
-      showToast(t('update.error'), 'error');
-    },
   });
 }

@@ -1,8 +1,9 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {useConfig, useToast} from '@thunderid/contexts';
-import {AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
+import {useConfig} from '@thunderid/contexts';
+import {getErrorMessage} from '@thunderid/utils';
+import {Alert, AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {ChevronLeft} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -42,19 +43,19 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const navigate = useNavigate();
   const routes = useConnectionRoutes();
   const {getGateCallbackUrl} = useConfig();
-  const {showToast} = useToast();
 
   const [step, setStep] = useState<Step>(Step.TYPE);
   const [selectedType, setSelectedType] = useState<SelectableConnectionType | null>(null);
   const [connectionName, setConnectionName] = useState('');
   const [editedValues, setEditedValues] = useState<ConnectionFormValues>({});
   const [nameError, setNameError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
   const isTrustedIdp: boolean = selectedType === 'trusted-idp';
 
-  // Defaults to OIDC before the user picks a type on the first step; the SMS placeholder is
-  // disabled and unselectable, and the trusted-idp pseudo-type renders via TrustedIssuerCreateForm
-  // instead, so this is only read when rendering the generic configure step.
+  // Defaults to OIDC before the user picks a type on the first step; the trusted-idp pseudo-type
+  // renders via TrustedIssuerCreateForm instead, so this is only read when rendering the generic
+  // configure step.
   const activeType: ConnectionType =
     selectedType && selectedType !== 'trusted-idp' ? selectedType : ConnectionTypes.OIDC;
   const createMutation = useCreateConnection(activeType);
@@ -63,6 +64,9 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const createFields = useMemo(() => fieldsForMode(activeType, 'create'), [activeType]);
   const redirectUri = getGateCallbackUrl();
   const emptyValues = useMemo(() => emptyFormValues(fields, redirectUri), [fields, redirectUri]);
+
+  // Only federated login providers carry a redirect URI to register with the provider.
+  const usesRedirectUri: boolean = fields.some((field) => field.name === 'redirectUri');
 
   const trimmedName: string = connectionName.trim();
   const values: ConnectionFormValues = {...emptyValues, ...editedValues, name: trimmedName};
@@ -75,10 +79,18 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const progress: number = ((ALL_STEPS.indexOf(step) + 1) / ALL_STEPS.length) * 100;
 
   const bounceToNameStep = (): void => {
-    const duplicateNameError = t('error.duplicateName', 'A connection with this name already exists.');
-    setNameError(duplicateNameError);
-    showToast(duplicateNameError, 'error');
+    setNameError(t('error.duplicateName', 'A connection with this name already exists.'));
     setStep(Step.NAME);
+  };
+
+  // A create failure is stale once the user edits any field. Only reset the mutation once it has
+  // actually failed: resetting while it's still pending would flip isPending back to false and
+  // re-enable the create button before the in-flight request settles.
+  const clearCreateError = (): void => {
+    setGeneralError(null);
+    if (createMutation.isError) {
+      createMutation.reset();
+    }
   };
 
   const handleCreate = (): void => {
@@ -86,12 +98,15 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
       return;
     }
     setNameError(null);
+    setGeneralError(null);
     const payload = formValuesToRequest(values, fields, {mode: 'create', secretReplaced: true});
     createMutation.mutate(payload, {
       onSuccess: (created: ConnectionResponse) => void navigate(routes.connections.detail(activeType, created.id)),
       onError: (error: Error) => {
         if (isConflictError(error)) {
           bounceToNameStep();
+        } else {
+          setGeneralError(getErrorMessage(error, t, 'create.error', 'Failed to create connection.'));
         }
       },
     });
@@ -136,6 +151,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
             onNameChange={(name) => {
               setConnectionName(name);
               setNameError(null);
+              setGeneralError(null);
             }}
             nameError={nameError}
           />
@@ -174,13 +190,15 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
             </Typography>
           </Stack>
 
-          <ConnectionCreateHint
-            instruction={t(
-              'wizard.configure.redirectHint',
-              'Register the redirect URI below with your identity provider as an allowed callback URL, then enter the credentials and endpoints it gives you.',
-            )}
-            redirectUri={redirectUri}
-          />
+          {usesRedirectUri && (
+            <ConnectionCreateHint
+              instruction={t(
+                'wizard.configure.redirectHint',
+                'Register the redirect URI below with your identity provider as an allowed callback URL, then enter the credentials and endpoints it gives you.',
+              )}
+              redirectUri={redirectUri}
+            />
+          )}
 
           <Paper variant="outlined" sx={{p: 3}}>
             <ConnectionForm
@@ -191,10 +209,19 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
               hasStoredSecret={false}
               vendorDisplayName={meta.displayName}
               showNameField={false}
-              onFieldChange={(name, value) => setEditedValues((prev) => ({...prev, [name]: value}))}
+              onFieldChange={(name, value) => {
+                clearCreateError();
+                setEditedValues((prev) => ({...prev, [name]: value}));
+              }}
               onSecretReplacingChange={() => undefined}
             />
           </Paper>
+
+          {generalError && (
+            <Alert severity="error" onClose={clearCreateError}>
+              {generalError}
+            </Alert>
+          )}
 
           <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
             <Button variant="outlined" startIcon={<ChevronLeft size={16} />} onClick={() => setStep(Step.NAME)}>

@@ -9,14 +9,13 @@ import ConnectionQueryKeys from '../constants/query-keys';
 import type {ConnectionResponse} from '../models/connection';
 import {ConnectionTypes} from '../models/connection';
 import type {TrustedIssuer, TrustedIssuerFormData} from '../models/trusted-issuer';
-import isConflictError from '../utils/isConflictError';
 import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
 
 /**
  * Create a trusted issuer, i.e. a trust-only OIDC connection (POST /connections/oidc).
  *
- * Conflicts (409 duplicate name) are not toasted here — the caller surfaces them inline next
- * to the name field.
+ * Failures are not toasted here — the caller surfaces them inline next to the name field
+ * (409 duplicate name) or next to the create action (any other failure).
  *
  * @example
  * ```tsx
@@ -59,11 +58,6 @@ export default function useCreateTrustedIssuer(): UseMutationResult<TrustedIssue
           // Ignore invalidation errors
         });
       showToast(t('trustedIssuers:create.success', 'Trusted issuer created successfully.'), 'success');
-    },
-    onError: (error) => {
-      if (!isConflictError(error)) {
-        showToast(t('trustedIssuers:create.error', 'Failed to create trusted issuer. Please try again.'), 'error');
-      }
     },
   });
 }

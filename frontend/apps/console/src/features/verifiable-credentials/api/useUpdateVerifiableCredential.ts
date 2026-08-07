@@ -45,8 +45,5 @@ export default function useUpdateVerifiableCredential(): UseMutationResult<Verif
       });
       showToast(t('update.success'), 'success');
     },
-    onError: () => {
-      showToast(t('update.error'), 'error');
-    },
   });
 }

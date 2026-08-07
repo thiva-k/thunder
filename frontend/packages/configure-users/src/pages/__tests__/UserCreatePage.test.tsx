@@ -5,7 +5,6 @@ import type {InviteUserRenderProps, EmbeddedFlowComponent} from '@thunderid/reac
 import {render, screen, waitFor, userEvent} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import UserCreateProvider from '../../contexts/UserCreate/UserCreateProvider';
 import UserCreatePage from '../UserCreatePage';
 
 const mockNavigate = vi.fn();
@@ -106,32 +105,20 @@ describe('UserCreatePage', () => {
   });
 
   it('renders the page with progress bar', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     const progressBars = screen.getAllByRole('progressbar');
     expect(progressBars.length).toBeGreaterThan(0);
   });
 
   it('renders close button', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     expect(screen.getByLabelText('Close')).toBeInTheDocument();
   });
 
   it('renders breadcrumb container', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     // Check that breadcrumb container is rendered
     const breadcrumbContainer = screen.getByLabelText('breadcrumb');
@@ -139,21 +126,13 @@ describe('UserCreatePage', () => {
   });
 
   it('renders embedded flow components', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
   });
 
   it('renders Create User action button', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     const buttons = screen.getAllByRole('button').filter((btn) => btn.textContent?.includes('Create User'));
     expect(buttons.length).toBeGreaterThan(0);
@@ -161,11 +140,7 @@ describe('UserCreatePage', () => {
 
   it('closes page when X button is clicked', async () => {
     const user = userEvent.setup();
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     const closeButton = screen.getByLabelText('Close');
     await user.click(closeButton);
@@ -176,11 +151,7 @@ describe('UserCreatePage', () => {
   });
 
   it('renders email input field', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     const emailInput = screen.getByLabelText('Email');
     expect(emailInput).toBeInTheDocument();
@@ -188,11 +159,7 @@ describe('UserCreatePage', () => {
 
   it('allows typing in form fields', async () => {
     const user = userEvent.setup();
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     const emailInput = screen.getByLabelText('Email');
     // User action should complete without error
@@ -204,11 +171,7 @@ describe('UserCreatePage', () => {
 
   it('handles form submission', async () => {
     const user = userEvent.setup();
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     const submitButtons = screen.getAllByRole('button').filter((btn) => btn.textContent?.includes('Create User'));
     expect(submitButtons.length).toBeGreaterThan(0);
@@ -221,33 +184,21 @@ describe('UserCreatePage', () => {
   });
 
   it('displays auto-submit behavior when create action is detected', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     // The page should render without errors
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('renders with AdditionalData containing rootOuId', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     // The page should successfully render with the mocked additional data
     expect(screen.getByLabelText('Close')).toBeInTheDocument();
   });
 
   it('handles translation of form labels', () => {
-    render(
-      <UserCreateProvider>
-        <UserCreatePage />
-      </UserCreateProvider>,
-    );
+    render(<UserCreatePage />);
 
     // Email label should be translated and visible
     expect(screen.getByLabelText('Email')).toBeInTheDocument();

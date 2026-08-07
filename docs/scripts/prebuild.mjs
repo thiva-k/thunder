@@ -65,6 +65,9 @@ async function generateDocs() {
   // Generate SDK release data
   executeScript('SDK Releases Generator', join(__dirname, 'generate-sdk-releases.mjs'));
 
+  // Copy LLM prompt files into static/docs/
+  executeScript('Prompts Generator', join(__dirname, 'generate-prompts.mjs'));
+
   logger.info('🎉 All documentation artifacts generated successfully!\n');
 }
 

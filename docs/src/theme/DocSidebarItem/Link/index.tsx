@@ -4,13 +4,11 @@
 import Link from '@docusaurus/Link';
 import {usePluginData} from '@docusaurus/useGlobalData';
 import OriginalDocSidebarItemLink from '@theme-original/DocSidebarItem/Link';
+import {AndroidLogo, FlutterLogo, LangChainLogo} from '@thunderid/components';
 import React from 'react';
-import AndroidLogo from '@site/src/components/icons/AndroidLogo';
 import ExpressLogo from '@site/src/components/icons/ExpressLogo';
-import FlutterLogo from '@site/src/components/icons/FlutterLogo';
 import IOSLogo from '@site/src/components/icons/IOSLogo';
 import JavaScriptLogo from '@site/src/components/icons/JavaScriptLogo';
-import LangChainLogo from '@site/src/components/icons/LangChainLogo';
 import NextLogo from '@site/src/components/icons/NextLogo';
 import NodeLogo from '@site/src/components/icons/NodeLogo';
 import NuxtLogo from '@site/src/components/icons/NuxtLogo';

@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {Box, DataGrid, Avatar, useTheme} from '@wso2/oxygen-ui';
@@ -53,7 +53,7 @@ export default function ManageChildOrganizationUnitSection({
   const logger = useLogger('ManageChildOrganizationUnitSection');
   const dataGridLocaleText = useDataGridLocaleText();
 
-  const {data: childOUsData, isLoading} = useGetChildOrganizationUnits(organizationUnitId);
+  const {data: childOUsData, isLoading, error, refetch} = useGetChildOrganizationUnits(organizationUnitId);
 
   const columns: DataGrid.GridColDef<OrganizationUnit>[] = useMemo(
     () => [
@@ -112,10 +112,34 @@ export default function ManageChildOrganizationUnitSection({
     [t, theme],
   );
 
+  if (error) {
+    return (
+      <SettingsCard
+        title={t('organizationUnits:edit.childOUs.sections.manage.title', 'Child Organization Units')}
+        description={t(
+          'organizationUnits:edit.childOUs.sections.manage.description',
+          'View and manage child organization units under this OU',
+        )}
+      >
+        <QueryErrorNotice
+          error={error}
+          t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
+          variant="inline"
+          onRetry={() => void refetch()}
+          fallbackKey="organizationUnits:edit.childOUs.sections.manage.error"
+          fallbackDefaultValue="Failed to load child organization units"
+        />
+      </SettingsCard>
+    );
+  }
+
   return (
     <SettingsCard
-      title={t('organizationUnits:edit.childOUs.sections.manage.title')}
-      description={t('organizationUnits:edit.childOUs.sections.manage.description')}
+      title={t('organizationUnits:edit.childOUs.sections.manage.title', 'Child Organization Units')}
+      description={t(
+        'organizationUnits:edit.childOUs.sections.manage.description',
+        'Organization units nested under this one.',
+      )}
       slotProps={{
         content: {
           sx: {

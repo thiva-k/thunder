@@ -34,7 +34,14 @@ vi.mock('framer-motion', async () => {
 const mockUseGetUsers = vi.fn();
 vi.mock('@thunderid/configure-users', () => ({
   useGetUsers: (args: unknown) => mockUseGetUsers(args) as unknown,
+  UserConstants: {DEFAULT_AVATAR_PREFIX: 'avatar:shape=circle,variant=two_letter,colors=0,content='},
 }));
+
+/** The fallback avatar renders an <img> whose data-URI SVG embeds the initials as text content. */
+function getRenderedInitials(img: HTMLImageElement): string {
+  const match = /<text[^>]*>([^<]*)<\/text>/.exec(decodeURIComponent(img.src));
+  return match?.[1] ?? '';
+}
 
 describe('InviteMembersCard', () => {
   beforeEach(() => {
@@ -84,8 +91,9 @@ describe('InviteMembersCard', () => {
 
       render(<InviteMembersCard />);
 
-      expect(screen.getByText('AS')).toBeInTheDocument();
-      expect(screen.getByText('BJ')).toBeInTheDocument();
+      const initials = screen.getAllByRole<HTMLImageElement>('img').map(getRenderedInitials);
+      expect(initials).toContain('AS');
+      expect(initials).toContain('BJ');
     });
 
     it('renders first two characters for a single-word display name', () => {
@@ -96,7 +104,7 @@ describe('InviteMembersCard', () => {
 
       render(<InviteMembersCard />);
 
-      expect(screen.getByText('AL')).toBeInTheDocument();
+      expect(getRenderedInitials(screen.getByRole<HTMLImageElement>('img'))).toBe('AL');
     });
 
     it('renders an extra count when totalResults exceeds the avatar limit', () => {

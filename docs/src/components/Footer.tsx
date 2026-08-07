@@ -8,6 +8,7 @@ import ThemedImage from '@theme/ThemedImage';
 import {Box, Container, Typography} from '@wso2/oxygen-ui';
 import {JSX} from 'react';
 import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 interface FooterColumnProps {
   title: string;
@@ -15,6 +16,7 @@ interface FooterColumnProps {
 }
 
 function FooterColumn({title, links}: FooterColumnProps) {
+  const docsUrl = useDocsUrl();
   return (
     <Box>
       <Typography
@@ -32,7 +34,7 @@ function FooterColumn({title, links}: FooterColumnProps) {
         <Typography
           key={link.label}
           component={Link}
-          href={link.href}
+          href={docsUrl(link.href)}
           variant="body2"
           sx={{
             display: 'block',

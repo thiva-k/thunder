@@ -3,7 +3,7 @@
 
 import {ApplicationQueryKeys} from '@thunderid/configure-applications';
 import type {Application} from '@thunderid/configure-applications';
-import {useConfig} from '@thunderid/contexts';
+import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {waitFor, act, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
@@ -22,6 +22,7 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
   return {
     ...actual,
     useConfig: vi.fn(),
+    useToast: vi.fn(),
   };
 });
 
@@ -124,10 +125,12 @@ describe('useCreateApplication', () => {
   };
 
   let mockHttpRequest: ReturnType<typeof vi.fn>;
+  let mockShowToast: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // Mock HTTP request function
     mockHttpRequest = vi.fn();
+    mockShowToast = vi.fn();
 
     // Mock useThunderID hook
     vi.mocked(useThunderID).mockReturnValue({
@@ -140,6 +143,10 @@ describe('useCreateApplication', () => {
     vi.mocked(useConfig).mockReturnValue({
       getServerUrl: () => 'https://localhost:8090',
     } as ReturnType<typeof useConfig>);
+
+    vi.mocked(useToast).mockReturnValue({
+      showToast: mockShowToast,
+    } as unknown as ReturnType<typeof useToast>);
   });
 
   afterEach(() => {
@@ -184,6 +191,8 @@ describe('useCreateApplication', () => {
       },
       data: mockRequest,
     });
+
+    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success');
   });
 
   it('should set pending state during creation', async () => {
@@ -231,6 +240,20 @@ describe('useCreateApplication', () => {
     expect(result.current.error).toEqual(apiError);
     expect(result.current.data).toBeUndefined();
     expect(result.current.isPending).toBe(false);
+  });
+
+  it('should not show a toast on error', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('Failed to create application'));
+
+    const {result} = renderHook(() => useCreateApplication());
+
+    result.current.mutate(mockRequest);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('should handle network error', async () => {

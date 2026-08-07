@@ -158,6 +158,40 @@ describe('ManageChildOrganizationUnitSection', () => {
     expect(screen.getByRole('grid')).toBeInTheDocument();
   });
 
+  it('should render an inline read error state instead of the grid when the query fails', () => {
+    mockUseGetChildOrganizationUnits.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+    });
+
+    renderWithProviders(
+      <ManageChildOrganizationUnitSection organizationUnitId="ou-parent" organizationUnitName="Engineering" />,
+    );
+
+    expect(screen.getByText('Failed to load child organization units')).toBeInTheDocument();
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+  });
+
+  it('should refetch when the retry action is clicked', () => {
+    const mockRefetch = vi.fn();
+    mockUseGetChildOrganizationUnits.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(
+      <ManageChildOrganizationUnitSection organizationUnitId="ou-parent" organizationUnitName="Engineering" />,
+    );
+
+    fireEvent.click(screen.getByText('Refresh'));
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
   it('should call useGetChildOrganizationUnits with correct ID', () => {
     mockUseGetChildOrganizationUnits.mockReturnValue({
       data: {organizationUnits: mockChildOUs},

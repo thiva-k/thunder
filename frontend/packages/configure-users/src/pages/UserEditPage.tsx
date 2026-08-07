@@ -3,6 +3,7 @@
 
 import {
   PageLoadingAnimation,
+  QueryErrorNotice,
   ResourceAvatar,
   SettingsCard,
   UnsavedChangesBar,
@@ -46,6 +47,7 @@ import UserDeleteDialog from '../components/UserDeleteDialog';
 import UserConstants from '../constants/user-constants';
 import useUserRoutes from '../hooks/useUserRoutes';
 import {dropNonConformingOptionalAttributes} from '../utils/dropNonConformingAttributes';
+import getUserErrorMessage from '../utils/getUserErrorMessage';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -94,7 +96,12 @@ export default function UserEditPage() {
   const updateUserMutation = useUpdateUser();
 
   // Get all schemas to find the schema ID from the schema name
-  const {data: userTypeList} = useGetUserTypes();
+  const {
+    data: userTypeList,
+    isLoading: isUserTypeListLoading,
+    error: userTypeListError,
+    refetch: refetchUserTypeList,
+  } = useGetUserTypes();
 
   // Find the schema ID based on the user's type (which is the schema name)
   const matchedSchema = userTypeList?.types?.find((s) => s.name === user?.type);
@@ -103,7 +110,12 @@ export default function UserEditPage() {
   const trimmedOuId = matchedSchema?.ouId?.trim();
   const schemaOuId = trimmedOuId === '' ? undefined : trimmedOuId;
 
-  const {data: userTypeDetails, isLoading: isSchemaLoading, error: schemaError} = useGetUserType(schemaId);
+  const {
+    data: userTypeDetails,
+    isLoading: isSchemaLoading,
+    error: schemaError,
+    refetch: refetchUserType,
+  } = useGetUserType(schemaId);
 
   const credentialFields: CredentialFieldInfo[] = useMemo(() => {
     if (!userTypeDetails?.schema) return [];
@@ -145,9 +157,13 @@ export default function UserEditPage() {
     setActiveTab(newValue);
   };
 
-  const handleFieldChange = useCallback((field: keyof User, value: unknown) => {
-    setEditedUser((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof User, value: unknown) => {
+      updateUserMutation.reset(); // a save error is stale once the form changes
+      setEditedUser((prev) => ({...prev, [field]: value}));
+    },
+    [updateUserMutation],
+  );
 
   const handleSave = useCallback(async () => {
     const organizationUnitId = schemaOuId ?? user?.ouId;
@@ -194,25 +210,37 @@ export default function UserEditPage() {
   };
 
   // Loading state
-  if (isUserLoading || isSchemaLoading) {
+  if (isUserLoading || isUserTypeListLoading || isSchemaLoading) {
     return <PageLoadingAnimation />;
   }
 
   // Error state
-  if (userError ?? schemaError) {
+  if (userError ?? userTypeListError ?? schemaError) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {userError?.message ?? schemaError?.message ?? 'Failed to load user information'}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch(() => null);
+        <QueryErrorNotice
+          error={(userError ?? userTypeListError ?? schemaError)!}
+          t={(key, options) => t(key.includes(':') ? key : `users:${key}`, options)}
+          resolveErrorMessage={getUserErrorMessage}
+          variant="block"
+          title={t('users:manageUser.loadError', 'Failed to load user information')}
+          onRetry={() => {
+            // The error state covers all three queries, so retry only the one(s) that failed.
+            if (userError) void refetch();
+            if (userTypeListError) void refetchUserTypeList();
+            if (schemaError) void refetchUserType();
           }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('users:manageUser.back')}
-        </Button>
+          action={
+            <Button
+              onClick={() => {
+                handleBack().catch(() => null);
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('users:manageUser.back', 'Back to Users')}
+            </Button>
+          }
+        />
       </PageContent>
     );
   }
@@ -459,7 +487,18 @@ export default function UserEditPage() {
           savingLabel={t('users:manageUser.saving', 'Saving…')}
           isSaving={updateUserMutation.isPending}
           saveDisabled={user.isReadOnly === true}
+          error={
+            updateUserMutation.error
+              ? getUserErrorMessage(
+                  updateUserMutation.error,
+                  (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+                  'update.error',
+                  'Failed to update user. Please try again.',
+                )
+              : undefined
+          }
           onReset={() => {
+            updateUserMutation.reset();
             setEditedUser({});
             setAttributesResetKey((key) => key + 1);
           }}

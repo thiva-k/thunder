@@ -12,9 +12,6 @@ import I18nConfigurationCard from '../I18nConfigurationCard';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => {
-      if (params) {
-        return `${key} ${JSON.stringify(params)}`;
-      }
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
         'login.description': 'Enter your credentials',
@@ -24,6 +21,15 @@ vi.mock('react-i18next', () => ({
         'custom:login.title': 'Sign In',
         'signin:forms.credentials.title': 'Sign In',
       };
+      // getErrorMessage's error-code and fallback lookups pass a `defaultValue` option rather than
+      // interpolation params, so those are resolved from the translations map (or the default
+      // value) instead of being echoed back as interpolated text.
+      if (params && 'defaultValue' in params) {
+        return translations[key] ?? ((params.defaultValue as string) || key);
+      }
+      if (params) {
+        return `${key} ${JSON.stringify(params)}`;
+      }
       return translations[key] ?? key;
     },
   }),
@@ -723,7 +729,7 @@ describe('I18nConfigurationCard', () => {
       });
     });
 
-    it('should show error on failed creation', async () => {
+    it('should show a resolved error message on failed creation, never the raw server text', async () => {
       render(
         <I18nConfigurationCard
           open
@@ -760,10 +766,11 @@ describe('I18nConfigurationCard', () => {
       const callbacks = mutateCall[1];
       callbacks.onError(new Error('API Error'));
 
-      // Should show error alert
+      // Should show the resolved fallback message, not the raw server error text
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText('API Error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to create translation. Please try again.')).toBeInTheDocument();
+        expect(screen.queryByText('API Error')).not.toBeInTheDocument();
       });
     });
 
@@ -998,7 +1005,7 @@ describe('I18nConfigurationCard', () => {
       // Should show fallback error message
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
-        expect(screen.getByText('common:errors.unknown')).toBeInTheDocument();
+        expect(screen.getByText('Failed to create translation. Please try again.')).toBeInTheDocument();
       });
     });
   });

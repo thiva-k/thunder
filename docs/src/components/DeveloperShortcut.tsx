@@ -3,21 +3,20 @@
 
 import Link from '@docusaurus/Link';
 import {useWindowSize} from '@docusaurus/theme-common';
+import {AndroidLogo, FlutterLogo, LangChainLogo} from '@thunderid/components';
 import {Box, Chip, Typography} from '@wso2/oxygen-ui';
-import {AppWindow, Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
+import {Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
 import React, {useCallback} from 'react';
-import AndroidLogo from './icons/AndroidLogo';
 import ExpressLogo from './icons/ExpressLogo';
-import FlutterLogo from './icons/FlutterLogo';
 import IOSLogo from './icons/IOSLogo';
 import JavaScriptLogo from './icons/JavaScriptLogo';
-import LangChainLogo from './icons/LangChainLogo';
 import NextLogo from './icons/NextLogo';
 import NodeLogo from './icons/NodeLogo';
 import NuxtLogo from './icons/NuxtLogo';
 import ReactLogo from './icons/ReactLogo';
 import VueLogo from './icons/VueLogo';
 import {applyConnectType, useConnectType} from '../utils/connectType';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 type ConnectType = 'app' | 'agent' | 'mcp';
 
@@ -39,8 +38,7 @@ const AGENT_QUICKSTARTS = [
 ];
 
 const MCP_QUICKSTARTS = [
-  {Logo: Server, href: '/docs/next/getting-started/connect-your-mcp/server/python', label: 'Server'},
-  {Logo: AppWindow, href: '/docs/next/getting-started/connect-your-mcp/client/connect/mcp-inspector', label: 'Client'},
+  {Logo: Server, href: '/docs/next/getting-started/connect-your-mcp/python', label: 'MCP'},
 ];
 
 const CATEGORIES: {id: ConnectType; icon: React.ReactElement; label: string; description: string; comingSoon: boolean}[] = [
@@ -84,6 +82,7 @@ export default function DeveloperShortcut({
 }: DeveloperShortcutProps): React.ReactElement {
   const windowSize = useWindowSize();
   const isMobile = windowSize === 'mobile';
+  const docsUrl = useDocsUrl();
 
   const selected = useConnectType();
 
@@ -267,7 +266,7 @@ export default function DeveloperShortcut({
                 <Box
                   key={label}
                   component={Link}
-                  to={href}
+                  to={docsUrl(href)}
                   sx={{
                     alignItems: 'center',
                     bgcolor: 'rgba(255,255,255,0.06)',
@@ -334,7 +333,7 @@ export default function DeveloperShortcut({
               </Typography>
               <Box
                 component={Link}
-                to="/docs/next/getting-started/get-thunderid"
+                to={docsUrl('/docs/next/getting-started/get-thunderid')}
                 sx={{
                   color: 'primary.main',
                   fontSize: '0.875rem',

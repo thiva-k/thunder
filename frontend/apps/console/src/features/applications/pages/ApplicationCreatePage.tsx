@@ -37,6 +37,7 @@ import ConfigureApplicationDetails from '../components/create-application/Config
 import ConfigureDesign from '../components/create-application/ConfigureDesign';
 import ConfigureDetails from '../components/create-application/ConfigureDetails';
 import ConfigureMcpClientType from '../components/create-application/mcp/ConfigureMcpClientType';
+import ApplicationConstants from '../constants/application-constants';
 import TemplateConstants from '../constants/template-constants';
 import useApplicationCreate from '../contexts/ApplicationCreate/useApplicationCreate';
 import {
@@ -45,15 +46,17 @@ import {
   ApplicationCreateFlowStep,
   OrganizationUnitDefaultItem,
 } from '../models/application-create-flow';
-import {PlatformApplicationTemplate} from '../models/application-templates';
+import {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../models/application-templates';
 import {McpClientTypes} from '../models/mcp-client';
 import type {CreateApplicationRequest} from '../models/requests';
+import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getConfigurationTypeFromTemplate from '../utils/getConfigurationTypeFromTemplate';
 import isRedirectCapableTemplate from '../utils/isRedirectCapableTemplate';
 import mergeCorsOrigins from '../utils/mergeCorsOrigins';
 import resolveApplicationType from '../utils/resolveApplicationType';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
 import GatePreview from '@/components/GatePreview/GatePreview';
+import {VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@/features/design/components/viewportConstants';
 
 export default function ApplicationCreatePage(): JSX.Element {
   const {t} = useTranslation();
@@ -168,7 +171,22 @@ export default function ApplicationCreatePage(): JSX.Element {
     [applicationsData],
   );
 
+  // Application names already in use, so the details step can flag a duplicate before submission.
+  const existingAppNames = useMemo(
+    (): string[] => (applicationsData?.applications ?? []).map((app) => app.name).filter(Boolean),
+    [applicationsData],
+  );
+
   const [selectedUserTypes, setSelectedUserTypes] = useState<string[]>([]);
+  // Names the server rejected as duplicates (APP-1020) that weren't in the fetched existingAppNames
+  // (e.g. beyond the pagination limit). Treated as additional existing names so the details step
+  // flags them and blocks readiness until the name is edited, avoiding a resubmit-and-fail loop.
+  const [rejectedAppNames, setRejectedAppNames] = useState<string[]>([]);
+
+  const knownAppNames = useMemo(
+    (): string[] => [...existingAppNames, ...rejectedAppNames],
+    [existingAppNames, rejectedAppNames],
+  );
 
   const createFlow = useCreateFlow();
   const {data: idpData} = useIdentityProviders();
@@ -372,13 +390,17 @@ export default function ApplicationCreatePage(): JSX.Element {
   );
 
   // Browser-based SPAs are public clients that must use the redirect-based flow, so the
-  // embedded (native) sign-in approach is not offered for them. Native mobile apps and digital
-  // wallets are also public clients but legitimately use app-native flows, so they are excluded
-  // from this rule.
+  // embedded (native) sign-in approach is not offered for them. Native mobile apps (both the
+  // generic Mobile platform template and the individual Android/iOS/Flutter technology
+  // templates) and digital wallets are also public clients but legitimately use app-native
+  // flows, so they are excluded from this rule.
   const isBrowserSpaTemplate = useMemo((): boolean => {
     if (
       selectedPlatform === PlatformApplicationTemplate.MOBILE ||
-      selectedPlatform === PlatformApplicationTemplate.WALLET
+      selectedPlatform === PlatformApplicationTemplate.WALLET ||
+      selectedTechnology === TechnologyApplicationTemplate.ANDROID ||
+      selectedTechnology === TechnologyApplicationTemplate.IOS ||
+      selectedTechnology === TechnologyApplicationTemplate.FLUTTER
     ) {
       return false;
     }
@@ -386,7 +408,7 @@ export default function ApplicationCreatePage(): JSX.Element {
       (config) => config.type === 'oauth2',
     )?.config;
     return oauthConfig?.publicClient === true;
-  }, [selectedTemplateConfig, selectedPlatform]);
+  }, [selectedTemplateConfig, selectedPlatform, selectedTechnology]);
 
   // Wallets are OID4VCI issuance flows that redirect to a hosted page; there's no native UI to
   // embed, so unlike mobile apps they get no sign-in approach choice at all.
@@ -396,7 +418,7 @@ export default function ApplicationCreatePage(): JSX.Element {
   // selected (e.g. after switching away from a BYOUI-capable template).
   useEffect((): void => {
     if (isBrowserSpaTemplate && signInApproach === ApplicationCreateFlowSignInApproach.EMBEDDED) {
-      setSignInApproach(ApplicationCreateFlowSignInApproach.INBUILT);
+      setSignInApproach(ApplicationCreateFlowSignInApproach.REDIRECT_BASED);
     }
   }, [isBrowserSpaTemplate, signInApproach, setSignInApproach]);
 
@@ -474,6 +496,18 @@ export default function ApplicationCreatePage(): JSX.Element {
 
   const handleLogoSelect = (logoUrl: string): void => {
     setAppLogo(logoUrl);
+  };
+
+  // Both of these feed the create payload but live in page state rather than the provider, so the
+  // provider's form fingerprint doesn't cover them. Clear a stale create error here instead.
+  const handleUserTypesChange = (userTypes: string[]): void => {
+    setError(null);
+    setSelectedUserTypes(userTypes);
+  };
+
+  const handleWalletClientIdChange = (clientId: string): void => {
+    setError(null);
+    setWalletClientId(clientId);
   };
 
   const handleCreateApplication = (skipOAuthConfig = false, overrideFlowId?: string): void => {
@@ -643,7 +677,24 @@ export default function ApplicationCreatePage(): JSX.Element {
         });
       },
       onError: (err: Error) => {
-        setError(getErrorMessage(err, (key, options) => t(`applications:${key}`, options), 'create.error'));
+        // The client-side pre-check can miss names beyond the fetched list; when the backend rejects
+        // a name as a duplicate, record it so the details step flags it and stays un-ready until the
+        // name is edited (preventing a resubmit-and-fail loop), then return there.
+        // getApplicationErrorMessage resolves the errors.APP-1020 message for this case (and the
+        // generic message otherwise).
+        const errorCode = (err as {response?: {data?: {code?: string}}})?.response?.data?.code;
+        if (errorCode === ApplicationConstants.DUPLICATE_APP_NAME_ERROR_CODE) {
+          setRejectedAppNames((prev) => (prev.includes(appName) ? prev : [...prev, appName]));
+          setCurrentStep(ApplicationCreateFlowStep.DETAILS);
+        }
+        setError(
+          getApplicationErrorMessage(
+            err,
+            (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
+            'create.error',
+            'Failed to create application. Please try again.',
+          ),
+        );
       },
     });
   };
@@ -688,7 +739,14 @@ export default function ApplicationCreatePage(): JSX.Element {
           handleCreateApplication(skipOAuthConfig, savedFlow.id);
         },
         onError: (err) => {
-          setError(err.message ?? 'Failed to generate authentication flow.');
+          setError(
+            getErrorMessage(
+              err,
+              (key, options) => t(key.includes(':') ? key : `flows:${key}`, options),
+              'applications:create.flowGenerationError',
+              'Failed to generate the authentication flow. Please try again.',
+            ),
+          );
         },
       });
     } else {
@@ -787,8 +845,9 @@ export default function ApplicationCreatePage(): JSX.Element {
             hasDesignStep={hasDesignStep}
             userTypes={userTypesData?.types ?? []}
             selectedUserTypes={selectedUserTypes}
-            onUserTypesChange={setSelectedUserTypes}
+            onUserTypesChange={handleUserTypesChange}
             onReadyChange={handleDetailsStepReadyChange}
+            existingAppNames={knownAppNames}
           />
         );
 
@@ -834,7 +893,7 @@ export default function ApplicationCreatePage(): JSX.Element {
             platform={selectedPlatform}
             onHostingUrlChange={setHostingUrl}
             onCallbackUrlChange={setCallbackUrlFromConfig}
-            onClientIdChange={setWalletClientId}
+            onClientIdChange={handleWalletClientIdChange}
             existingClientIds={existingClientIds}
             selectedApproach={signInApproach}
             onReadyChange={handleConfigureStepReadyChange}
@@ -887,6 +946,14 @@ export default function ApplicationCreatePage(): JSX.Element {
   // hosted sign-in screen at all, so both simply omit the relevant steps from their own
   // `previewSteps` list.
   const hasNoPreview = !creationFlow.previewSteps.includes(currentStep);
+
+  // The wizard preview has no viewport switcher of its own (see the `showToolbar={false}` below)
+  // — the device frame it renders at is fixed per template via `previewDevice`, defaulting to
+  // desktop when a template doesn't set it.
+  const isMobilePreview = selectedTemplateConfig?.previewDevice === 'mobile';
+  const previewViewport = isMobilePreview
+    ? {width: VIEWPORT_WIDTHS.mobile, height: VIEWPORT_HEIGHTS.mobile}
+    : undefined;
 
   const isFirstStep = visibleSteps.indexOf(currentStep) === 0;
   const isLastStep = visibleSteps.indexOf(currentStep) === visibleSteps.length - 1;
@@ -954,6 +1021,9 @@ export default function ApplicationCreatePage(): JSX.Element {
               baseTheme={DefaultTheme as Theme}
               mock={activePreviewMock}
               displayName={appName ?? undefined}
+              showToolbar={false}
+              viewport={previewViewport}
+              frameStyle={isMobilePreview ? 'phone' : 'browser'}
               footer={
                 currentStep === ApplicationCreateFlowStep.SECURITY && totalPreviewSteps >= 2 ? (
                   <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, py: 1.5}}>

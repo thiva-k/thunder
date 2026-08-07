@@ -66,7 +66,7 @@ func (ds *discoveryService) GetOAuth2AuthorizationServerMetadata(
 		metadata.BackchannelTokenDeliveryModesSupported = []string{"poll"}
 		metadata.BackchannelUserCodeParameterSupported = false
 	}
-	if ds.cfg.OAuth.TokenRevocation.Enabled {
+	if ds.cfg.OAuth.TokenRevocation.IsEnabled() {
 		metadata.RevocationEndpoint = ds.getRevocationEndpoint()
 	}
 	if ds.cfg.OAuth.DCR.IsEnabled() {
@@ -102,7 +102,7 @@ func (ds *discoveryService) GetOIDCMetadata(ctx context.Context) (*OIDCProviderM
 		AcrValuesSupported:                   ds.getSupportedAcrValues(),
 	}
 
-	if ds.cfg.OAuth.Logout.Enabled {
+	if ds.cfg.OAuth.Logout.IsEnabled() {
 		oidcProviderMetadata.EndSessionEndpoint = ds.getEndSessionEndpoint()
 	}
 

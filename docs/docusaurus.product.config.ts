@@ -53,8 +53,7 @@ const DocusaurusProductConfig = {
   project: {
     emoji: '⚡',
     name: 'ThunderID',
-    description:
-      'Open Source Auth for Modern Apps and AI Agents',
+    description: 'Open Source Auth for Modern Apps and AI Agents',
     source: {
       github: {
         name: 'thunderid',
@@ -62,7 +61,7 @@ const DocusaurusProductConfig = {
         url: 'https://github.com/thunder-id/thunderid',
         discussionsUrl: 'https://github.com/thunder-id/thunderid/discussions',
         issuesUrl: 'https://github.com/thunder-id/thunderid/issues',
-        releasesUrl: '/docs/next/releases',
+        releasesUrl: '/releases',
         editUrls: {
           blog: 'https://github.com/thunder-id/thunderid/tree/main/blog/',
           content: 'https://github.com/thunder-id/thunderid/tree/main/docs/',
@@ -80,7 +79,7 @@ const DocusaurusProductConfig = {
   },
   documentation: {
     versioning: {
-      enabled: false,
+      enabled: true,
     },
     deployment: {
       production: {

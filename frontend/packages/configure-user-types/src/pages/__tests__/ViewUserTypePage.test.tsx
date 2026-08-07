@@ -61,7 +61,6 @@ const mockNavigate = vi.fn();
 const mockRefetch = vi.fn();
 const mockUpdateMutateAsync = vi.fn();
 const mockResetUpdateError = vi.fn();
-const mockShowToast = vi.fn();
 
 // Mock react-router
 vi.mock('react-router', async () => {
@@ -116,15 +115,6 @@ vi.mock('@thunderid/configure-organization-units', () => ({
     </div>
   ),
 }));
-
-// Mock shared-contexts (useToast)
-vi.mock('@thunderid/contexts', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@thunderid/contexts')>();
-  return {
-    ...actual,
-    useToast: () => ({showToast: mockShowToast}),
-  };
-});
 
 /**
  * Helper to navigate to the Schema tab.
@@ -1271,9 +1261,15 @@ describe('ViewUserTypePage', () => {
       });
     });
 
-    it('handles save error and shows toast', async () => {
+    it('shows the mutation error inline via the unsaved changes bar', async () => {
       const user = userEvent.setup();
       mockUpdateMutateAsync.mockRejectedValue(new Error('Save failed'));
+      mockUseUpdateUserType.mockReturnValue({
+        mutateAsync: mockUpdateMutateAsync,
+        error: new Error('Save failed'),
+        reset: mockResetUpdateError,
+        isPending: false,
+      });
 
       render(<ViewUserTypePage />);
 
@@ -1284,8 +1280,24 @@ describe('ViewUserTypePage', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith('Save failed', 'error');
+        expect(screen.getByText('Failed to update user type. Please try again.')).toBeInTheDocument();
       });
+    });
+
+    it('resets the save error as soon as a field changes', async () => {
+      const user = userEvent.setup();
+      mockUseUpdateUserType.mockReturnValue({
+        mutateAsync: mockUpdateMutateAsync,
+        error: new Error('Save failed'),
+        reset: mockResetUpdateError,
+        isPending: false,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByTestId('select-ou-child'));
+
+      expect(mockResetUpdateError).toHaveBeenCalled();
     });
 
     it('shows validation error when saving with empty organization unit', async () => {
@@ -1321,7 +1333,7 @@ describe('ViewUserTypePage', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith('Please provide an organization unit ID', 'error');
+        expect(screen.getByText('Please provide an organization unit ID')).toBeInTheDocument();
       });
 
       expect(mockUpdateMutateAsync).not.toHaveBeenCalled();
@@ -1614,7 +1626,7 @@ describe('ViewUserTypePage', () => {
   });
 
   describe('Save Error Handling', () => {
-    it('handles non-Error save rejection with fallback message', async () => {
+    it('handles a non-Error save rejection without crashing', async () => {
       const user = userEvent.setup();
       mockUpdateMutateAsync.mockRejectedValue('string error');
 
@@ -1626,8 +1638,11 @@ describe('ViewUserTypePage', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('Failed to save user type'), 'error');
+        expect(mockUpdateMutateAsync).toHaveBeenCalled();
       });
+      // The unsaved changes bar stays up so the user can retry, since a non-Error
+      // rejection carries no message to resolve into the mutation's own error state.
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
     });
   });
 

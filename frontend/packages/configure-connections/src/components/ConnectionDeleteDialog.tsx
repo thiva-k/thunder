@@ -28,6 +28,8 @@ interface ConnectionDeleteDialogProps {
   connectionId: string;
   connectionName: string;
   isPending: boolean;
+  /** Resolved error message from a failed delete, rendered inline. The dialog stays open on failure. */
+  error?: string | null;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -38,6 +40,7 @@ export default function ConnectionDeleteDialog({
   connectionId,
   connectionName,
   isPending,
+  error = null,
   onConfirm,
   onClose,
 }: ConnectionDeleteDialogProps): JSX.Element {
@@ -90,6 +93,12 @@ export default function ConnectionDeleteDialog({
             </List>
           </Alert>
         ) : null}
+
+        {error && (
+          <Alert severity="error" sx={{mt: 2}}>
+            {error}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isPending}>

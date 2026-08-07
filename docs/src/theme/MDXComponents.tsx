@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import MDXComponents from '@theme-original/MDXComponents';
+import {AndroidLogo, FlutterLogo} from '@thunderid/components';
 import {
   Box,
   Card,
@@ -40,7 +41,6 @@ import DocsGetStarted from '@site/src/components/DocsGetStarted';
 import FloatingLogosBackground from '@site/src/components/FloatingLogosBackground';
 import {BuildAFlowDiagram, FlowNodeTypesRoadmap, FlowBuildingBlocksRoadmap} from '@site/src/components/FlowConcepts';
 import GettingStartedJourney from '@site/src/components/GettingStartedJourney';
-import AndroidLogo from '@site/src/components/icons/AndroidLogo';
 import AngularLogo from '@site/src/components/icons/AngularLogo';
 import BrowserLogo from '@site/src/components/icons/BrowserLogo';
 import ClaudeLogo from '@site/src/components/icons/ClaudeLogo';
@@ -48,7 +48,6 @@ import CliLogo from '@site/src/components/icons/CliLogo';
 import CodexLogo from '@site/src/components/icons/CodexLogo';
 import DockerLogo from '@site/src/components/icons/DockerLogo';
 import ExpressLogo from '@site/src/components/icons/ExpressLogo';
-import FlutterLogo from '@site/src/components/icons/FlutterLogo';
 import GoLogo from '@site/src/components/icons/GoLogo';
 import Html5Logo from '@site/src/components/icons/Html5Logo';
 import IOSLogo from '@site/src/components/icons/IOSLogo';
@@ -68,11 +67,13 @@ import {K8sArchDiagram} from '@site/src/components/K8sArchDiagram';
 import {ConsoleUrl, WayFinderSampleUrl, WayFinderMailUrl} from '@site/src/components/LocalUrls';
 import {McpOAuthFlowDiagram} from '@site/src/components/McpQuickstartFlow';
 import {NextSteps, NextStepsCard} from '@site/src/components/NextSteps';
+import {Pattern, PatternPicker} from '@site/src/components/PatternPicker';
 import ProductName from '@site/src/components/ProductName';
 import RepoLink from '@site/src/components/RepoLink';
 import RunThunderID from '@site/src/components/RunThunderID';
 import SampleDownload from '@site/src/components/SampleDownload';
 import SDKCard from '@site/src/components/SDKCard';
+import {SolutionArchitectureDiagram} from '@site/src/components/SolutionArchitectureDiagram';
 import Stepper from '@site/src/components/Stepper';
 import TutorialHero, {TutorialHeroItem} from '@site/src/components/TutorialHero';
 import UseCaseBranchCards from '@site/src/components/UseCaseBranchCards';
@@ -168,6 +169,7 @@ export default {
   DeveloperShortcut,
   GettingStartedJourney,
   SampleDownload,
+  SolutionArchitectureDiagram,
   UseCaseBranchCards,
   UseCaseStepper,
   UseCaseStepperCard,
@@ -182,6 +184,8 @@ export default {
   DockerLogo,
   Html5Logo,
   SkillsLogo,
+  Pattern,
+  PatternPicker,
   // TODO: Heading styling is a bit off when oxygen-ui Typography is used.
   // After sorting that out, we can switch to using Oxygen UI Typography for headings as well.
   // ex: h1: (props: TypographyProps<'h1'>) => <Typography variant="h1" {...props} />,

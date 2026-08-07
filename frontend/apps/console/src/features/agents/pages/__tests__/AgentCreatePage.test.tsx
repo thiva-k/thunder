@@ -317,7 +317,31 @@ describe('AgentCreatePage', () => {
 
     await user.click(screen.getByRole('button', {name: /Create agent/i}));
 
-    expect(setError).toHaveBeenCalledWith('Create failed');
+    expect(setError).toHaveBeenCalledWith('Failed to create agent. Please try again.');
+  });
+
+  it('clears a stale create error as soon as a field changes', async () => {
+    const user = userEvent.setup();
+    agentCreateState.currentStep = AgentCreateFlowStep.NAME;
+    agentCreateState.error = 'Failed to create agent. Please try again.';
+    const setError = vi.fn();
+
+    mockUseAgentCreate.mockImplementation(() => ({
+      ...agentCreateState,
+      setCurrentStep: () => null,
+      setSelectedSchema: () => null,
+      setSelectedOuId: () => null,
+      setAgentName: () => null,
+      setFormValues: () => null,
+      setSelectedOwnerId: () => null,
+      setError,
+    }));
+
+    render(<AgentCreatePage />);
+
+    await user.click(screen.getByRole('button', {name: 'Set Name'}));
+
+    expect(setError).toHaveBeenCalledWith(null);
   });
 
   it('renders the OU picker on the organization unit step when child organization units exist', () => {

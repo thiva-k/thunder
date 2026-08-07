@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {QrCode} from '@thunderid/design';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -67,7 +68,7 @@ export default function CredentialOfferDialog({open, handle, onClose}: Credentia
   }, []);
 
   const handleClose = (): void => {
-    reset();
+    if (createOffer.isError) reset();
     setCopied(false);
     onClose();
   };
@@ -83,7 +84,12 @@ export default function CredentialOfferDialog({open, handle, onClose}: Credentia
         )}
         {error && (
           <Alert severity="warning" sx={{mb: 2}}>
-            {t('offer.notConfigured')}
+            {getErrorMessage(
+              error,
+              t,
+              'offer.notConfigured',
+              'Credential issuance is not enabled. Configure an issuer signing key to generate credential offers.',
+            )}
           </Alert>
         )}
         {!isPending && deepLink && (

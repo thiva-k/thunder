@@ -4,6 +4,7 @@
 import {useHasMultipleOUs} from '@thunderid/configure-organization-units';
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -63,9 +64,58 @@ export default function CreateResourceServerPage(): JSX.Element {
     ORGANIZATION_UNIT: false,
   });
 
-  const handleDelimiterChange = useCallback((newDelimiter: PermissionDelimiter): void => {
-    setDelimiter(newDelimiter);
-  }, []);
+  // Resolves an error through the `resourceServers` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `resourceServers:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `resourceServers:${key}`, options),
+    [t],
+  );
+
+  // A create failure is stale once the user edits any field, so every field-change path below
+  // clears both the error state and the mutation's own error before applying the change. Only
+  // reset the mutation once it has actually failed: resetting while it's still pending would flip
+  // isPending back to false and re-enable the submit button before the in-flight request settles,
+  // letting the user fire a second concurrent create.
+  const clearCreateError = useCallback((): void => {
+    setError(null);
+    if (createResourceServer.isError) {
+      createResourceServer.reset();
+    }
+  }, [createResourceServer]);
+
+  const handleNameChange = useCallback(
+    (newName: string): void => {
+      clearCreateError();
+      setName(newName);
+    },
+    [clearCreateError],
+  );
+
+  const handleIdentifierChange = useCallback(
+    (newIdentifier: string): void => {
+      clearCreateError();
+      setIdentifier(newIdentifier);
+    },
+    [clearCreateError],
+  );
+
+  const handleOuIdChange = useCallback(
+    (newOuId: string): void => {
+      clearCreateError();
+      setOuId(newOuId);
+    },
+    [clearCreateError],
+  );
+
+  const handleDelimiterChange = useCallback(
+    (newDelimiter: PermissionDelimiter): void => {
+      clearCreateError();
+      setDelimiter(newDelimiter);
+    },
+    [clearCreateError],
+  );
 
   const steps: Record<ResourceServerCreateStep, {label: string; order: number}> = useMemo(
     () => ({
@@ -108,10 +158,11 @@ export default function CreateResourceServerPage(): JSX.Element {
 
   const handleTypeSelect = useCallback(
     (value: ResourceServerType): void => {
+      clearCreateError();
       setSelectedType(value);
       handleStepReadyChange(ResourceServerCreateStep.TYPE, true);
     },
-    [handleStepReadyChange],
+    [clearCreateError, handleStepReadyChange],
   );
 
   const isLastStep =
@@ -163,7 +214,9 @@ export default function CreateResourceServerPage(): JSX.Element {
       },
       onError: (err: Error) => {
         logger.error('Failed to create resource server', {error: err});
-        setError(err.message);
+        setError(
+          getErrorMessage(err, tForErrors, 'create.error', 'Failed to create resource server. Please try again.'),
+        );
       },
     });
   };
@@ -207,8 +260,8 @@ export default function CreateResourceServerPage(): JSX.Element {
             name={name}
             identifier={identifier}
             selectedType={selectedType}
-            onNameChange={setName}
-            onIdentifierChange={setIdentifier}
+            onNameChange={handleNameChange}
+            onIdentifierChange={handleIdentifierChange}
             onReadyChange={handleNameReadyChange}
           />
         );
@@ -225,7 +278,7 @@ export default function CreateResourceServerPage(): JSX.Element {
           <ConfigureOrgUnit
             selectedOuId={ouId}
             selectedType={selectedType}
-            onOuIdChange={setOuId}
+            onOuIdChange={handleOuIdChange}
             onReadyChange={handleOuReadyChange}
           />
         );
@@ -279,7 +332,7 @@ export default function CreateResourceServerPage(): JSX.Element {
             >
               <Box sx={{width: '100%', maxWidth: 800, display: 'flex', flexDirection: 'column'}}>
                 {error && (
-                  <Alert severity="error" sx={{mb: 4}} onClose={() => setError(null)}>
+                  <Alert severity="error" sx={{mb: 4}} onClose={clearCreateError}>
                     {error}
                   </Alert>
                 )}
