@@ -25,6 +25,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/authn/oidc"
 	"github.com/thunder-id/thunderid/internal/authn/otp"
 	"github.com/thunder-id/thunderid/internal/authn/passkey"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/notification"
@@ -136,6 +137,14 @@ func (as *authenticationService) AuthenticateWithCredentials(ctx context.Context
 		return nil, &ErrorEmptyAttributesOrCredentials
 	}
 
+	// Credential types reserved for internal flows select an authentication mechanism by key name in
+	// the provider chain, so accepting them here would let a client pick any mechanism directly.
+	if reserved, found := authnprovidercm.FindReservedCredentialType(credentials); found {
+		logger.Debug(ctx, "Rejected reserved credential type on the credentials API",
+			log.String("credentialType", reserved))
+		return nil, &ErrorReservedCredentialType
+	}
+
 	newAuthUser, _, svcErr := as.authnProvider.AuthenticateUser(ctx, identifiers, credentials, nil, nil,
 		providers.AuthUser{})
 	if svcErr != nil {
@@ -233,7 +242,7 @@ func (as *authenticationService) VerifyOTP(ctx context.Context, sessionToken str
 	logger.Debug(ctx, "Verifying OTP for authentication")
 
 	credentials := map[string]interface{}{
-		"otp": map[string]interface{}{
+		authnprovidercm.CredentialTypeOTP: map[string]interface{}{
 			"sessionToken": sessionToken,
 			"otp":          otpCode,
 		},
@@ -368,7 +377,7 @@ func (as *authenticationService) FinishIDPAuthentication(ctx context.Context, re
 	}
 
 	credentials := map[string]interface{}{
-		"federated": &common.FederatedAuthCredential{
+		authnprovidercm.CredentialTypeFederated: &common.FederatedAuthCredential{
 			IDPID:   sessionData.IDPID,
 			IDPType: sessionData.IDPType,
 			AuthorizationData: common.AuthorizationData{

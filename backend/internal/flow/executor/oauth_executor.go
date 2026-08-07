@@ -14,6 +14,7 @@ import (
 
 	authncm "github.com/thunder-id/thunderid/internal/authn/common"
 	authnoauth "github.com/thunder-id/thunderid/internal/authn/oauth"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/idp"
@@ -230,7 +231,7 @@ func (o *oAuthExecutor) ProcessAuthFlowResponse(ctx *providers.NodeContext,
 	}
 
 	credentials := map[string]interface{}{
-		"federated": &authncm.FederatedAuthCredential{
+		authnprovidercm.CredentialTypeFederated: &authncm.FederatedAuthCredential{
 			IDPID:   idpID,
 			IDPType: o.idpType,
 			AuthorizationData: authncm.AuthorizationData{

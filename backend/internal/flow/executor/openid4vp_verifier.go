@@ -6,6 +6,7 @@ package executor
 import (
 	authncommon "github.com/thunder-id/thunderid/internal/authn/common"
 	"github.com/thunder-id/thunderid/internal/authn/openid4vp"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -169,7 +170,7 @@ func (e *openid4vpVerifier) authenticate(
 		return
 	}
 	credentials := map[string]interface{}{
-		"openid4vp": &authncommon.OpenID4VPCredential{
+		authnprovidercm.CredentialTypeOpenID4VP: &authncommon.OpenID4VPCredential{
 			Subject: rs.Result.Subject,
 			Claims:  rs.Result.Claims,
 		},

@@ -3,6 +3,10 @@
 
 package agent
 
+import (
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+)
+
 const (
 	agentBasePath = "/agents"
 )
@@ -13,7 +17,7 @@ const (
 	fieldDescription  = "description"
 	fieldOwner        = "owner"
 	fieldClientID     = "clientId"
-	fieldClientSecret = "clientSecret"
+	fieldClientSecret = authnprovidercm.CredentialTypeClientSecret
 )
 
 // propLogoURL is the inbound-client PROPERTIES key holding the agent logo.
