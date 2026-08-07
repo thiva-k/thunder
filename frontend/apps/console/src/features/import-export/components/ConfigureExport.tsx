@@ -87,6 +87,7 @@ export default function ConfigureExport({
   const [expandedConnections, setExpandedConnections] = useState(false);
   const [expandedOrgUnits, setExpandedOrgUnits] = useState(false);
   const [expandedSchemas, setExpandedSchemas] = useState(false);
+  const [expandedAgentTypes, setExpandedAgentTypes] = useState(false);
   const [expandedTranslations, setExpandedTranslations] = useState(false);
   const [expandedLayouts, setExpandedLayouts] = useState(false);
   const [expandedResourceServers, setExpandedResourceServers] = useState(false);
@@ -250,6 +251,8 @@ export default function ConfigureExport({
     (Array.isArray(configData?.organization_unit) ? configData.organization_unit.length : 0);
   const userTypesCount =
     resourceCounts?.user_type ?? (Array.isArray(configData?.user_type) ? configData.user_type.length : 0);
+  const agentTypesCount =
+    resourceCounts?.agent_type ?? (Array.isArray(configData?.agent_type) ? configData.agent_type.length : 0);
   const translationsCount =
     resourceCounts?.translation ?? (Array.isArray(configData?.translation) ? configData.translation.length : 0);
   const layoutsCount = resourceCounts?.layout ?? (Array.isArray(configData?.layout) ? configData.layout.length : 0);
@@ -683,6 +686,57 @@ export default function ConfigureExport({
                   size="small"
                   variant="outlined"
                   onClick={() => setExpandedSchemas(!expandedSchemas)}
+                  sx={{cursor: 'pointer'}}
+                />
+              </Box>
+            )}
+          </Stack>
+        </Box>
+      ),
+    });
+  }
+
+  // Add agent types if present
+  if (agentTypesCount > 0) {
+    const agentTypes = (configData?.agent_type as {name?: string; handle?: string}[]) ?? [];
+    const displayedAgentTypes = expandedAgentTypes ? agentTypes : agentTypes.slice(0, 5);
+    const remainingCount = agentTypes.length - 5;
+
+    items.push({
+      id: 'agent-types',
+      label: t('importExport:configureExport.labels.agentTypes', 'Agent Types'),
+      icon: <Bot size={16} />,
+      value: agentTypesCount,
+      status: 'ready',
+      dependencyCount: 0,
+      content: (
+        <Box sx={{px: 3, py: 2, bgcolor: 'background.default'}}>
+          <Stack spacing={2}>
+            <Stack spacing={2} divider={<Box sx={{borderBottom: 1, borderColor: 'divider'}} />}>
+              {displayedAgentTypes.map((agentType, idx) => (
+                <Stack key={agentType.handle ?? agentType.name ?? `agent-type-${idx}`} spacing={0.5}>
+                  <Stack direction="row" spacing={1} sx={{alignItems: 'center'}}>
+                    <Bot size={14} />
+                    <Typography variant="body2" fontWeight={600}>
+                      {agentType.name ??
+                        agentType.handle ??
+                        t('importExport:configureExport.fallback.unnamedAgentType', 'Unnamed agent type')}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+            {remainingCount > 0 && (
+              <Box sx={{pt: 1, textAlign: 'center'}}>
+                <Chip
+                  label={
+                    expandedAgentTypes
+                      ? t('importExport:configureExport.actions.showLess')
+                      : t('importExport:configureExport.actions.more', {count: remainingCount})
+                  }
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setExpandedAgentTypes(!expandedAgentTypes)}
                   sx={{cursor: 'pointer'}}
                 />
               </Box>

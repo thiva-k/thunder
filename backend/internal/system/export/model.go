@@ -11,6 +11,7 @@ type ExportRequest struct {
 	Applications      []string `json:"applications,omitempty"`
 	Connections       []string `json:"connections,omitempty"`
 	UserTypes         []string `json:"userTypes,omitempty"`
+	AgentTypes        []string `json:"agentTypes,omitempty"`
 	OrganizationUnits []string `json:"organizationUnits,omitempty"`
 	Users             []string `json:"users,omitempty"`
 	Groups            []string `json:"groups,omitempty"`

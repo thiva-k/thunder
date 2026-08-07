@@ -3150,6 +3150,8 @@ const translations = {
     'configureExport.fallback.unnamedCredentialConfiguration': 'Unnamed Credential Configuration',
     'configureExport.labels.agents': 'Agents',
     'configureExport.fallback.unnamedAgent': 'Unnamed Agent',
+    'configureExport.fallback.unnamedAgentType': 'Unnamed agent type',
+    'configureExport.labels.agentTypes': 'Agent Types',
     'configureExport.labels.serverConfigs': 'Server Configurations',
     'configureExport.fallback.unnamedServerConfig': 'Unnamed Server Configuration',
     'configureExport.fallback.unnamedUser': 'User {{index}}',
@@ -3180,6 +3182,7 @@ const translations = {
     'summary.fallback.theme': 'Theme {{index}}',
     'summary.fallback.user': 'User {{index}}',
     'summary.fallback.schema': 'Schema {{index}}',
+    'summary.fallback.agentType': 'Agent Type {{index}}',
     'summary.precheck.readyNoEnvRequired': 'Ready to proceed. No environment values are required for this import.',
     'summary.precheck.readyAllEnvAvailable':
       'Ready to proceed. All {{count}} referenced environment values are available.',

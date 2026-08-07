@@ -15,6 +15,7 @@ import (
 const (
 	resourceTypeOrganizationUnit        = "organization_unit"
 	resourceTypeEntityType              = "user_type"
+	resourceTypeAgentType               = "agent_type"
 	resourceTypeResourceServer          = "resource_server"
 	resourceTypeRole                    = "role"
 	resourceTypeGroup                   = "group"
@@ -93,6 +94,7 @@ func isKnownResourceType(resourceType string) bool {
 	knownTypes := map[string]struct{}{
 		resourceTypeOrganizationUnit:        {},
 		resourceTypeEntityType:              {},
+		resourceTypeAgentType:               {},
 		resourceTypeResourceServer:          {},
 		resourceTypeRole:                    {},
 		resourceTypeConnection:              {},

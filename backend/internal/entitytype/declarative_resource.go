@@ -22,54 +22,75 @@ import (
 const (
 	resourceTypeEntityType = "user_type"
 	paramTypEntityType     = "EntityType"
+	resourceTypeAgentType  = "agent_type"
+	paramTypeAgentType     = "AgentType"
 )
 
 // entityTypeExporter implements declarative_resource.ResourceExporter for entity types.
 type entityTypeExporter struct {
-	service EntityTypeServiceInterface
+	service  EntityTypeServiceInterface
+	category TypeCategory
 }
 
-// newEntityTypeExporter creates a new entity type exporter.
-func newEntityTypeExporter(service EntityTypeServiceInterface) *entityTypeExporter {
-	return &entityTypeExporter{service: service}
+// newEntityTypeExporter creates a new entity type exporter for the given category.
+func newEntityTypeExporter(service EntityTypeServiceInterface, category TypeCategory) *entityTypeExporter {
+	return &entityTypeExporter{service: service, category: category}
 }
 
 // NewEntityTypeExporterForTest creates a new entity type exporter for testing purposes.
-func NewEntityTypeExporterForTest(service EntityTypeServiceInterface) *entityTypeExporter {
-	return newEntityTypeExporter(service)
+func NewEntityTypeExporterForTest(service EntityTypeServiceInterface, category TypeCategory) *entityTypeExporter {
+	return newEntityTypeExporter(service, category)
 }
 
 // GetResourceType returns the resource type for entity types.
 func (e *entityTypeExporter) GetResourceType() string {
+	if e.category == TypeCategoryAgent {
+		return resourceTypeAgentType
+	}
 	return resourceTypeEntityType
 }
 
 // GetParameterizerType returns the parameterizer type for entity types.
 func (e *entityTypeExporter) GetParameterizerType() string {
+	if e.category == TypeCategoryAgent {
+		return paramTypeAgentType
+	}
 	return paramTypEntityType
 }
 
-// GetAllResourceIDs retrieves all user-category entity type IDs.
+// GetAllResourceIDs retrieves all entity type IDs for the exporter's category.
 // In composite mode, this excludes declarative (YAML-based) entity types.
 func (e *entityTypeExporter) GetAllResourceIDs(ctx context.Context) ([]string, *tidcommon.ServiceError) {
-	response, err := e.service.GetEntityTypeList(ctx, TypeCategoryUser, serverconst.MaxPageSize, 0, false)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]string, 0, len(response.Types))
-	for _, schema := range response.Types {
-		if !schema.IsReadOnly {
-			ids = append(ids, schema.ID)
+	offset := 0
+	limit := serverconst.MaxPageSize
+	ids := []string{}
+
+	for {
+		response, err := e.service.GetEntityTypeList(ctx, e.category, limit, offset, false)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, schema := range response.Types {
+			if !schema.IsReadOnly {
+				ids = append(ids, schema.ID)
+			}
+		}
+
+		offset += len(response.Types)
+		if len(response.Types) == 0 {
+			break
 		}
 	}
+
 	return ids, nil
 }
 
-// GetResourceByID retrieves a user-category entity type by its ID.
+// GetResourceByID retrieves an entity type of the exporter's category by its ID.
 func (e *entityTypeExporter) GetResourceByID(ctx context.Context, id string) (
 	interface{}, string, *tidcommon.ServiceError,
 ) {
-	schema, err := e.service.GetEntityType(ctx, TypeCategoryUser, id, false)
+	schema, err := e.service.GetEntityType(ctx, e.category, id, false)
 	if err != nil {
 		return nil, "", err
 	}
@@ -82,11 +103,11 @@ func (e *entityTypeExporter) ValidateResource(ctx context.Context,
 ) (string, *declarativeresource.ExportError) {
 	schema, ok := resource.(*EntityType)
 	if !ok {
-		return "", declarativeresource.CreateTypeError(resourceTypeEntityType, id)
+		return "", declarativeresource.CreateTypeError(e.GetResourceType(), id)
 	}
 
 	err := declarativeresource.ValidateResourceName(ctx,
-		schema.Name, resourceTypeEntityType, id, "SCHEMA_VALIDATION_ERROR", logger,
+		schema.Name, e.GetResourceType(), id, "SCHEMA_VALIDATION_ERROR", logger,
 	)
 	if err != nil {
 		return "", err

@@ -412,6 +412,8 @@ func (s *importService) importDocument(
 		return s.importOrganizationUnit(ctx, doc, options, dryRun)
 	case resourceTypeEntityType:
 		return s.importEntityType(ctx, doc, options, dryRun)
+	case resourceTypeAgentType:
+		return s.importEntityType(ctx, doc, options, dryRun)
 	case resourceTypeRole:
 		return s.importRole(ctx, doc, options, dryRun)
 	case resourceTypeGroup:
@@ -757,6 +759,7 @@ func (s *importService) importFlow(
 var resourceDependencyOrder = []string{
 	resourceTypeOrganizationUnit,
 	resourceTypeEntityType,
+	resourceTypeAgentType,
 	resourceTypeResourceServer,
 	resourceTypeConnection,
 	resourceTypeFlow,

@@ -108,7 +108,7 @@ func createTestExporters(
 	return []declarativeresource.ResourceExporter{
 		application.NewApplicationExporterForTest(appService),
 		connection.NewConnectionExporterForTest(idpService, notificationService),
-		entitytype.NewEntityTypeExporterForTest(entityTypeService),
+		entitytype.NewEntityTypeExporterForTest(entityTypeService, entitytype.TypeCategoryUser),
 	}
 }
 

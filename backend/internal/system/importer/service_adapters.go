@@ -208,7 +208,11 @@ func (s *importService) importEntityType(
 
 	category := req.Category
 	if category == "" {
-		category = entitytype.TypeCategoryUser
+		if doc.ResourceType == resourceTypeAgentType {
+			category = entitytype.TypeCategoryAgent
+		} else {
+			category = entitytype.TypeCategoryUser
+		}
 	}
 	if !category.IsValid() {
 		return ImportItemOutcome{

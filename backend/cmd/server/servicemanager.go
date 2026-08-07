@@ -168,10 +168,11 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize HashService")
 
 	// Initialize user type service
-	entityTypeService, entityTypeExporter, err := entitytype.Initialize(
+	entityTypeService, entityTypeExporter, agentTypeExporter, err := entitytype.Initialize(
 		mux, mcpServer, cacheManager, ouService, ouAuthzService)
 	fatalOnError(ctx, logger, err, "Failed to initialize EntityTypeService")
 	exporters = append(exporters, entityTypeExporter)
+	exporters = append(exporters, agentTypeExporter)
 
 	// Initialize entity service
 	entityService, err := entity.Initialize(cacheManager, hashService, entityTypeService, ouService)

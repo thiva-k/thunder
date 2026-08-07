@@ -416,7 +416,7 @@ func TestLoadDeclarativeResources(t *testing.T) {
 func TestGetAllResourceIDs_WithReadOnlyFilter(t *testing.T) {
 	mockService := NewEntityTypeServiceInterfaceMock(t)
 
-	exporter := newEntityTypeExporter(mockService)
+	exporter := newEntityTypeExporter(mockService, TypeCategoryUser)
 
 	response := &EntityTypeListResponse{
 		Types: []EntityTypeListItem{
@@ -426,7 +426,9 @@ func TestGetAllResourceIDs_WithReadOnlyFilter(t *testing.T) {
 		},
 	}
 
-	mockService.On("GetEntityTypeList", mock.Anything, mock.Anything, 100, 0, false).Return(response, nil)
+	mockService.On("GetEntityTypeList", mock.Anything, mock.Anything, 100, 0, false).Return(response, nil).Once()
+	mockService.On("GetEntityTypeList", mock.Anything, mock.Anything, 100, 3, false).
+		Return(&EntityTypeListResponse{Types: []EntityTypeListItem{}}, nil).Once()
 
 	ids, err := exporter.GetAllResourceIDs(context.Background())
 

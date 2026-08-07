@@ -339,6 +339,24 @@ const RESOURCE_VIEWS: ResourceView[] = [
       ) : null,
   },
   {
+    type: 'agent_type',
+    id: 'agent-types',
+    icon: Bot,
+    getLabel: (t) => t('configureExport.labels.agentTypes'),
+    getKey: (item, idx) => item.handle ?? item.name ?? `agent-type-${idx}`,
+    getName: (item, t, idx) => item.name ?? item.handle ?? t('summary.fallback.agentType', {index: idx + 1}),
+    renderChip: (item, t) =>
+      item.allow_self_registration ? (
+        <Chip
+          label={t('configureExport.labels.selfRegistration')}
+          size="small"
+          color="success"
+          variant="outlined"
+          sx={{height: 18, fontSize: '0.65rem'}}
+        />
+      ) : null,
+  },
+  {
     type: 'agent',
     id: 'agents',
     icon: Bot,
