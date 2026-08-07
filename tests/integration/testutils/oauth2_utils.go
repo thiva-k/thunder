@@ -191,6 +191,58 @@ func ExecuteAuthenticationFlow(executionId string, inputs map[string]string, act
 	return &flowStep, nil
 }
 
+// ExecuteAuthenticationFlowExpectingError executes a flow step that is expected to fail at the engine
+// level, and returns the HTTP status along with the parsed error body. ExecuteAuthenticationFlow
+// collapses any non-200 into a Go error, which hides the errorAssertion carried in that body.
+func ExecuteAuthenticationFlowExpectingError(executionId string, inputs map[string]string,
+	action string, challengeToken ...string) (int, *FlowErrorResponse, error) {
+	flowData := map[string]interface{}{
+		"executionId": executionId,
+	}
+
+	if len(inputs) > 0 {
+		flowData["inputs"] = inputs
+	}
+	if action != "" {
+		flowData["action"] = action
+	}
+	if len(challengeToken) > 0 && challengeToken[0] != "" {
+		flowData["challengeToken"] = challengeToken[0]
+	}
+
+	flowJSON, err := json.Marshal(flowData)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to marshal flow data: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", TestServerURL+"/flow/execute", bytes.NewBuffer(flowJSON))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create flow request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to execute flow: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	var errorResponse FlowErrorResponse
+	if err := json.Unmarshal(bodyBytes, &errorResponse); err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("failed to decode flow error response %q: %w",
+			string(bodyBytes), err)
+	}
+
+	return resp.StatusCode, &errorResponse, nil
+}
+
 // CompleteAuthorization completes the authorization using the assertion
 func CompleteAuthorization(authID, assertion string) (*AuthorizationResponse, error) {
 	authzData := map[string]interface{}{

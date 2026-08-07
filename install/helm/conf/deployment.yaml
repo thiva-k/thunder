@@ -240,6 +240,7 @@ oauth:
   dcr:
     enabled: {{ .Values.configuration.oauth.dcr.enabled }}
     insecure: {{ .Values.configuration.oauth.dcr.insecure }}
+  send_server_errors_to_client: {{ .Values.configuration.oauth.sendServerErrorsToClient }}
   allowed_auth_methods:
   {{- range .Values.configuration.oauth.allowedAuthMethods }}
     - {{ . | quote }}

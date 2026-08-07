@@ -459,6 +459,7 @@ OAuth 2.0 and OpenID Connect settings.
 | `oauth.allowed_response_types` | `["code"]` | OAuth response types allowed during client registration |
 | `oauth.allowed_grant_types` | `["client_credentials", "authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:token-exchange", "urn:openid:params:grant-type:ciba", "urn:ietf:params:oauth:grant-type:jwt-bearer"]` | OAuth grant types allowed during client registration |
 | `oauth.allow_wildcard_redirect_uri` | `false` | If `true`, allows wildcard patterns in registered redirect URIs: `*` and `**` in the path component, and `*` in the host component (label-internal, alphanumeric only). When `false`, only exact redirect URI matching is performed and registering a wildcard URI returns a `400 Bad Request` error. |
+| `oauth.send_server_errors_to_client` | `false` | If `true`, an authentication flow failure that maps to the OAuth `server_error` code is reported to the client, as RFC 6749 section 4.1.2.1 requires. If `false`, the authorization code flow shows the error page instead of redirecting to the client, and CIBA leaves the request pending so the polling client times out. Denials (`access_denied`) are always reported to the client and are not affected by this setting. |
 
 :::note
 Enabling `oauth.allow_wildcard_redirect_uri` affects all applications in the deployment. See [Use Wildcard Redirect URIs](../../guides/applications/application-settings#use-wildcard-redirect-uris) for pattern syntax and matching rules.

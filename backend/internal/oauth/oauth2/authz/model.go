@@ -79,4 +79,5 @@ type assertionClaims struct {
 	completedACR           string
 	authorizationRequestID string
 	tokenFamilyID          string
+	flowErrorType          string
 }

@@ -223,6 +223,7 @@ type FlowStep struct {
 	ChallengeToken string
 	Data           FlowData
 	Assertion      string
+	ErrorAssertion string
 	Error          *tidcommon.ServiceError
 
 	// SSOHandleOut / SSOFlowID carry an SSO session handle minted during this step back to the
@@ -255,6 +256,7 @@ type FlowResponse struct {
 	ChallengeToken string                  `json:"challengeToken,omitempty"`
 	Data           FlowData                `json:"data,omitempty"`
 	Assertion      string                  `json:"assertion,omitempty"`
+	ErrorAssertion string                  `json:"errorAssertion,omitempty"`
 	Error          *apierror.ErrorResponse `json:"error,omitempty"`
 }
 

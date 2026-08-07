@@ -6,6 +6,7 @@ package authz
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -27,6 +28,7 @@ import (
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	oauth2model "github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
+	oauth2utils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -598,10 +600,11 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Se
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_InvalidAuthID() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTWithIat, "", "").Return(nil)
 	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, "invalid-key").Return(false, authRequestContext{}, nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "invalid-key", "test-assertion")
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "invalid-key", svcJWTWithIat)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -609,49 +612,37 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_InvalidA
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_StoreError() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTWithIat, "", "").Return(nil)
 	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, "db-fail-key").
 		Return(false, authRequestContext{}, errors.New("db connection error"))
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "db-fail-key", "test-assertion")
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "db-fail-key", svcJWTWithIat)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
 }
 
+// TestHandleAuthorizationCallback_MissingAssertion verifies that an empty assertion is rejected before
+// the authorization request is touched, so a caller holding only an authID cannot destroy it.
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_MissingAssertion() {
-	authCtx := authRequestContext{
-		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
-			RedirectURI: "https://client.example.com/callback",
-			State:       "test-state",
-		},
-	}
-	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, testAuthID).Return(true, authCtx, nil)
-	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
-
 	svc := suite.newService()
 	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "")
 
 	assert.Empty(suite.T(), redirectURI)
-	assert.NotNil(suite.T(), authErr)
+	suite.Require().NotNil(authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
-	assert.Equal(suite.T(), "test-state", authErr.State)
-	assert.True(suite.T(), authErr.SendErrorToClient)
-	assert.Equal(suite.T(), "https://client.example.com/callback", authErr.ClientRedirectURI)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "GetRequest", mock.Anything, mock.Anything)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "ClearRequest", mock.Anything, mock.Anything)
 }
 
+// TestHandleAuthorizationCallback_InvalidAssertionSignature verifies that verification runs before the
+// authorization request is loaded, since loading consumes it. An assertion whose signature does not
+// verify is not evidence that any flow ran, so the request survives and the error goes to the error
+// page rather than to the client, which is why no redirect URI is populated here.
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_InvalidAssertionSignature() {
-	authCtx := authRequestContext{
-		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
-			RedirectURI: "https://client.example.com/callback",
-			State:       "test-state",
-		},
-	}
-	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, testAuthID).Return(true, authCtx, nil)
-	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
 	suite.mockJWTService.EXPECT().
 		VerifyJWT(mock.Anything, "invalid-assertion", "", "").Return(&jwt.ErrorInvalidTokenSignature)
 
@@ -659,23 +650,18 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_InvalidA
 	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "invalid-assertion")
 
 	assert.Empty(suite.T(), redirectURI)
-	assert.NotNil(suite.T(), authErr)
+	suite.Require().NotNil(authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
-	assert.Equal(suite.T(), "test-state", authErr.State)
-	assert.True(suite.T(), authErr.SendErrorToClient)
-	assert.Equal(suite.T(), "https://client.example.com/callback", authErr.ClientRedirectURI)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "GetRequest", mock.Anything, mock.Anything)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "ClearRequest", mock.Anything, mock.Anything)
 }
 
+// TestHandleAuthorizationCallback_FailedToDecodeAssertion verifies that an assertion whose claims
+// cannot be read is rejected without touching the authorization request. Its claims cannot show it was
+// minted for this request, so consuming the request on it would let a caller holding one malformed
+// assertion destroy any live authID it can name.
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_FailedToDecodeAssertion() {
-	authCtx := authRequestContext{
-		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
-			RedirectURI: "https://client.example.com/callback",
-			State:       "test-state",
-		},
-	}
-	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, testAuthID).Return(true, authCtx, nil)
-	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
 	// VerifyJWT succeeds but "not.valid.jwt" cannot be decoded as a valid JWT payload.
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, "not.valid.jwt", "", "").Return(nil)
 
@@ -683,12 +669,12 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_FailedTo
 	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "not.valid.jwt")
 
 	assert.Empty(suite.T(), redirectURI)
-	assert.NotNil(suite.T(), authErr)
-	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
-	assert.Equal(suite.T(), "Failed to process authorization request", authErr.Message)
-	assert.Equal(suite.T(), "test-state", authErr.State)
-	assert.True(suite.T(), authErr.SendErrorToClient)
-	assert.Equal(suite.T(), "https://client.example.com/callback", authErr.ClientRedirectURI)
+	suite.Require().NotNil(authErr)
+	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	assert.Empty(suite.T(), authErr.ClientRedirectURI)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "GetRequest", mock.Anything, mock.Anything)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "ClearRequest", mock.Anything, mock.Anything)
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_UnboundAssertion() {
@@ -739,28 +725,20 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Mismatch
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_NonStringAuthReqID() {
-	// Assertion's authorization_request_id claim is not a string → malformed client input,
-	// mapped to invalid_request rather than server_error.
-	authCtx := authRequestContext{
-		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
-			RedirectURI: "https://client.example.com/callback",
-			State:       "test-state",
-		},
-	}
-	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, testAuthID).Return(true, authCtx, nil)
-	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+	// The assertion's authorization_request_id claim is not a string, so it is malformed client input,
+	// mapped to invalid_request. The unreadable claim is the binding itself, so the assertion cannot be
+	// tied to this request and it is rejected without consuming it.
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTNonStringAuthReqID, "", "").Return(nil)
 
 	svc := suite.newService()
 	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTNonStringAuthReqID)
 
 	assert.Empty(suite.T(), redirectURI)
-	assert.NotNil(suite.T(), authErr)
+	suite.Require().NotNil(authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
-	assert.True(suite.T(), authErr.SendErrorToClient)
-	assert.Equal(suite.T(), "https://client.example.com/callback", authErr.ClientRedirectURI)
-	assert.Equal(suite.T(), "test-state", authErr.State)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "GetRequest", mock.Anything, mock.Anything)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "ClearRequest", mock.Anything, mock.Anything)
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_PersistAuthCodeError() {
@@ -2243,4 +2221,319 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Mu
 	assert.Nil(suite.T(), result)
 	assert.NotNil(suite.T(), authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidTarget, authErr.Code)
+}
+
+// Error assertion fixtures for HandleAuthorizationCallback failure branch. All use alg "none" since the
+// signature is checked by the mocked JWT service, not by decoding.
+const (
+	// Payload: authorization_request_id=test-auth-id, flow_error_type=end_user_error,
+	// flow_error_description="User denied consent"
+	errAssertionEndUser = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJ0ZXN0LWF1dGgtaWQiLCJmbG93X2Vycm9yX3R5cGUiOiJlbmRfdXNlcl9" +
+		"lcnJvciIsImZsb3dfZXJyb3JfZGVzY3JpcHRpb24iOiJVc2VyIGRlbmllZCBjb25zZW50In0."
+	// Payload: flow_error_type=server_error, flow_error_description="Flow engine failure"
+	errAssertionServerError = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJ0ZXN0LWF1dGgtaWQiLCJmbG93X2Vycm9yX3R5cGUiOiJzZXJ2ZXJfZXJ" +
+		"yb3IiLCJmbG93X2Vycm9yX2Rlc2NyaXB0aW9uIjoiRmxvdyBlbmdpbmUgZmFpbHVyZSJ9."
+	// Payload: flow_error_type=end_user_error, no flow_error_description
+	errAssertionNoDescription = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJ0ZXN0LWF1dGgtaWQiLCJmbG93X2Vycm9yX3R5cGUiOiJlbmRfdXNlcl9lcnJvciJ9."
+	// Payload: flow_error_description contains a quote, a newline, a non-ASCII rune and a backslash,
+	// all of which RFC 6749 disallows in error_description.
+	errAssertionDirtyDescription = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJ0ZXN0LWF1dGgtaWQiLCJmbG93X2Vycm9yX3R5cGUiOiJlbmRfdXNlcl9" +
+		"lcnJvciIsImZsb3dfZXJyb3JfZGVzY3JpcHRpb24iOiJEZW5pZWQgXCJlbWFpbFwiXG5cdTAwZTkgYmFja1xcc2xhc2gifQ."
+	// Payload: authorization_request_id=other-auth-id — not bound to testAuthID.
+	errAssertionMismatched = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJvdGhlci1hdXRoLWlkIiwiZmxvd19lcnJvcl90eXBlIjoiZW5kX3VzZXJfZXJyb3IifQ."
+	// Payload: flow_error_type is an unrecognized value.
+	errAssertionUnknownType = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJ0ZXN0LWF1dGgtaWQiLCJmbG93X2Vycm9yX3R5cGUiOiJ0b3RhbGx5X3Vua25vd24ifQ."
+	// Payload: flow_error_type=client_error, flow_error_description="Max call depth exceeded"
+	errAssertionClientError = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0." +
+		"eyJhdXRob3JpemF0aW9uX3JlcXVlc3RfaWQiOiJ0ZXN0LWF1dGgtaWQiLCJmbG93X2Vycm9yX3R5cGUiOiJjbGllbnRfZXJyb3" +
+		"IiLCJmbG93X2Vycm9yX2Rlc2NyaXB0aW9uIjoiTWF4IGNhbGwgZGVwdGggZXhjZWVkZWQifQ."
+)
+
+// TestHandleAuthorizationCallback_ClassifiesByFlowErrorTypeClaim is the core of the single-field
+// callback contract: success and failure assertions arrive in the same argument, and the flow error
+// type claim alone decides which branch runs. The claim is covered by the signature, which is verified
+// first, so a caller cannot steer an assertion into the other branch.
+func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_ClassifiesByFlowErrorTypeClaim() {
+	suite.Run("AssertionWithFlowErrorTypeIsAFailure", func() {
+		suite.SetupTest()
+		suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionEndUser, "", "").Return(nil)
+		suite.mockAuthReqStore.EXPECT().
+			GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil)
+		suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+
+		svc := suite.newService()
+		redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+
+		// The failure branch never mints a code; it only produces an error for the client.
+		assert.Empty(suite.T(), redirectURI)
+		suite.Require().NotNil(authErr)
+		assert.Equal(suite.T(), oauth2const.ErrorAccessDenied, authErr.Code)
+		assert.Equal(suite.T(), "User denied consent", authErr.Message)
+		suite.mockAuthzCodeStore.AssertNotCalled(suite.T(), "InsertAuthorizationCode",
+			mock.Anything, mock.Anything)
+	})
+
+	suite.Run("AssertionWithoutFlowErrorTypeIsASuccess", func() {
+		suite.SetupTest()
+		suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTWithIat, "", "").Return(nil)
+		suite.mockAuthReqStore.EXPECT().
+			GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil)
+		suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+		suite.mockAuthzCodeStore.EXPECT().InsertAuthorizationCode(mock.Anything, mock.Anything).Return(nil)
+
+		svc := suite.newService()
+		redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+
+		assert.Nil(suite.T(), authErr)
+		assert.Contains(suite.T(), redirectURI, "code=")
+	})
+}
+
+// failedCallbackAuthCtx is the stored authorization request the failure callback resolves
+// redirect_uri and state from.
+func failedCallbackAuthCtx() authRequestContext {
+	return authRequestContext{
+		OAuthParameters: oauth2model.OAuthParameters{
+			ClientID:    "test-client",
+			RedirectURI: "https://client.example.com/callback",
+			State:       "test-state",
+		},
+	}
+}
+
+// TestHandleFailedCallback_MapsErrorTypeAndDescription pins the flow error type to OAuth code and
+// description mapping, so it enables oauth.send_server_errors_to_client to keep every row on the
+// client redirect path. Suppressing server errors is the default and is covered by
+// TestHandleFailedCallback_UnsetToggleSuppressesServerErrors.
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_MapsErrorTypeAndDescription() {
+	tests := []struct {
+		name                string
+		assertion           string
+		expectedCode        string
+		expectedDescription string
+	}{
+		{
+			name:                "EndUserErrorBecomesAccessDenied",
+			assertion:           errAssertionEndUser,
+			expectedCode:        oauth2const.ErrorAccessDenied,
+			expectedDescription: "User denied consent",
+		},
+		{
+			name:                "ServerErrorBecomesServerError",
+			assertion:           errAssertionServerError,
+			expectedCode:        oauth2const.ErrorServerError,
+			expectedDescription: "Flow engine failure",
+		},
+		{
+			name:                "UnknownTypeFallsBackToServerError",
+			assertion:           errAssertionUnknownType,
+			expectedCode:        oauth2const.ErrorServerError,
+			expectedDescription: "Failed to process authorization request",
+		},
+		{
+			name:                "MissingDescriptionFallsBackToFixedMessage",
+			assertion:           errAssertionNoDescription,
+			expectedCode:        oauth2const.ErrorAccessDenied,
+			expectedDescription: "Access denied",
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.SetupTest()
+			suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, tt.assertion, "", "").Return(nil)
+			suite.mockAuthReqStore.EXPECT().
+				GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil)
+			suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+
+			svc := suite.newService()
+			svc.cfg.OAuth.SendServerErrorsToClient = new(true)
+			_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, tt.assertion)
+
+			assert.NotNil(suite.T(), authErr)
+			assert.Equal(suite.T(), tt.expectedCode, authErr.Code)
+			assert.Equal(suite.T(), tt.expectedDescription, authErr.Message)
+			assert.True(suite.T(), authErr.SendErrorToClient)
+			assert.Equal(suite.T(), "https://client.example.com/callback", authErr.ClientRedirectURI)
+			assert.Equal(suite.T(), "test-state", authErr.State)
+		})
+	}
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_SanitizesDescription() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionDirtyDescription, "", "").Return(nil)
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil)
+	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+
+	svc := suite.newService()
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionDirtyDescription)
+
+	assert.Equal(suite.T(), oauth2const.ErrorAccessDenied, authErr.Code)
+	// The quote, newline, non-ASCII rune and backslash are all dropped.
+	assert.Equal(suite.T(), "Denied email backslash", authErr.Message)
+
+	// The sanitized description must still build a client redirect; an unsanitized one would fail
+	// validation and strand the user on the error page instead of notifying the client.
+	redirectURI, err := oauth2utils.GetURIWithQueryParams(authErr.ClientRedirectURI, map[string]string{
+		oauth2const.RequestParamError:            authErr.Code,
+		oauth2const.RequestParamErrorDescription: authErr.Message,
+		oauth2const.RequestParamState:            authErr.State,
+	})
+	assert.NoError(suite.T(), err)
+	assert.Contains(suite.T(), redirectURI, "error=access_denied")
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_InvalidSignature_PreservesRequest() {
+	// Verification runs before the request is loaded, so a bad assertion must not consume the authID.
+	suite.mockJWTService.EXPECT().
+		VerifyJWT(mock.Anything, "tampered-assertion", "", "").Return(&jwt.ErrorInvalidTokenSignature)
+
+	svc := suite.newService()
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "tampered-assertion")
+
+	assert.NotNil(suite.T(), authErr)
+	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "GetRequest", mock.Anything, mock.Anything)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "ClearRequest", mock.Anything, mock.Anything)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_BindingMismatch_PreservesRequest() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionMismatched, "", "").Return(nil)
+
+	svc := suite.newService()
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionMismatched)
+
+	assert.NotNil(suite.T(), authErr)
+	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "GetRequest", mock.Anything, mock.Anything)
+	suite.mockAuthReqStore.AssertNotCalled(suite.T(), "ClearRequest", mock.Anything, mock.Anything)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_UnknownAuthID_NotSentToClient() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionEndUser, "", "").Return(nil)
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(false, authRequestContext{}, nil)
+
+	svc := suite.newService()
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+
+	assert.NotNil(suite.T(), authErr)
+	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_StoreError_ReturnsServerError() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionEndUser, "", "").Return(nil)
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(false, authRequestContext{}, errors.New("db down"))
+
+	svc := suite.newService()
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+
+	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
+	assert.False(suite.T(), authErr.SendErrorToClient)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_ConsumesRequest() {
+	// The request is single-use: it is cleared on load, so a replay finds nothing.
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionEndUser, "", "").Return(nil).Twice()
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil).Once()
+	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil).Once()
+
+	svc := suite.newService()
+	_, first := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+	assert.True(suite.T(), first.SendErrorToClient)
+
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(false, authRequestContext{}, nil).Once()
+	_, replay := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+
+	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, replay.Code)
+	assert.False(suite.T(), replay.SendErrorToClient)
+}
+
+// TestHandleFailedCallback_SendServerErrorsToClientToggle verifies that
+// oauth.send_server_errors_to_client gates only the server_error code. A denial is the client's
+// business and is always reported; every flow error type that maps to server_error is suppressed
+// together, so client_error and an unrecognized type follow server_error.
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_SendServerErrorsToClientToggle() {
+	tests := []struct {
+		name      string
+		assertion string
+		code      string
+		// gated is true when the toggle decides whether this error reaches the client.
+		gated bool
+	}{
+		{name: "EndUserErrorAlwaysReported", assertion: errAssertionEndUser,
+			code: oauth2const.ErrorAccessDenied, gated: false},
+		{name: "ServerErrorIsGated", assertion: errAssertionServerError,
+			code: oauth2const.ErrorServerError, gated: true},
+		{name: "ClientErrorIsGated", assertion: errAssertionClientError,
+			code: oauth2const.ErrorServerError, gated: true},
+		{name: "UnknownTypeIsGated", assertion: errAssertionUnknownType,
+			code: oauth2const.ErrorServerError, gated: true},
+	}
+
+	for _, tt := range tests {
+		for _, enabled := range []bool{true, false} {
+			suite.Run(fmt.Sprintf("%s/enabled=%t", tt.name, enabled), func() {
+				suite.SetupTest()
+				suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, tt.assertion, "", "").Return(nil)
+				suite.mockAuthReqStore.EXPECT().
+					GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil)
+				suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+
+				svc := suite.newService()
+				svc.cfg.OAuth.SendServerErrorsToClient = new(enabled)
+				_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, tt.assertion)
+
+				suite.Require().NotNil(authErr)
+				assert.Equal(suite.T(), tt.code, authErr.Code)
+				assert.Equal(suite.T(), enabled || !tt.gated, authErr.SendErrorToClient)
+			})
+		}
+	}
+}
+
+// TestHandleFailedCallback_SuppressedServerErrorStillConsumesRequest verifies that
+// declining to report a server error does not resurrect the authorization request. The request is
+// dead either way; only the notification to the client is suppressed.
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_SuppressedServerErrorStillConsumesRequest() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionServerError, "", "").Return(nil)
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil).Once()
+	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil).Once()
+
+	svc := suite.newService()
+	svc.cfg.OAuth.SendServerErrorsToClient = new(false)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionServerError)
+
+	assert.False(suite.T(), authErr.SendErrorToClient)
+	suite.mockAuthReqStore.AssertExpectations(suite.T())
+}
+
+// TestHandleFailedCallback_UnsetToggleSuppressesServerErrors verifies the default: a deployment that
+// never sets the key keeps the server error off the client redirect, so the error page handles it.
+func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_UnsetToggleSuppressesServerErrors() {
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionServerError, "", "").Return(nil)
+	suite.mockAuthReqStore.EXPECT().
+		GetRequest(mock.Anything, testAuthID).Return(true, failedCallbackAuthCtx(), nil)
+	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+
+	svc := suite.newService()
+	svc.cfg.OAuth.SendServerErrorsToClient = nil
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionServerError)
+
+	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
+	assert.False(suite.T(), authErr.SendErrorToClient)
 }

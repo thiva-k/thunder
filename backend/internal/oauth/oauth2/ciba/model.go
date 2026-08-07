@@ -20,6 +20,8 @@ const (
 	CIBAStateConsumed CIBARequestState = "CONSUMED"
 	// CIBAStateDenied indicates the user denied the authentication request.
 	CIBAStateDenied CIBARequestState = "DENIED"
+	// CIBAStateFailed indicates the authentication flow terminated due to a server-side error.
+	CIBAStateFailed CIBARequestState = "FAILED"
 	// CIBAStateExpired indicates the request expired before completion.
 	CIBAStateExpired CIBARequestState = "EXPIRED"
 )
@@ -75,4 +77,5 @@ type assertionClaims struct {
 	completedACR          string
 	authReqID             string
 	authorizedPermissions string
+	flowErrorType         string
 }

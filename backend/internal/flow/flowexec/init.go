@@ -11,6 +11,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/graphbuilder"
 	"github.com/thunder-id/thunderid/internal/flow/interceptor"
 	"github.com/thunder-id/thunderid/internal/flow/session"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -26,6 +27,7 @@ func Initialize(
 	cryptoSvc providers.RuntimeCryptoProvider,
 	attestationVerifier providers.AttestationProvider,
 	graphBuilder graphbuilder.GraphBuilderInterface,
+	jwtService jwt.JWTServiceInterface,
 	storeProvider providers.RuntimeStoreProvider,
 	transactioner providers.Transactioner,
 	serverConfigSvc serverConfigProvider,
@@ -37,7 +39,7 @@ func Initialize(
 		flowProvider, graphBuilder)
 	flowExecService := newFlowExecService(flowProvider, flowStore, flowEngine,
 		actorProvider, observabilitySvc, transactioner, cryptoSvc, attestationVerifier,
-		graphBuilder, serverConfigSvc, cfg)
+		graphBuilder, jwtService, serverConfigSvc, cfg)
 
 	// Mark the SSO cookie Secure unless the deployment is configured to serve over plain HTTP, and
 	// bound its lifetime to the session's configured absolute timeout (same fallback as the session

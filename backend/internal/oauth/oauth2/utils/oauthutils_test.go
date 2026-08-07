@@ -1815,3 +1815,43 @@ func (suite *OAuth2UtilsTestSuite) TestResolveEffectiveScopeClaims_DoesNotMutate
 	suite.Equal([]string{"email", "email_verified"}, constants.StandardOIDCScopes["email"].Claims,
 		"the shared StandardOIDCScopes constant must not be mutated via the returned map")
 }
+
+func (suite *OAuth2UtilsTestSuite) TestSanitizeErrorDescription() {
+	longDesc := strings.Repeat("a", maxErrorDescriptionLength+50)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"CleanDescriptionUnchanged", "User denied consent", "User denied consent"},
+		{"DropsDoubleQuote", `Denied "email"`, "Denied email"},
+		{"DropsBackslash", `back\slash`, "backslash"},
+		{"DropsControlCharacters", "line one\nline two\ttab", "line oneline twotab"},
+		{"DropsNonASCII", "café dénied", "caf dnied"},
+		{"TrimsSurroundingSpace", "  spaced  ", "spaced"},
+		{"EmptyStaysEmpty", "", ""},
+		{"OnlyDisallowedBecomesEmpty", "\n\t\"\\", ""},
+		{"TruncatesToLimit", longDesc, strings.Repeat("a", maxErrorDescriptionLength)},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			assert.Equal(suite.T(), tt.expected, SanitizeErrorDescription(tt.input))
+		})
+	}
+}
+
+func (suite *OAuth2UtilsTestSuite) TestSanitizeErrorDescriptionKeepsRedirectBuildable() {
+	// Whatever the flow reports, the sanitized result must always pass the spec charset check so the
+	// client redirect can still be constructed.
+	dirty := "Denied \"email\"\né back\\slash"
+
+	uri, err := GetURIWithQueryParams("https://client.example.com/callback", map[string]string{
+		constants.RequestParamError:            constants.ErrorAccessDenied,
+		constants.RequestParamErrorDescription: SanitizeErrorDescription(dirty),
+	})
+
+	assert.NoError(suite.T(), err)
+	assert.Contains(suite.T(), uri, "error=access_denied")
+}

@@ -146,6 +146,7 @@ func (s *cibaService) InitiateBackchannelAuth(
 
 	runtimeData := map[string]string{
 		flowcm.RuntimeKeyAuthorizationRequestID:      authReqID,
+		flowcm.RuntimeKeyCallbackType:                string(providers.GrantTypeCIBA),
 		flowcm.RuntimeKeyClientID:                    oauthApp.ClientID,
 		flowcm.RuntimeKeyRequestedPermissions:        utils.StringifyStringArray(permissionScopes, " "),
 		flowcm.RuntimeKeyResourceServerIdentifier:    resourceServerIdentifier,
@@ -219,10 +220,13 @@ func (s *cibaService) InitiateBackchannelAuth(
 	}, nil
 }
 
-// HandleCallback verifies the flow assertion, enforces the sub binding, and marks the request authenticated.
-func (s *cibaService) HandleCallback(ctx context.Context, authReqID, assertion string) *CIBAError {
+// loadPendingRequestForCallback loads the request a flow callback refers to and verifies the assertion
+// against it: the request must exist, still be pending and unexpired, and the assertion must carry a
+// valid signature for the owning client's audience. Shared by the success and failure callbacks.
+func (s *cibaService) loadPendingRequestForCallback(
+	ctx context.Context, authReqID, assertion string) (*CIBAAuthRequest, *CIBAError) {
 	if authReqID == "" || assertion == "" {
-		return &CIBAError{
+		return nil, &CIBAError{
 			Code:    oauth2const.ErrorInvalidRequest,
 			Message: "auth_req_id and assertion are required",
 		}
@@ -231,26 +235,26 @@ func (s *cibaService) HandleCallback(ctx context.Context, authReqID, assertion s
 	record, err := s.store.GetByID(ctx, authReqID)
 	if err != nil {
 		if errors.Is(err, ErrCIBARequestNotFound) {
-			return &CIBAError{
+			return nil, &CIBAError{
 				Code:    oauth2const.ErrorInvalidRequest,
 				Message: "Invalid auth_req_id",
 			}
 		}
 		s.logger.Error(ctx, "Failed to retrieve CIBA authentication request", log.Error(err))
-		return &CIBAError{
+		return nil, &CIBAError{
 			Code:    oauth2const.ErrorServerError,
 			Message: "Failed to process backchannel authentication callback",
 		}
 	}
 
 	if record.State != CIBAStatePending {
-		return &CIBAError{
+		return nil, &CIBAError{
 			Code:    oauth2const.ErrorInvalidRequest,
 			Message: "Backchannel authentication request is not pending",
 		}
 	}
 	if record.ExpiryTime.Before(time.Now()) {
-		return &CIBAError{
+		return nil, &CIBAError{
 			Code:    oauth2const.ErrorExpiredToken,
 			Message: "Backchannel authentication request has expired",
 		}
@@ -263,10 +267,23 @@ func (s *cibaService) HandleCallback(ctx context.Context, authReqID, assertion s
 	if verifyErr := s.jwtService.VerifyJWT(ctx, assertion, expectedAud, ""); verifyErr != nil {
 		s.logger.Debug(ctx, "Assertion verification failed",
 			log.String("error", verifyErr.Error.DefaultValue))
-		return &CIBAError{
+		return nil, &CIBAError{
 			Code:    oauth2const.ErrorInvalidRequest,
 			Message: "Invalid assertion signature",
 		}
+	}
+
+	return record, nil
+}
+
+// HandleCallback verifies the flow assertion and applies its outcome to the request. The assertion is
+// either an authentication assertion from a completed flow or a signed error assertion minted when the
+// flow terminated in failure; only the latter carries the flow error type claim, so that claim selects
+// the branch.
+func (s *cibaService) HandleCallback(ctx context.Context, authReqID, assertion string) *CIBAError {
+	record, cibaErr := s.loadPendingRequestForCallback(ctx, authReqID, assertion)
+	if cibaErr != nil {
+		return cibaErr
 	}
 
 	claims, authTime, decodeErr := decodeAttributesFromAssertion(assertion)
@@ -277,6 +294,21 @@ func (s *cibaService) HandleCallback(ctx context.Context, authReqID, assertion s
 			Message: "Failed to process backchannel authentication callback",
 		}
 	}
+
+	if claims.flowErrorType != "" {
+		// Cannot fail: the same assertion decoded successfully above.
+		errClaims, _ := oauth2utils.DecodeFlowErrorAssertionClaims(assertion)
+		return s.handleFailedCallback(ctx, record, errClaims)
+	}
+
+	return s.handleSuccessCallback(ctx, record, claims, authTime)
+}
+
+// handleSuccessCallback enforces the sub binding of a verified authentication assertion and marks the
+// request authenticated.
+func (s *cibaService) handleSuccessCallback(ctx context.Context, record *CIBAAuthRequest,
+	claims assertionClaims, authTime time.Time) *CIBAError {
+	authReqID := record.AuthReqID
 
 	// Bind the assertion to this specific CIBA request. The auth_req_id is threaded through the
 	// flow runtime data into the assertion as the authorization_request_id claim; requiring it to
@@ -325,6 +357,49 @@ func (s *cibaService) HandleCallback(ctx context.Context, authReqID, assertion s
 		}
 	}
 
+	return nil
+}
+
+// handleFailedCallback marks the request DENIED (end-user failure) or FAILED (server-side failure) for
+// a verified error assertion, so the polling token endpoint returns access_denied or a 500. It returns
+// nil once the state transition succeeds; the *CIBAError return only reports whether the callback op
+// itself succeeded.
+func (s *cibaService) handleFailedCallback(
+	ctx context.Context, record *CIBAAuthRequest, claims oauth2utils.FlowErrorAssertionClaims) *CIBAError {
+	authReqID := record.AuthReqID
+
+	// Bind the assertion to this specific CIBA request (same protection as the success callback).
+	if claims.AuthorizationRequestID != record.AuthReqID {
+		s.logger.Debug(ctx, "Error assertion is not bound to the backchannel authentication request",
+			log.MaskedString("auth_req_id", authReqID))
+		return &CIBAError{
+			Code:    oauth2const.ErrorInvalidRequest,
+			Message: "Error assertion does not match the backchannel authentication request",
+		}
+	}
+
+	targetState := CIBAStateFailed
+	if claims.ErrorType == flowcm.FlowErrorTypeEndUser {
+		targetState = CIBAStateDenied
+	} else if !s.cfg.OAuth.SendServerErrorsToClientEnabled() {
+		// The deployment opts out of reporting server errors. There is no error page to fall back
+		// to here, so the request is left pending for the polling client to time out on.
+		s.logger.Debug(ctx, "Not failing backchannel authentication request on a server error",
+			log.String("flowErrorType", claims.ErrorType))
+		return nil
+	}
+	s.logger.Debug(ctx, "Failing backchannel authentication request",
+		log.String("state", string(targetState)),
+		log.String("flowErrorType", claims.ErrorType),
+		log.String("flowErrorDescription", claims.Description))
+	if err := s.UpdateState(ctx, authReqID, targetState); err != nil {
+		s.logger.Error(ctx, "Failed to update CIBA authentication request state",
+			log.String("state", string(targetState)), log.Error(err))
+		return &CIBAError{
+			Code:    oauth2const.ErrorServerError,
+			Message: "Failed to process backchannel authentication callback",
+		}
+	}
 	return nil
 }
 
@@ -552,6 +627,10 @@ func decodeAttributesFromAssertion(assertion string) (assertionClaims, time.Time
 
 	if v, ok := payload["authorized_permissions"].(string); ok {
 		claims.authorizedPermissions = v
+	}
+
+	if v, ok := payload[flowcm.ClaimFlowErrorType].(string); ok {
+		claims.flowErrorType = v
 	}
 
 	return claims, base.AuthTime, nil

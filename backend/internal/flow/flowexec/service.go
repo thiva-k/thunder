@@ -22,6 +22,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/session"
 	sysContext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/observability/event"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -46,6 +47,7 @@ type flowExecService struct {
 	transactioner       providers.Transactioner
 	cryptoSvc           providers.RuntimeCryptoProvider
 	attestationVerifier providers.AttestationProvider
+	jwtService          jwt.JWTServiceInterface
 	serverConfigSvc     serverConfigProvider
 	cfg                 flowconfig.Config
 }
@@ -59,6 +61,7 @@ func newFlowExecService(flowProvider providers.FlowProvider,
 	cryptoSvc providers.RuntimeCryptoProvider,
 	attestationVerifier providers.AttestationProvider,
 	graphBuilder graphbuilder.GraphBuilderInterface,
+	jwtService jwt.JWTServiceInterface,
 	serverConfigSvc serverConfigProvider,
 	cfg flowconfig.Config) FlowExecServiceInterface {
 	return &flowExecService{
@@ -71,6 +74,7 @@ func newFlowExecService(flowProvider providers.FlowProvider,
 		cryptoSvc:           cryptoSvc,
 		attestationVerifier: attestationVerifier,
 		graphBuilder:        graphBuilder,
+		jwtService:          jwtService,
 		serverConfigSvc:     serverConfigSvc,
 		cfg:                 cfg,
 	}
@@ -140,7 +144,40 @@ func (s *flowExecService) Execute(ctx context.Context,
 				return nil, &tidcommon.InternalServerError
 			}
 		}
+		// An engine failure is reported as a 4xx/5xx, which has no flow response to carry the error
+		// assertion, so return a bare step alongside the error for the handler to serialize.
+		errorType := common.FlowErrorTypeServer
+		if flowErr.Type == tidcommon.ClientErrorType {
+			errorType = common.FlowErrorTypeClient
+		}
+		if assertion := s.buildErrorAssertion(ctx, engineCtx, errorType,
+			flowErr.ErrorDescription.String(), logger); assertion != "" {
+			return &FlowStep{ErrorAssertion: assertion}, flowErr
+		}
 		return nil, flowErr
+	}
+
+	// Surface the OAuth callback type (grant type) from runtime data onto the terminal response so the
+	// Gate/SDK routes the completion or failure to the correct callback handler (e.g. CIBA).
+	// TODO: Remove once the OAuth callback handler can determine the grant type without runtime data.
+	if flowStep.Status == providers.FlowStatusComplete || flowStep.Status == providers.FlowStatusError {
+		if callbackType := engineCtx.RuntimeData[common.RuntimeKeyCallbackType]; callbackType != "" {
+			if flowStep.Data.AdditionalData == nil {
+				flowStep.Data.AdditionalData = make(map[string]string)
+			}
+			flowStep.Data.AdditionalData[common.DataCallbackType] = callbackType
+		}
+	}
+
+	// Build a signed error assertion for an in-band flow failure so the OAuth callback can verify and
+	// propagate it to the waiting authorization request.
+	if flowStep.Status == providers.FlowStatusError {
+		description := ""
+		if flowStep.Error != nil {
+			description = flowStep.Error.ErrorDescription.String()
+		}
+		flowStep.ErrorAssertion = s.buildErrorAssertion(ctx, engineCtx,
+			common.FlowErrorTypeEndUser, description, logger)
 	}
 
 	if isComplete(flowStep) {
@@ -168,6 +205,37 @@ func (s *flowExecService) Execute(ctx context.Context,
 	}
 
 	return &flowStep, nil
+}
+
+// buildErrorAssertion signs an assertion binding the flow error type and description to the OAuth
+// authorization request
+func (s *flowExecService) buildErrorAssertion(ctx context.Context, engineCtx *EngineContext,
+	errorType, description string, logger *log.Logger) string {
+	authReqID := engineCtx.RuntimeData[common.RuntimeKeyAuthorizationRequestID]
+	if authReqID == "" {
+		return ""
+	}
+
+	// Bound to the same validity as the success assertion (AuthAssertExecutor), since both are
+	// consumed by the callback within the same request cycle.
+	validityPeriod := int64(0)
+	if engineCtx.Application.Assertion != nil {
+		validityPeriod = engineCtx.Application.Assertion.ValidityPeriod
+	}
+
+	claims := map[string]interface{}{
+		"aud":                              engineCtx.AppID,
+		common.ClaimAuthorizationRequestID: authReqID,
+		common.ClaimFlowErrorType:          errorType,
+		common.ClaimFlowErrorDescription:   description,
+	}
+	token, _, err := s.jwtService.GenerateJWT(ctx, "", "", validityPeriod, claims, jwt.TokenTypeJWT, "")
+	if err != nil {
+		logger.Error(ctx, "Failed to build flow error assertion",
+			log.String("error", err.Error.DefaultValue))
+		return ""
+	}
+	return token
 }
 
 // applyInboundSSO selects the SSO handle carried for this flow from the request-scoped

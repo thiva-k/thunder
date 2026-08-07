@@ -465,7 +465,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	attestationProvider := initAttestationProvider(ctx, logger, runtimeCryptoSvc)
 	flowExecService, err := flowexec.Initialize(mux, flowMgtService, actorProvider,
 		execRegistry, interceptorRegistry, observabilitySvc, runtimeCryptoSvc, attestationProvider,
-		graphBuilder, runtimeStoreProvider, transactioner, serverConfigService, flowConfig)
+		graphBuilder, jwtService, runtimeStoreProvider, transactioner, serverConfigService, flowConfig)
 	fatalOnError(ctx, logger, err, "Failed to initialize flow execution service")
 
 	// Initialize OAuth services.
