@@ -137,6 +137,7 @@ export default function FlowComponentRenderer({
             onBlur={onBlur}
             onSubmit={onSubmit}
             onValidate={onValidate}
+            additionalData={additionalData}
           />
         </>
       );
@@ -155,6 +156,7 @@ export default function FlowComponentRenderer({
         onBlur={onBlur}
         onSubmit={onSubmit}
         onValidate={onValidate}
+        additionalData={additionalData}
       />
     );
   }
