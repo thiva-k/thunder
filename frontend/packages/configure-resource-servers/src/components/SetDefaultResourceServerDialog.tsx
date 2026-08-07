@@ -4,20 +4,9 @@
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
-import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  Typography,
-} from '@wso2/oxygen-ui';
-import {Star} from '@wso2/oxygen-ui-icons-react';
+import {Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography} from '@wso2/oxygen-ui';
 import {useCallback, useState, type JSX} from 'react';
-import {useTranslation} from 'react-i18next';
+import {Trans, useTranslation} from 'react-i18next';
 import useSetDefaultResourceServer from '../api/useSetDefaultResourceServer';
 import type {ResourceServer} from '../models/resource-server';
 
@@ -82,32 +71,20 @@ export default function SetDefaultResourceServerDialog({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'primary.main',
-              bgcolor: 'primary.light',
-            }}
-          >
-            <Star size={20} />
-          </Box>
-          <span>{t('resourceServers:setDefault.title', 'Set default resource server')}</span>
-        </Stack>
-      </DialogTitle>
+      <DialogTitle>{t('resourceServers:setDefault.title', 'Set default resource server')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
-          <strong>{resourceServer?.name}</strong>{' '}
+          <Trans
+            i18nKey="resourceServers:setDefault.message"
+            defaults="<bold>{{name}}</bold> will become the default resource server."
+            values={{name: resourceServer?.name}}
+            components={{bold: <strong />}}
+          />
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{mt: 1}}>
           {t(
-            'resourceServers:setDefault.message',
-            'will become the default resource server. Requests without a resource parameter will fall back to it.',
+            'resourceServers:setDefault.explanation',
+            'When an application requests a token without naming a resource server, its permissions come from this one. Only one resource server can be the default at a time.',
           )}
         </Typography>
         {error && (

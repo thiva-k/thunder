@@ -139,3 +139,78 @@ describe('ConfigureName', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('ConfigureName default resource server checkbox', () => {
+  beforeEach(() => {
+    vi.mocked(generateRandomHumanReadableIdentifiers).mockReturnValue(mockSuggestions);
+  });
+
+  const renderWithDefault = (props: Partial<Parameters<typeof ConfigureName>[0]> = {}) =>
+    render(
+      <ConfigureName
+        name="Test"
+        identifier="https://api.example.com"
+        selectedType="API"
+        canSetDefault
+        onNameChange={vi.fn()}
+        onIdentifierChange={vi.fn()}
+        {...props}
+      />,
+    );
+
+  const defaultCheckbox = () => screen.queryByRole('checkbox', {name: /make this the default resource server/i});
+
+  it('offers the choice for an API resource server', () => {
+    renderWithDefault();
+
+    expect(defaultCheckbox()).toBeInTheDocument();
+  });
+
+  it('offers the choice for a custom resource server', () => {
+    renderWithDefault({selectedType: 'CUSTOM'});
+
+    expect(defaultCheckbox()).not.toBeNull();
+  });
+
+  it('does not offer the choice for an MCP server', () => {
+    renderWithDefault({selectedType: 'MCP'});
+
+    expect(defaultCheckbox()).toBeNull();
+  });
+
+  it('does not offer the choice while the default config is unavailable', () => {
+    renderWithDefault({canSetDefault: false});
+
+    expect(defaultCheckbox()).toBeNull();
+  });
+
+  it('reflects the ticked state it is given', () => {
+    renderWithDefault({makeDefault: true});
+
+    expect(defaultCheckbox()).toBeChecked();
+  });
+
+  it('reflects the unticked state it is given', () => {
+    renderWithDefault({makeDefault: false});
+
+    expect(defaultCheckbox()).not.toBeChecked();
+  });
+
+  it('reports a tick to the caller', () => {
+    const onMakeDefaultChange = vi.fn();
+    renderWithDefault({makeDefault: false, onMakeDefaultChange});
+
+    fireEvent.click(defaultCheckbox()!);
+
+    expect(onMakeDefaultChange).toHaveBeenCalledWith(true);
+  });
+
+  it('reports an untick to the caller', () => {
+    const onMakeDefaultChange = vi.fn();
+    renderWithDefault({makeDefault: true, onMakeDefaultChange});
+
+    fireEvent.click(defaultCheckbox()!);
+
+    expect(onMakeDefaultChange).toHaveBeenCalledWith(false);
+  });
+});

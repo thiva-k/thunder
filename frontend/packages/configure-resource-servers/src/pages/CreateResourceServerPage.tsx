@@ -21,6 +21,8 @@ import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useCreateResourceServer from '../api/useCreateResourceServer';
+import useGetDefaultResourceServer from '../api/useGetDefaultResourceServer';
+import useSetDefaultResourceServer from '../api/useSetDefaultResourceServer';
 import ConfigureName from '../components/create-resource-server/ConfigureName';
 import ConfigureOrgUnit from '../components/create-resource-server/ConfigureOrgUnit';
 import ConfigureSeparator from '../components/create-resource-server/ConfigureSeparator';
@@ -28,7 +30,7 @@ import ConfigureType from '../components/create-resource-server/ConfigureType';
 import {DEFAULT_PERMISSION_DELIMITER} from '../constants/permission-constants';
 import useResourceServerRoutes from '../hooks/useResourceServerRoutes';
 import type {PermissionDelimiter} from '../models/permissions';
-import type {ResourceServerType} from '../models/resource-server';
+import {isDefaultEligibleType, type ResourceServerType} from '../models/resource-server';
 
 const ResourceServerCreateStep = {
   TYPE: 'TYPE',
@@ -46,8 +48,17 @@ export default function CreateResourceServerPage(): JSX.Element {
   const {showToast} = useToast();
   const logger = useLogger('CreateResourceServerPage');
   const createResourceServer = useCreateResourceServer();
+  const setDefaultResourceServer = useSetDefaultResourceServer();
+  const {data: defaultConfig, isLoading: isDefaultLoading, error: defaultError} = useGetDefaultResourceServer();
 
   const {hasMultipleOUs, isLoading: isOuLoading, ouList} = useHasMultipleOUs();
+
+  // Only trust the config once it has resolved, so the checkbox does not flicker from unticked to
+  // ticked. A declarative (read-only) default is locked: the backend rejects any write to it.
+  const isDefaultReady = !isDefaultLoading && !defaultError;
+  const isDefaultLocked = Boolean(defaultConfig?.readOnly?.resourceServerId);
+  const canSetDefault = isDefaultReady && !isDefaultLocked;
+  const hasExistingDefault = Boolean(defaultConfig?.merged?.resourceServerId);
 
   const [currentStep, setCurrentStep] = useState<ResourceServerCreateStep>(ResourceServerCreateStep.TYPE);
   const [selectedType, setSelectedType] = useState<ResourceServerType | undefined>(undefined);
@@ -56,6 +67,11 @@ export default function CreateResourceServerPage(): JSX.Element {
   const [delimiter, setDelimiter] = useState<PermissionDelimiter>(DEFAULT_PERMISSION_DELIMITER);
   const [ouId, setOuId] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Only the user's explicit choice is stored. Until they make one it derives from the config, which
+  // resolves after the first render: offer to make this the default only when the deployment has
+  // none. Deriving avoids seeding state from an effect once the config arrives.
+  const [makeDefaultOverride, setMakeDefaultOverride] = useState<boolean | undefined>(undefined);
+  const makeDefault = makeDefaultOverride ?? !hasExistingDefault;
 
   const [stepReady, setStepReady] = useState<Record<ResourceServerCreateStep, boolean>>({
     TYPE: false,
@@ -113,6 +129,14 @@ export default function CreateResourceServerPage(): JSX.Element {
     (newDelimiter: PermissionDelimiter): void => {
       clearCreateError();
       setDelimiter(newDelimiter);
+    },
+    [clearCreateError],
+  );
+
+  const handleMakeDefaultChange = useCallback(
+    (newMakeDefault: boolean): void => {
+      clearCreateError();
+      setMakeDefaultOverride(newMakeDefault);
     },
     [clearCreateError],
   );
@@ -198,6 +222,10 @@ export default function CreateResourceServerPage(): JSX.Element {
       delimiter,
     };
 
+    // Guard on the same conditions the checkbox renders under, so a type change after ticking it
+    // cannot carry a stale choice into the request.
+    const shouldMakeDefault = makeDefault && canSetDefault && isDefaultEligibleType(selectedType);
+
     createResourceServer.mutate(payload, {
       onSuccess: (created) => {
         showToast(
@@ -206,11 +234,39 @@ export default function CreateResourceServerPage(): JSX.Element {
             : t('resourceServers:create.success', 'Resource server created successfully.'),
           'success',
         );
-        (async (): Promise<void> => {
-          await navigate(`${routes.detail(created.id)}?tab=resources`);
-        })().catch((err: unknown) => {
-          logger.error('Failed to navigate after create', {error: err});
-        });
+
+        const goToCreated = (): void => {
+          (async (): Promise<void> => {
+            await navigate(`${routes.detail(created.id)}?tab=resources`);
+          })().catch((err: unknown) => {
+            logger.error('Failed to navigate after create', {error: err});
+          });
+        };
+
+        if (!shouldMakeDefault) {
+          goToCreated();
+          return;
+        }
+
+        // The server already exists by now, so a failure here must not read as a create failure.
+        // Warn and continue to the created server; the default can be set from its page.
+        setDefaultResourceServer.mutate(
+          {resourceServerId: created.id},
+          {
+            onSuccess: () => goToCreated(),
+            onError: (err: Error) => {
+              logger.error('Failed to set the new resource server as default', {error: err});
+              showToast(
+                t(
+                  'resourceServers:create.setDefaultError',
+                  'Resource server created, but it could not be made the default.',
+                ),
+                'warning',
+              );
+              goToCreated();
+            },
+          },
+        );
       },
       onError: (err: Error) => {
         logger.error('Failed to create resource server', {error: err});
@@ -231,7 +287,14 @@ export default function CreateResourceServerPage(): JSX.Element {
     }
   };
 
-  const isNextDisabled = createResourceServer.isPending || !stepReady[currentStep] || (isLastStep && isOuLoading);
+  // The wizard is spent once the create succeeds: the follow-up default request and the navigation
+  // away both still have to run, and re-enabling in between would let the user create a duplicate.
+  // Keyed off isSuccess rather than the two pending flags so it never depends on the two mutations'
+  // state changes landing in the same render.
+  const isSubmitting =
+    createResourceServer.isPending || createResourceServer.isSuccess || setDefaultResourceServer.isPending;
+
+  const isNextDisabled = isSubmitting || !stepReady[currentStep] || (isLastStep && isOuLoading);
 
   const getProgress = (): number => {
     const totalSteps = hasMultipleOUs ? 4 : 3;
@@ -260,9 +323,12 @@ export default function CreateResourceServerPage(): JSX.Element {
             name={name}
             identifier={identifier}
             selectedType={selectedType}
+            canSetDefault={canSetDefault}
+            makeDefault={makeDefault}
             onNameChange={handleNameChange}
             onIdentifierChange={handleIdentifierChange}
             onReadyChange={handleNameReadyChange}
+            onMakeDefaultChange={handleMakeDefaultChange}
           />
         );
       case ResourceServerCreateStep.SEPARATOR:
@@ -349,21 +415,16 @@ export default function CreateResourceServerPage(): JSX.Element {
                   }}
                 >
                   {currentStep !== ResourceServerCreateStep.TYPE && (
-                    <Button
-                      variant="outlined"
-                      onClick={handleBack}
-                      sx={{minWidth: 100}}
-                      disabled={createResourceServer.isPending}
-                    >
+                    <Button variant="outlined" onClick={handleBack} sx={{minWidth: 100}} disabled={isSubmitting}>
                       {t('common:actions.back', 'Back')}
                     </Button>
                   )}
 
                   <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-                    {createResourceServer.isPending && <CircularProgress size={20} />}
+                    {isSubmitting && <CircularProgress size={20} />}
                     <Button variant="contained" disabled={isNextDisabled} sx={{minWidth: 100}} onClick={handleNext}>
                       {isLastStep
-                        ? createResourceServer.isPending
+                        ? isSubmitting
                           ? t('resourceServers:create.creating', 'Creating…')
                           : selectedType === 'MCP'
                             ? t('resourceServers:create.submitMcp', 'Create MCP server')
