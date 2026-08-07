@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Box, Card, CardActionArea, CardContent, Stack, Typography} from '@wso2/oxygen-ui';
-import {KeyRound, Lock, LogOut, UserPlus} from '@wso2/oxygen-ui-icons-react';
+import {KeyRound, Lock, LogOut, UserCog, UserPlus} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {FlowType} from '../../models/flows';
@@ -58,6 +58,14 @@ export default function SelectFlowType({selectedType, onTypeChange, onReadyChang
       descriptionDefault: 'Confirm and terminate an established SSO session',
       icon: <LogOut size={28} />,
     },
+    {
+      type: FlowType.ADMINISTRATION,
+      labelKey: 'flows:create.type.administration.label',
+      labelDefault: 'Administration',
+      descriptionKey: 'flows:create.type.administration.description',
+      descriptionDefault: 'Perform authenticated administrative and security operations',
+      icon: <UserCog size={28} />,
+    },
   ];
 
   const handleSelect = (type: string): void => {
@@ -73,7 +81,7 @@ export default function SelectFlowType({selectedType, onTypeChange, onReadyChang
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           maxWidth: 1040,
           gap: 2,
           mt: 3,

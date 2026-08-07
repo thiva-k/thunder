@@ -127,7 +127,7 @@ func (tv *tokenValidator) ValidateAccessToken(ctx context.Context, token string)
 
 	jti, _ := extractStringClaim(claims, constants.ClaimJTI)
 	tokenFamilyID, _ := extractStringClaim(claims, constants.ClaimTokenFamilyID)
-	if err := tv.ensureNotRevoked(ctx, jti, tokenFamilyID); err != nil {
+	if err := tv.ensureNotRevoked(ctx, revocationIdentity(claims, jti, tokenFamilyID)); err != nil {
 		return nil, err
 	}
 
@@ -194,7 +194,7 @@ func (tv *tokenValidator) ValidateRefreshToken(
 		dpopJkt = s
 	}
 
-	if err := tv.ensureNotRevoked(ctx, jti, tokenFamilyID); err != nil {
+	if err := tv.ensureNotRevoked(ctx, revocationIdentity(claims, jti, tokenFamilyID)); err != nil {
 		return nil, err
 	}
 
@@ -252,7 +252,7 @@ func (tv *tokenValidator) ValidateSubjectToken(
 			return nil, err
 		}
 		selfTokenFamilyID, _ := extractStringClaim(claims, constants.ClaimTokenFamilyID)
-		if err := tv.ensureNotRevoked(ctx, selfClaims.JTI, selfTokenFamilyID); err != nil {
+		if err := tv.ensureNotRevoked(ctx, revocationIdentity(claims, selfClaims.JTI, selfTokenFamilyID)); err != nil {
 			return nil, err
 		}
 		return selfClaims, nil
@@ -338,7 +338,7 @@ func (tv *tokenValidator) ValidateToken(ctx context.Context, token string) (map[
 
 	jti, _ := extractStringClaim(claims, constants.ClaimJTI)
 	tokenFamilyID, _ := extractStringClaim(claims, constants.ClaimTokenFamilyID)
-	if err := tv.ensureNotRevoked(ctx, jti, tokenFamilyID); err != nil {
+	if err := tv.ensureNotRevoked(ctx, revocationIdentity(claims, jti, tokenFamilyID)); err != nil {
 		return nil, err
 	}
 
@@ -703,9 +703,40 @@ func (tv *tokenValidator) isAuthAssertion(
 	return false
 }
 
-func (tv *tokenValidator) ensureNotRevoked(ctx context.Context, jti, tokenFamilyID string) error {
+// ensureNotRevoked delegates the final token validation step to the configured enforcement service.
+func (tv *tokenValidator) ensureNotRevoked(ctx context.Context,
+	identity revocation.RevocationIdentity) error {
 	if tv.enforcementService != nil {
-		return tv.enforcementService.EnsureNotRevoked(ctx, jti, tokenFamilyID)
+		return tv.enforcementService.EnsureNotRevoked(ctx, identity)
 	}
 	return nil
+}
+
+// revocationIdentity extracts the trusted token attributes used by criteria enforcement.
+//
+// Only the dimensions a writer actually records are enforced here: the token family and the subject.
+// The remaining criterion types the revocation service accepts have no writer yet, and adding them
+// speculatively would widen the deny-list query on every token validation for rows that cannot
+// exist. Extend this alongside the write path, not ahead of it, and keep it in step with the
+// Resource Server cache so both enforcement points cover the same dimensions.
+func revocationIdentity(claims map[string]interface{}, jti, tokenFamilyID string) revocation.RevocationIdentity {
+	criteria := make([]revocation.Criterion, 0, 2)
+	if tokenFamilyID != "" {
+		criteria = append(criteria,
+			revocation.Criterion{Type: revocation.CriterionTypeTokenFamily, Value: tokenFamilyID})
+	}
+	subject, _ := extractStringClaim(claims, constants.ClaimSub)
+	if accessTokenSubject, _ := extractStringClaim(
+		claims, constants.ClaimAccessTokenSubject); accessTokenSubject != "" {
+		subject = accessTokenSubject
+	}
+	if subject != "" {
+		criteria = append(criteria, revocation.Criterion{Type: revocation.CriterionTypeSubject, Value: subject})
+	}
+
+	var establishedAt time.Time
+	if issuedAt, ok := claims[constants.ClaimIat].(float64); ok {
+		establishedAt = time.Unix(int64(issuedAt), 0).UTC()
+	}
+	return revocation.RevocationIdentity{JTI: jti, EstablishedAt: establishedAt, Criteria: criteria}
 }

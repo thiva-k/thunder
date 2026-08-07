@@ -325,15 +325,12 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	csp.InitializeConfigReader(serverConfigService)
 
 	flowConfig := flowconfig.FromServerRuntime()
-	// The SSO session service revokes a session's token families on sign-out. The criteria revoker is
-	// built here (the OAuth engine's own revoker is created later, so it cannot be shared) and adapted
-	// to the session service's consumer interface with the sign-out reason fixed.
 	tokenFamilyRevocationTTL := time.Duration(runtime.Config.OAuth.RefreshToken.ValidityPeriod) * time.Second
-	sessionCriteriaRev := sessionCriteriaRevoker{
-		revoker: revocation.InitializeCriteriaRevoker(tokenFamilyRevocationTTL),
-	}
+	revocationEnforcer, revocationSvc := revocation.Initialize(jwtService, observabilitySvc,
+		tokenFamilyRevocationTTL, runtime.Config.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
+	sessionRevoker := sessionCriteriaRevoker{revoker: revocationSvc}
 	sessionService, sessionCfg := initSessionService(ctx, serverConfigService,
-		runtime.Config.Server.Identifier, sessionCriteriaRev, logger)
+		runtime.Config.Server.Identifier, sessionRevoker, logger)
 	flowConfig.Session = sessionCfg
 	flowFactory, execRegistry, interceptorRegistry, graphBuilder := initializeFlowCoreAndExecutor(ctx, logger,
 		cacheManager, executor.ExecutorDependencies{
@@ -362,6 +359,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 			OpenID4VPVerifierSvc:  openid4vpSvc,
 			SessionService:        sessionService,
 			ResourceService:       resourceServerProvider,
+			UserService:           userService,
+			CriteriaRevoker:       revocationSvc,
 		},
 		interceptor.InterceptorDependencies{},
 		flowConfig,
@@ -472,7 +471,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	err = oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
 		flowExecService, observabilitySvc, runtimeCryptoSvc, ouService, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
-		runtimeStoreProvider, transactioner, oauthCfg)
+		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc, oauthCfg)
 	fatalOnError(ctx, logger, err, "Failed to initialize OAuth services")
 
 	if oauthCfg.OAuth.DCR.IsEnabled() {
@@ -549,8 +548,7 @@ func initSessionService(ctx context.Context, svc serverconfig.ServerConfigServic
 	return sessionService, cfg
 }
 
-// sessionCriteriaRevoker adapts the OAuth criteria revoker to the SSO session service's consumer
-// interface, fixing the revocation reason to session sign-out.
+// sessionCriteriaRevoker fixes the reason used when the session service revokes a token family.
 type sessionCriteriaRevoker struct {
 	revoker revocation.CriteriaRevokerInterface
 }

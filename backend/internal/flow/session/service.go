@@ -58,6 +58,10 @@ type Service interface {
 	// against ending a session grouped under a different flow. It is idempotent, returning (nil, nil)
 	// when no session matches the handle, and returns the deleted session on success.
 	Terminate(ctx context.Context, handle, flowID string) (*Session, error)
+	// TerminateBySubject ends every SSO session belonging to the subject, revoking the subject's
+	// grants first so no session is deleted while its tokens remain live. It is idempotent, returning
+	// nil when the subject holds no sessions.
+	TerminateBySubject(ctx context.Context, subjectID string) error
 }
 
 // LoadCheckpointInput carries what a Session join needs to restore a checkpoint. Session and Context
@@ -316,6 +320,53 @@ func (s *service) Terminate(ctx context.Context, handle, flowID string) (*Sessio
 
 	s.logger.Debug(ctx, "Terminated SSO session", log.String("flowId", sess.FlowID))
 	return sess, nil
+}
+
+// TerminateBySubject ends every SSO session belonging to the subject. Repeated calls are idempotent.
+//
+// Unlike Terminate, this does not revoke token families. Subject-wide termination is driven by a
+// criteria revocation on the subject dimension, which already matches every token those sessions
+// hold regardless of which application's family issued it, so enumerating families here would write
+// one redundant deny-list row per participating application.
+//
+// That makes the criteria revocation a precondition, not an optimisation: the caller must have
+// persisted the subject criterion before calling this, or sessions are deleted while their tokens
+// stay live. In flows this is enforced at flow-creation time, where a flow containing
+// SessionRevocationExecutor must also contain CriteriaRevocationExecutor.
+//
+// All deletions share one transaction, so a partial failure leaves every session intact rather than
+// some subset terminated.
+func (s *service) TerminateBySubject(ctx context.Context, subjectID string) error {
+	if subjectID == "" {
+		return nil
+	}
+	sessions, err := s.store.ListBySubject(ctx, subjectID)
+	if err != nil {
+		return fmt.Errorf("failed to list sessions by subject: %w", err)
+	}
+	if len(sessions) == 0 {
+		return nil
+	}
+
+	if txErr := s.transactioner.Transact(ctx, func(txCtx context.Context) error {
+		for _, sess := range sessions {
+			if delErr := s.store.DeleteSession(txCtx, sess.SessionID); delErr != nil {
+				return delErr
+			}
+			if delErr := s.store.Delete(txCtx, sess.SessionID); delErr != nil {
+				return delErr
+			}
+			if delErr := s.store.DeleteBySessionID(txCtx, sess.SessionID); delErr != nil {
+				return delErr
+			}
+		}
+		return nil
+	}); txErr != nil {
+		return fmt.Errorf("failed to terminate subject sessions: %w", txErr)
+	}
+
+	s.logger.Debug(ctx, "Terminated all SSO sessions for subject", log.Int("sessionCount", len(sessions)))
+	return nil
 }
 
 // revokeSessionFamilies revokes the token family of every application participating in the session,

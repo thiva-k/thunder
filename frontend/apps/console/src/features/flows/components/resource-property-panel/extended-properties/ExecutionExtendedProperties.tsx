@@ -3,6 +3,7 @@
 
 import {Stack} from '@wso2/oxygen-ui';
 import {useCallback, useMemo, type ReactNode} from 'react';
+import PreDeleteProperties from './execution-properties/PreDeleteProperties';
 import ConsentProperties from './execution-properties/ConsentProperties';
 import {EXECUTOR_TO_IDP_TYPE_MAP, EXECUTORS_WITH_FIXED_INPUTS} from './execution-properties/constants';
 import EmailProperties from './execution-properties/EmailProperties';
@@ -94,6 +95,9 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
       break;
     case ExecutionTypes.PermissionValidator:
       executorSpecificProperties = <PermissionValidatorProperties resource={resource} onChange={onChange} />;
+      break;
+    case ExecutionTypes.PreDelete:
+      executorSpecificProperties = <PreDeleteProperties resource={resource} onChange={onChange} />;
       break;
     case ExecutionTypes.ProvisioningExecutor:
       executorSpecificProperties = <ProvisioningProperties resource={resource} onChange={onChange} />;

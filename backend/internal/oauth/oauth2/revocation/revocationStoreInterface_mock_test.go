@@ -6,6 +6,7 @@ package revocation
 
 import (
 	"context"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -160,6 +161,78 @@ func (_c *revocationStoreInterfaceMock_IsTokenRevoked_Call) RunAndReturn(run fun
 	return _c
 }
 
+// areCriteriaRevoked provides a mock function for the type revocationStoreInterfaceMock
+func (_mock *revocationStoreInterfaceMock) areCriteriaRevoked(ctx context.Context, criteria []Criterion, establishedAt time.Time) (bool, error) {
+	ret := _mock.Called(ctx, criteria, establishedAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for areCriteriaRevoked")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []Criterion, time.Time) (bool, error)); ok {
+		return returnFunc(ctx, criteria, establishedAt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []Criterion, time.Time) bool); ok {
+		r0 = returnFunc(ctx, criteria, establishedAt)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []Criterion, time.Time) error); ok {
+		r1 = returnFunc(ctx, criteria, establishedAt)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// revocationStoreInterfaceMock_areCriteriaRevoked_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'areCriteriaRevoked'
+type revocationStoreInterfaceMock_areCriteriaRevoked_Call struct {
+	*mock.Call
+}
+
+// areCriteriaRevoked is a helper method to define mock.On call
+//   - ctx context.Context
+//   - criteria []Criterion
+//   - establishedAt time.Time
+func (_e *revocationStoreInterfaceMock_Expecter) areCriteriaRevoked(ctx interface{}, criteria interface{}, establishedAt interface{}) *revocationStoreInterfaceMock_areCriteriaRevoked_Call {
+	return &revocationStoreInterfaceMock_areCriteriaRevoked_Call{Call: _e.mock.On("areCriteriaRevoked", ctx, criteria, establishedAt)}
+}
+
+func (_c *revocationStoreInterfaceMock_areCriteriaRevoked_Call) Run(run func(ctx context.Context, criteria []Criterion, establishedAt time.Time)) *revocationStoreInterfaceMock_areCriteriaRevoked_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []Criterion
+		if args[1] != nil {
+			arg1 = args[1].([]Criterion)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *revocationStoreInterfaceMock_areCriteriaRevoked_Call) Return(b bool, err error) *revocationStoreInterfaceMock_areCriteriaRevoked_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *revocationStoreInterfaceMock_areCriteriaRevoked_Call) RunAndReturn(run func(ctx context.Context, criteria []Criterion, establishedAt time.Time) (bool, error)) *revocationStoreInterfaceMock_areCriteriaRevoked_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // insertCriterion provides a mock function for the type revocationStoreInterfaceMock
 func (_mock *revocationStoreInterfaceMock) insertCriterion(ctx context.Context, criterion revocationCriterion) error {
 	ret := _mock.Called(ctx, criterion)
@@ -213,78 +286,6 @@ func (_c *revocationStoreInterfaceMock_insertCriterion_Call) Return(err error) *
 }
 
 func (_c *revocationStoreInterfaceMock_insertCriterion_Call) RunAndReturn(run func(ctx context.Context, criterion revocationCriterion) error) *revocationStoreInterfaceMock_insertCriterion_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// isCriterionRevoked provides a mock function for the type revocationStoreInterfaceMock
-func (_mock *revocationStoreInterfaceMock) isCriterionRevoked(ctx context.Context, criterion criterionType, value string) (bool, error) {
-	ret := _mock.Called(ctx, criterion, value)
-
-	if len(ret) == 0 {
-		panic("no return value specified for isCriterionRevoked")
-	}
-
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, criterionType, string) (bool, error)); ok {
-		return returnFunc(ctx, criterion, value)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, criterionType, string) bool); ok {
-		r0 = returnFunc(ctx, criterion, value)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, criterionType, string) error); ok {
-		r1 = returnFunc(ctx, criterion, value)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// revocationStoreInterfaceMock_isCriterionRevoked_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'isCriterionRevoked'
-type revocationStoreInterfaceMock_isCriterionRevoked_Call struct {
-	*mock.Call
-}
-
-// isCriterionRevoked is a helper method to define mock.On call
-//   - ctx context.Context
-//   - criterion criterionType
-//   - value string
-func (_e *revocationStoreInterfaceMock_Expecter) isCriterionRevoked(ctx interface{}, criterion interface{}, value interface{}) *revocationStoreInterfaceMock_isCriterionRevoked_Call {
-	return &revocationStoreInterfaceMock_isCriterionRevoked_Call{Call: _e.mock.On("isCriterionRevoked", ctx, criterion, value)}
-}
-
-func (_c *revocationStoreInterfaceMock_isCriterionRevoked_Call) Run(run func(ctx context.Context, criterion criterionType, value string)) *revocationStoreInterfaceMock_isCriterionRevoked_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 criterionType
-		if args[1] != nil {
-			arg1 = args[1].(criterionType)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *revocationStoreInterfaceMock_isCriterionRevoked_Call) Return(b bool, err error) *revocationStoreInterfaceMock_isCriterionRevoked_Call {
-	_c.Call.Return(b, err)
-	return _c
-}
-
-func (_c *revocationStoreInterfaceMock_isCriterionRevoked_Call) RunAndReturn(run func(ctx context.Context, criterion criterionType, value string) (bool, error)) *revocationStoreInterfaceMock_isCriterionRevoked_Call {
 	_c.Call.Return(run)
 	return _c
 }

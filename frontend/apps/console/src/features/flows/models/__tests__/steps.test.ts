@@ -179,8 +179,12 @@ describe('steps models', () => {
       expect(ExecutionTypes.Authorization).toBe('AuthorizationExecutor');
     });
 
-    it('should have exactly 26 execution types', () => {
-      expect(Object.keys(ExecutionTypes)).toHaveLength(26);
+    it('should have PreDelete type', () => {
+      expect(ExecutionTypes.PreDelete).toBe('PreDeleteExecutor');
+    });
+
+    it('should have exactly 27 execution types', () => {
+      expect(Object.keys(ExecutionTypes)).toHaveLength(27);
     });
   });
 

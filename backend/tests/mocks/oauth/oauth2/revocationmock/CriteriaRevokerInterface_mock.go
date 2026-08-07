@@ -38,6 +38,63 @@ func (_m *CriteriaRevokerInterfaceMock) EXPECT() *CriteriaRevokerInterfaceMock_E
 	return &CriteriaRevokerInterfaceMock_Expecter{mock: &_m.Mock}
 }
 
+// RevokeByCriteria provides a mock function for the type CriteriaRevokerInterfaceMock
+func (_mock *CriteriaRevokerInterfaceMock) RevokeByCriteria(ctx context.Context, revocation1 revocation.CriteriaRevocation) error {
+	ret := _mock.Called(ctx, revocation1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeByCriteria")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, revocation.CriteriaRevocation) error); ok {
+		r0 = returnFunc(ctx, revocation1)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CriteriaRevokerInterfaceMock_RevokeByCriteria_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeByCriteria'
+type CriteriaRevokerInterfaceMock_RevokeByCriteria_Call struct {
+	*mock.Call
+}
+
+// RevokeByCriteria is a helper method to define mock.On call
+//   - ctx context.Context
+//   - revocation1 revocation.CriteriaRevocation
+func (_e *CriteriaRevokerInterfaceMock_Expecter) RevokeByCriteria(ctx interface{}, revocation1 interface{}) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
+	return &CriteriaRevokerInterfaceMock_RevokeByCriteria_Call{Call: _e.mock.On("RevokeByCriteria", ctx, revocation1)}
+}
+
+func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) Run(run func(ctx context.Context, revocation1 revocation.CriteriaRevocation)) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 revocation.CriteriaRevocation
+		if args[1] != nil {
+			arg1 = args[1].(revocation.CriteriaRevocation)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) Return(err error) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) RunAndReturn(run func(ctx context.Context, revocation1 revocation.CriteriaRevocation) error) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RevokeTokenFamily provides a mock function for the type CriteriaRevokerInterfaceMock
 func (_mock *CriteriaRevokerInterfaceMock) RevokeTokenFamily(ctx context.Context, tokenFamilyID string, reason revocation.RevocationReason) error {
 	ret := _mock.Called(ctx, tokenFamilyID, reason)

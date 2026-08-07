@@ -1166,6 +1166,48 @@ var (
 				"acr_values or max_age",
 		},
 	}
+
+	// ErrInvalidRevocationMode is returned when an administrative action receives an unsupported mode.
+	ErrInvalidRevocationMode = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1083",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.invalid_revocation_mode",
+			DefaultValue: "Invalid revocation mode",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.invalid_revocation_mode_desc",
+			DefaultValue: "The requested revocation mode is not supported for this action",
+		},
+	}
+
+	// ErrUserDeletionNotAllowed is returned when the target user cannot be deleted.
+	ErrUserDeletionNotAllowed = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1084",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.user_deletion_not_allowed",
+			DefaultValue: "User deletion not allowed",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.user_deletion_not_allowed_desc",
+			DefaultValue: "The user cannot be deleted in the current state",
+		},
+	}
+
+	// ErrUserDeletionFailed is returned when a permitted user deletion cannot be completed.
+	ErrUserDeletionFailed = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1085",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.user_deletion_failed",
+			DefaultValue: "User deletion failed",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.user_deletion_failed_desc",
+			DefaultValue: "The user could not be deleted",
+		},
+	}
 )
 
 // errAttributeNotUniqueFor returns a ServiceError for a specific attribute that is not unique.

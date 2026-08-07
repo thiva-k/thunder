@@ -267,6 +267,7 @@ const (
 	ClaimAuthorizedPermissions  string = "authorized_permissions"
 	ClaimAuthorizationRequestID string = "authorization_request_id"
 	ClaimClientID               string = "client_id"
+	ClaimAccessTokenSubject     string = "access_token_sub"
 	// ClaimIDP identifies the source identity provider (by issuer) that authenticated the subject of a
 	// jwt-bearer-grant (ID-JAG) access token, so downstream consumers can distinguish a federated
 	// principal from a local one.

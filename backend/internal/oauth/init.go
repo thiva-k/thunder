@@ -7,7 +7,6 @@ package oauth
 import (
 	"net/http"
 	"slices"
-	"time"
 
 	"github.com/thunder-id/thunderid/internal/attributecache"
 	"github.com/thunder-id/thunderid/internal/flow/flowexec"
@@ -54,6 +53,8 @@ func Initialize(
 	dpopVerifier dpop.VerifierInterface,
 	runtimeStore providers.RuntimeStoreProvider,
 	transactioner providers.Transactioner,
+	enforcementService revocation.EnforcementServiceInterface,
+	revocationSvc revocation.RevocationServiceInterface,
 	cfg oauthconfig.Config,
 ) error {
 	jwks.Initialize(mux, runtimeCrypto)
@@ -63,15 +64,14 @@ func Initialize(
 	resolver := jwksresolver.Initialize(httpClient)
 	scopeValidator := scope.Initialize()
 	discoveryService := discovery.Initialize(mux, runtimeCrypto, jweService, cfg)
-	var enforcementService revocation.EnforcementServiceInterface
-	var revocationSvc revocation.RevocationServiceInterface
+	// The revocation services are constructed by the service manager, not here: the session service
+	// needs the same criteria revoker, and it is wired before the OAuth engine. This registers the
+	// RFC 7009 routes against the already-built service.
 	if cfg.OAuth.TokenRevocation.IsEnabled() {
-		// The enforcement service (revocation read path) is built before the token service so it can be
-		// injected into the validator, which enforces the deny list as the final step of every validation.
-		tokenFamilyRevocationTTL := time.Duration(cfg.OAuth.RefreshToken.ValidityPeriod) * time.Second
-		enforcementService, revocationSvc = revocation.Initialize(
-			mux, jwtService, actorProvider, authnProvider, discoveryService, observabilitySvc,
-			tokenFamilyRevocationTTL, cfg.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
+		revocation.RegisterRoutes(mux, jwtService, actorProvider, authnProvider, discoveryService, revocationSvc)
+	} else {
+		enforcementService = nil
+		revocationSvc = nil
 	}
 
 	jtiStore := jti.Initialize(runtimeStore)

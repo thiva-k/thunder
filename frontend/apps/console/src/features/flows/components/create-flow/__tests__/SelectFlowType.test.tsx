@@ -18,6 +18,7 @@ vi.mock('@wso2/oxygen-ui-icons-react', async (importOriginal) => {
   return {
     ...actual,
     KeyRound: ({size}: {size: number}) => <span data-testid="icon-key-round">{size}</span>,
+    UserCog: ({size}: {size: number}) => <span data-testid="icon-user-cog">{size}</span>,
     UserPlus: ({size}: {size: number}) => <span data-testid="icon-user-plus">{size}</span>,
   };
 });
@@ -76,6 +77,14 @@ describe('SelectFlowType', () => {
       expect(screen.getByText('Sign Out')).toBeInTheDocument();
       expect(screen.getByText('Confirm and terminate an established SSO session')).toBeInTheDocument();
     });
+
+    it('should render Administration option', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      expect(screen.getByText('Administration')).toBeInTheDocument();
+      expect(screen.getByText('Perform authenticated administrative and security operations')).toBeInTheDocument();
+      expect(screen.getByTestId('icon-user-cog')).toBeInTheDocument();
+    });
   });
 
   describe('Selection', () => {
@@ -103,6 +112,15 @@ describe('SelectFlowType', () => {
       fireEvent.click(screen.getByText('Self Sign-up'));
 
       expect(mockOnTypeChange).toHaveBeenCalledWith('REGISTRATION');
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onTypeChange with ADMINISTRATION when Administration is clicked', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Administration'));
+
+      expect(mockOnTypeChange).toHaveBeenCalledWith('ADMINISTRATION');
       expect(mockOnReadyChange).toHaveBeenCalledWith(true);
     });
 

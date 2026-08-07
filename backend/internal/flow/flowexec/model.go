@@ -262,6 +262,7 @@ type FlowResponse struct {
 
 // FlowRequest represents the flow execution API request body
 type FlowRequest struct {
+	FlowID         string            `json:"flowId,omitempty"`
 	ApplicationID  string            `json:"applicationId"`
 	FlowType       string            `json:"flowType"`
 	Verbose        bool              `json:"verbose,omitempty"`

@@ -3509,6 +3509,15 @@ const translations = {
     'core.executions.identifying.description':
       'Configure the identifying executor mode. Use "Resolve" to enable user disambiguation when multiple users match.',
 
+    // Administrative flow pre executor
+    'core.executions.preDelete.mode.revokeAll': 'Revoke all grants',
+    'core.executions.preDelete.mode.label': 'Revocation mode',
+    'core.executions.preDelete.mode.placeholder': 'Select a revocation mode',
+    'core.executions.preDelete.mode.hint':
+      'Applies to every grant the subject holds. The executors that follow act on this setting, so it cannot be changed per request.',
+    'core.executions.preDelete.description':
+      'Validate the target of an administrative operation and plan the revocation carried out by the executors that follow.',
+
     // Passkey executor modes
     'core.executions.passkey.mode.challenge': 'Challenge',
     'core.executions.passkey.mode.verify': 'Verify',

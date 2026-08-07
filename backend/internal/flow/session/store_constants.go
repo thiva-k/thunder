@@ -107,4 +107,12 @@ var (
 		ID:    "SSO-SESS-12",
 		Query: `DELETE FROM "SSO_SESSION" WHERE SESSION_ID = $1 AND DEPLOYMENT_ID = $2`,
 	}
+
+	// queryListSessionsBySubject returns all SSO sessions owned by a subject.
+	queryListSessionsBySubject = model.DBQuery{
+		ID: "SSO-SESS-13",
+		Query: `SELECT SESSION_ID, SUBJECT_ID, FLOW_ID, FLOW_VERSION, FLOW_EXECUTION_ID, HANDLE_ID, ` +
+			`AUTHENTICATED_AT, CREATED_AT, LAST_ACTIVE_AT, IDLE_EXPIRES_AT, ABSOLUTE_EXPIRES_AT, STATE, VERSION ` +
+			`FROM "SSO_SESSION" WHERE SUBJECT_ID = $1 AND DEPLOYMENT_ID = $2`,
+	}
 )

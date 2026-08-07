@@ -3931,6 +3931,52 @@ func (s *EngineTestSuite) TestHandleCallResponse_Success() {
 	s.Equal(mockStartNode, ctx.CurrentNode)
 }
 
+func (s *EngineTestSuite) TestSharedRuntimeDataSurvivesAdministrationFlowCallAndReturn() {
+	t := s.T()
+	callerGraph := coremock.NewGraphInterfaceMock(t)
+	callNode := coremock.NewCallNodeInterfaceMock(t)
+	deleteNode := coremock.NewNodeInterfaceMock(t)
+	calleeGraph := coremock.NewGraphInterfaceMock(t)
+	calleeStart := coremock.NewNodeInterfaceMock(t)
+	flowProvider := NewFlowProviderMock(t)
+	graphBuilder := NewGraphBuilderInterfaceMock(t)
+
+	callNode.On("GetID").Return("revoke-call")
+	callerGraph.On("GetNode", "revoke-call").Return(callNode, true)
+	callNode.On("GetOnSuccess").Return("delete-user")
+	callerGraph.On("GetNode", "delete-user").Return(deleteNode, true)
+	flow := &providers.CompleteFlowDefinition{ID: "revocation-flow", FlowType: providers.FlowTypeAdministration}
+	flowProvider.On("GetFlow", mock.Anything, "revocation-flow").Return(flow, nil)
+	graphBuilder.On("GetGraph", mock.Anything, flow).Return(calleeGraph, nil)
+	calleeGraph.On("GetType").Return(providers.FlowTypeAdministration)
+	calleeGraph.On("GetStartNode").Return(calleeStart, nil)
+
+	engine := &flowEngine{
+		logger: log.GetLogger(), flowProvider: flowProvider, graphBuilder: graphBuilder,
+	}
+	ctx := &EngineContext{
+		Context: context.Background(), Graph: callerGraph, CurrentNode: callNode,
+		FlowType: providers.FlowTypeAdministration,
+	}
+	engine.updateContextWithNodeResponse(ctx, &common.NodeResponse{
+		SharedRuntimeData: map[string]string{"revocation.plan": `{"criteria":[{"type":"subject","value":"user-123"}]}`},
+	})
+
+	_, svcErr := engine.handleCallResponse(ctx, &common.NodeResponse{
+		Status: common.NodeStatusCall, CallTargetFlowID: "revocation-flow",
+	}, log.GetLogger())
+	s.Nil(svcErr)
+	s.Equal(`{"criteria":[{"type":"subject","value":"user-123"}]}`,
+		ctx.sharedRuntimeData["revocation.plan"])
+
+	ctx.CurrentNode = calleeStart
+	next, svcErr := engine.handleCalleeReturn(ctx, log.GetLogger())
+	s.Nil(svcErr)
+	s.Equal(deleteNode, next)
+	s.Equal(`{"criteria":[{"type":"subject","value":"user-123"}]}`,
+		ctx.sharedRuntimeData["revocation.plan"])
+}
+
 // --- handleCalleeReturn ---
 
 func (s *EngineTestSuite) TestHandleCalleeReturn_Success() {

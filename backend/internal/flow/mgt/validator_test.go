@@ -121,6 +121,8 @@ func (s *ValidatorTestSuite) TestIsValidFlowType_ValidTypes() {
 		providers.FlowTypeRegistration,
 		providers.FlowTypeUserOnboarding,
 		providers.FlowTypeRecovery,
+		providers.FlowTypeSignOut,
+		providers.FlowTypeAdministration,
 	}
 	for _, ft := range valid {
 		s.True(isValidFlowType(ft), "expected %q to be valid", ft)
@@ -1296,6 +1298,56 @@ func (s *ValidatorTestSuite) TestValidateNodes_Valid() {
 	index, _ := buildNodeIndex(nodes)
 	err := s.v.validateNodes(nodes, index, providers.FlowTypeAuthentication)
 	s.Nil(err)
+}
+
+// ---------------------------------------------------------------------------
+// Tests for validateCompanionExecutors
+// ---------------------------------------------------------------------------
+
+func companionNodes(executorNames ...string) []providers.NodeDefinition {
+	nodes := []providers.NodeDefinition{
+		{ID: "start", Type: string(common.NodeTypeStart), OnSuccess: "task-0"},
+	}
+	for i, name := range executorNames {
+		next := "end"
+		if i+1 < len(executorNames) {
+			next = fmt.Sprintf("task-%d", i+1)
+		}
+		nodes = append(nodes, providers.NodeDefinition{
+			ID: fmt.Sprintf("task-%d", i), Type: string(common.NodeTypeTaskExecution),
+			Executor:  &providers.ExecutorDefinition{Name: name},
+			OnSuccess: next,
+		})
+	}
+	return append(nodes, providers.NodeDefinition{ID: "end", Type: string(common.NodeTypeEnd)})
+}
+
+// Terminating a subject's sessions relies on the subject criterion that CriteriaRevocationExecutor
+// persists. Without it the flow would delete sessions while their tokens are still live, so the flow
+// must be rejected at creation rather than failing open at runtime.
+func (s *ValidatorTestSuite) TestValidateCompanionExecutors_SessionRevocationWithoutCriteriaRevocation() {
+	nodes := companionNodes(executor.ExecutorNameSessionRevocation)
+
+	err := s.v.validateCompanionExecutors(nodes)
+
+	s.Require().NotNil(err)
+	s.Equal(ErrorInvalidExecutorConfig.Code, err.Code)
+}
+
+func (s *ValidatorTestSuite) TestValidateCompanionExecutors_SessionRevocationWithCriteriaRevocation() {
+	nodes := companionNodes(
+		executor.ExecutorNameCriteriaRevocation, executor.ExecutorNameSessionRevocation)
+
+	s.Nil(s.v.validateCompanionExecutors(nodes))
+}
+
+// Criteria revocation stands on its own; only the session executor carries the dependency.
+func (s *ValidatorTestSuite) TestValidateCompanionExecutors_CriteriaRevocationAlone() {
+	s.Nil(s.v.validateCompanionExecutors(companionNodes(executor.ExecutorNameCriteriaRevocation)))
+}
+
+func (s *ValidatorTestSuite) TestValidateCompanionExecutors_UnrelatedFlowUnaffected() {
+	s.Nil(s.v.validateCompanionExecutors(companionNodes("AuthAssertExecutor")))
 }
 
 // ---------------------------------------------------------------------------

@@ -27,11 +27,13 @@ import (
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/notification"
 	"github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/revocation"
 	"github.com/thunder-id/thunderid/internal/role"
 	"github.com/thunder-id/thunderid/internal/system/email"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/template"
+	"github.com/thunder-id/thunderid/internal/user"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -139,6 +141,8 @@ type ExecutorDependencies struct {
 	OpenID4VPVerifierSvc  openid4vp.OpenID4VPServiceInterface
 	SessionService        session.Service
 	ResourceService       providers.ResourceServerProvider
+	UserService           user.UserServiceInterface
+	CriteriaRevoker       revocation.CriteriaRevoker
 }
 
 type builtInExecutorRegistrar func(ExecutorRegistryInterface, ExecutorDependencies)
@@ -265,6 +269,22 @@ func newBuiltInExecutorRegistrars() map[string]builtInExecutorRegistrar {
 		ExecutorNameOTPExecutor: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
 			reg.RegisterExecutor(ExecutorNameOTPExecutor, newOTPExecutor(
 				deps.FlowFactory, deps.OTPService, deps.AuthnProvider, deps.EntityProvider))
+		},
+		ExecutorNamePreDelete: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
+			reg.RegisterExecutor(ExecutorNamePreDelete,
+				newPreDeleteExecutor(deps.FlowFactory, deps.UserService))
+		},
+		ExecutorNameCriteriaRevocation: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
+			reg.RegisterExecutor(ExecutorNameCriteriaRevocation,
+				newCriteriaRevocationExecutor(deps.FlowFactory, deps.CriteriaRevoker))
+		},
+		ExecutorNameSessionRevocation: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
+			reg.RegisterExecutor(ExecutorNameSessionRevocation,
+				newSessionRevocationExecutor(deps.FlowFactory, deps.SessionService))
+		},
+		ExecutorNameUserDelete: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
+			reg.RegisterExecutor(ExecutorNameUserDelete,
+				newUserDeleteExecutor(deps.FlowFactory, deps.UserService))
 		},
 	}
 }

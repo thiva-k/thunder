@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package flowexec
@@ -237,5 +237,49 @@ var ErrorAttestationNotConfigured = tidcommon.ServiceError{
 	ErrorDescription: tidcommon.I18nMessage{
 		Key:          "error.flowexecservice.attestation_not_configured_description",
 		DefaultValue: "Mobile applications must configure platform attestation to initiate a flow",
+	},
+}
+
+// ErrorAdministrationAuthenticationRequired defines the error returned when an administrative
+// flow is invoked without an authenticated caller.
+var ErrorAdministrationAuthenticationRequired = tidcommon.ServiceError{
+	Code: "FES-1017",
+	Type: tidcommon.ClientErrorType,
+	Error: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.administration_authentication_required",
+		DefaultValue: "Authentication required",
+	},
+	ErrorDescription: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.administration_authentication_required_description",
+		DefaultValue: "Administrative flows require an authenticated caller",
+	},
+}
+
+// ErrorFlowIDExecutionNotPermitted is returned when direct execution by ID targets a non-administrative flow.
+var ErrorFlowIDExecutionNotPermitted = tidcommon.ServiceError{
+	Code: "FES-1018",
+	Type: tidcommon.ClientErrorType,
+	Error: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.flow_id_execution_not_permitted",
+		DefaultValue: "Flow execution not permitted",
+	},
+	ErrorDescription: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.flow_id_execution_not_permitted_description",
+		DefaultValue: "The selected flow cannot be executed directly by its ID",
+	},
+}
+
+// ErrorAdministrationPermissionRequired defines the error returned when an authenticated caller
+// invokes an administrative flow without the root system permission.
+var ErrorAdministrationPermissionRequired = tidcommon.ServiceError{
+	Code: "FES-1019",
+	Type: tidcommon.ClientErrorType,
+	Error: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.administration_permission_required",
+		DefaultValue: "Insufficient permissions",
+	},
+	ErrorDescription: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.administration_permission_required_description",
+		DefaultValue: "Administrative flows require the system permission",
 	},
 }

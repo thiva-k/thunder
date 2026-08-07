@@ -191,6 +191,27 @@ func (s *StoreTestSuite) TestGetByExecutionID_Miss() {
 	s.Nil(got)
 }
 
+func (s *StoreTestSuite) TestListBySubject() {
+	base := time.Date(2026, 6, 16, 10, 0, 0, 0, time.UTC)
+	row := map[string]interface{}{
+		"session_id": "sess-1", "subject_id": "user-1", "flow_id": "flow-1",
+		"flow_version": int64(2), "flow_execution_id": "exec-1", "handle_id": "handle-abc",
+		"authenticated_at": base, "created_at": base, "last_active_at": base,
+		"idle_expires_at": nil, "absolute_expires_at": base.Add(8 * time.Hour),
+		"state": "ACTIVE", "version": int64(1),
+	}
+	s.mockDBProvider.On("GetRuntimePersistentDBClient").Return(s.mockDBClient, nil)
+	s.mockDBClient.On("QueryContext", context.Background(), queryListSessionsBySubject,
+		"user-1", testDeploymentID).Return([]map[string]interface{}{row}, nil)
+
+	got, err := s.store.ListBySubject(context.Background(), "user-1")
+
+	s.NoError(err)
+	s.Require().Len(got, 1)
+	s.Equal("sess-1", got[0].SessionID)
+	s.Equal("user-1", got[0].SubjectID)
+}
+
 func (s *StoreTestSuite) TestUpdate_Success() {
 	sess := s.sampleSession()
 

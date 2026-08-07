@@ -46,6 +46,7 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 
 	// Sanitize the input to prevent injection attacks
 	appID := sysutils.SanitizeString(flowR.ApplicationID)
+	flowID := sysutils.SanitizeString(flowR.FlowID)
 	executionID := sysutils.SanitizeString(flowR.ExecutionID)
 	flowTypeStr := sysutils.SanitizeString(flowR.FlowType)
 	verbose := flowR.Verbose
@@ -59,9 +60,16 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 	// them available to the flow service, which selects the handle once the flow is known.
 	ctx := session.WithInbound(r.Context(), h.ssoTransport.Read(r))
 
-	flowStep, flowErr := h.flowExecService.Execute(
-		ctx, appID, executionID, flowTypeStr, verbose, action, inputs, challengeToken,
-		flowSecret, attestationToken)
+	var flowStep *FlowStep
+	var flowErr *tidcommon.ServiceError
+	if flowID != "" {
+		flowStep, flowErr = h.flowExecService.ExecuteByID(
+			ctx, flowID, executionID, verbose, action, inputs, challengeToken)
+	} else {
+		flowStep, flowErr = h.flowExecService.Execute(
+			ctx, appID, executionID, flowTypeStr, verbose, action, inputs, challengeToken,
+			flowSecret, attestationToken)
+	}
 
 	if flowErr != nil {
 		errorAssertion := ""
@@ -131,10 +139,12 @@ func handleFlowError(ctx context.Context, w http.ResponseWriter, flowErr *tidcom
 	statusCode := http.StatusInternalServerError
 	if flowErr.Type == tidcommon.ClientErrorType {
 		switch flowErr.Code {
-		case ErrorDirectFlowInitiationNotPermitted.Code:
+		case ErrorDirectFlowInitiationNotPermitted.Code, ErrorFlowIDExecutionNotPermitted.Code,
+			ErrorAdministrationPermissionRequired.Code:
 			statusCode = http.StatusForbidden
 		case ErrorFlowSecretRequired.Code, ErrorFlowSecretInvalid.Code,
-			ErrorAttestationRequired.Code, ErrorAttestationInvalid.Code:
+			ErrorAttestationRequired.Code, ErrorAttestationInvalid.Code,
+			ErrorAdministrationAuthenticationRequired.Code:
 			statusCode = http.StatusUnauthorized
 		default:
 			statusCode = http.StatusBadRequest
