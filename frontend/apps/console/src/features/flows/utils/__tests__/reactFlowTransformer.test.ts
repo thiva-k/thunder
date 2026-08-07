@@ -2147,5 +2147,84 @@ describe('reactFlowTransformer', () => {
         expect(viewNode.prompts?.[0].action).toEqual({ref: 'action_recovery', nextNode: 'call-1'});
       });
     });
+
+    describe('Resend Action Serialization', () => {
+      const otpInput = {
+        id: 'otp-1',
+        type: ElementTypes.OtpInput,
+        category: ElementCategories.Field,
+        ref: 'otp',
+        required: true,
+      } as unknown as Element;
+
+      const verifyAction = {
+        id: 'verify-1',
+        type: ElementTypes.Action,
+        category: ElementCategories.Action,
+        eventType: ActionEventTypes.Submit,
+      } as unknown as Element;
+
+      const resendAction = {
+        id: 'resend-1',
+        type: ElementTypes.Resend,
+        category: ElementCategories.Action,
+        eventType: ActionEventTypes.Submit,
+      } as unknown as Element;
+
+      const otpBlock = {
+        id: 'block-1',
+        type: 'BLOCK',
+        category: ElementCategories.Block,
+        components: [otpInput, verifyAction, resendAction],
+      } as unknown as Element;
+
+      const buildCanvas = () => ({
+        nodes: [
+          createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [otpBlock]} as StepData),
+          createNode('verify-node', StepTypes.Execution),
+          createNode('generate-node', StepTypes.Execution),
+        ],
+        edges: [
+          createEdge(
+            'e-verify',
+            'view-1',
+            'verify-node',
+            `verify-1${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
+          ),
+          createEdge(
+            'e-resend',
+            'view-1',
+            'generate-node',
+            `resend-1${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
+          ),
+        ],
+      });
+
+      const promptsOf = (result: ReturnType<typeof transformReactFlow>) =>
+        (
+          result.nodes.find((n) => n.id === 'view-1') as unknown as {
+            prompts?: {action: {ref: string; nextNode: string}; inputs?: {identifier: string}[]}[];
+          }
+        ).prompts;
+
+      it('emits no inputs for a resend action sharing a block with a required OTP input', () => {
+        // A resend re-issues the code the OTP input is waiting for. Inheriting that required
+        // input makes the engine reject the resend for a missing `otp` and re-prompt instead.
+        const prompts = promptsOf(transformReactFlow(buildCanvas()));
+        const resendPrompt = prompts?.find((p) => p.action.ref === 'resend-1');
+
+        expect(resendPrompt).toBeDefined();
+        expect(resendPrompt?.inputs).toBeUndefined();
+        expect(resendPrompt?.action.nextNode).toBe('generate-node');
+      });
+
+      it('still gives the sibling submit action the block inputs', () => {
+        const prompts = promptsOf(transformReactFlow(buildCanvas()));
+        const verifyPrompt = prompts?.find((p) => p.action.ref === 'verify-1');
+
+        expect(verifyPrompt?.inputs).toHaveLength(1);
+        expect(verifyPrompt?.inputs?.[0].identifier).toBe('otp');
+      });
+    });
   });
 });

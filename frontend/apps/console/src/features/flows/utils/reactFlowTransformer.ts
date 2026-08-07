@@ -144,6 +144,17 @@ const STEP_TO_NODE_TYPE_MAP: Record<string, string> = {
 };
 
 /**
+ * Action element types whose prompt takes no inputs, regardless of the inputs their
+ * container block holds. The runtime validates the selected action's inputs, so an
+ * action that does not submit the surrounding form must not inherit them:
+ * - A RESEND re-issues the very code its container's input is waiting for, so
+ *   inheriting that input would block the resend on an empty field.
+ * - A RICH_TEXT link navigates rather than submitting, so one sitting inside a
+ *   credentials block would otherwise demand a username and password to fire.
+ */
+const INPUTLESS_ACTION_TYPES = new Set<string>([ElementTypes.Resend, ElementTypes.RichText]);
+
+/**
  * Set of input element types for quick lookup
  */
 const INPUT_ELEMENT_TYPES = new Set<string>([
@@ -436,12 +447,11 @@ function extractPrompts(components: Element[], nodeId: string, edges: Edge[]): F
     // Check if this component is an action
     const action = extractActionFromComponent(component);
     if (action) {
-      // This action gets the parent's inputs (all accumulated up to this point). A rich-text
-      // link navigates rather than submitting the surrounding form, so it must not inherit
-      // them: the runtime validates the selected action's inputs, and a link sitting inside a
-      // credentials block would otherwise demand a username and password before it could fire.
+      // This action gets the parent's inputs (all accumulated up to this point), unless it is
+      // one of the action types that never submits the surrounding form (see
+      // INPUTLESS_ACTION_TYPES).
       const prompt: FlowPrompt = {action};
-      if (parentInputs.length > 0 && component.type !== ElementTypes.RichText) {
+      if (parentInputs.length > 0 && !INPUTLESS_ACTION_TYPES.has(component.type)) {
         prompt.inputs = parentInputs;
       }
       prompts.push(prompt);
