@@ -97,10 +97,10 @@ ouHandle: default
 name: React SDK Sample
 description: Sample React application using ThunderID React SDK
 type: browser
-url: https://localhost:3000
+url: http://localhost:3000
 logoUrl: emoji:🛍️
-tosUri: https://localhost:3000/terms
-policyUri: https://localhost:3000/privacy
+tosUri: http://localhost:3000/terms
+policyUri: http://localhost:3000/privacy
 contacts:
   - admin@example.com
 authFlowHandle: default-flow
@@ -182,4 +182,5 @@ resource_type: server_config
 name: cors
 value:
   allowedOrigins:
+    - "http://localhost:3000"
     - "https://localhost:3000"
