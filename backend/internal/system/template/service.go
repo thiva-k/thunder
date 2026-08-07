@@ -6,6 +6,7 @@ package template
 import (
 	"context"
 	"errors"
+	"html"
 	"regexp"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -65,7 +66,9 @@ func (s *templateService) Render(
 		return nil, svcErr
 	}
 
-	replacePlaceholders := func(s string) string {
+	isHTML := tmpl.ContentType == "text/html"
+
+	replacePlaceholders := func(s string, escapeHTML bool) string {
 		return ctxPlaceholderRegex.ReplaceAllStringFunc(s, func(match string) string {
 			// Extract the key from {{ctx(key)}}
 			submatches := ctxPlaceholderRegex.FindStringSubmatch(match)
@@ -74,6 +77,9 @@ func (s *templateService) Render(
 			}
 			key := submatches[1]
 			if val, ok := data[key]; ok {
+				if escapeHTML {
+					return html.EscapeString(val)
+				}
 				return val
 			}
 			return match
@@ -81,9 +87,10 @@ func (s *templateService) Render(
 	}
 
 	rendered := &RenderedTemplate{
-		Subject: replacePlaceholders(tmpl.Subject),
-		Body:    replacePlaceholders(tmpl.Body),
-		IsHTML:  tmpl.ContentType == "text/html",
+
+		Subject: replacePlaceholders(tmpl.Subject, false),
+		Body:    replacePlaceholders(tmpl.Body, isHTML),
+		IsHTML:  isHTML,
 	}
 
 	s.logger.Debug(ctx, "Template rendered successfully",
