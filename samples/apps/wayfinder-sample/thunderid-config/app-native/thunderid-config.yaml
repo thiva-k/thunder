@@ -1328,8 +1328,6 @@ nodes:
           nextNode: consent_check
   - id: auth_assert
     type: TASK_EXECUTION
-    properties:
-      callbackType: "urn:openid:params:grant-type:ciba"
     executor:
       name: AuthAssertExecutor
     onSuccess: auth_success
@@ -1533,8 +1531,6 @@ nodes:
           nextNode: consent_check
   - id: auth_assert
     type: TASK_EXECUTION
-    properties:
-      callbackType: "urn:openid:params:grant-type:ciba"
     executor:
       name: AuthAssertExecutor
     onSuccess: auth_success
