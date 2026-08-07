@@ -76,7 +76,7 @@ const BRANCHING_OUTCOME_KEYS = ['onFailure', 'onIncomplete'] as const;
 /**
  * Shape of an executor definition read from the resource catalog
  */
-type ExecutorDefinition = {
+interface ExecutorDefinition {
   data?: {
     action?: {
       executor?: {name?: string; mode?: string};
@@ -84,7 +84,7 @@ type ExecutorDefinition = {
       onIncomplete?: string;
     };
   };
-};
+}
 
 /**
  * Builds the catalog lookup key for an executor. Mode is part of the key because the same executor
@@ -100,7 +100,7 @@ function getExecutorKey(name?: string, mode?: string): string {
  * Supporting an outcome is a property of the executor definition, not of whichever edges happened
  * to be connected when the flow was saved, so this is the authoritative source on load.
  */
-const EXECUTOR_DECLARED_OUTCOMES: Map<string, string[]> = new Map(
+const EXECUTOR_DECLARED_OUTCOMES = new Map<string, string[]>(
   (executors as ExecutorDefinition[]).map((definition: ExecutorDefinition) => {
     const action = definition.data?.action;
 
@@ -132,7 +132,7 @@ function resolveBranchingOutcomes(apiNode: FlowNode): Record<string, string> {
 
   BRANCHING_OUTCOME_KEYS.forEach((key: 'onFailure' | 'onIncomplete') => {
     if (apiNode[key] !== undefined) {
-      outcomes[key] = apiNode[key] as string;
+      outcomes[key] = apiNode[key];
     }
   });
 
