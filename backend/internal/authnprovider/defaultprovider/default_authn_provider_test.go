@@ -7,6 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"testing"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -1475,4 +1478,88 @@ func (suite *DefaultAuthnProviderTestSuite) TestEnroll_UnsupportedCredential() {
 	suite.Nil(result)
 	suite.NotNil(err)
 	suite.Equal(tidcommon.ServerErrorType, err.Type)
+}
+
+// TestDispatchKeysAreInternalCredentialTypes keeps the credentials authentication API's reject list
+// in step with what this provider dispatches on. A key dispatched here but missing from
+// InternalCredentialTypes would be selectable by any API client. The dispatch is an if chain rather
+// than a table, so both sides are read from the source and compared by constant name.
+func (suite *DefaultAuthnProviderTestSuite) TestDispatchKeysAreInternalCredentialTypes() {
+	dispatched := suite.dispatchedCredentialConstants("default_authn_provider.go",
+		"authenticateWithCredential")
+	reserved := suite.listedCredentialConstants("../common/constants.go", "InternalCredentialTypes")
+
+	for _, name := range dispatched {
+		suite.Contains(reserved, name,
+			"authnprovidercm.%s is dispatched by the default provider but is not listed in "+
+				"InternalCredentialTypes, so the credentials authentication API would accept it", name)
+	}
+}
+
+// dispatchedCredentialConstants returns the authnprovidercm constant names used to index the
+// credentials map inside the named function.
+func (suite *DefaultAuthnProviderTestSuite) dispatchedCredentialConstants(
+	filename, funcName string) []string {
+	var fn *ast.FuncDecl
+	for _, decl := range suite.parseFile(filename).Decls {
+		if decl, ok := decl.(*ast.FuncDecl); ok && decl.Name.Name == funcName {
+			fn = decl
+			break
+		}
+	}
+	suite.Require().NotNil(fn, "function %s not found in %s", funcName, filename)
+
+	var names []string
+	ast.Inspect(fn, func(node ast.Node) bool {
+		index, ok := node.(*ast.IndexExpr)
+		if !ok {
+			return true
+		}
+		if operand, ok := index.X.(*ast.Ident); !ok || operand.Name != "credentials" {
+			return true
+		}
+		if key, ok := index.Index.(*ast.SelectorExpr); ok {
+			if pkg, ok := key.X.(*ast.Ident); ok && pkg.Name == "authnprovidercm" {
+				names = append(names, key.Sel.Name)
+			}
+		}
+		return true
+	})
+	suite.Require().NotEmpty(names, "no credential dispatch keys found in %s", funcName)
+	return names
+}
+
+// listedCredentialConstants returns the constant names listed in the named []string variable.
+func (suite *DefaultAuthnProviderTestSuite) listedCredentialConstants(
+	filename, varName string) []string {
+	var names []string
+	for _, decl := range suite.parseFile(filename).Decls {
+		decl, ok := decl.(*ast.GenDecl)
+		if !ok || decl.Tok != token.VAR {
+			continue
+		}
+		for _, spec := range decl.Specs {
+			spec, ok := spec.(*ast.ValueSpec)
+			if !ok || len(spec.Names) != 1 || spec.Names[0].Name != varName ||
+				len(spec.Values) != 1 {
+				continue
+			}
+			literal, ok := spec.Values[0].(*ast.CompositeLit)
+			suite.Require().True(ok, "%s is not a composite literal", varName)
+			for _, element := range literal.Elts {
+				if element, ok := element.(*ast.Ident); ok {
+					names = append(names, element.Name)
+				}
+			}
+		}
+	}
+	suite.Require().NotEmpty(names, "variable %s not found in %s", varName, filename)
+	return names
+}
+
+// parseFile parses a source file relative to this package's directory.
+func (suite *DefaultAuthnProviderTestSuite) parseFile(filename string) *ast.File {
+	file, err := parser.ParseFile(token.NewFileSet(), filename, nil, 0)
+	suite.Require().NoError(err, "failed to parse %s", filename)
+	return file
 }

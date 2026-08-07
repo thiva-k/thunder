@@ -16,6 +16,7 @@ import (
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/thunder-id/thunderid/internal/authn/common"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/entity"
 	"github.com/thunder-id/thunderid/internal/system/log"
 )
@@ -25,7 +26,7 @@ const (
 	loggerComponentName = "PasskeyService"
 
 	// CredentialType is the credential type key that identifies passkey credentials in the provider chain.
-	CredentialType = "passkey"
+	CredentialType = authnprovidercm.CredentialTypePasskey
 )
 
 // PasskeyServiceInterface defines the interface for passkey authentication and registration operations.

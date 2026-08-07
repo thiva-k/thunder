@@ -104,7 +104,7 @@ func (m *authnProviderManager) AuthenticateUser(ctx context.Context, identifiers
 		return authUser, nil, &ErrorAuthenticationFailed
 	}
 
-	if sub, ok := credentials["sub"]; ok {
+	if sub, ok := credentials[authnprovidercm.UserAttributeSub]; ok {
 		// Temporary handling of disambiguation after a federated authentication step.
 		// Only works with Thunder's default authn provider.
 		if subStr, ok := sub.(string); !ok || subStr == "" {

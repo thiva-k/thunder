@@ -58,7 +58,7 @@ func (p *defaultAuthnProvider) InitiateAuthentication(
 	metadata *providers.AuthnMetadata,
 ) (any, *tidcommon.ServiceError) {
 	switch credentialType {
-	case passkey.CredentialType:
+	case authnprovidercm.CredentialTypePasskey:
 		// Expect initData to be a PasskeyAuthenticationStartRequest struct
 		return p.initiateAuthenticationWithPasskey(ctx, initData)
 	default:
@@ -170,7 +170,7 @@ func (p *defaultAuthnProvider) InitiateEnrollment(
 	metadata *providers.AuthnMetadata) (
 	any, *tidcommon.ServiceError) {
 	switch credentialType {
-	case passkey.CredentialType:
+	case authnprovidercm.CredentialTypePasskey:
 		// Expect initData to be a PasskeyRegistrationStartRequest struct
 		return p.initiateEnrollmentWithPasskey(ctx, initData)
 	default:
@@ -241,7 +241,7 @@ func (p *defaultAuthnProvider) enrollWithCredential(
 	ctx context.Context,
 	credentials map[string]interface{},
 ) (*authncommon.AuthnResult, *tidcommon.ServiceError) {
-	if passkeyCredential, ok := credentials[passkey.CredentialType]; ok {
+	if passkeyCredential, ok := credentials[authnprovidercm.CredentialTypePasskey]; ok {
 		return p.enrollWithPasskey(ctx, passkeyCredential)
 	}
 	return nil, p.logAndReturnServerError(ctx, "Unsupported credential type for enrollment",
@@ -357,29 +357,32 @@ func (p *defaultAuthnProvider) resolveEntityFromToken(
 	return entityResult, nil
 }
 
+// authenticateWithCredential selects the authentication mechanism by credential type. Every
+// credential type dispatched here must also appear in authnprovidercm.InternalCredentialTypes,
+// otherwise the credentials authentication API would let a client select that mechanism directly.
 func (p *defaultAuthnProvider) authenticateWithCredential(
 	ctx context.Context,
 	identifiers, credentials map[string]interface{},
 ) (*authncommon.AuthnResult, *tidcommon.ServiceError) {
-	if provisioned, ok := credentials["provisionedEntityID"]; ok {
+	if provisioned, ok := credentials[authnprovidercm.CredentialTypeProvisionedEntityID]; ok {
 		return p.authenticateForProvisioning(provisioned)
 	}
-	if passkeyCredential, ok := credentials[passkey.CredentialType]; ok {
+	if passkeyCredential, ok := credentials[authnprovidercm.CredentialTypePasskey]; ok {
 		return p.authenticateWithPasskey(ctx, passkeyCredential)
 	}
-	if otpCredential, ok := credentials["otp"]; ok {
+	if otpCredential, ok := credentials[authnprovidercm.CredentialTypeOTP]; ok {
 		return p.authenticateWithOTP(ctx, otpCredential)
 	}
-	if fedCred, ok := credentials["federated"]; ok {
+	if fedCred, ok := credentials[authnprovidercm.CredentialTypeFederated]; ok {
 		return p.authenticateWithFederated(ctx, fedCred)
 	}
-	if mlCred, ok := credentials["magiclink"]; ok {
+	if mlCred, ok := credentials[authnprovidercm.CredentialTypeMagicLink]; ok {
 		return p.authenticateWithMagicLink(ctx, mlCred)
 	}
-	if vpCred, ok := credentials["openid4vp"]; ok {
+	if vpCred, ok := credentials[authnprovidercm.CredentialTypeOpenID4VP]; ok {
 		return p.authenticateWithOpenID4VP(ctx, vpCred)
 	}
-	if userID, ok := identifiers["userID"]; ok && userID != "" {
+	if userID, ok := identifiers[authnprovidercm.UserAttributeUserID]; ok && userID != "" {
 		return p.authenticateByUserID(ctx, userID, credentials)
 	}
 	return p.authenticateByIdentifiers(ctx, identifiers, credentials)

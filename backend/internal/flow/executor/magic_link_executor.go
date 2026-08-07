@@ -13,6 +13,7 @@ import (
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/thunder-id/thunderid/internal/authn/magiclink"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
@@ -315,7 +316,7 @@ func (m *magicLinkExecutor) executeVerify(ctx *providers.NodeContext) (*provider
 	}
 
 	creds := map[string]interface{}{
-		"magiclink": map[string]interface{}{
+		authnprovidercm.CredentialTypeMagicLink: map[string]interface{}{
 			"token":            token,
 			"subjectAttribute": subjectAttribute,
 		},

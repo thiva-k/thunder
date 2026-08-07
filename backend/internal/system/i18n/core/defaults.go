@@ -343,6 +343,8 @@ var defaultMessages = map[string]string{
 	"error.authnservice.passkey_authentication_failed_description": "The passkey authentication attempt failed",
 	"error.authnservice.passkey_enrollment_failed": "Enrollment failed",
 	"error.authnservice.passkey_enrollment_failed_description": "The passkey enrollment attempt failed",
+	"error.authnservice.reserved_credential_type": "Reserved credential type",
+	"error.authnservice.reserved_credential_type_description": "The provided credentials contain a credential type that is reserved for internal use",
 	"error.authnservice.sub_claim_not_found": "user subject not found",
 	"error.authnservice.sub_claim_not_found_description": "The 'sub' claim is not found in the ID token claims",
 	"error.authnservice.user_not_found": "User not found",

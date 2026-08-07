@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/authn/common"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/error/apierror"
 )
 
@@ -254,6 +255,20 @@ func (suite *AuthenticationHandlerTestSuite) TestHandleCredentialsAuthRequestSer
 			},
 			expectedStatusCode: http.StatusBadRequest,
 			expectedErrorCode:  "CUSTOM_ERROR",
+		},
+		{
+			name: "ReservedCredentialType",
+			authRequest: map[string]interface{}{
+				"identifiers": map[string]interface{}{
+					"username": "testuser",
+				},
+				"credentials": map[string]interface{}{
+					authnprovidercm.CredentialTypeProvisionedEntityID: "user123",
+				},
+			},
+			serviceError:       &ErrorReservedCredentialType,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedErrorCode:  ErrorReservedCredentialType.Code,
 		},
 		{
 			name: "ServerError",

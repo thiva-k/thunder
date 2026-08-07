@@ -3,6 +3,10 @@
 
 package flowexec
 
+import (
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+)
+
 const (
 	defaultAuthFlowExpiry           int64 = 3600  // 60 minutes in seconds
 	defaultRegistrationFlowExpiry   int64 = 3600  // 60 minutes in seconds
@@ -10,7 +14,7 @@ const (
 	defaultRecoveryFlowExpiry       int64 = 1800  // 30 minutes in seconds
 	defaultSignOutFlowExpiry        int64 = 1800  // 30 minutes in seconds
 
-	fieldFlowSecret = "flowSecret"
+	fieldFlowSecret = authnprovidercm.CredentialTypeFlowSecret
 
 	// applicationTypePropertyKey is the InboundClient.Properties key under which the application
 	// type is stored.

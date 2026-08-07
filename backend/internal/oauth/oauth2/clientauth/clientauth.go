@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/cert"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
@@ -143,7 +144,7 @@ func authenticate(
 		providers.TokenEndpointAuthMethodClientSecretPost:
 		_, _, authnErr := authnProvider.AuthenticateUser(ctx,
 			map[string]interface{}{"clientId": clientID},
-			map[string]interface{}{"clientSecret": clientSecret},
+			map[string]interface{}{authnprovidercm.CredentialTypeClientSecret: clientSecret},
 			nil, nil, providers.AuthUser{})
 		if authnErr != nil {
 			logger.Debug(ctx, "Client secret authentication failed",

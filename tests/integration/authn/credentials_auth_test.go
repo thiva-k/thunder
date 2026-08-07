@@ -1006,6 +1006,68 @@ func (suite *CredentialsAuthTestSuite) TestAuthenticateWithExistingAssertionEmpt
 	suite.Equal("AAL1", aal, "Single-factor authentication should result in AAL1")
 }
 
+// TestAuthenticateWithProvisionedEntityIDRejected verifies the authentication bypass is closed for a
+// real user ID. The provisionedEntityID credential type performs no verification at all, so before
+// the reject list this returned 200 with the user's identity and a signed assertion.
+func (suite *CredentialsAuthTestSuite) TestAuthenticateWithProvisionedEntityIDRejected() {
+	authRequest := map[string]interface{}{
+		"identifiers": map[string]interface{}{
+			"username": "credtest_user1",
+		},
+		"credentials": map[string]interface{}{
+			"provisionedEntityID": suite.users["username_password"],
+		},
+	}
+
+	response, statusCode, err := suite.sendAuthRequest(authRequest)
+	suite.Require().NoError(err, "Failed to send authenticate request")
+	suite.Equal(http.StatusBadRequest, statusCode, "Expected status 400 for a reserved credential type")
+	suite.Empty(response.ID, "Rejected request should not resolve a user")
+	suite.Empty(response.Assertion, "Rejected request should not mint an assertion")
+}
+
+// TestAuthenticateWithReservedCredentialTypesRejected verifies every reserved credential type is
+// rejected on the credentials API. The guard matches on key presence, so the values need not be
+// valid payloads. These names mirror InternalCredentialTypes and SystemCredentialTypes in the
+// backend's authnprovider/common package, which this module cannot import.
+func (suite *CredentialsAuthTestSuite) TestAuthenticateWithReservedCredentialTypesRejected() {
+	reservedTypes := []string{
+		"provisionedEntityID", "passkey", "otp", "federated", "magiclink", "openid4vp",
+		"sub", "clientSecret", "flowSecret",
+	}
+
+	for _, reserved := range reservedTypes {
+		suite.Run(reserved, func() {
+			suite.assertReservedCredentialTypeRejected(map[string]interface{}{
+				reserved: "attacker-supplied-value",
+			})
+		})
+	}
+
+	// The guard runs before authentication, so a reserved credential type cannot be smuggled in
+	// beside a valid one.
+	suite.Run("alongside a valid password", func() {
+		suite.assertReservedCredentialTypeRejected(map[string]interface{}{
+			"password":            "TestPassword123!",
+			"provisionedEntityID": suite.users["username_password"],
+		})
+	})
+}
+
+// assertReservedCredentialTypeRejected asserts the credentials API rejects the given credentials.
+func (suite *CredentialsAuthTestSuite) assertReservedCredentialTypeRejected(
+	credentials map[string]interface{}) {
+	errorResp, statusCode, err := suite.sendAuthRequestExpectingError(map[string]interface{}{
+		"identifiers": map[string]interface{}{
+			"username": "credtest_user1",
+		},
+		"credentials": credentials,
+	})
+	suite.Require().NoError(err, "Failed to send authenticate request")
+	suite.Equal(http.StatusBadRequest, statusCode, "Expected status 400 for a reserved credential type")
+	suite.Equal("AUTH-CRED-1005", errorResp.Code, "Expected error code AUTH-CRED-1005")
+}
+
 func (suite *CredentialsAuthTestSuite) sendAuthRequest(authRequest map[string]interface{}) (
 	*testutils.AuthenticationResponse, int, error) {
 	requestJSON, err := json.Marshal(authRequest)
