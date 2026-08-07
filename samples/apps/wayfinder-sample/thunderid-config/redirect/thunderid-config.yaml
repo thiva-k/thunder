@@ -1971,3 +1971,11 @@ name: cors
 value:
   allowedOrigins:
     - "http://localhost:5173"
+
+---
+resource_type: server_config
+# Activates the Wayfinder staff onboarding flow.
+name: flow
+value:
+  userOnboardingFlow:
+    defaultHandle: wayfinder-onboarding-flow
