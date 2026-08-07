@@ -51,6 +51,8 @@ func newAllowAllAuthz(t *testing.T) sysauthz.SystemAuthorizationServiceInterface
 		Return(true, (*tidcommon.ServiceError)(nil)).Maybe()
 	mockAuthz.On("GetAccessibleResources", mock.Anything, mock.Anything, security.ResourceTypeOU).
 		Return(&sysauthz.AccessibleResources{AllAllowed: true}, (*tidcommon.ServiceError)(nil)).Maybe()
+	mockAuthz.On("CanGrantMembership", mock.Anything, mock.Anything, mock.Anything).
+		Return((*tidcommon.ServiceError)(nil)).Maybe()
 	return mockAuthz
 }
 
@@ -61,6 +63,8 @@ func newAuthzError(t *testing.T) sysauthz.SystemAuthorizationServiceInterface {
 		Return(false, &tidcommon.InternalServerError).Maybe()
 	mockAuthz.On("GetAccessibleResources", mock.Anything, mock.Anything, security.ResourceTypeOU).
 		Return((*sysauthz.AccessibleResources)(nil), &tidcommon.InternalServerError).Maybe()
+	mockAuthz.On("CanGrantMembership", mock.Anything, mock.Anything, mock.Anything).
+		Return(&tidcommon.InternalServerError).Maybe()
 	return mockAuthz
 }
 
@@ -2628,6 +2632,9 @@ func TestUpdateGroupMembers_OUValidationFailure(t *testing.T) {
 
 	authzSvcMock.On("IsActionAllowed", mock.Anything, security.ActionUpdateGroup, mock.Anything).
 		Return(true, (*tidcommon.ServiceError)(nil)).Once()
+
+	authzSvcMock.On("CanGrantMembership", mock.Anything, sysauthz.PrincipalTypeGroup, "group1").
+		Return((*tidcommon.ServiceError)(nil)).Once()
 
 	entitySvcMock.On("GetEntitiesByIDs", mock.Anything, []string{"user-1"}).
 		Return([]providers.Entity{

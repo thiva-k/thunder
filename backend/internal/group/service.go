@@ -43,6 +43,10 @@ type GroupServiceInterface interface {
 	GetGroupMembers(ctx context.Context, groupID string, limit, offset int, includeDisplay bool) (
 		*MemberListResponse, *tidcommon.ServiceError)
 	ValidateGroupIDs(ctx context.Context, groupIDs []string) *tidcommon.ServiceError
+	// GetTransitiveAncestorGroups returns the IDs of every group containing the given group,
+	// directly or through nesting, excluding the group itself. It performs no authorization check
+	// of its own: the authorization layer calls it, so gating it would be circular.
+	GetTransitiveAncestorGroups(ctx context.Context, groupID string) ([]string, *tidcommon.ServiceError)
 	GetGroupsByIDs(ctx context.Context, groupIDs []string) (map[string]*Group, *tidcommon.ServiceError)
 	AddGroupMembers(ctx context.Context, groupID string, members []Member) (*Group, *tidcommon.ServiceError)
 	RemoveGroupMembers(ctx context.Context, groupID string, members []Member) (*Group, *tidcommon.ServiceError)
@@ -846,6 +850,14 @@ func (gs *groupService) modifyGroupMembers(
 		return nil, svcErr
 	}
 
+	// Membership conveys every permission the group confers, including through its ancestors.
+	// Removal carries the same requirement.
+	if svcErr := gs.authzService.CanGrantMembership(
+		ctx, sysauthz.PrincipalTypeGroup, groupID,
+	); svcErr != nil {
+		return nil, svcErr
+	}
+
 	if svcErr := gs.validateEntityMembers(ctx, members, security.ActionUpdateGroup); svcErr != nil {
 		return nil, svcErr
 	}
@@ -886,6 +898,15 @@ func (gs *groupService) modifyGroupMembers(
 		); err != nil {
 			capturedSvcErr = err
 			return errors.New("rollback for unauthorized access")
+		}
+
+		// Re-evaluated inside the transaction, as the access check above is, since the group's
+		// assignments may change after the earlier check.
+		if svcErr := gs.authzService.CanGrantMembership(
+			txCtx, sysauthz.PrincipalTypeGroup, groupID,
+		); svcErr != nil {
+			capturedSvcErr = svcErr
+			return errors.New("rollback for disallowed grant")
 		}
 
 		if err := storeOp(txCtx, groupID, members); err != nil {
@@ -1283,6 +1304,28 @@ func validatePaginationParams(limit, offset int) *tidcommon.ServiceError {
 		return &ErrorInvalidOffset
 	}
 	return nil
+}
+
+// GetTransitiveAncestorGroups returns the IDs of every group containing the given group, directly
+// or through nesting. A failure is surfaced as an error, never an empty list, since callers read
+// an empty ancestor set as "confers nothing".
+func (gs *groupService) GetTransitiveAncestorGroups(
+	ctx context.Context, groupID string,
+) ([]string, *tidcommon.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+
+	if groupID == "" {
+		return nil, &ErrorMissingGroupID
+	}
+
+	ancestors, err := resolveTransitiveGroupAncestors(ctx, gs.groupStore, groupID)
+	if err != nil {
+		logger.Error(ctx, "Failed to resolve transitive ancestor groups",
+			log.String("groupID", groupID), log.Error(err))
+		return nil, &tidcommon.InternalServerError
+	}
+
+	return ancestors, nil
 }
 
 // checkGroupAccess performs an authorization check on the group resource against the current caller.

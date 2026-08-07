@@ -198,7 +198,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	exporters = append(exporters, resourceExporter)
 
 	roleService, roleAssignmentService, ouRoleResolver, roleExporter, err := role.Initialize(
-		mux, entityService, groupService, ouService, resourceService, entityTypeService,
+		mux, entityService, groupService, ouService, resourceService, entityTypeService, ouAuthzService,
 	)
 	fatalOnError(ctx, logger, err, "Failed to initialize RoleService")
 	exporters = append(exporters, roleExporter)
@@ -207,6 +207,12 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	ouService.SetOUUserResolver(ouUserResolver)
 	ouService.SetOUGroupResolver(ouGroupResolver)
 	ouService.SetOURoleResolver(ouRoleResolver)
+
+	// Complete the two-phase initialization of the privilege-escalation guard. The resolver spans
+	// roles, groups, and entities, so it can only be built once all three are ready. Until it is
+	// injected the guard fails closed, so this must not be skipped.
+	ouAuthzService.SetPermissionResolver(
+		role.NewEffectivePermissionResolver(roleService, groupService, entityService))
 
 	authZService := authz.Initialize(roleService)
 

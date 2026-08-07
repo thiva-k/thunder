@@ -43,6 +43,10 @@ type roleStoreInterface interface {
 	GetAuthorizedPermissionsByResourceServer(
 		ctx context.Context, entityID string, groupIDs []string, resourceServerID string,
 		requestedPermissions []string) ([]string, error)
+	// GetAllPermissionsForAssignees returns every permission the entity and/or groups hold through
+	// their assigned roles, grouped by resource server. It takes no filters: it enumerates.
+	GetAllPermissionsForAssignees(
+		ctx context.Context, entityID string, groupIDs []string) ([]ResourcePermissions, error)
 	GetUserRoles(ctx context.Context, entityID string, groupIDs []string) ([]string, error)
 	// GetEntityRoleIDs returns the set of role IDs assigned to the entity directly or via
 	// group membership. Unlike GetUserRoles this does not require the role to exist in the
@@ -585,6 +589,47 @@ func (s *roleStore) CheckRoleNameExistsExcludingID(
 
 // GetAuthorizedPermissionsByResourceServer retrieves the permissions that an entity is authorized for based on
 // their direct role assignments and group memberships, scoped to a resource server when provided.
+// GetAllPermissionsForAssignees returns every permission granted to the entity and/or groups by
+// their assigned database-backed roles, grouped by resource server.
+func (s *roleStore) GetAllPermissionsForAssignees(
+	ctx context.Context, entityID string, groupIDs []string,
+) ([]ResourcePermissions, error) {
+	if entityID == "" && len(groupIDs) == 0 {
+		return []ResourcePermissions{}, nil
+	}
+
+	dbClient, err := s.getConfigDBClient()
+	if err != nil {
+		return nil, err
+	}
+
+	if groupIDs == nil {
+		groupIDs = []string{}
+	}
+
+	query, args := buildAllPermissionsForAssigneesQuery(entityID, groupIDs, s.deploymentID)
+
+	results, err := dbClient.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all permissions for assignees: %w", err)
+	}
+
+	byResourceServer := make(map[string][]string)
+	for _, row := range results {
+		resourceServerID, ok := row["resource_server_id"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse resource_server_id as string")
+		}
+		permission, ok := row["permission"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse permission as string")
+		}
+		byResourceServer[resourceServerID] = append(byResourceServer[resourceServerID], permission)
+	}
+
+	return resourcePermissionsFromMap(byResourceServer), nil
+}
+
 func (s *roleStore) GetAuthorizedPermissionsByResourceServer(
 	ctx context.Context,
 	entityID string,
