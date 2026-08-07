@@ -248,9 +248,19 @@ type OAuthConfig struct {
 	AllowedResponseTypes []string `yaml:"allowed_response_types" json:"allowed_response_types"`
 	// AllowedAuthMethods lists allowed client token endpoint auth methods
 	AllowedAuthMethods []string `yaml:"allowed_auth_methods" json:"allowed_auth_methods"`
+	// SendServerErrorsToClient controls whether a flow failure that maps to the OAuth
+	// server_error code is reported to the client. Denials (access_denied) are always
+	// reported and are not affected. Nil means unset; the default lives in default.json.
+	SendServerErrorsToClient *bool `yaml:"send_server_errors_to_client" json:"send_server_errors_to_client"`
 
 	TokenRevocation OAuthTokenRevocationConfig `yaml:"token_revocation" json:"token_revocation"`
 	Logout          LogoutConfig               `yaml:"logout" json:"logout"`
+}
+
+// SendServerErrorsToClientEnabled reports whether server errors reach the client, defaulting to
+// false when unset so that a missing key does not disclose an internal failure to the client.
+func (c OAuthConfig) SendServerErrorsToClientEnabled() bool {
+	return c.SendServerErrorsToClient != nil && *c.SendServerErrorsToClient
 }
 
 // OAuthTokenRevocationConfig holds the configuration details for the token revocation feature

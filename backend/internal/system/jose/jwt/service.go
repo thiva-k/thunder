@@ -161,12 +161,14 @@ func (js *jwtService) GenerateJWT(
 	}
 
 	defaultClaims := map[string]interface{}{
-		"sub": sub,
 		"iss": tokenIssuer,
 		"exp": expirationTime,
 		"iat": iat.Unix(),
 		"nbf": iat.Unix(),
 		"jti": jti,
+	}
+	if sub != "" {
+		defaultClaims["sub"] = sub
 	}
 
 	payload := make(map[string]interface{}, len(claims)+len(defaultClaims))

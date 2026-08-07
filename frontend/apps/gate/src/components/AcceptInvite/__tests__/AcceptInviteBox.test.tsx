@@ -56,6 +56,16 @@ const render = (ui: React.ReactElement) => {
   return testRender(<DesignContext.Provider value={designValue}>{ui}</DesignContext.Provider>);
 };
 
+// Mock react-i18next so a test can make a specific message key resolve to a translation, the way a
+// deployment-supplied translation bundle does. Keys with no entry fall back to the caller's default
+// value, matching the untranslated behavior the other tests rely on.
+const {mockTranslations} = vi.hoisted(() => ({mockTranslations: {} as Record<string, string>}));
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, defaultValue?: string) => mockTranslations[key] ?? defaultValue ?? key,
+  }),
+}));
+
 // Mock useTemplateLiteralResolver
 vi.mock('@thunderid/hooks', () => ({
   useTemplateLiteralResolver: () => ({
@@ -1621,6 +1631,107 @@ describe('AcceptInviteBox', () => {
       render(<AcceptInviteBox />);
 
       capturedOnFlowChange?.({flowStatus: 'INCOMPLETE', assertion: 'test-assertion'});
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('relays the errorAssertion in the shared assertion field when the flow fails', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      render(<AcceptInviteBox />);
+
+      capturedOnFlowChange?.({
+        flowStatus: 'ERROR',
+        errorAssertion: 'test-error-assertion',
+        data: {additionalData: {callbackType: 'urn:openid:params:grant-type:ciba'}},
+      });
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      const callBody = JSON.parse((mockFetch.mock.calls[0][1] as {body: string}).body) as {
+        authId?: string;
+        assertion?: string;
+        errorAssertion?: string;
+        type?: string;
+      };
+      expect(callBody.authId).toBe('ciba-req-123');
+      // Success and failure assertions share one field; the backend tells them apart by their claims.
+      expect(callBody.assertion).toBe('test-error-assertion');
+      expect(callBody.errorAssertion).toBeUndefined();
+      expect(callBody.type).toBe('urn:openid:params:grant-type:ciba');
+    });
+
+    it('relays the errorAssertion when the failure carries a translatable message key', async () => {
+      mockTranslations['error.flowexecservice.flow_failed'] = 'Localized flow error';
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      render(<AcceptInviteBox />);
+
+      capturedOnFlowChange?.({
+        flowStatus: 'ERROR',
+        errorAssertion: 'test-error-assertion',
+        error: {
+          code: 'FEE-60001',
+          message: {key: 'error.flowexecservice.flow_failed', defaultValue: 'Flow error'},
+        },
+      });
+
+      // The localized message is displayed, and the failure still reaches the waiting OAuth request.
+      expect(await screen.findByText('Localized flow error')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      const callBody = JSON.parse((mockFetch.mock.calls[0][1] as {body: string}).body) as {
+        assertion?: string;
+        authId?: string;
+      };
+      expect(callBody.authId).toBe('ciba-req-123');
+      expect(callBody.assertion).toBe('test-error-assertion');
+
+      delete mockTranslations['error.flowexecservice.flow_failed'];
+    });
+
+    it('redirects when the failure callback returns a redirect_uri', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            redirect_uri: 'https://client.example.com/callback?error=access_denied&state=xyz',
+          }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+      const assignSpy = vi.fn();
+      Object.defineProperty(window, 'location', {value: {href: ''}, writable: true});
+      Object.defineProperty(window.location, 'href', {set: assignSpy, configurable: true});
+
+      render(<AcceptInviteBox />);
+
+      capturedOnFlowChange?.({flowStatus: 'ERROR', errorAssertion: 'test-error-assertion'});
+
+      await waitFor(() => {
+        expect(assignSpy).toHaveBeenCalledWith('https://client.example.com/callback?error=access_denied&state=xyz');
+      });
+    });
+
+    it('does not call callback when the failed flow carries no errorAssertion', async () => {
+      const mockFetch = vi.fn();
+      vi.stubGlobal('fetch', mockFetch);
+
+      render(<AcceptInviteBox />);
+
+      capturedOnFlowChange?.({flowStatus: 'ERROR'});
 
       await new Promise((r) => setTimeout(r, 50));
       expect(mockFetch).not.toHaveBeenCalled();

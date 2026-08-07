@@ -302,3 +302,26 @@ func (suite *ValidateTestSuite) TestCORSConfig_Validate() {
 		assert.Error(t, cors.Validate(origins))
 	})
 }
+
+// ----- OAuthConfig.SendServerErrorsToClientEnabled -----
+
+// TestOAuthConfig_SendServerErrorsToClientEnabled tests the behavior of the SendServerErrorsToClientEnabled method.
+func (suite *ValidateTestSuite) TestOAuthConfig_SendServerErrorsToClientEnabled() {
+	enabled, disabled := true, false
+	tests := []struct {
+		name     string
+		value    *bool
+		expected bool
+	}{
+		{"UnsetDefaultsToSuppressing", nil, false},
+		{"ExplicitTrue", &enabled, true},
+		{"ExplicitFalse", &disabled, false},
+	}
+
+	for _, tt := range tests {
+		suite.T().Run(tt.name, func(t *testing.T) {
+			c := OAuthConfig{SendServerErrorsToClient: tt.value}
+			assert.Equal(t, tt.expected, c.SendServerErrorsToClientEnabled())
+		})
+	}
+}

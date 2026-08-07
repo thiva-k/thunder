@@ -147,6 +147,11 @@ func (h *cibaGrantHandler) HandleGrant(ctx context.Context, tokenRequest *model.
 			Error:            constants.ErrorAccessDenied,
 			ErrorDescription: "The user denied the authentication request",
 		}
+	case ciba.CIBAStateFailed:
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorServerError,
+			ErrorDescription: "Authentication could not be completed due to a server error",
+		}
 	case ciba.CIBAStateConsumed:
 		return nil, &model.ErrorResponse{
 			Error:            constants.ErrorInvalidGrant,

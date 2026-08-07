@@ -412,6 +412,8 @@ configuration:
     dcr:
       enabled: true
       insecure: false
+    # Report an authentication flow failure that maps to the OAuth server_error code to the client.
+    sendServerErrorsToClient: false
     # Client token endpoint auth methods allowed during registration.
     allowedAuthMethods:
       - "client_secret_basic"

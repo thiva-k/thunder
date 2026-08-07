@@ -378,6 +378,12 @@ components:
           example: "ERROR"
         error:
           $ref: '#/components/schemas/Error'
+        errorAssertion:
+          type: string
+          description: |
+            Optionally returned signed JWT error assertion. It carries the flow error type and description bound to 
+            that authorization request.
+          example: "<jwt_token>"
 
     Data:
       type: object
@@ -555,6 +561,12 @@ components:
           $ref: '#/components/schemas/I18nMessage'
         description:
           $ref: '#/components/schemas/I18nMessage'
+        errorAssertion:
+          type: string
+          description: |
+            Optionally returned signed JWT error assertion. It carries the flow error type and description bound to 
+            that authorization request.
+          example: "<jwt_token>"
 
     I18nMessage:
       type: object

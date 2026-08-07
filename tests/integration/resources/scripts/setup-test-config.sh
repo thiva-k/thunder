@@ -123,6 +123,7 @@ server_config:
 
 oauth:
   allow_wildcard_redirect_uri: true
+  send_server_errors_to_client: true
   auth_class:
     amrs:
       - PWD
