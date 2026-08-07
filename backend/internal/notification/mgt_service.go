@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -31,6 +32,8 @@ type NotificationSenderMgtSvcInterface interface {
 	UpdateSender(ctx context.Context, id string, sender common.NotificationSenderDTO) (*common.NotificationSenderDTO,
 		*tidcommon.ServiceError)
 	DeleteSender(ctx context.Context, id string) *tidcommon.ServiceError
+	GetSenderUsages(ctx context.Context, id string) (*resourcedependency.DependenciesResponse,
+		*tidcommon.ServiceError)
 	SetDependencyRegistry(r resourcedependency.Registry)
 }
 
@@ -316,6 +319,47 @@ func (s *notificationSenderMgtService) DeleteSender(ctx context.Context, id stri
 // provider services are initialized to avoid a cyclic import.
 func (s *notificationSenderMgtService) SetDependencyRegistry(r resourcedependency.Registry) {
 	s.dependencyRegistry = r
+}
+
+// GetSenderUsages returns the resources that reference this notification sender, such as flows that
+// use it. It is informational — it drives the pre-delete confirmation dialog and does not gate
+// deletion on the server (deletion is gated separately by ensureNoBlockingDependencies).
+func (s *notificationSenderMgtService) GetSenderUsages(
+	ctx context.Context, id string,
+) (*resourcedependency.DependenciesResponse, *tidcommon.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "NotificationSenderMgtService"))
+
+	if strings.TrimSpace(id) == "" {
+		return nil, &ErrorInvalidSenderID
+	}
+
+	sender, err := s.notificationStore.getSenderByID(ctx, id)
+	if err != nil {
+		logger.Error(ctx, "Failed to retrieve notification sender", log.String("id", id), log.Error(err))
+		return nil, &tidcommon.InternalServerError
+	}
+	if sender == nil {
+		return nil, &ErrorSenderNotFound
+	}
+
+	if s.dependencyRegistry == nil {
+		logger.Warn(ctx, "Dependency registry not set; returning unknown dependencies", log.String("id", id))
+		return &resourcedependency.DependenciesResponse{
+			TotalResults: nil,
+			Count:        0,
+			Summary:      nil,
+			Usages:       []resourcedependency.ResourceDependency{},
+		}, nil
+	}
+
+	result, depErr := s.dependencyRegistry.GetDependencies(
+		ctx, resourcedependency.ResourceTypeNotificationSender, id)
+	if depErr != nil {
+		logger.Error(ctx, "Failed to get notification sender usages", log.Error(depErr), log.String("id", id))
+		return nil, &tidcommon.InternalServerError
+	}
+
+	return result, nil
 }
 
 // ensureNoBlockingDependencies refuses deletion when other resources depend on the notification

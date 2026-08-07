@@ -21,6 +21,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -137,6 +138,16 @@ func (s *InitTestSuite) TestRouteTable() {
 	s.mockNotif.On("DeleteSender", mock.Anything, "sg-1").
 		Return((*tidcommon.ServiceError)(nil))
 
+	emptyUsages := &resourcedependency.DependenciesResponse{
+		Usages: []resourcedependency.ResourceDependency{},
+	}
+	s.mockIDP.On("GetIDPUsages", mock.Anything, "gh-1").
+		Return(emptyUsages, (*tidcommon.ServiceError)(nil))
+	s.mockNotif.On("GetSenderUsages", mock.Anything, "tw-1").
+		Return(emptyUsages, (*tidcommon.ServiceError)(nil))
+	s.mockNotif.On("GetSenderUsages", mock.Anything, "sg-1").
+		Return(emptyUsages, (*tidcommon.ServiceError)(nil))
+
 	body, _ := json.Marshal(githubConnectionRequest{
 		Name: "GH", ClientID: "c", ClientSecret: "s", RedirectURI: "https://app/cb",
 	})
@@ -161,6 +172,8 @@ func (s *InitTestSuite) TestRouteTable() {
 		{http.MethodPut, "/connections/github/gh-1", body, http.StatusOK},
 		{http.MethodDelete, "/connections/github/gh-1", nil, http.StatusNoContent},
 		{http.MethodOptions, "/connections/github/gh-1", nil, http.StatusNoContent},
+		{http.MethodGet, "/connections/github/gh-1/usages", nil, http.StatusOK},
+		{http.MethodOptions, "/connections/github/gh-1/usages", nil, http.StatusNoContent},
 		{http.MethodPost, "/connections/twilio", twilioBody, http.StatusCreated},
 		{http.MethodGet, "/connections/twilio", nil, http.StatusOK},
 		{http.MethodOptions, "/connections/twilio", nil, http.StatusNoContent},
@@ -168,6 +181,8 @@ func (s *InitTestSuite) TestRouteTable() {
 		{http.MethodPut, "/connections/twilio/tw-1", twilioBody, http.StatusOK},
 		{http.MethodDelete, "/connections/twilio/tw-1", nil, http.StatusNoContent},
 		{http.MethodOptions, "/connections/twilio/tw-1", nil, http.StatusNoContent},
+		{http.MethodGet, "/connections/twilio/tw-1/usages", nil, http.StatusOK},
+		{http.MethodOptions, "/connections/twilio/tw-1/usages", nil, http.StatusNoContent},
 		{http.MethodPost, "/connections/sms-gateway", smsGatewayBody, http.StatusCreated},
 		{http.MethodGet, "/connections/sms-gateway", nil, http.StatusOK},
 		{http.MethodOptions, "/connections/sms-gateway", nil, http.StatusNoContent},
@@ -175,6 +190,8 @@ func (s *InitTestSuite) TestRouteTable() {
 		{http.MethodPut, "/connections/sms-gateway/sg-1", smsGatewayBody, http.StatusOK},
 		{http.MethodDelete, "/connections/sms-gateway/sg-1", nil, http.StatusNoContent},
 		{http.MethodOptions, "/connections/sms-gateway/sg-1", nil, http.StatusNoContent},
+		{http.MethodGet, "/connections/sms-gateway/sg-1/usages", nil, http.StatusOK},
+		{http.MethodOptions, "/connections/sms-gateway/sg-1/usages", nil, http.StatusNoContent},
 	}
 	for _, tc := range cases {
 		req := httptest.NewRequest(tc.method, tc.path, bytes.NewReader(tc.body))
