@@ -55,7 +55,7 @@ func Initialize(
 	runtimeStore providers.RuntimeStoreProvider,
 	transactioner providers.Transactioner,
 	cfg oauthconfig.Config,
-) error {
+) (tokenservice.TokenValidatorInterface, error) {
 	jwks.Initialize(mux, runtimeCrypto)
 	httpClient := syshttp.NewHTTPClientWithCheckRedirect(func(req *http.Request, _ []*http.Request) error {
 		return syshttp.IsSSRFSafeURL(req.URL.String())
@@ -82,7 +82,7 @@ func Initialize(
 	oauth2AuthzService, err := oauth2authz.Initialize(mux, actorProvider, resourceService,
 		jwtService, flowExecService, parService, revocationSvc, cfg, runtimeStore, transactioner)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var cibaService ciba.CIBAServiceInterface
@@ -108,5 +108,5 @@ func Initialize(
 	if cfg.OAuth.Logout.IsEnabled() {
 		oauth2logout.Initialize(mux, jwtService, actorProvider, flowExecService, runtimeStore, cfg)
 	}
-	return nil
+	return tokenValidator, nil
 }

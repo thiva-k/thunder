@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/internal/system/config"
-	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/user"
 	"github.com/thunder-id/thunderid/internal/vc/credential"
@@ -23,11 +23,14 @@ import (
 
 // Initialize wires the OpenID4VCI issuer engine and the wallet-facing endpoints.
 // credSvc is the already-initialized credential-configuration service (owned by the caller).
+// tokenValidator validates the OAuth 2.0 access token presented at the credential endpoint.
+// actorProvider resolves the wallet application behind an issuance request's access token.
 // When no signing key is configured, issuance is disabled and Initialize returns nil without error.
 func Initialize(
 	mux *http.ServeMux, cryptoProvider providers.RuntimeCryptoProvider,
-	jwtService jwt.JWTServiceInterface, userService user.UserServiceInterface,
+	tokenValidator tokenservice.TokenValidatorInterface, userService user.UserServiceInterface,
 	dpopVerifier dpop.VerifierInterface, credSvc credential.CredentialConfigurationServiceInterface,
+	actorProvider providers.ActorProvider,
 	store providers.RuntimeStoreProvider,
 ) (OpenID4VCIServiceInterface, error) {
 	runtime := config.GetServerRuntime()
@@ -88,7 +91,7 @@ func Initialize(
 		EnforceScope:         cfg.EnforceScope,
 	}, cryptoProvider, providers.KeyRef{KeyID: cfg.SigningKeyID},
 		signingKey.Algorithm, signingKey.Thumbprint, x5c,
-		newOpenID4VCIStore(store), jwtService, userService, credSvc)
+		newOpenID4VCIStore(store), tokenValidator, userService, credSvc, actorProvider)
 	if err != nil {
 		return nil, err
 	}

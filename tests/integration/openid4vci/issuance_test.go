@@ -189,10 +189,12 @@ func (ts *OpenID4VCITestSuite) TearDownSuite() {
 // createApp registers the OAuth application used to obtain user access tokens.
 func (ts *OpenID4VCITestSuite) createApp() string {
 	app := map[string]any{
-		"name":                      vciAppName,
-		"description":               "OpenID4VCI integration test app",
-		"ouId":                      ts.ouID,
-		"type":                      "fullstack",
+		"name":        vciAppName,
+		"description": "OpenID4VCI integration test app",
+		"ouId":        ts.ouID,
+		"type":        "mobile",
+		// Credential issuance is restricted to wallet applications.
+		"template":                  "wallet",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"openid4vci-test-person"},

@@ -256,8 +256,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	dpopVerifier := dpop.Initialize(oauthCfg, jti.Initialize(runtimeStoreProvider), runtimeCryptoSvc)
 
 	openid4vpSvc, openid4vpDefSvc, openid4vciCredSvc, exporters :=
-		initializeVCServices(ctx, logger, mux, runtimeCryptoSvc, configCryptoSvc, jwtService, userService,
-			ouService, dpopVerifier, runtimeStoreProvider, exporters)
+		initializeVCServices(ctx, logger, mux, runtimeCryptoSvc, configCryptoSvc, jwtService,
+			ouService, runtimeStoreProvider, exporters)
 
 	defaultProvider := defaultprovider.Initialize(entityService, passkeyService,
 		otpCoreService, magicLinkService, openid4vpSvc, federatedAuths)
@@ -469,11 +469,17 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize flow execution service")
 
 	// Initialize OAuth services.
-	err = oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
+	tokenValidator, err := oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
 		flowExecService, observabilitySvc, runtimeCryptoSvc, ouService, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
 		runtimeStoreProvider, transactioner, oauthCfg)
 	fatalOnError(ctx, logger, err, "Failed to initialize OAuth services")
+
+	// Initialized after the OAuth services because credential issuance validates the presented
+	// access token with the OAuth token validator and resolves the wallet application behind it.
+	_, err = openid4vci.Initialize(mux, runtimeCryptoSvc, tokenValidator, userService, dpopVerifier,
+		openid4vciCredSvc, actorProvider, runtimeStoreProvider)
+	fatalOnError(ctx, logger, err, "Failed to initialize OpenID4VCI issuer service")
 
 	if oauthCfg.OAuth.DCR.IsEnabled() {
 		// Register OAuth2 DCR service.
@@ -628,14 +634,14 @@ func initializeFlowCoreAndExecutor(
 	return flowFactory, execRegistry, interceptorRegistry, graphBuilder
 }
 
-// initializeVCServices initializes the OpenID4VP verifier and OpenID4VCI issuer services,
-// appending their declarative-resource exporters to exporters.
+// initializeVCServices initializes the OpenID4VP verifier and the credential-configuration
+// service, appending their declarative-resource exporters to exporters. The OpenID4VCI issuer
+// itself is initialized later, once the application service it depends on exists.
 func initializeVCServices(
 	ctx context.Context, logger *log.Logger, mux *http.ServeMux,
 	runtimeCrypto providers.RuntimeCryptoProvider, configCrypto kmprovider.ConfigCryptoProvider,
-	jwtService jwt.JWTServiceInterface, userService user.UserServiceInterface,
+	jwtService jwt.JWTServiceInterface,
 	ouService ou.OrganizationUnitServiceInterface,
-	dpopVerifier dpop.VerifierInterface,
 	runtimeStoreProvider providers.RuntimeStoreProvider,
 	exporters []declarativeresource.ResourceExporter,
 ) (openid4vp.OpenID4VPServiceInterface, presentation.PresentationDefinitionServiceInterface,
@@ -655,10 +661,6 @@ func initializeVCServices(
 	if vciCredExp != nil {
 		exporters = append(exporters, vciCredExp)
 	}
-
-	_, err = openid4vci.Initialize(mux, runtimeCrypto, jwtService, userService, dpopVerifier, openid4vciCredSvc,
-		runtimeStoreProvider)
-	fatalOnError(ctx, logger, err, "Failed to initialize OpenID4VCI issuer service")
 
 	return openid4vpSvc, openid4vpDefSvc, openid4vciCredSvc, exporters
 }
