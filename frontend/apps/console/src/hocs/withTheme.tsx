@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useConfig} from '@thunderid/contexts';
-import {DefaultTheme} from '@thunderid/design';
+import {DefaultTheme, getCspNonce} from '@thunderid/design';
 import {createOxygenTheme, OxygenUIThemeProvider, HighContrastTheme} from '@wso2/oxygen-ui';
 import type {JSX, ComponentType} from 'react';
 import Head from '../components/Head';
@@ -13,6 +13,7 @@ export default function withTheme<P extends object>(WrappedComponent: ComponentT
 
     return (
       <OxygenUIThemeProvider
+        nonce={getCspNonce()}
         themes={[
           {key: 'highContrast', label: 'High Contrast Theme', theme: HighContrastTheme},
           {key: 'default', label: 'Default Theme', theme: DefaultTheme},

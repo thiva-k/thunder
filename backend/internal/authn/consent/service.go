@@ -155,6 +155,9 @@ func (s *consentEnforcerService) RecordConsent(ctx context.Context, ouID, appID,
 	// Fill in any missing purposes as denied so incomplete submissions are treated as non-consented
 	fillMissingDecisions(sessionData, decisions)
 
+	// Push denials down the decision hierarchy so everything below reads the effective value
+	applyDecisionHierarchy(decisions)
+
 	// Build essential element lookup and check whether any essential attribute was denied
 	essentialElements := buildEssentialElementSet(sessionData)
 	hasEssentialDenial := hasEssentialDenials(decisions, essentialElements)
@@ -375,6 +378,24 @@ func fillMissingDecisions(session *consentSessionData, decisions *providers.Cons
 				Approved:    false,
 				Elements:    elements,
 			})
+		}
+	}
+}
+
+// applyDecisionHierarchy denies every purpose and element sitting under a denied level, so callers
+// can read the leaf Approved values directly instead of walking back up. Approval is not propagated
+// downwards: an approved parent leaves its children's own decisions untouched.
+func applyDecisionHierarchy(decisions *providers.ConsentDecisions) {
+	for i := range decisions.Purposes {
+		purpose := &decisions.Purposes[i]
+		if !decisions.Approved {
+			purpose.Approved = false
+		}
+		if purpose.Approved {
+			continue
+		}
+		for j := range purpose.Elements {
+			purpose.Elements[j].Approved = false
 		}
 	}
 }

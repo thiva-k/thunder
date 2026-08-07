@@ -168,10 +168,11 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize HashService")
 
 	// Initialize user type service
-	entityTypeService, entityTypeExporter, err := entitytype.Initialize(
+	entityTypeService, entityTypeExporter, agentTypeExporter, err := entitytype.Initialize(
 		mux, mcpServer, cacheManager, ouService, ouAuthzService)
 	fatalOnError(ctx, logger, err, "Failed to initialize EntityTypeService")
 	exporters = append(exporters, entityTypeExporter)
+	exporters = append(exporters, agentTypeExporter)
 
 	// Initialize entity service
 	entityService, err := entity.Initialize(cacheManager, hashService, entityTypeService, ouService)
@@ -197,7 +198,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	exporters = append(exporters, resourceExporter)
 
 	roleService, roleAssignmentService, ouRoleResolver, roleExporter, err := role.Initialize(
-		mux, entityService, groupService, ouService, resourceService, entityTypeService,
+		mux, entityService, groupService, ouService, resourceService, entityTypeService, ouAuthzService,
 	)
 	fatalOnError(ctx, logger, err, "Failed to initialize RoleService")
 	exporters = append(exporters, roleExporter)
@@ -206,6 +207,12 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	ouService.SetOUUserResolver(ouUserResolver)
 	ouService.SetOUGroupResolver(ouGroupResolver)
 	ouService.SetOURoleResolver(ouRoleResolver)
+
+	// Complete the two-phase initialization of the privilege-escalation guard. The resolver spans
+	// roles, groups, and entities, so it can only be built once all three are ready. Until it is
+	// injected the guard fails closed, so this must not be skipped.
+	ouAuthzService.SetPermissionResolver(
+		role.NewEffectivePermissionResolver(roleService, groupService, entityService))
 
 	authZService := authz.Initialize(roleService)
 
@@ -256,8 +263,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	dpopVerifier := dpop.Initialize(oauthCfg, jti.Initialize(runtimeStoreProvider), runtimeCryptoSvc)
 
 	openid4vpSvc, openid4vpDefSvc, openid4vciCredSvc, exporters :=
-		initializeVCServices(ctx, logger, mux, runtimeCryptoSvc, configCryptoSvc, jwtService, userService,
-			ouService, dpopVerifier, runtimeStoreProvider, exporters)
+		initializeVCServices(ctx, logger, mux, runtimeCryptoSvc, configCryptoSvc, jwtService,
+			ouService, runtimeStoreProvider, exporters)
 
 	defaultProvider := defaultprovider.Initialize(entityService, passkeyService,
 		otpCoreService, magicLinkService, openid4vpSvc, federatedAuths)
@@ -325,15 +332,12 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	csp.InitializeConfigReader(serverConfigService)
 
 	flowConfig := flowconfig.FromServerRuntime()
-	// The SSO session service revokes a session's token families on sign-out. The criteria revoker is
-	// built here (the OAuth engine's own revoker is created later, so it cannot be shared) and adapted
-	// to the session service's consumer interface with the sign-out reason fixed.
 	tokenFamilyRevocationTTL := time.Duration(runtime.Config.OAuth.RefreshToken.ValidityPeriod) * time.Second
-	sessionCriteriaRev := sessionCriteriaRevoker{
-		revoker: revocation.InitializeCriteriaRevoker(tokenFamilyRevocationTTL),
-	}
+	revocationEnforcer, revocationSvc := revocation.Initialize(jwtService, observabilitySvc,
+		tokenFamilyRevocationTTL, runtime.Config.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
+	sessionRevoker := sessionCriteriaRevoker{revoker: revocationSvc}
 	sessionService, sessionCfg := initSessionService(ctx, serverConfigService,
-		runtime.Config.Server.Identifier, sessionCriteriaRev, logger)
+		runtime.Config.Server.Identifier, sessionRevoker, logger)
 	flowConfig.Session = sessionCfg
 	flowFactory, execRegistry, interceptorRegistry, graphBuilder := initializeFlowCoreAndExecutor(ctx, logger,
 		cacheManager, executor.ExecutorDependencies{
@@ -362,6 +366,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 			OpenID4VPVerifierSvc:  openid4vpSvc,
 			SessionService:        sessionService,
 			ResourceService:       resourceServerProvider,
+			UserService:           userService,
+			CriteriaRevoker:       revocationSvc,
 		},
 		interceptor.InterceptorDependencies{},
 		flowConfig,
@@ -465,15 +471,21 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	attestationProvider := initAttestationProvider(ctx, logger, runtimeCryptoSvc)
 	flowExecService, err := flowexec.Initialize(mux, flowMgtService, actorProvider,
 		execRegistry, interceptorRegistry, observabilitySvc, runtimeCryptoSvc, attestationProvider,
-		graphBuilder, runtimeStoreProvider, transactioner, serverConfigService, flowConfig)
+		graphBuilder, jwtService, runtimeStoreProvider, transactioner, serverConfigService, flowConfig)
 	fatalOnError(ctx, logger, err, "Failed to initialize flow execution service")
 
 	// Initialize OAuth services.
-	err = oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
+	tokenValidator, err := oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
 		flowExecService, observabilitySvc, runtimeCryptoSvc, ouService, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
-		runtimeStoreProvider, transactioner, oauthCfg)
+		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc, oauthCfg)
 	fatalOnError(ctx, logger, err, "Failed to initialize OAuth services")
+
+	// Initialized after the OAuth services because credential issuance validates the presented
+	// access token with the OAuth token validator and resolves the wallet application behind it.
+	_, err = openid4vci.Initialize(mux, runtimeCryptoSvc, tokenValidator, userService, dpopVerifier,
+		openid4vciCredSvc, actorProvider, runtimeStoreProvider)
+	fatalOnError(ctx, logger, err, "Failed to initialize OpenID4VCI issuer service")
 
 	if oauthCfg.OAuth.DCR.IsEnabled() {
 		// Register OAuth2 DCR service.
@@ -549,8 +561,7 @@ func initSessionService(ctx context.Context, svc serverconfig.ServerConfigServic
 	return sessionService, cfg
 }
 
-// sessionCriteriaRevoker adapts the OAuth criteria revoker to the SSO session service's consumer
-// interface, fixing the revocation reason to session sign-out.
+// sessionCriteriaRevoker fixes the reason used when the session service revokes a token family.
 type sessionCriteriaRevoker struct {
 	revoker revocation.CriteriaRevokerInterface
 }
@@ -628,14 +639,14 @@ func initializeFlowCoreAndExecutor(
 	return flowFactory, execRegistry, interceptorRegistry, graphBuilder
 }
 
-// initializeVCServices initializes the OpenID4VP verifier and OpenID4VCI issuer services,
-// appending their declarative-resource exporters to exporters.
+// initializeVCServices initializes the OpenID4VP verifier and the credential-configuration
+// service, appending their declarative-resource exporters to exporters. The OpenID4VCI issuer
+// itself is initialized later, once the application service it depends on exists.
 func initializeVCServices(
 	ctx context.Context, logger *log.Logger, mux *http.ServeMux,
 	runtimeCrypto providers.RuntimeCryptoProvider, configCrypto kmprovider.ConfigCryptoProvider,
-	jwtService jwt.JWTServiceInterface, userService user.UserServiceInterface,
+	jwtService jwt.JWTServiceInterface,
 	ouService ou.OrganizationUnitServiceInterface,
-	dpopVerifier dpop.VerifierInterface,
 	runtimeStoreProvider providers.RuntimeStoreProvider,
 	exporters []declarativeresource.ResourceExporter,
 ) (openid4vp.OpenID4VPServiceInterface, presentation.PresentationDefinitionServiceInterface,
@@ -655,10 +666,6 @@ func initializeVCServices(
 	if vciCredExp != nil {
 		exporters = append(exporters, vciCredExp)
 	}
-
-	_, err = openid4vci.Initialize(mux, runtimeCrypto, jwtService, userService, dpopVerifier, openid4vciCredSvc,
-		runtimeStoreProvider)
-	fatalOnError(ctx, logger, err, "Failed to initialize OpenID4VCI issuer service")
 
 	return openid4vpSvc, openid4vpDefSvc, openid4vciCredSvc, exporters
 }

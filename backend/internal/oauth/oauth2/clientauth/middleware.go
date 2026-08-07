@@ -6,6 +6,7 @@ package clientauth
 import (
 	"net/http"
 
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/utils"
@@ -18,12 +19,15 @@ import (
 func ClientAuthMiddleware(actorProvider providers.ActorProvider,
 	authnProvider providers.AuthnProviderManager,
 	jwtService jwt.JWTServiceInterface,
-	issuer string) func(http.Handler) http.Handler {
+	jtiStore jti.JTIStoreInterface,
+	issuer string,
+	leeway int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			// Authenticate client
-			clientInfo, authErr := authenticate(ctx, r, actorProvider, authnProvider, jwtService, issuer)
+			clientInfo, authErr := authenticate(ctx, r, actorProvider, authnProvider, jwtService,
+				jtiStore, issuer, leeway)
 			if authErr != nil {
 				// If the client attempted to authenticate via the Authorization
 				// header, include WWW-Authenticate in 401 responses.

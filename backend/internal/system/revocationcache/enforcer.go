@@ -3,16 +3,17 @@
 
 package revocationcache
 
-import "context"
+import (
+	"context"
 
-// EnforcerInterface answers revocation checks for the Resource Server enforcement point. jti is the
-// token's own identifier and tokenFamilyID is its grant's token family id (tfid); a token is rejected
-// when either is on the cached deny list. Reads are served entirely from the in-memory cache, so the
-// request hot path never touches the source.
+	"github.com/thunder-id/thunderid/internal/system/security"
+)
+
+// EnforcerInterface answers revocation checks for the Resource Server enforcement point. A token is
+// rejected when its JTI, token family, or ThunderID subject is cached as revoked.
 type EnforcerInterface interface {
-	// EnsureNotRevoked returns nil when the token may proceed and errTokenRevoked when its jti or its
-	// token family id is present in the cached deny list. Empty jti and tokenFamilyID are each a no-op.
-	EnsureNotRevoked(ctx context.Context, jti, tokenFamilyID string) error
+	// EnsureNotRevoked returns nil when the token may proceed.
+	EnsureNotRevoked(ctx context.Context, identity security.RevocationIdentity) error
 }
 
 // enforcer serves revocation checks from the in-memory cache. It holds no write capability.
@@ -25,13 +26,15 @@ func newEnforcer(cache *revokedCache) *enforcer {
 	return &enforcer{cache: cache}
 }
 
-// EnsureNotRevoked returns errTokenRevoked when the token's jti or token family id is on the cached
-// deny list, nil otherwise. Empty identifiers are treated as nothing to enforce.
-func (e *enforcer) EnsureNotRevoked(_ context.Context, jti, tokenFamilyID string) error {
-	if jti != "" && e.cache.isTokenRevoked(jti) {
+// EnsureNotRevoked returns errTokenRevoked when the identity matches a cached deny-list entry.
+func (e *enforcer) EnsureNotRevoked(_ context.Context, identity security.RevocationIdentity) error {
+	if identity.JTI != "" && e.cache.isTokenRevoked(identity.JTI) {
 		return errTokenRevoked
 	}
-	if tokenFamilyID != "" && e.cache.isTokenFamilyRevoked(tokenFamilyID) {
+	if identity.TokenFamilyID != "" && e.cache.isTokenFamilyRevoked(identity.TokenFamilyID) {
+		return errTokenRevoked
+	}
+	if identity.Subject != "" && e.cache.isSubjectRevoked(identity.Subject, identity.EstablishedAt) {
 		return errTokenRevoked
 	}
 	return nil
@@ -41,4 +44,6 @@ func (e *enforcer) EnsureNotRevoked(_ context.Context, jti, tokenFamilyID string
 type noopEnforcer struct{}
 
 // EnsureNotRevoked always returns nil.
-func (noopEnforcer) EnsureNotRevoked(_ context.Context, _, _ string) error { return nil }
+func (noopEnforcer) EnsureNotRevoked(_ context.Context, _ security.RevocationIdentity) error {
+	return nil
+}

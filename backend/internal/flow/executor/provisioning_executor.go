@@ -12,6 +12,7 @@ import (
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/flow/common"
@@ -219,7 +220,7 @@ func (p *provisioningExecutor) Execute(ctx *providers.NodeContext) (*providers.E
 func (p *provisioningExecutor) authenticateProvisionedUser(ctx *providers.NodeContext, userID string,
 	execResp *providers.ExecutorResponse) {
 	credential := map[string]interface{}{
-		"provisionedEntityID": userID,
+		authnprovidercm.CredentialTypeProvisionedEntityID: userID,
 	}
 	authUser, authenticatedClaims, err := p.authnProvider.AuthenticateUser(ctx.Context, nil, credential,
 		nil, nil, execResp.AuthUser)

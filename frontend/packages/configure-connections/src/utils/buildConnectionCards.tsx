@@ -54,7 +54,14 @@ export default function buildConnectionCards(
       backendType: ConnectionTypes.OIDC,
       displayName: instance.name,
       descriptionKey: TRUSTED_IDP_DESCRIPTION_KEY,
-      logo: <ResourceAvatar variant="rounded" size={44} fallback={ConnectionConstants.DEFAULT_TRUSTED_IDP_AVATAR} />,
+      logo: (
+        <ResourceAvatar
+          transparent
+          variant="rounded"
+          size={48}
+          fallback={ConnectionConstants.DEFAULT_TRUSTED_IDP_AVATAR}
+        />
+      ),
       categories: ['trusted-idp', 'custom'],
       status: 'configured',
       comingSoon: false,

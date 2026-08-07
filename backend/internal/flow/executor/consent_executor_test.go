@@ -513,6 +513,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_NoInputs_EmptyTimeout() {
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_AllApproved_Success() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{
 				PurposeName: "app:app-123:attrs",
@@ -569,6 +570,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_AllApproved_Success
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_HTMLEscapedJSON() {
 	// Simulate the HTML-escaped JSON that SanitizeStringMap would produce
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},
@@ -659,6 +661,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_InvalidJSON() {
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_ConsentTimeout_Expired() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},
@@ -686,8 +689,119 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_ConsentTimeout_Expi
 	assert.Equal(suite.T(), ErrConsentPromptTimedOut.Code, resp.Error.Code)
 }
 
+func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_TimeoutReason_CompletesWithoutRecording() {
+	decisions := providers.ConsentDecisions{
+		Approved: false,
+		Reason:   providers.ConsentDecisionReasonTimeout,
+		Purposes: []providers.PurposeDecision{
+			{PurposeName: "attributes:test-app", Approved: false},
+		},
+	}
+	decisionsJSON, _ := json.Marshal(decisions)
+
+	ctx := buildConsentNodeContext()
+	ctx.UserInputs[userInputConsentDecisions] = string(decisionsJSON)
+
+	// The auto submission is expected to arrive after the deadline, so the expiry must be skipped
+	pastExpiry := strconv.FormatInt(time.Now().Add(-1*time.Minute).UnixMilli(), 10)
+	ctx.RuntimeData[common.RuntimeKeyStepTimeout] = pastExpiry
+	suite.setupDefaultAuthnProviderMocks()
+
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("ValidatePrerequisites", ctx, mock.AnythingOfType("*providers.ExecutorResponse"), mock.Anything).Return(true)
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("HasRequiredInputs", ctx, mock.AnythingOfType("*providers.ExecutorResponse")).Return(true)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	assert.Nil(suite.T(), resp.Error)
+
+	// Nothing is consented, and both keys must be present so auth assert knows consent ran
+	consentedAttrs, hasAttrs := resp.RuntimeData[common.RuntimeKeyConsentedAttributes]
+	assert.True(suite.T(), hasAttrs)
+	assert.Empty(suite.T(), consentedAttrs)
+	consentedPerms, hasPerms := resp.RuntimeData[common.RuntimeKeyConsentedPermissions]
+	assert.True(suite.T(), hasPerms)
+	assert.Empty(suite.T(), consentedPerms)
+
+	// A timeout is not a decision, so no consent record is created
+	assert.Empty(suite.T(), resp.RuntimeData[common.RuntimeKeyConsentID])
+	suite.mockConsentEnforcer.AssertNotCalled(suite.T(), "RecordConsent", mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_TimeoutReason_WithoutConfiguredTimeout() {
+	decisions := providers.ConsentDecisions{
+		Reason:   providers.ConsentDecisionReasonTimeout,
+		Purposes: []providers.PurposeDecision{{PurposeName: "attributes:test-app"}},
+	}
+	decisionsJSON, _ := json.Marshal(decisions)
+
+	ctx := buildConsentNodeContext()
+	ctx.UserInputs[userInputConsentDecisions] = string(decisionsJSON)
+	suite.setupDefaultAuthnProviderMocks()
+
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("ValidatePrerequisites", ctx, mock.AnythingOfType("*providers.ExecutorResponse"), mock.Anything).Return(true)
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("HasRequiredInputs", ctx, mock.AnythingOfType("*providers.ExecutorResponse")).Return(true)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	suite.mockConsentEnforcer.AssertNotCalled(suite.T(), "RecordConsent", mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_UserDeniedReason_IsRecorded() {
+	decisions := providers.ConsentDecisions{
+		Approved: false,
+		Reason:   providers.ConsentDecisionReasonUserDenied,
+		Purposes: []providers.PurposeDecision{
+			{PurposeName: "attributes:test-app", Approved: false},
+		},
+	}
+	decisionsJSON, _ := json.Marshal(decisions)
+
+	ctx := buildConsentNodeContext()
+	ctx.UserInputs[userInputConsentDecisions] = string(decisionsJSON)
+
+	futureExpiry := strconv.FormatInt(time.Now().Add(5*time.Minute).UnixMilli(), 10)
+	ctx.RuntimeData[common.RuntimeKeyStepTimeout] = futureExpiry
+	suite.setupDefaultAuthnProviderMocks()
+
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("ValidatePrerequisites", ctx, mock.AnythingOfType("*providers.ExecutorResponse"), mock.Anything).Return(true)
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("HasRequiredInputs", ctx, mock.AnythingOfType("*providers.ExecutorResponse")).Return(true)
+
+	consentResult := &providers.Consent{
+		ID:       "consent-004",
+		Purposes: []providers.ConsentPurposeItem{},
+	}
+
+	suite.mockConsentEnforcer.On("RecordConsent", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(consentResult, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+
+	// Unlike a timeout, an explicit denial is a user decision and must be persisted
+	assert.Equal(suite.T(), "consent-004", resp.RuntimeData[common.RuntimeKeyConsentID])
+	suite.mockConsentEnforcer.AssertCalled(suite.T(), "RecordConsent", mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_ConsentTimeout_NotExpired() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},
@@ -724,6 +838,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_ConsentTimeout_NotE
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_EssentialDenied() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{
 				PurposeName: "attributes:test-app",
@@ -760,6 +875,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_EssentialDenied() {
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_RecordConsent_ClientError() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},
@@ -794,6 +910,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_RecordConsent_Clien
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_RecordConsent_ServerError() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},
@@ -824,6 +941,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_RecordConsent_Serve
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_NilLoginConsentConfig() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},
@@ -859,6 +977,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_NilLoginConsentConf
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_PartialElementApproval() {
 	// Test where a purpose is approved but some elements are not approved
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{
 				PurposeName: "attributes:app-123",
@@ -911,6 +1030,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_PartialElementAppro
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_AttributeAndPermissionPurposes_AllApproved() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:app-123", Approved: true},
 			{PurposeName: "permissions:app-123", Approved: true},
@@ -967,6 +1087,7 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_AttributeAndPermiss
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_NoConsentedElements() {
 	decisions := providers.ConsentDecisions{
+		Approved: true,
 		Purposes: []providers.PurposeDecision{
 			{PurposeName: "attributes:test-app", Approved: true},
 		},

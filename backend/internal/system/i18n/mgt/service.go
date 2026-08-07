@@ -133,8 +133,8 @@ func (s *i18nService) ResolveTranslationsForKey(ctx context.Context,
 func (s *i18nService) SetTranslationOverrideForKey(ctx context.Context,
 	language string, namespace string, key string, value string) (
 	*TranslationResponse, *tidcommon.ServiceError) {
-	if err := declarativeresource.CheckDeclarativeUpdate(); err != nil {
-		return nil, err
+	if isDeclarativeModeEnabled() {
+		return nil, &declarativeresource.ErrorDeclarativeResourceUpdateOperation
 	}
 	if err := validate(language, namespace, key); err != nil {
 		return nil, err
@@ -169,8 +169,8 @@ func (s *i18nService) SetTranslationOverrideForKey(ctx context.Context,
 // entries is map[key]map[language]value.
 func (s *i18nService) SetTranslationOverridesForNamespace(
 	ctx context.Context, namespace string, entries map[string]map[string]string) *tidcommon.ServiceError {
-	if err := declarativeresource.CheckDeclarativeUpdate(); err != nil {
-		return err
+	if isDeclarativeModeEnabled() {
+		return &declarativeresource.ErrorDeclarativeResourceUpdateOperation
 	}
 	if !ValidateNamespace(namespace) {
 		return &ErrorInvalidNamespace
@@ -211,8 +211,8 @@ func (s *i18nService) SetTranslationOverridesForNamespace(
 // ClearTranslationOverrideForKey removes the custom override for a single translation.
 func (s *i18nService) ClearTranslationOverrideForKey(ctx context.Context,
 	language string, namespace string, key string) *tidcommon.ServiceError {
-	if err := declarativeresource.CheckDeclarativeDelete(); err != nil {
-		return err
+	if isDeclarativeModeEnabled() {
+		return &declarativeresource.ErrorDeclarativeResourceDeleteOperation
 	}
 	if err := validate(language, namespace, key); err != nil {
 		return err
@@ -306,8 +306,8 @@ func (s *i18nService) ResolveTranslations(ctx context.Context,
 func (s *i18nService) SetTranslationOverrides(ctx context.Context,
 	language string, translations map[string]map[string]string) (
 	*providers.LanguageTranslationsResponse, *tidcommon.ServiceError) {
-	if err := declarativeresource.CheckDeclarativeUpdate(); err != nil {
-		return nil, err
+	if isDeclarativeModeEnabled() {
+		return nil, &declarativeresource.ErrorDeclarativeResourceUpdateOperation
 	}
 	if language == "" {
 		return nil, &ErrorMissingLanguage
@@ -361,8 +361,8 @@ func (s *i18nService) SetTranslationOverrides(ctx context.Context,
 
 // ClearTranslationOverrides removes all custom overrides for a language.
 func (s *i18nService) ClearTranslationOverrides(ctx context.Context, language string) *tidcommon.ServiceError {
-	if err := declarativeresource.CheckDeclarativeDelete(); err != nil {
-		return err
+	if isDeclarativeModeEnabled() {
+		return &declarativeresource.ErrorDeclarativeResourceDeleteOperation
 	}
 	if language == "" {
 		return &ErrorMissingLanguage

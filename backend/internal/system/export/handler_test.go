@@ -56,7 +56,7 @@ func (suite *HandlerTestSuite) SetupTest() {
 	exporters := []declarativeresource.ResourceExporter{
 		application.NewApplicationExporterForTest(suite.mockAppService),
 		connection.NewConnectionExporterForTest(suite.mockIDPService, suite.mockNotificationService),
-		entitytype.NewEntityTypeExporterForTest(suite.mockEntityTypeService),
+		entitytype.NewEntityTypeExporterForTest(suite.mockEntityTypeService, entitytype.TypeCategoryUser),
 	}
 	parameterizer := newParameterizer(templatingRules{})
 	suite.exportService = newExportService(exporters, parameterizer)
@@ -80,7 +80,7 @@ func TestNewExportHandler(t *testing.T) {
 	exporters := []declarativeresource.ResourceExporter{
 		application.NewApplicationExporterForTest(mockAppService),
 		connection.NewConnectionExporterForTest(mockIDPService, mockNotificationService),
-		entitytype.NewEntityTypeExporterForTest(mockEntityTypeService),
+		entitytype.NewEntityTypeExporterForTest(mockEntityTypeService, entitytype.TypeCategoryUser),
 	}
 	parameterizer := newParameterizer(templatingRules{})
 	exportService := newExportService(exporters, parameterizer)
@@ -434,7 +434,7 @@ func setupBenchmarkTest(b *testing.B) (*exportHandler, []byte) {
 	exporters := []declarativeresource.ResourceExporter{
 		application.NewApplicationExporterForTest(mockAppService),
 		connection.NewConnectionExporterForTest(mockIDPService, mockNotificationService),
-		entitytype.NewEntityTypeExporterForTest(mockEntityTypeService),
+		entitytype.NewEntityTypeExporterForTest(mockEntityTypeService, entitytype.TypeCategoryUser),
 	}
 	parameterizer := newParameterizer(templatingRules{})
 	exportService := newExportService(exporters, parameterizer)

@@ -62,10 +62,12 @@ export default function TranslationsList(): JSX.Element {
             sx={{width: '100%'}}
             icon={
               <ResourceAvatar
+                transparent
                 variant="rounded"
                 value={toFlagEmoji(params.row.code)}
                 size={30}
                 fallback={TranslationConstants.DEFAULT_AVATAR}
+                sx={{fontSize: '1.8rem'}}
               />
             }
             primary={getDisplayNameForCode(params.row.code)}

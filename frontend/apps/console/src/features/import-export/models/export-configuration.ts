@@ -20,6 +20,10 @@ export interface ExportRequest {
    */
   userTypes?: string[];
   /**
+   * List of agent type IDs to export. Use `["*"]` to export all.
+   */
+  agentTypes?: string[];
+  /**
    * List of organization unit IDs to export. Use `["*"]` to export all.
    */
   organizationUnits?: string[];

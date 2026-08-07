@@ -111,9 +111,6 @@ func (a *authAssertExecutor) Execute(ctx *providers.NodeContext) (*providers.Exe
 
 		execResp.Status = providers.ExecComplete
 		execResp.Assertion = token
-		if callbackType, ok := ctx.NodeProperties[propertyKeyCallbackType].(string); ok && callbackType != "" {
-			execResp.AdditionalData[propertyKeyCallbackType] = callbackType
-		}
 	} else {
 		execResp.Status = providers.ExecFailure
 		execResp.Error = &ErrUserNotAuthenticated

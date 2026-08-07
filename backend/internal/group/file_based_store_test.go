@@ -496,3 +496,38 @@ func (suite *GroupFileBasedStoreTestSuite) TestGetTransitiveGroupsForEntity_NoCy
 
 // Ensure the return type satisfies entity.GroupMembershipProvider.
 var _ entitypkg.GroupMembershipProvider = (*fileBasedGroupStore)(nil)
+
+// A malformed declarative entry must fail the ancestor lookup rather than being skipped. A skipped
+// entry could be a parent, and a short ancestor list understates what membership in a group confers.
+func (suite *GroupFileBasedStoreTestSuite) TestGetDirectGroupParents_MalformedEntryFailsClosed() {
+	parent := groupDeclarativeResource{
+		ID:      "parent-grp",
+		Name:    "Parent",
+		OUID:    "ou1",
+		Members: []Member{{ID: "child-grp", Type: MemberTypeGroup}},
+	}
+	suite.Require().NoError(suite.store.GenericFileBasedStore.Create(parent.ID, &parent))
+	// Bypass the typed Create so a malformed entry lands in the store.
+	suite.Require().NoError(suite.store.GenericFileBasedStore.Create("broken-grp", "not a group"))
+
+	parents, err := suite.store.GetDirectGroupParents(context.Background(), []string{"child-grp"})
+
+	suite.Error(err, "a malformed declarative group must not be silently skipped")
+	suite.Nil(parents)
+}
+
+// The happy path must still resolve parents when every entry parses.
+func (suite *GroupFileBasedStoreTestSuite) TestGetDirectGroupParents_ResolvesWhenAllEntriesParse() {
+	parent := groupDeclarativeResource{
+		ID:      "ok-parent",
+		Name:    "Parent",
+		OUID:    "ou1",
+		Members: []Member{{ID: "ok-child", Type: MemberTypeGroup}},
+	}
+	suite.Require().NoError(suite.store.GenericFileBasedStore.Create(parent.ID, &parent))
+
+	parents, err := suite.store.GetDirectGroupParents(context.Background(), []string{"ok-child"})
+
+	suite.NoError(err)
+	suite.Contains(parents, "ok-parent")
+}

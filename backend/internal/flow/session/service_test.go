@@ -535,6 +535,100 @@ func (suite *ServiceTestSuite) TestTerminate_RevokesParticipantFamilies() {
 	revoker.AssertExpectations(suite.T())
 }
 
+// Subject-wide termination deletes sessions without enumerating token families: the caller's subject
+// criterion already covers them, so a per-application revocation here would only add redundant rows.
+// The pairing is enforced at flow-creation time, not here.
+func (suite *ServiceTestSuite) TestTerminateBySubject_DeletesAllSessionsInOneTransaction() {
+	m := &serviceMocks{
+		store: newSessionStoreMock(suite.T()),
+		tx:    transactionmock.NewTransactionerMock(suite.T()),
+	}
+	revoker := NewCriteriaRevokerMock(suite.T())
+	svc := &service{
+		store:           m.store,
+		resolver:        newResolver(m.store),
+		transactioner:   m.tx,
+		criteriaRevoker: revoker,
+		timeouts:        DefaultTimeouts(),
+		logger:          log.GetLogger(),
+	}
+
+	m.store.EXPECT().ListBySubject(mock.Anything, "user-1").Return([]Session{
+		{SessionID: "sess-1", SubjectID: "user-1"},
+		{SessionID: "sess-2", SubjectID: "user-1"},
+	}, nil)
+	// One transaction covers the revocation and every session's deletes.
+	m.tx.EXPECT().Transact(mock.Anything, mock.Anything).RunAndReturn(
+		func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }).Once()
+	for _, sessionID := range []string{"sess-1", "sess-2"} {
+		m.store.EXPECT().DeleteSession(mock.Anything, sessionID).Return(nil)
+		m.store.EXPECT().Delete(mock.Anything, sessionID).Return(nil)
+		m.store.EXPECT().DeleteBySessionID(mock.Anything, sessionID).Return(nil)
+	}
+
+	err := svc.TerminateBySubject(context.Background(), "user-1")
+
+	suite.Require().NoError(err)
+	// No token-family sweep: two sessions must not mean two revocation writes.
+	revoker.AssertNotCalled(suite.T(), "RevokeTokenFamily", mock.Anything, mock.Anything)
+	m.store.AssertNotCalled(suite.T(), "ListBySessionID", mock.Anything, mock.Anything)
+}
+
+// A failed delete rolls the whole batch back rather than leaving some sessions terminated.
+func (suite *ServiceTestSuite) TestTerminateBySubject_DeleteFailureRollsBackBatch() {
+	m := &serviceMocks{
+		store: newSessionStoreMock(suite.T()),
+		tx:    transactionmock.NewTransactionerMock(suite.T()),
+	}
+	svc := &service{
+		store:         m.store,
+		resolver:      newResolver(m.store),
+		transactioner: m.tx,
+		timeouts:      DefaultTimeouts(),
+		logger:        log.GetLogger(),
+	}
+
+	m.store.EXPECT().ListBySubject(mock.Anything, "user-1").Return([]Session{
+		{SessionID: "sess-1", SubjectID: "user-1"},
+	}, nil)
+	m.tx.EXPECT().Transact(mock.Anything, mock.Anything).RunAndReturn(
+		func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }).Once()
+	m.store.EXPECT().DeleteSession(mock.Anything, "sess-1").Return(errors.New("db down"))
+
+	err := svc.TerminateBySubject(context.Background(), "user-1")
+
+	suite.Require().Error(err)
+}
+
+// No sessions means no transaction at all.
+func (suite *ServiceTestSuite) TestTerminateBySubject_NoSessionsIsNoOp() {
+	m := &serviceMocks{
+		store: newSessionStoreMock(suite.T()),
+		tx:    transactionmock.NewTransactionerMock(suite.T()),
+	}
+	revoker := NewCriteriaRevokerMock(suite.T())
+	svc := &service{
+		store:           m.store,
+		resolver:        newResolver(m.store),
+		transactioner:   m.tx,
+		criteriaRevoker: revoker,
+		timeouts:        DefaultTimeouts(),
+		logger:          log.GetLogger(),
+	}
+
+	m.store.EXPECT().ListBySubject(mock.Anything, "user-1").Return(nil, nil)
+
+	suite.Require().NoError(svc.TerminateBySubject(context.Background(), "user-1"))
+	m.tx.AssertNotCalled(suite.T(), "Transact", mock.Anything, mock.Anything)
+}
+
+func (suite *ServiceTestSuite) TestTerminateBySubject_EmptySubjectIsNoOp() {
+	svc, m := suite.newService()
+
+	suite.Require().NoError(svc.TerminateBySubject(context.Background(), ""))
+	m.store.AssertNotCalled(suite.T(), "ListBySubject", mock.Anything, mock.Anything)
+}
+
 func (suite *ServiceTestSuite) TestTerminate_NoHandle() {
 	svc, _ := suite.newService()
 

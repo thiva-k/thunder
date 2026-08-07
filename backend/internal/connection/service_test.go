@@ -476,3 +476,36 @@ func (s *ServiceTestSuite) TestUsagesByTypeGetFails() {
 	s.Nil(result)
 	s.mockIDP.AssertNotCalled(s.T(), "GetIDPUsages", mock.Anything, mock.Anything)
 }
+
+func (s *ServiceTestSuite) TestUsagesSMSByProviderDelegates() {
+	total := 1
+	usages := &resourcedependency.DependenciesResponse{
+		TotalResults: &total,
+		Count:        1,
+		Summary:      map[string]int{"flow": 1},
+		Usages: []resourcedependency.ResourceDependency{
+			{ResourceType: "flow", ID: "flow-1", DisplayName: "SMS OTP", BehaviorOnDelete: "restrict"},
+		},
+	}
+	s.mockNotif.On("GetSender", mock.Anything, "tw-1").Return(&ncommon.NotificationSenderDTO{
+		ID: "tw-1", Type: ncommon.NotificationSenderTypeMessage, Provider: ncommon.MessageProviderTypeTwilio,
+	}, (*tidcommon.ServiceError)(nil))
+	s.mockNotif.On("GetSenderUsages", mock.Anything, "tw-1").Return(usages, (*tidcommon.ServiceError)(nil))
+
+	result, svcErr := s.svc.usagesSMSByProvider(context.Background(), ncommon.MessageProviderTypeTwilio, "tw-1")
+	s.Nil(svcErr)
+	s.Equal(usages, result)
+}
+
+// TestUsagesSMSByProviderWrongProvider verifies a sender of another provider is not exposed
+// through a vendor's usages endpoint.
+func (s *ServiceTestSuite) TestUsagesSMSByProviderWrongProvider() {
+	s.mockNotif.On("GetSender", mock.Anything, "vo-1").Return(&ncommon.NotificationSenderDTO{
+		ID: "vo-1", Type: ncommon.NotificationSenderTypeMessage, Provider: ncommon.MessageProviderTypeVonage,
+	}, (*tidcommon.ServiceError)(nil))
+
+	result, svcErr := s.svc.usagesSMSByProvider(context.Background(), ncommon.MessageProviderTypeTwilio, "vo-1")
+	s.Require().NotNil(svcErr)
+	s.Nil(result)
+	s.mockNotif.AssertNotCalled(s.T(), "GetSenderUsages", mock.Anything, mock.Anything)
+}

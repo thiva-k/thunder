@@ -48,7 +48,14 @@ func (suite *CIBAGrantHandlerTestSuite) SetupTest() {
 	suite.mockResource = resourcemock.NewResourceServiceInterfaceMock(suite.T())
 	suite.handler = newCIBAGrantHandler(suite.mockCIBAService, suite.mockTokenBuilder,
 		suite.mockAttrCacheService, suite.mockResource)
-	suite.oauthApp = &providers.OAuthClient{ClientID: "client-1"}
+	suite.oauthApp = &providers.OAuthClient{
+		ClientID: "client-1",
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name", "given_name", "family_name", "picture"},
+			"email":   {"email", "email_verified"},
+		},
+	}
 	suite.tokenReq = &model.TokenRequest{
 		GrantType: string(providers.GrantTypeCIBA),
 		ClientID:  "client-1",
@@ -192,6 +199,18 @@ func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Denied() {
 	suite.Nil(resp)
 	suite.NotNil(errResp)
 	suite.Equal(constants.ErrorAccessDenied, errResp.Error)
+}
+
+func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Failed() {
+	// A server-side flow failure surfaces as server_error, which the token endpoint maps to HTTP 500.
+	record := suite.pendingRecord()
+	record.State = ciba.CIBAStateFailed
+	suite.mockCIBAService.EXPECT().GetByAuthReqID(mock.Anything, "auth-req-1").Return(record, nil)
+
+	resp, errResp := suite.handler.HandleGrant(context.Background(), suite.tokenReq, suite.oauthApp)
+	suite.Nil(resp)
+	suite.NotNil(errResp)
+	suite.Equal(constants.ErrorServerError, errResp.Error)
 }
 
 func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Consumed() {

@@ -284,7 +284,7 @@ func (e *otpExecutor) getAuthenticatedUser(ctx *providers.NodeContext,
 	}
 
 	credentials := map[string]interface{}{
-		"otp": map[string]interface{}{
+		authnprovidercm.CredentialTypeOTP: map[string]interface{}{
 			"sessionToken": sessionToken,
 			"otp":          providedOTP,
 		},

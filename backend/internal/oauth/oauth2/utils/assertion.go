@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	flowcm "github.com/thunder-id/thunderid/internal/flow/common"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -21,6 +22,31 @@ type FlowAssertionClaims struct {
 	AttributeCacheID string
 	CompletedACR     string
 	AuthTime         time.Time
+}
+
+// FlowErrorAssertionClaims holds the claims of a flow error assertion, minted by the flow service
+// when an OAuth-initiated flow terminates in failure.
+type FlowErrorAssertionClaims struct {
+	AuthorizationRequestID string
+	ErrorType              string
+	Description            string
+}
+
+// DecodeFlowErrorAssertionClaims decodes a flow error assertion JWT. Callers must verify the
+// signature and the authorization request binding before acting on the claims.
+func DecodeFlowErrorAssertionClaims(assertion string) (FlowErrorAssertionClaims, error) {
+	claims := FlowErrorAssertionClaims{}
+
+	_, jwtPayload, err := jwt.DecodeJWT(assertion)
+	if err != nil {
+		return claims, fmt.Errorf("failed to decode the JWT token: %w", err)
+	}
+
+	claims.AuthorizationRequestID, _ = jwtPayload[flowcm.ClaimAuthorizationRequestID].(string)
+	claims.ErrorType, _ = jwtPayload[flowcm.ClaimFlowErrorType].(string)
+	claims.Description, _ = jwtPayload[flowcm.ClaimFlowErrorDescription].(string)
+
+	return claims, nil
 }
 
 // DecodeFlowAssertionClaims decodes the common flow assertion claims from a JWT string.

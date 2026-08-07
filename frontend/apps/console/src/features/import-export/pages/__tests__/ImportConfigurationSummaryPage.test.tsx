@@ -758,6 +758,7 @@ describe('ImportConfigurationSummaryPage', () => {
         translation: [{locale: 'fr-FR', namespace: 'common'}],
         user: [{type: 'customer', attributes: {name: 'Jane Doe', username: 'jane', email: 'jane@example.com'}}],
         user_type: [{name: 'Customer', handle: 'customer', allow_self_registration: true}],
+        agent_type: [{name: 'Enterprise Agent', handle: 'enterprise-agent', allow_self_registration: true}],
         agent: [
           {
             name: 'My Agent',
@@ -782,7 +783,8 @@ describe('ImportConfigurationSummaryPage', () => {
       expect(screen.getByText('OIDC')).toBeInTheDocument();
       expect(screen.getByText('SMTP')).toBeInTheDocument();
       expect(screen.getByText('customer')).toBeInTheDocument();
-      expect(screen.getByText('configureExport.labels.selfRegistration')).toBeInTheDocument();
+      expect(screen.getAllByText('configureExport.labels.selfRegistration')).toHaveLength(2);
+      expect(screen.getByText('Enterprise Agent')).toBeInTheDocument();
 
       // Handle detail lines shown when distinct from the name.
       expect(screen.getByText('login-flow')).toBeInTheDocument();
@@ -834,6 +836,7 @@ describe('ImportConfigurationSummaryPage', () => {
         flow: [{}],
         theme: [{}],
         user_type: [{}],
+        agent_type: [{}],
         translation: [{}],
         user: [{}],
         group: [{}],
@@ -844,6 +847,7 @@ describe('ImportConfigurationSummaryPage', () => {
       expect(screen.getByText('summary.fallback.flow')).toBeInTheDocument();
       expect(screen.getByText('summary.fallback.theme')).toBeInTheDocument();
       expect(screen.getByText('summary.fallback.schema')).toBeInTheDocument();
+      expect(screen.getByText('summary.fallback.agentType')).toBeInTheDocument();
       expect(screen.getByText('configureExport.fallback.unnamedTranslation')).toBeInTheDocument();
       expect(screen.getByText('summary.fallback.user')).toBeInTheDocument();
       expect(screen.getByText('configureExport.fallback.unnamedGroup')).toBeInTheDocument();

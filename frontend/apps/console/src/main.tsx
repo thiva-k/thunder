@@ -51,7 +51,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       >
         <QueryClientProvider client={queryClient}>
           <AppWithDecorators />
-          <ReactQueryDevtools initialIsOpen={false} />
+          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </QueryClientProvider>
       </LoggerProvider>
     </ConfigProvider>

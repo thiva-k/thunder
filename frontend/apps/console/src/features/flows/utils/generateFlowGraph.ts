@@ -175,25 +175,16 @@ function buildMfaChannelChain(
  * `auth_assert`, so Multi-Factor Login still layers on top of it like any other first factor.
  *
  * @param onVerified - ID of the node to continue to once the magic link is verified
- * @param onFailureNodeId - Node to fall back to when generating/sending/verifying the link fails.
- *   Defaults to the chain's own email prompt (the standalone/Magic-Link-only shape). When Magic
- *   Link runs as a second factor after Basic auth (see `Basic + Magic Link Authentication Flow` in
- *   `flows/data/templates.json`), this is the primary credentials screen instead, since that's
- *   where a user recovering from a failure needs to re-enter the flow.
- * @returns The chain's nodes, the ID of its entry node (where the "Sign in with Magic Link" button
- *   should route to for the standalone shape), and the ID of its generate step (where an
- *   already-known email can be routed straight to, skipping the manual prompt)
+ * @returns The chain's nodes. Its entry node is `magic_link_prompt_email`, where the
+ *   "Sign in with Magic Link" button routes to, and where any failure in the chain returns to.
  */
-function buildMagicLinkChain(
-  onVerified: string,
-  onFailureNodeId?: string,
-): {nodes: FlowNode[]; entryNodeId: string; generateNodeId: string} {
+function buildMagicLinkChain(onVerified: string): FlowNode[] {
   const promptId = 'magic_link_prompt_email';
   const generateId = 'magic_link_generate';
   const sendId = 'magic_link_send_email';
   const sentPromptId = 'magic_link_prompt_sent';
   const verifyId = 'magic_link_verify';
-  const failureTarget = onFailureNodeId ?? promptId;
+  const failureTarget = promptId;
 
   const nodes: FlowNode[] = [
     {
@@ -223,7 +214,7 @@ function buildMagicLinkChain(
             components: [
               {
                 id: 'input_magic_link_email',
-                ref: 'magic_link_email',
+                ref: 'email',
                 type: 'EMAIL_INPUT',
                 label: 'Email',
                 required: true,
@@ -319,7 +310,7 @@ function buildMagicLinkChain(
     },
   ];
 
-  return {nodes, entryNodeId: promptId, generateNodeId: generateId};
+  return nodes;
 }
 
 /** Horizontal gap between graph layers (stage reached from `start`), in canvas pixels. */
@@ -556,12 +547,7 @@ export default function generateFlowGraph(options: FlowGeneratorOptions): Create
   // Magic Link Block — an alternative first-factor button, routing to its own dedicated
   // email-entry screen (magic_link_prompt_email), not straight to an executor like the other
   // buttons here, since it needs its own multi-step chain (see buildMagicLinkChain).
-  //
-  // Only rendered when there's no password to pair it with. Alongside Basic auth, Magic Link
-  // instead becomes a mandatory second factor after credentials succeed (mirrors the
-  // "Basic + Magic Link Authentication Flow" template in flows/data/templates.json) — invisible
-  // on this screen, wired below in section 4 via `collect_email`.
-  if (hasMagicLink && !hasCredentialsAuth) {
+  if (hasMagicLink) {
     metaComponents.push({
       type: 'BLOCK',
       id: 'block_magic_link',
@@ -570,7 +556,7 @@ export default function generateFlowGraph(options: FlowGeneratorOptions): Create
           type: 'ACTION',
           id: 'action_magic_link',
           label: 'Sign in with Magic Link',
-          variant: hasPasskey ? 'SECONDARY' : 'PRIMARY',
+          variant: hasCredentialsAuth || hasPasskey ? 'SECONDARY' : 'PRIMARY',
           eventType: 'SUBMIT',
         },
       ],
@@ -702,9 +688,7 @@ export default function generateFlowGraph(options: FlowGeneratorOptions): Create
 
   // 4. Executor Nodes
 
-  // Credentials Auth Executor. When Magic Link is also enabled, success routes through
-  // `collect_email` (below) instead of straight to `postAuthNodeId` — Magic Link is a mandatory
-  // second factor in that combination, not an alternative.
+  // Credentials Auth Executor
   if (hasCredentialsAuth) {
     nodes.push({
       id: 'credentials_auth',
@@ -712,7 +696,7 @@ export default function generateFlowGraph(options: FlowGeneratorOptions): Create
       executor: {
         name: 'CredentialsAuthExecutor',
       },
-      onSuccess: hasMagicLink ? 'collect_email' : postAuthNodeId,
+      onSuccess: postAuthNodeId,
       onIncomplete: promptNodeId,
     });
   }
@@ -749,34 +733,7 @@ export default function generateFlowGraph(options: FlowGeneratorOptions): Create
   // Magic Link chain — built only now that postAuthNodeId is finalized, so verifying the link
   // routes into the same MFA-or-assert continuation every other first factor uses.
   if (hasMagicLink) {
-    if (hasCredentialsAuth) {
-      // Sequential second factor: try to collect the user's on-file email automatically (no
-      // prompt) once they're authenticated; only fall back to a manual prompt when it's missing.
-      // Failures anywhere in the chain return to the primary credentials screen, since that's
-      // where a user recovering from a failure re-enters this combined flow.
-      const magicLinkChain = buildMagicLinkChain(postAuthNodeId, promptNodeId);
-      nodes.push({
-        id: 'collect_email',
-        type: FlowNodeType.TASK_EXECUTION,
-        executor: {
-          name: 'AttributeCollector',
-          inputs: [
-            {
-              ref: 'input_magic_link_email',
-              identifier: 'email',
-              type: 'EMAIL_INPUT',
-              required: false,
-            },
-          ],
-        },
-        onSuccess: magicLinkChain.generateNodeId,
-        onIncomplete: magicLinkChain.entryNodeId,
-      });
-      nodes.push(...magicLinkChain.nodes);
-    } else {
-      const magicLinkChain = buildMagicLinkChain(postAuthNodeId);
-      nodes.push(...magicLinkChain.nodes);
-    }
+    nodes.push(...buildMagicLinkChain(postAuthNodeId));
   }
 
   // Google Executor

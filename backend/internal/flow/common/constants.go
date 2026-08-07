@@ -70,6 +70,8 @@ const (
 	DataStepTimeout = "stepTimeout"
 	// DataInviteLink is the key used for the invite link in the flow response additional data.
 	DataInviteLink = "inviteLink"
+	// DataCallbackType is the OAuth grant type surfaced on the terminal flow response's additional data.
+	DataCallbackType = "callbackType"
 	// DataEmailSent is the key used to indicate that an email was sent successfully in the flow response.
 	DataEmailSent = "emailSent"
 	// DataSMSSent is the key used to indicate that an SMS was sent successfully in the flow response.
@@ -84,6 +86,20 @@ const (
 	DataOpenID4VPRequestURI = "openid4vpRequestUri"
 	// DataOpenID4VPWalletURI is the openid4vp:// authorization URI for the wallet.
 	DataOpenID4VPWalletURI = "openid4vpWalletUri"
+)
+
+// Error assertion claims.
+const (
+	ClaimAuthorizationRequestID = "authorization_request_id"
+	ClaimFlowErrorType          = "flow_error_type"
+	ClaimFlowErrorDescription   = "flow_error_description"
+)
+
+// FlowErrorType defines the type of error that occurred during flow execution.
+const (
+	FlowErrorTypeServer  = "server_error"
+	FlowErrorTypeClient  = "client_error"
+	FlowErrorTypeEndUser = "end_user_error"
 )
 
 // DefaultHTTPTimeout defines the default timeout duration for HTTP requests.
@@ -119,6 +135,10 @@ const (
 	RuntimeKeyUserEligibleForProvisioning = "userEligibleForProvisioning"
 	// RuntimeKeyUserAmbiguous indicates the user exists in multiple OUs and requires disambiguation
 	RuntimeKeyUserAmbiguous = "userAmbiguous"
+	// RuntimeKeyRevocationPlan holds the trusted revocation plan an administrative flow's
+	// pre-processing node produces for the executors that follow. It travels on the engine context's
+	// cross-frame store, so it survives a CALL into another flow.
+	RuntimeKeyRevocationPlan = "revocationPlan"
 	// RuntimeKeyClientID holds the OAuth client ID for the current flow execution, if applicable.
 	RuntimeKeyClientID = "clientId"
 	// RuntimeKeyRequestedPermissions holds the space-separated permission scopes requested by the OAuth client.
@@ -200,6 +220,10 @@ const (
 	// RuntimeKeyAuthorizationRequestID holds the auth request identifier bound to the current flow
 	// execution (the OAuth authorize authId or the CIBA auth_req_id), if applicable.
 	RuntimeKeyAuthorizationRequestID = "authorizationRequestId"
+	// RuntimeKeyCallbackType holds the OAuth grant type of the initiating request, seeded by the OAuth
+	// initiator and surfaced onto the terminal flow response as DataCallbackType so the Gate/SDK routes
+	// to the correct callback handler. Absent for non-OAuth flows.
+	RuntimeKeyCallbackType = "callbackType"
 	// RuntimeKeySSOSessionPresent is the prefix of the per-checkpoint flag recording whether the
 	// SSO-Check node found a live session that already has this checkpoint's snapshot ("true") or not.
 	// It is scoped per checkpoint via SSOCheckpointKey; the paired Session node reads it to choose

@@ -50,12 +50,16 @@ vi.mock('@wso2/oxygen-ui', async () => {
 
 const mockUseGetUsers = vi.fn();
 const mockUseGetApplications = vi.fn();
+const mockUseGetGroups = vi.fn();
 vi.mock('@thunderid/configure-users', () => ({
   useGetUsers: (...args: unknown[]): unknown => mockUseGetUsers(...args),
 }));
 vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
   useGetApplications: (...args: unknown[]): unknown => mockUseGetApplications(...args),
+}));
+vi.mock('../../api/useGetGroups', () => ({
+  default: (...args: unknown[]): unknown => mockUseGetGroups(...args),
 }));
 
 describe('AddMemberDialog', () => {
@@ -86,6 +90,19 @@ describe('AddMemberDialog', () => {
         applications: [
           {id: 'a1', name: 'Orders API', description: 'Orders backend'},
           {id: 'a2', name: 'Billing API', description: 'Billing backend'},
+        ],
+      },
+      isLoading: false,
+    });
+    mockUseGetGroups.mockReturnValue({
+      data: {
+        totalResults: 3,
+        startIndex: 0,
+        count: 3,
+        groups: [
+          {id: 'g1', name: 'Engineering', ouId: 'ou1'},
+          {id: 'g2', name: 'Support', ouId: 'ou1'},
+          {id: 'g3', name: 'Finance', ouId: 'ou2'},
         ],
       },
       isLoading: false,
@@ -193,6 +210,66 @@ describe('AddMemberDialog', () => {
     await user.click(screen.getByText('Add Selected'));
 
     expect(defaultProps.onAdd).toHaveBeenCalledWith([{id: 'a1', type: 'app'}]);
+  });
+
+  it('should render groups in the grid when Groups tab is selected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AddMemberDialog {...defaultProps} />);
+
+    await user.click(screen.getByText('Groups'));
+
+    expect(screen.getByTestId('user-g1')).toBeInTheDocument();
+    expect(screen.getByTestId('user-g2')).toBeInTheDocument();
+    expect(screen.getByTestId('user-g3')).toBeInTheDocument();
+  });
+
+  it('should exclude the edited group from the groups grid', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AddMemberDialog {...defaultProps} excludeGroupId="g2" />);
+
+    await user.click(screen.getByText('Groups'));
+
+    expect(screen.queryByTestId('user-g2')).not.toBeInTheDocument();
+    expect(screen.getByTestId('user-g1')).toBeInTheDocument();
+    expect(screen.getByTestId('user-g3')).toBeInTheDocument();
+  });
+
+  it('should call onAdd with selected group members', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AddMemberDialog {...defaultProps} />);
+
+    await user.click(screen.getByText('Groups'));
+    await user.click(screen.getByTestId('checkbox-g1'));
+    await user.click(screen.getByText('Add Selected'));
+
+    expect(defaultProps.onAdd).toHaveBeenCalledWith([{id: 'g1', type: 'group'}]);
+  });
+
+  it('should show no results alert when no groups', async () => {
+    const user = userEvent.setup();
+    mockUseGetGroups.mockReturnValue({
+      data: {totalResults: 0, startIndex: 0, count: 0, groups: []},
+      isLoading: false,
+    });
+    renderWithProviders(<AddMemberDialog {...defaultProps} />);
+
+    await user.click(screen.getByText('Groups'));
+    expect(screen.getByText('No groups found')).toBeInTheDocument();
+  });
+
+  it('should show error alert when groups fetch fails', async () => {
+    const user = userEvent.setup();
+    mockUseGetGroups.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: new Error('Network error'),
+    });
+    renderWithProviders(<AddMemberDialog {...defaultProps} />);
+
+    await user.click(screen.getByText('Groups'));
+
+    expect(screen.getByText('Failed to load groups. Please try again.')).toBeInTheDocument();
+    expect(screen.queryByText('No groups found')).not.toBeInTheDocument();
   });
 
   it('should call onClose when cancel is clicked', async () => {

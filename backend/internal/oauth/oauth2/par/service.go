@@ -112,7 +112,6 @@ func (s *parService) HandlePushedAuthorizationRequest(
 
 	scope := params[oauth2const.RequestParamScope]
 	oidcScopes, nonOidcScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(scope, oauthApp.ScopeClaims)
-	oidcScopes = oauth2utils.FilterOIDCScopesByAllowedScopes(oidcScopes, oauthApp.Scopes)
 
 	// Validate up front that the request can bind to a resource server: an explicit resource must
 	// resolve, or (with no resource) either the request is OIDC-only or a default resource server is

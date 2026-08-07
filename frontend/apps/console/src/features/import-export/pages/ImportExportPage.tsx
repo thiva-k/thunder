@@ -3,17 +3,7 @@
 
 import {ExternalLink} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
-import {
-  AppBreadcrumbs,
-  Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  IconButton,
-  LinearProgress,
-  Stack,
-  Typography,
-} from '@wso2/oxygen-ui';
+import {AppBreadcrumbs, Box, Card, CardContent, IconButton, LinearProgress, Stack, Typography} from '@wso2/oxygen-ui';
 import {FileOutput, FileInput, X} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -123,34 +113,39 @@ export default function ImportExportPage(): JSX.Element {
                   }}
                 >
                   {options.map((option) => (
-                    <Card key={option.route} variant="outlined">
-                      <CardActionArea
-                        onClick={() => handleSelect(option.route)}
-                        sx={{
-                          height: '100%',
-                          border: 1,
-                          borderColor: 'divider',
-                          transition: 'all 0.2s ease-in-out',
-                          '&:hover': {
-                            borderColor: 'primary.main',
-                            bgcolor: 'action.hover',
-                          },
-                        }}
-                      >
-                        <CardContent sx={{py: 2, px: 2}}>
-                          <Stack direction="column" spacing={1.5} alignItems="flex-start">
-                            <Box sx={{color: 'text.secondary'}}>{option.icon}</Box>
-                            <Stack direction="column" spacing={0.5}>
-                              <Typography variant="subtitle1" sx={{fontWeight: 500}}>
-                                {t(option.labelKey, option.labelDefault)}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {t(option.descriptionKey, option.descriptionDefault)}
-                              </Typography>
-                            </Stack>
+                    <Card
+                      key={option.route}
+                      variant="outlined"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleSelect(option.route)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSelect(option.route);
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        borderColor: 'divider',
+                        transition: 'border-color 0.15s',
+                        '&:hover': {borderColor: 'primary.main'},
+                        '&:focus-visible': {outline: 'none', borderColor: 'primary.main'},
+                      }}
+                    >
+                      <CardContent sx={{py: 2, px: 2}}>
+                        <Stack direction="column" spacing={1.5} alignItems="flex-start">
+                          <Box sx={{color: 'text.secondary'}}>{option.icon}</Box>
+                          <Stack direction="column" spacing={0.5}>
+                            <Typography variant="subtitle1" sx={{fontWeight: 500}}>
+                              {t(option.labelKey, option.labelDefault)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {t(option.descriptionKey, option.descriptionDefault)}
+                            </Typography>
                           </Stack>
-                        </CardContent>
-                      </CardActionArea>
+                        </Stack>
+                      </CardContent>
                     </Card>
                   ))}
                 </Box>

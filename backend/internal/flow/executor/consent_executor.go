@@ -225,6 +225,16 @@ func (e *consentExecutor) handleConsentDecisions(ctx *providers.NodeContext, exe
 		return execResp, nil
 	}
 
+	// A timed out prompt is not a user decision, so nothing is recorded and nothing is consented.
+	// The expiry check below is skipped because such a submission is expected to arrive late.
+	if decisions.Reason == providers.ConsentDecisionReasonTimeout {
+		logger.Debug(ctx.Context, "Consent prompt timed out; completing without recording consent")
+		execResp.RuntimeData[common.RuntimeKeyConsentedAttributes] = ""
+		execResp.RuntimeData[common.RuntimeKeyConsentedPermissions] = ""
+		execResp.Status = providers.ExecComplete
+		return execResp, nil
+	}
+
 	// Check if the consent prompt has timed out
 	if expiresAtStr, ok := ctx.RuntimeData[common.RuntimeKeyStepTimeout]; ok && expiresAtStr != "" {
 		if expiresAt, err := strconv.ParseInt(expiresAtStr, 10, 64); err == nil {

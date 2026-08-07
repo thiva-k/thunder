@@ -43,7 +43,7 @@ export default function FlowsList(): JSX.Element {
     setSelectedFlow(null);
   };
 
-  const handleEditClick = useCallback(
+  const handleOpenClick = useCallback(
     (flow: BasicFlowDefinition): void => {
       (async (): Promise<void> => {
         await navigate(flowRoutes.flows.detail(flow.id));
@@ -106,8 +106,14 @@ export default function FlowsList(): JSX.Element {
           return (
             <ListingTable.RowActions>
               {params.row.isReadOnly ? (
-                <Tooltip title={t('common:status.readOnly', 'Read Only')}>
-                  <IconButton size="small" disableRipple sx={{cursor: 'default'}}>
+                <Tooltip title={t('common:actions.view', 'View')}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenClick(params.row);
+                    }}
+                  >
                     <Eye size={16} />
                   </IconButton>
                 </Tooltip>
@@ -118,7 +124,7 @@ export default function FlowsList(): JSX.Element {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEditClick(params.row);
+                        handleOpenClick(params.row);
                       }}
                     >
                       <Pencil size={16} />
@@ -143,7 +149,7 @@ export default function FlowsList(): JSX.Element {
         },
       },
     ],
-    [handleDeleteClick, handleEditClick, t],
+    [handleDeleteClick, handleOpenClick, t],
   );
 
   if (error) {
@@ -168,13 +174,8 @@ export default function FlowsList(): JSX.Element {
             rows={data?.flows ?? []}
             columns={columns}
             getRowId={(row): string => (row as BasicFlowDefinition).id}
-            getRowClassName={(params) =>
-              (params.row as BasicFlowDefinition).isReadOnly ? 'row-not-clickable' : 'row-clickable'
-            }
             onRowClick={(params) => {
-              if (!(params.row as BasicFlowDefinition).isReadOnly) {
-                handleEditClick(params.row as BasicFlowDefinition);
-              }
+              handleOpenClick(params.row as BasicFlowDefinition);
             }}
             initialState={{
               pagination: {
@@ -186,11 +187,8 @@ export default function FlowsList(): JSX.Element {
             localeText={dataGridLocaleText}
             autoHeight
             sx={{
-              '& .MuiDataGrid-row.row-clickable': {
+              '& .MuiDataGrid-row': {
                 cursor: 'pointer',
-              },
-              '& .MuiDataGrid-row.row-not-clickable': {
-                cursor: 'default',
               },
             }}
           />

@@ -458,6 +458,36 @@ func (suite *ConfigTestSuite) TestLogConfigOverrideToZeroValues() {
 	assert.Equal(suite.T(), boolPtr(true), base2.Log.Output.Console.Enabled, "nil override keeps the default")
 }
 
+// TestOAuthSendServerErrorsToClientOverride verifies the presence-based (pointer) merge for
+// the OAuth.SendServerErrorsToClient field:
+func (suite *ConfigTestSuite) TestOAuthSendServerErrorsToClientOverride() {
+	base := &Config{}
+	base.OAuth.SendServerErrorsToClient = boolPtr(false)
+
+	user := &Config{}
+	user.OAuth.SendServerErrorsToClient = boolPtr(true)
+
+	mergeConfigs(base, user)
+	assert.Equal(suite.T(), boolPtr(true), base.OAuth.SendServerErrorsToClient,
+		"true must override the false default")
+
+	// The reverse direction is what a plain bool could not express: a zero-valued user field is
+	// skipped by the merge, so only the pointer lets deployment.yaml turn the toggle back off.
+	base2 := &Config{}
+	base2.OAuth.SendServerErrorsToClient = boolPtr(true)
+	user2 := &Config{}
+	user2.OAuth.SendServerErrorsToClient = boolPtr(false)
+	mergeConfigs(base2, user2)
+	assert.Equal(suite.T(), boolPtr(false), base2.OAuth.SendServerErrorsToClient,
+		"explicit false must override a true base")
+
+	base3 := &Config{}
+	base3.OAuth.SendServerErrorsToClient = boolPtr(false)
+	mergeConfigs(base3, &Config{})
+	assert.Equal(suite.T(), boolPtr(false), base3.OAuth.SendServerErrorsToClient,
+		"nil override keeps the default")
+}
+
 func (suite *ConfigTestSuite) TestLoadConfigWithDefaults_ErrorCases() {
 	tempDir := suite.T().TempDir()
 

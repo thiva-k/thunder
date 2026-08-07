@@ -386,3 +386,43 @@ func (suite *RoleFileBasedStoreTestSuite) TestGetEntityRoleIDs_AlwaysEmpty() {
 		})
 	}
 }
+
+// A malformed declarative role must fail the enumeration rather than being skipped. This method
+// feeds the grant checks, where an omitted role understates what is conferred.
+func (suite *RoleFileBasedStoreTestSuite) TestGetAllPermissionsForAssignees_MalformedRoleFailsClosed() {
+	suite.seedRole(RoleWithPermissionsAndAssignments{
+		ID:   "good-role",
+		Name: "Good",
+		OUID: "ou1",
+		Permissions: []ResourcePermissions{
+			{ResourceServerID: "rs1", Permissions: []string{"system:user"}},
+		},
+		Assignments: []RoleAssignment{{ID: "user1", Type: assigneeTypeEntity}},
+	})
+	// Bypass the typed Create so a malformed entry lands in the store.
+	suite.Require().NoError(suite.store.GenericFileBasedStore.Create("broken-role", "not a role"))
+
+	result, err := suite.store.GetAllPermissionsForAssignees(context.Background(), "user1", nil)
+
+	suite.Error(err, "a malformed declarative role must not be silently skipped")
+	suite.Nil(result)
+}
+
+// The happy path must still enumerate permissions when every entry parses.
+func (suite *RoleFileBasedStoreTestSuite) TestGetAllPermissionsForAssignees_EnumeratesWhenAllEntriesParse() {
+	suite.seedRole(RoleWithPermissionsAndAssignments{
+		ID:   "ok-role",
+		Name: "Ok",
+		OUID: "ou1",
+		Permissions: []ResourcePermissions{
+			{ResourceServerID: "rs1", Permissions: []string{"system:user"}},
+		},
+		Assignments: []RoleAssignment{{ID: "user2", Type: assigneeTypeEntity}},
+	})
+
+	result, err := suite.store.GetAllPermissionsForAssignees(context.Background(), "user2", nil)
+
+	suite.NoError(err)
+	suite.Len(result, 1)
+	suite.Equal([]string{"system:user"}, result[0].Permissions)
+}

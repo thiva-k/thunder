@@ -154,6 +154,11 @@ components:
           items:
             type: string
           description: IDs of user types to export, or ["*"] for all.
+        agentTypes:
+          type: array
+          items:
+            type: string
+          description: IDs of agent types to export, or ["*"] for all.
         organizationUnits:
           type: array
           items:

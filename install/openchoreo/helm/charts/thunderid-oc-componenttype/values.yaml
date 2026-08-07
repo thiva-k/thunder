@@ -1,8 +1,0 @@
-# Copyright 2026 The ThunderID Authors
-# SPDX-License-Identifier: Apache-2.0
-
-# Component type scope.
-# false  — creates a namespaced ComponentType in the Helm release namespace.
-# true (default) — creates a ClusterComponentType (cluster-scoped, reusable across all projects).
-componentType:
-  cluster: true

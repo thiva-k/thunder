@@ -61,6 +61,13 @@ export default function TokenAudienceSelector({
     onChange(newValue);
   };
 
+  // A picker with a single choice is noise, so with one selectable audience the settings are shown
+  // on their own. Locked audiences are then unreachable, along with whatever the caller renders for
+  // them, which is the point: there is nothing to choose between.
+  if (options.filter((option) => option.isLocked !== true).length <= 1) {
+    return children;
+  }
+
   return (
     <Grid container spacing={3}>
       <Grid size={{xs: 12, md: 4, lg: 3}}>

@@ -74,19 +74,22 @@ interface ResendButtonAdapterProps {
   component: FlowComponent;
   isLoading: boolean;
   resolve: (template: string | undefined) => string | undefined;
+  /** Fires the resend action directly, bypassing the form's field validation */
+  onClick: () => void;
 }
 
-function ResendButtonAdapter({component, isLoading, resolve}: ResendButtonAdapterProps): JSX.Element {
+function ResendButtonAdapter({component, isLoading, resolve, onClick}: ResendButtonAdapterProps): JSX.Element {
   const {t} = useTranslation();
 
   return (
     <Button
       id={component.id}
-      type="submit"
+      type="button"
       fullWidth
       className={cn('Flow--resendButton', 'Button--root')}
       variant="text"
       disabled={isLoading}
+      onClick={onClick}
       sx={{mt: 1}}
     >
       {t(resolve(component.label)!)}
@@ -250,7 +253,13 @@ function renderFormSubComponent(
 
   if (sub.type === 'RESEND' && sub.eventType === EmbeddedFlowEventType.Submit) {
     return (
-      <ResendButtonAdapter key={sub.id ?? compIndex} component={sub} isLoading={ctx.isLoading} resolve={ctx.resolve} />
+      <ResendButtonAdapter
+        key={sub.id ?? compIndex}
+        component={sub}
+        isLoading={ctx.isLoading}
+        resolve={ctx.resolve}
+        onClick={() => ctx.onSubmit(sub, ctx.values)}
+      />
     );
   }
 

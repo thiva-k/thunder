@@ -402,9 +402,76 @@ export const signOutConfirmActionRule: GraphValidationRule = (nodes: Node[], edg
   return notifications;
 };
 
-export const GRAPH_VALIDATION_RULES: GraphValidationRule[] = [ssoPairingRule];
+/**
+ * Collects every rich text that is wired as an interactive link, including ones
+ * nested inside containers such as a form block.
+ */
+function collectWiredRichTextElements(elements: FlowElement[] | undefined): FlowElement[] {
+  if (!elements) {
+    return [];
+  }
+
+  return elements.flatMap((element) => {
+    const actionRef = (element as FlowElement & {action?: {ref?: string} | null}).action?.ref;
+    const isWiredLink = element.type === ElementTypes.RichText && actionRef !== undefined && actionRef !== '';
+
+    return [...(isWiredLink ? [element] : []), ...collectWiredRichTextElements(element.components)];
+  });
+}
+
+/**
+ * A rich-text link's `action.ref` is a lookup key, resolved at runtime against the step's
+ * prompts. The prompt only exists while an edge leaves the link's own handle, so an unwired
+ * link serialises with a ref that resolves to nothing: the anchor still renders and still
+ * dispatches, and the backend then fails the step with `ErrInvalidActionProvided`, which the
+ * user sees as an empty sign in page.
+ *
+ * Deleting the step a link pointed at is the usual way in. React Flow drops the edge without
+ * touching the ref, so nothing on the canvas shows that the link is now broken.
+ *
+ * A warning rather than an error, matching `signOutConfirmActionRule` for the same "action
+ * element left unwired" shape: an existing flow with this defect must stay saveable, since
+ * saving is how the author fixes the rest of it.
+ */
+export const richTextActionWiringRule: GraphValidationRule = (nodes: Node[], edges: Edge[]): Notification[] => {
+  const notifications: Notification[] = [];
+
+  for (const node of nodes) {
+    const elements = collectWiredRichTextElements((node.data as StepData | undefined)?.components);
+
+    for (const element of elements) {
+      const handleId = `${element.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`;
+      const isConnected = edges.some(
+        (candidate) => candidate.source === node.id && candidate.sourceHandle === handleId,
+      );
+
+      if (!isConnected) {
+        notifications.push(
+          createGraphElementNotification(
+            `${element.id}_RICH_TEXT_ACTION_NOT_CONNECTED`,
+            'flows:core.validation.richText.actionNotConnected',
+            element,
+            NotificationType.WARNING,
+          ),
+        );
+      }
+    }
+  }
+
+  return notifications;
+};
+
+/**
+ * Rules that apply to every flow type.
+ */
+export const COMMON_GRAPH_VALIDATION_RULES: GraphValidationRule[] = [richTextActionWiringRule];
+
+export const GRAPH_VALIDATION_RULES: GraphValidationRule[] = [ssoPairingRule, ...COMMON_GRAPH_VALIDATION_RULES];
 
 /**
  * Rules that apply to sign-out flows.
  */
-export const SIGN_OUT_GRAPH_VALIDATION_RULES: GraphValidationRule[] = [signOutConfirmActionRule];
+export const SIGN_OUT_GRAPH_VALIDATION_RULES: GraphValidationRule[] = [
+  signOutConfirmActionRule,
+  ...COMMON_GRAPH_VALIDATION_RULES,
+];

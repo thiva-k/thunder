@@ -191,15 +191,16 @@ func (n *taskExecutionNode) triggerExecutor(ctx *providers.NodeContext, logger *
 // buildNodeResponse constructs a NodeResponse from the ExecutorResponse.
 func (n *taskExecutionNode) buildNodeResponse(execResp *providers.ExecutorResponse) *common.NodeResponse {
 	nodeResp := &common.NodeResponse{
-		Error:          execResp.Error,
-		Inputs:         execResp.Inputs,
-		AdditionalData: execResp.AdditionalData,
-		RedirectURL:    execResp.RedirectURL,
-		RuntimeData:    execResp.RuntimeData,
-		ForwardedData:  execResp.ForwardedData,
-		Assertion:      execResp.Assertion,
-		AuthUser:       execResp.AuthUser,
-		EngineData:     execResp.EngineData,
+		Error:             execResp.Error,
+		Inputs:            execResp.Inputs,
+		AdditionalData:    execResp.AdditionalData,
+		RedirectURL:       execResp.RedirectURL,
+		RuntimeData:       execResp.RuntimeData,
+		SharedRuntimeData: execResp.SharedRuntimeData,
+		ForwardedData:     execResp.ForwardedData,
+		Assertion:         execResp.Assertion,
+		AuthUser:          execResp.AuthUser,
+		EngineData:        execResp.EngineData,
 	}
 	if nodeResp.AdditionalData == nil {
 		nodeResp.AdditionalData = make(map[string]string)

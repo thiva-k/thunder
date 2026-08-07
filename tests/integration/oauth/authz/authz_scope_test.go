@@ -653,9 +653,9 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_SharedPermissionStringSco
 	ts.Require().NotContains(scopes, "read", "read is not granted on resource server B")
 }
 
-// TestOAuthAuthzFlow_FiltersOIDCScopesByApplicationScopes verifies that requested OIDC scopes are
-// filtered by the application's active scopes before token issuance.
-func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_FiltersOIDCScopesByApplicationScopes() {
+// TestOAuthAuthzFlow_FiltersOIDCScopesByScopeClaims verifies that requested OIDC scopes are
+// filtered by the application's scope-to-claims mapping before token issuance.
+func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_FiltersOIDCScopesByScopeClaims() {
 	const (
 		clientID     = "oidc_scope_filter_test_client"
 		clientSecret = "oidc_scope_filter_test_secret"
@@ -678,7 +678,11 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_FiltersOIDCScopesByApplic
 					"grantTypes":              []string{"authorization_code", "refresh_token"},
 					"responseTypes":           []string{"code"},
 					"tokenEndpointAuthMethod": "client_secret_post",
-					"scopes":                  []string{"profile"},
+					// A mapping sent at creation is stored as sent, so this is the whole mapping:
+					// the standard scopes it omits are unavailable to the application.
+					"scopeClaims": map[string][]string{
+						"profile": {"name", "given_name", "family_name"},
+					},
 				},
 			},
 		},
@@ -690,10 +694,10 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_FiltersOIDCScopesByApplic
 		_ = testutils.DeleteApplication(appID)
 	}()
 
-	persistedScopes, err := ts.getApplicationOAuthScopes(appID)
-	ts.Require().NoError(err, "Failed to get persisted OAuth application scopes")
+	persistedScopes, err := ts.getApplicationMappedScopes(appID)
+	ts.Require().NoError(err, "Failed to get persisted OAuth application scope claims")
 	ts.Require().ElementsMatch([]string{"profile"}, persistedScopes,
-		"Application should persist only the active OIDC scope used by this test")
+		"Application should persist only the mapped OIDC scope used by this test")
 
 	tokenResp, err := ts.obtainTokenWithResource(
 		clientID,
@@ -707,8 +711,8 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_FiltersOIDCScopesByApplic
 	ts.Require().NotEmpty(tokenResp.AccessToken, "Access token should not be empty")
 
 	tokenResponseScopes := strings.Fields(tokenResp.Scope)
-	ts.Require().ElementsMatch([]string{"profile"}, tokenResponseScopes,
-		"Token response scope should only include active requested OIDC scopes")
+	ts.Require().ElementsMatch([]string{"openid", "email", "profile"}, tokenResponseScopes,
+		"Token response scope should drop the unmapped email scope and keep openid")
 
 	claims, err := testutils.DecodeJWT(tokenResp.AccessToken)
 	ts.Require().NoError(err, "Failed to decode access token")
@@ -720,12 +724,20 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_FiltersOIDCScopesByApplic
 	ts.Require().True(ok, "scope claim should be a string")
 
 	accessTokenScopes := strings.Fields(scopeStr)
-	ts.Require().ElementsMatch([]string{"profile"}, accessTokenScopes,
-		"Access token scope should only include active requested OIDC scopes")
-	ts.Require().Empty(tokenResp.IDToken, "ID token should not be issued when openid is not active")
+	ts.Require().ElementsMatch([]string{"openid", "email", "profile"}, accessTokenScopes,
+		"Access token scope should only include mapped requested OIDC scopes, plus openid")
+	// openid is granted without a mapping entry, so the ID token is still issued; email is not
+	// mapped, so none of its claims can appear.
+	ts.Require().NotEmpty(tokenResp.IDToken, "ID token should be issued for the openid scope")
+
+	idTokenClaims, err := testutils.DecodeJWT(tokenResp.IDToken)
+	ts.Require().NoError(err, "Failed to decode ID token")
+	ts.Require().NotContains(idTokenClaims.Additional, "email",
+		"email claims must not be issued for a scope the mapping does not define")
 }
 
-func (ts *OAuthAuthzScopeTestSuite) getApplicationOAuthScopes(appID string) ([]string, error) {
+// getApplicationMappedScopes returns the scopes the application's scope-to-claims mapping defines.
+func (ts *OAuthAuthzScopeTestSuite) getApplicationMappedScopes(appID string) ([]string, error) {
 	req, err := http.NewRequest(http.MethodGet, testutils.TestServerURL+"/applications/"+appID, nil)
 	if err != nil {
 		return nil, err
@@ -748,7 +760,7 @@ func (ts *OAuthAuthzScopeTestSuite) getApplicationOAuthScopes(appID string) ([]s
 	var app struct {
 		InboundAuthConfig []struct {
 			OAuthConfig struct {
-				Scopes []string `json:"scopes"`
+				ScopeClaims map[string][]string `json:"scopeClaims"`
 			} `json:"config"`
 		} `json:"inboundAuthConfig"`
 	}
@@ -758,7 +770,11 @@ func (ts *OAuthAuthzScopeTestSuite) getApplicationOAuthScopes(appID string) ([]s
 	if len(app.InboundAuthConfig) == 0 {
 		return nil, fmt.Errorf("application has no inbound auth config")
 	}
-	return app.InboundAuthConfig[0].OAuthConfig.Scopes, nil
+	scopes := make([]string, 0, len(app.InboundAuthConfig[0].OAuthConfig.ScopeClaims))
+	for scope := range app.InboundAuthConfig[0].OAuthConfig.ScopeClaims {
+		scopes = append(scopes, scope)
+	}
+	return scopes, nil
 }
 
 // createOAuthApplication creates an OAuth application using the low-level API

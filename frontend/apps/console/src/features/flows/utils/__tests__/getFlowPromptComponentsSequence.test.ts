@@ -4,6 +4,7 @@
 import {describe, it, expect} from 'vitest';
 import {FlowNodeType} from '../../models/flows';
 import type {FlowDefinitionResponse, FlowNode} from '../../models/responses';
+import generateFlowGraph from '../generateFlowGraph';
 import getFlowPromptComponentsSequence from '../getFlowPromptComponentsSequence';
 
 describe('getFlowPromptComponentsSequence', () => {
@@ -151,5 +152,19 @@ describe('getFlowPromptComponentsSequence', () => {
 
   it('returns null for a flow with no nodes', () => {
     expect(getFlowPromptComponentsSequence(createFlow([]))).toBeNull();
+  });
+
+  it('previews Magic Link on the first screen when it is enabled alongside Credentials Auth', () => {
+    const generated = generateFlowGraph({
+      hasCredentialsAuth: true,
+      hasPasskey: false,
+      hasMagicLink: true,
+      hasSmsOtp: false,
+    });
+
+    const screens = getFlowPromptComponentsSequence(createFlow(generated.nodes));
+
+    expect(screens?.[0]?.find((c) => (c as {id: string}).id === 'block_magic_link')).toBeDefined();
+    expect(screens).toHaveLength(1);
   });
 });

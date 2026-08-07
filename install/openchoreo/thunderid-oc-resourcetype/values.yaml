@@ -1,8 +1,0 @@
-# Copyright 2026 The ThunderID Authors
-# SPDX-License-Identifier: Apache-2.0
-
-# Resource type scope.
-# false — creates a namespaced ResourceType in the Helm release namespace.
-# true (default) — creates a ClusterResourceType (cluster-scoped, reusable across all projects).
-resourceType:
-  cluster: true

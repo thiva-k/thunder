@@ -301,7 +301,6 @@ func (as *authorizeService) handleStandardAuthorizationRequest(
 	}
 
 	oidcScopes, nonOidcScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(scope, app.ScopeClaims)
-	oidcScopes = oauth2utils.FilterOIDCScopesByAllowedScopes(oidcScopes, app.Scopes)
 
 	// The single target resource server, downscoping, and audience binding are resolved in
 	// initiateFlowAndStoreRequest, the path shared by both standard and PAR-based requests.
@@ -471,10 +470,53 @@ func (as *authorizeService) initiateFlowAndStoreRequest(
 	return &AuthorizationInitResult{QueryParams: queryParams}, nil
 }
 
-// HandleAuthorizationCallback processes the callback assertion from the flow engine.
-// Returns the client redirect URI (with authorization code) on success, or a structured error.
+// HandleAuthorizationCallback processes the callback assertion from the flow engine. The assertion is
+// either an authentication assertion from a completed flow or a signed error assertion minted when the
+// flow terminated in failure. Returns the client redirect URI (with authorization code) on success, or a structured
+// error.
 func (as *authorizeService) HandleAuthorizationCallback(ctx context.Context, authID string, assertion string) (
 	string, *AuthorizationError) {
+	if assertion == "" {
+		return "", &AuthorizationError{
+			Code:    oauth2const.ErrorInvalidRequest,
+			Message: "Invalid authorization request",
+		}
+	}
+
+	// Verify before either branch runs. This keeps an unverified assertion from burning a live authID,
+	// and it means the branch below is selected by a claim that the signature covers.
+	if verifyErr := as.verifyAssertion(ctx, assertion); verifyErr != nil {
+		as.logger.Debug(ctx, "Assertion verification failed", log.Error(verifyErr))
+		return "", &AuthorizationError{
+			Code:    oauth2const.ErrorInvalidRequest,
+			Message: "Authorization request failed",
+		}
+	}
+
+	claims, authTime, decodeErr := decodeAttributesFromAssertion(assertion)
+	if decodeErr != nil {
+		// An assertion whose claims cannot be read cannot be shown to be bound to this request, so it is
+		// rejected without loading it. Loading consumes the request, and a caller holding a malformed
+		// assertion must not be able to destroy a live authID
+		as.logger.Debug(ctx, "Failed to decode the assertion", log.Error(decodeErr))
+		return "", &AuthorizationError{
+			Code:    oauth2const.ErrorInvalidRequest,
+			Message: "Authorization request failed",
+		}
+	}
+
+	if claims.flowErrorType != "" {
+		errClaims, _ := oauth2utils.DecodeFlowErrorAssertionClaims(assertion)
+		return "", as.handleFailedCallback(ctx, authID, errClaims)
+	}
+
+	return as.handleSuccessCallback(ctx, authID, claims, authTime)
+}
+
+// handleSuccessCallback mints an authorization code for a verified authentication assertion and
+// returns the client redirect URI carrying it.
+func (as *authorizeService) handleSuccessCallback(ctx context.Context, authID string,
+	claims assertionClaims, authTime time.Time) (string, *AuthorizationError) {
 	var redirectURI string
 	var authErr *AuthorizationError
 
@@ -493,54 +535,6 @@ func (as *authorizeService) HandleAuthorizationCallback(ctx context.Context, aut
 			authErr = &AuthorizationError{
 				Code:    oauth2const.ErrorServerError,
 				Message: "Failed to process authorization request",
-			}
-			return err
-		}
-
-		if assertion == "" {
-			authErr = &AuthorizationError{
-				Code:              oauth2const.ErrorInvalidRequest,
-				Message:           "Invalid authorization request",
-				SendErrorToClient: true,
-				ClientRedirectURI: authRequestCtx.OAuthParameters.RedirectURI,
-				State:             authRequestCtx.OAuthParameters.State,
-			}
-			return errors.New("assertion is empty")
-		}
-
-		// Verify the assertion.
-		if err := as.verifyAssertion(ctx, assertion); err != nil {
-			as.logger.Debug(ctx, "Assertion verification failed", log.Error(err))
-			authErr = &AuthorizationError{
-				Code:              oauth2const.ErrorInvalidRequest,
-				Message:           "Authorization request failed",
-				SendErrorToClient: true,
-				ClientRedirectURI: authRequestCtx.OAuthParameters.RedirectURI,
-				State:             authRequestCtx.OAuthParameters.State,
-			}
-			return err
-		}
-
-		// Decode user attributes from the assertion.
-		claims, authTime, err := decodeAttributesFromAssertion(assertion)
-		if err != nil {
-			if errors.Is(err, errAssertionClaimInvalid) {
-				as.logger.Debug(ctx, "Assertion contains a malformed claim", log.Error(err))
-				authErr = &AuthorizationError{
-					Code:              oauth2const.ErrorInvalidRequest,
-					Message:           "Assertion contains a malformed claim",
-					SendErrorToClient: true,
-					ClientRedirectURI: authRequestCtx.OAuthParameters.RedirectURI,
-					State:             authRequestCtx.OAuthParameters.State,
-				}
-				return err
-			}
-			authErr = &AuthorizationError{
-				Code:              oauth2const.ErrorServerError,
-				Message:           "Failed to process authorization request",
-				SendErrorToClient: true,
-				ClientRedirectURI: authRequestCtx.OAuthParameters.RedirectURI,
-				State:             authRequestCtx.OAuthParameters.State,
 			}
 			return err
 		}
@@ -663,6 +657,51 @@ func (as *authorizeService) HandleAuthorizationCallback(ctx context.Context, aut
 	return redirectURI, nil
 }
 
+// handleFailedCallback constructs the OAuth error response for a verified error assertion. The
+// assertion is bound to this authorization request before the request context is loaded, since
+// loading consumes it and an assertion minted for another request must not burn a live authID.
+func (as *authorizeService) handleFailedCallback(
+	ctx context.Context, authID string, claims oauth2utils.FlowErrorAssertionClaims) *AuthorizationError {
+	if claims.AuthorizationRequestID != authID {
+		as.logger.Debug(ctx, "Error assertion is not bound to the authorization request")
+		return &AuthorizationError{
+			Code:    oauth2const.ErrorInvalidRequest,
+			Message: "Error assertion does not match the authorization request",
+		}
+	}
+
+	authRequestCtx, err := as.loadAuthRequestContext(ctx, authID)
+	if err != nil {
+		if errors.Is(err, errAuthRequestNotFound) {
+			return &AuthorizationError{
+				Code:    oauth2const.ErrorInvalidRequest,
+				Message: "Invalid authorization request",
+			}
+		}
+		as.logger.Error(ctx, "Failed to load authorization request context", log.Error(err))
+		return &AuthorizationError{
+			Code:    oauth2const.ErrorServerError,
+			Message: "Failed to process authorization request",
+		}
+	}
+
+	code, message := mapFlowErrorTypeToOAuthError(claims.ErrorType, claims.Description)
+	// Denials are always reported. Server errors are reported unless the deployment opts out, in
+	// which case the failure surfaces on the error page and the client is left to time out.
+	sendToClient := code != oauth2const.ErrorServerError || as.cfg.OAuth.SendServerErrorsToClientEnabled()
+	as.logger.Debug(ctx, "Propagating flow failure",
+		log.String("flowErrorType", claims.ErrorType),
+		log.String("flowErrorDescription", claims.Description),
+		log.Bool("sendToClient", sendToClient))
+	return &AuthorizationError{
+		Code:              code,
+		Message:           message,
+		SendErrorToClient: sendToClient,
+		ClientRedirectURI: authRequestCtx.OAuthParameters.RedirectURI,
+		State:             authRequestCtx.OAuthParameters.State,
+	}
+}
+
 // loadAuthRequestContext loads the authorization request context from the store using the auth ID.
 func (as *authorizeService) loadAuthRequestContext(ctx context.Context, authID string) (*authRequestContext, error) {
 	ok, authRequestCtx, err := as.authReqStore.GetRequest(ctx, authID)
@@ -712,6 +751,10 @@ func decodeAttributesFromAssertion(assertion string) (assertionClaims, time.Time
 
 	if v, ok := payload[oauth2const.ClaimTokenFamilyID].(string); ok {
 		claims.tokenFamilyID = v
+	}
+
+	if v, ok := payload[flowcm.ClaimFlowErrorType].(string); ok {
+		claims.flowErrorType = v
 	}
 
 	if v, ok := payload[oauth2const.ClaimAuthorizationRequestID]; ok {
@@ -930,27 +973,9 @@ func appendAttributesFromClaimsParameter(claimsRequest *oauth2model.ClaimsReques
 func appendAttributesFromScopes(oidcScopes []string, app *providers.OAuthClient,
 	idTokenAllowedSet, userInfoAllowedSet map[string]bool, optionalAttributes map[string]bool) {
 	for _, scope := range oidcScopes {
-		scopeAttributes := resolveScopeAttributes(scope, app.ScopeClaims)
-		appendAttributesForScope(scopeAttributes,
+		appendAttributesForScope(oauth2utils.ResolveScopeClaims(scope, app.ScopeClaims),
 			idTokenAllowedSet, userInfoAllowedSet, optionalAttributes)
 	}
-}
-
-// resolveScopeAttributes resolves attributes for a scope, checking app-specific mappings first.
-func resolveScopeAttributes(scope string, scopeAttributesMapping map[string][]string) []string {
-	// Check app-specific scope attributes mapping first
-	if scopeAttributesMapping != nil {
-		if appAttributes, exists := scopeAttributesMapping[scope]; exists {
-			return appAttributes
-		}
-	}
-
-	// Fall back to standard OIDC scopes
-	if standardScope, exists := oauth2const.StandardOIDCScopes[scope]; exists {
-		return standardScope.Claims
-	}
-
-	return nil
 }
 
 // appendAttributesForScope appends attributes for a particular scope, allow-listed for either the
@@ -1013,4 +1038,19 @@ func (as *authorizeService) resolveUserAttributesCacheTTL(app *providers.OAuthCl
 	}
 	authCodeTTL := as.cfg.OAuth.AuthorizationCode.ValidityPeriod
 	return maxTTL + authCodeTTL + oauth2const.AttributeCacheTTLBufferSeconds
+}
+
+func mapFlowErrorTypeToOAuthError(errorType, description string) (string, string) {
+	code := oauth2const.ErrorServerError
+	message := "Failed to process authorization request"
+	if errorType == flowcm.FlowErrorTypeEndUser {
+		code = oauth2const.ErrorAccessDenied
+		message = "Access denied"
+	}
+
+	if sanitized := oauth2utils.SanitizeErrorDescription(description); sanitized != "" {
+		message = sanitized
+	}
+
+	return code, message
 }

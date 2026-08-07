@@ -499,6 +499,80 @@ func (_c *roleStoreInterfaceMock_DeleteRole_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// GetAllPermissionsForAssignees provides a mock function for the type roleStoreInterfaceMock
+func (_mock *roleStoreInterfaceMock) GetAllPermissionsForAssignees(ctx context.Context, entityID string, groupIDs []string) ([]ResourcePermissions, error) {
+	ret := _mock.Called(ctx, entityID, groupIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllPermissionsForAssignees")
+	}
+
+	var r0 []ResourcePermissions
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) ([]ResourcePermissions, error)); ok {
+		return returnFunc(ctx, entityID, groupIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) []ResourcePermissions); ok {
+		r0 = returnFunc(ctx, entityID, groupIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]ResourcePermissions)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []string) error); ok {
+		r1 = returnFunc(ctx, entityID, groupIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllPermissionsForAssignees'
+type roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call struct {
+	*mock.Call
+}
+
+// GetAllPermissionsForAssignees is a helper method to define mock.On call
+//   - ctx context.Context
+//   - entityID string
+//   - groupIDs []string
+func (_e *roleStoreInterfaceMock_Expecter) GetAllPermissionsForAssignees(ctx interface{}, entityID interface{}, groupIDs interface{}) *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call {
+	return &roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call{Call: _e.mock.On("GetAllPermissionsForAssignees", ctx, entityID, groupIDs)}
+}
+
+func (_c *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call) Run(run func(ctx context.Context, entityID string, groupIDs []string)) *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call) Return(resourcePermissionss []ResourcePermissions, err error) *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call {
+	_c.Call.Return(resourcePermissionss, err)
+	return _c
+}
+
+func (_c *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call) RunAndReturn(run func(ctx context.Context, entityID string, groupIDs []string) ([]ResourcePermissions, error)) *roleStoreInterfaceMock_GetAllPermissionsForAssignees_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAuthorizedPermissionsByResourceServer provides a mock function for the type roleStoreInterfaceMock
 func (_mock *roleStoreInterfaceMock) GetAuthorizedPermissionsByResourceServer(ctx context.Context, entityID string, groupIDs []string, resourceServerID string, requestedPermissions []string) ([]string, error) {
 	ret := _mock.Called(ctx, entityID, groupIDs, resourceServerID, requestedPermissions)

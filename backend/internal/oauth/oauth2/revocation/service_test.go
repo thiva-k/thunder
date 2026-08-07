@@ -77,7 +77,7 @@ func (s *RevocationServiceTestSuite) TestRevokeToken_RevokesTokenFamily() {
 	s.jwtServiceMock.On("VerifyJWTSignature", mock.Anything, token).Return(nil)
 	s.storeMock.On("InsertRevokedToken", mock.Anything, mock.Anything).Return(nil)
 	s.storeMock.On("insertCriterion", mock.Anything, mock.MatchedBy(func(c revocationCriterion) bool {
-		return c.Type == criterionTypeTokenFamily && c.Value == "tfid-77" &&
+		return c.Type == CriterionTypeTokenFamily && c.Value == "tfid-77" &&
 			c.Reason == RevocationReasonExplicitTokenFamily
 	})).Return(nil)
 	s.obsMock.On("IsEnabled").Return(false)
@@ -224,7 +224,7 @@ func TestRevokeTokenFamily_WritesTokenFamilyCriterion(t *testing.T) {
 	err := revoker.RevokeTokenFamily(context.Background(), "tfid-abc", RevocationReasonSessionLogout)
 
 	assert.NoError(t, err)
-	assert.Equal(t, criterionTypeTokenFamily, captured.Type)
+	assert.Equal(t, CriterionTypeTokenFamily, captured.Type)
 	assert.Equal(t, "tfid-abc", captured.Value)
 	assert.Equal(t, RevocationReasonSessionLogout, captured.Reason)
 	assert.WithinDuration(t, captured.RevokedAt.Add(time.Hour), captured.ExpiryTime, time.Second)
@@ -238,6 +238,27 @@ func TestRevokeTokenFamily_EmptyIDIsNoOp(t *testing.T) {
 	err := revoker.RevokeTokenFamily(context.Background(), "", RevocationReasonSessionLogout)
 	assert.NoError(t, err)
 	store.AssertNotCalled(t, "insertCriterion", mock.Anything, mock.Anything)
+}
+
+func TestRevokeByCriteria_UsesCutoffAsRevokedAt(t *testing.T) {
+	store := newRevocationStoreInterfaceMock(t)
+	cutoff := time.Now().UTC().Add(-time.Minute).Truncate(time.Second)
+	store.On("insertCriterion", mock.Anything, mock.MatchedBy(func(criterion revocationCriterion) bool {
+		return criterion.Type == CriterionTypeApplicationID &&
+			criterion.Value == "app-123" &&
+			criterion.Reason == RevocationReasonApplicationSecretRegenerated &&
+			criterion.RevokedAt.Equal(cutoff)
+	})).Return(nil)
+
+	revoker := newRevocationService(nil, store, time.Hour, false, nil)
+	err := revoker.RevokeByCriteria(context.Background(), CriteriaRevocation{
+		Criterion: Criterion{Type: CriterionTypeApplicationID, Value: "app-123"},
+		Mode:      RevocationModeBeforeAction,
+		Cutoff:    cutoff,
+		Reason:    RevocationReasonApplicationSecretRegenerated,
+	})
+
+	assert.NoError(t, err)
 }
 
 func TestRevokeTokenFamily_PropagatesStoreError(t *testing.T) {

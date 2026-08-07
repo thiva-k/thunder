@@ -120,9 +120,14 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 	suite.oauthApp = &providers.OAuthClient{
 		ClientID: testClientID,
 
-		RedirectURIs:            []string{"https://client.example.com/callback"},
-		GrantTypes:              []providers.GrantType{providers.GrantTypeAuthorizationCode},
-		ResponseTypes:           []providers.ResponseType{providers.ResponseTypeCode},
+		RedirectURIs:  []string{"https://client.example.com/callback"},
+		GrantTypes:    []providers.GrantType{providers.GrantTypeAuthorizationCode},
+		ResponseTypes: []providers.ResponseType{providers.ResponseTypeCode},
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name", "given_name", "family_name", "picture"},
+			"email":   {"email", "email_verified"},
+		},
 		TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodClientSecretPost,
 		Token: &providers.OAuthTokenConfig{
 			AccessToken: &providers.AccessTokenConfig{

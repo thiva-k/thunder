@@ -163,3 +163,67 @@ func (s *FlowConfigHandlerTestSuite) TestMergeFlowTypeConfig_WritableExpiryWins(
 	s.Equal("ro", merged.DefaultHandle)
 	s.Equal(int64(900), merged.ExpirySeconds)
 }
+
+// ---------------------------------------------------------------------------
+// User deletion flow
+// ---------------------------------------------------------------------------
+
+// An unset handle is valid: it is how a deployment opts out of flow-based deletion and keeps the
+// native endpoint.
+func (s *FlowConfigHandlerTestSuite) TestValidate_UserDeletionHandleOptional() {
+	s.NoError(s.handler.Validate(flowconfig.FlowSectionConfig{}, nil, nil))
+}
+
+// The handle must name an administration flow, not merely exist.
+func (s *FlowConfigHandlerTestSuite) TestValidate_UserDeletionHandleCheckedAgainstAdministration() {
+	var gotType providers.FlowType
+	s.handler.SetHandleValidator(func(_ context.Context, _ string, flowType providers.FlowType) bool {
+		gotType = flowType
+		return true
+	})
+	cfg := flowconfig.FlowSectionConfig{
+		UserDeletionFlow: flowconfig.FlowTypeConfig{DefaultHandle: "default-user-deletion-flow"},
+	}
+
+	s.Require().NoError(s.handler.Validate(cfg, nil, nil))
+	s.Equal(providers.FlowTypeAdministration, gotType)
+}
+
+func (s *FlowConfigHandlerTestSuite) TestValidate_UserDeletionHandleRejectedWhenNotAdministration() {
+	s.handler.SetHandleValidator(func(_ context.Context, _ string, _ providers.FlowType) bool {
+		return false
+	})
+	cfg := flowconfig.FlowSectionConfig{
+		UserDeletionFlow: flowconfig.FlowTypeConfig{DefaultHandle: "not-an-admin-flow"},
+	}
+
+	err := s.handler.Validate(cfg, nil, nil)
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "userDeletionFlow.defaultHandle")
+}
+
+// An operator can repoint deletion at their own administration flow through the writable layer.
+func (s *FlowConfigHandlerTestSuite) TestMerge_WritableUserDeletionHandleWins() {
+	ro := flowconfig.FlowSectionConfig{
+		UserDeletionFlow: flowconfig.FlowTypeConfig{DefaultHandle: "default-user-deletion-flow"},
+	}
+	wr := flowconfig.FlowSectionConfig{
+		UserDeletionFlow: flowconfig.FlowTypeConfig{DefaultHandle: "acme-offboarding"},
+	}
+
+	merged, ok := s.handler.Merge(ro, wr).(flowconfig.FlowSectionConfig)
+
+	s.Require().True(ok)
+	s.Equal("acme-offboarding", merged.UserDeletionFlow.DefaultHandle)
+}
+
+func (s *FlowConfigHandlerTestSuite) TestMerge_EmptyWritableKeepsDeclarativeUserDeletionHandle() {
+	ro := flowconfig.FlowSectionConfig{
+		UserDeletionFlow: flowconfig.FlowTypeConfig{DefaultHandle: "default-user-deletion-flow"},
+	}
+
+	merged, _ := s.handler.Merge(ro, flowconfig.FlowSectionConfig{}).(flowconfig.FlowSectionConfig)
+
+	s.Equal("default-user-deletion-flow", merged.UserDeletionFlow.DefaultHandle)
+}

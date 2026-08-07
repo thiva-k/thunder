@@ -42,10 +42,6 @@ func (suite *InitTestSuite) SetupTest() {
 
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockDiscoveryService = discoverymock.NewDiscoveryServiceInterfaceMock(suite.T())
-	suite.mockDiscoveryService.On("GetOAuth2AuthorizationServerMetadata", mock.Anything).
-		Return(&discovery.OAuth2AuthorizationServerMetadata{
-			RevocationEndpoint: "https://localhost:8090/oauth2/revoke",
-		})
 }
 
 func (suite *InitTestSuite) TearDownTest() {
@@ -53,10 +49,8 @@ func (suite *InitTestSuite) TearDownTest() {
 }
 
 func (suite *InitTestSuite) TestInitialize() {
-	mux := http.NewServeMux()
-
 	enforcementService, revocationService := Initialize(
-		mux, suite.mockJWTService, nil, nil, suite.mockDiscoveryService, nil, time.Hour, true)
+		suite.mockJWTService, nil, time.Hour, true)
 
 	assert.NotNil(suite.T(), enforcementService)
 	assert.Implements(suite.T(), (*EnforcementServiceInterface)(nil), enforcementService)
@@ -67,9 +61,14 @@ func (suite *InitTestSuite) TestInitialize() {
 }
 
 func (suite *InitTestSuite) TestInitialize_RegistersRoutes() {
+	suite.mockDiscoveryService.On("GetOAuth2AuthorizationServerMetadata", mock.Anything).
+		Return(&discovery.OAuth2AuthorizationServerMetadata{
+			RevocationEndpoint: "https://localhost:8090/oauth2/revoke",
+		})
 	mux := http.NewServeMux()
+	_, revocationService := Initialize(suite.mockJWTService, nil, time.Hour, true)
 
-	Initialize(mux, suite.mockJWTService, nil, nil, suite.mockDiscoveryService, nil, time.Hour, true)
+	RegisterRoutes(mux, suite.mockJWTService, nil, nil, suite.mockDiscoveryService, revocationService, nil, 0)
 
 	// The pattern includes the method because of CORS middleware wrapping.
 	_, pattern := mux.Handler(&http.Request{Method: "POST", URL: &url.URL{Path: "/oauth2/revoke"}})

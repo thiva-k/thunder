@@ -22,35 +22,6 @@ Complete [Set Up Your Environment](../../build-environment) before starting this
 [Understand It](../../overview) covers the requirements story behind this use case.
 :::
 
-## Set Up Internal User Onboarding
-
-1. Invitation emails are delivered through a SMTP server. **Configure a SMTP provider** and apply the configuration in
-   `deployment.yaml`.
-
-   **Sample SMTP Configuration:**
-
-   ```yaml
-   email:
-     smtp:
-       host: '<smtp-host>'
-       port: <smtp-port>
-       username: '<smtp-username>'
-       password: '<smtp-password>'
-       from_address: '<from-address>'
-       enable_start_tls: true
-       enable_authentication: true
-   ```
-
-2. **Activate the user onboarding flow** by pointing the `user_onboarding_flow_handle` to the bundled flow in
-   `deployment.yaml`:
-
-   ```yaml
-   flow:
-     user_onboarding_flow_handle: 'wayfinder-onboarding-flow'
-   ```
-
-3. Restart <ProductName /> for the changes to take effect.
-
 ## Try the Use Case
 
 The Wayfinder onboarding flow prompts the admin to pick the staff role (Support or DestinationsAdmin), then collects the

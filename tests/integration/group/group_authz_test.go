@@ -53,6 +53,12 @@ type GroupAuthzTestSuite struct {
 	deletableGroupOU1ID string
 	targetGroupOU2ID    string
 
+	// Privileged fixture: a group conferring system:user, which the group-manager does not hold,
+	// plus a harmless group nested inside it to exercise the ancestor walk.
+	librarianGroupID  string
+	librarianRoleID   string
+	nestedInLibraryID string
+
 	// Member users created in each OU to test membership authz
 	memberUserOU1ID   string
 	memberUserOU2ID   string
@@ -203,7 +209,7 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 	// when configured.
 	const scopedRSIdentifier = "https://authz-test.example.com/group"
 	systemRSID, err := testutils.CreateSystemScopedResourceServer(
-		ts.groupOU1ID, "Authz Test RS (group)", scopedRSIdentifier, "ou", "group")
+		ts.groupOU1ID, "Authz Test RS (group)", scopedRSIdentifier, "ou", "group", "user")
 	ts.Require().NoError(err, "create scoped resource server")
 	ts.scopedRSID = systemRSID
 
@@ -239,6 +245,45 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 	ts.Require().NotEmpty(tokenResp.AccessToken, "group-manager token must be non-empty")
 
 	ts.groupAdminClient = testutils.GetHTTPClientWithToken(tokenResp.AccessToken)
+
+	// ---- 8. Create a privileged group the group-manager must not be able to join ----
+	// A group carrying no roles of its own, which will be nested inside the privileged group.
+	// Joining it confers the privileged permissions transitively, so the guard must walk ancestors.
+	nestedID, err := testutils.CreateGroup(testutils.Group{
+		Name:        "authz-nested-in-library-ou1",
+		Description: "Harmless group nested inside the librarian group",
+		OUID:        ts.groupOU1ID,
+	})
+	ts.Require().NoError(err, "create nested group")
+	ts.nestedInLibraryID = nestedID
+
+	// The privileged group, created with the harmless group already nested inside it.
+	librarianID, err := testutils.CreateGroup(testutils.Group{
+		Name:        "authz-librarian-ou1",
+		Description: "Group conferring system:user",
+		OUID:        ts.groupOU1ID,
+		Members:     []testutils.Member{{Id: nestedID, Type: "group"}},
+	})
+	ts.Require().NoError(err, "create librarian group")
+	ts.librarianGroupID = librarianID
+
+	// Assigned a role conferring "system:user", which the group-manager does not hold. Adding anyone
+	// to this group would therefore transfer a permission the caller was never granted.
+	librarianRoleID, err := testutils.CreateRole(testutils.Role{
+		Name: "authz-librarian-role",
+		OUID: ts.groupOU1ID,
+		Permissions: []testutils.ResourcePermissions{
+			{
+				ResourceServerID: systemRSID,
+				Permissions:      []string{"system:user"},
+			},
+		},
+		Assignments: []testutils.Assignment{
+			{ID: librarianID, Type: "group"},
+		},
+	})
+	ts.Require().NoError(err, "create librarian role")
+	ts.librarianRoleID = librarianRoleID
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +301,13 @@ func (ts *GroupAuthzTestSuite) TearDownSuite() {
 			ts.T().Logf("teardown: delete group-manager role: %v", err)
 		}
 	}
-	for _, id := range []string{ts.targetGroupOU1ID, ts.deletableGroupOU1ID} {
+	if ts.librarianRoleID != "" {
+		if err := testutils.DeleteRole(ts.librarianRoleID); err != nil {
+			ts.T().Logf("teardown: delete librarian role: %v", err)
+		}
+	}
+	for _, id := range []string{ts.nestedInLibraryID, ts.librarianGroupID,
+		ts.targetGroupOU1ID, ts.deletableGroupOU1ID} {
 		if id != "" {
 			if err := testutils.DeleteGroup(id); err != nil {
 				ts.T().Logf("teardown: delete group %s: %v", id, err)
@@ -519,4 +570,99 @@ func (ts *GroupAuthzTestSuite) TestRemoveMemberFromGroupInOwnOU() {
 
 	ts.Equal(http.StatusOK, resp.StatusCode,
 		"group-manager should be able to remove a user from a group in their own OU")
+}
+
+// mustMarshal encodes a JSON request body, failing the test on error.
+func (ts *GroupAuthzTestSuite) mustMarshal(v any) []byte {
+	ts.T().Helper()
+	payload, err := json.Marshal(v)
+	ts.Require().NoError(err)
+	return payload
+}
+
+// ---------------------------------------------------------------------------
+// Privilege escalation via group membership
+// ---------------------------------------------------------------------------
+
+// The reported vulnerability. The group-manager holds system:group but not system:user. The
+// librarian group confers system:user through its assigned role, so adding anyone to it — including
+// the caller — would grant a permission the caller was never given.
+func (ts *GroupAuthzTestSuite) TestAddSelfToPrivilegedGroupIsForbidden() {
+	payload := ts.mustMarshal(map[string]any{
+		"members": []map[string]string{{"id": ts.groupMgrUserID, "type": "user"}},
+	})
+
+	resp := ts.doGroup(http.MethodPost, "/groups/"+ts.librarianGroupID+"/members/add", payload)
+	defer resp.Body.Close()
+
+	ts.Equalf(http.StatusForbidden, resp.StatusCode,
+		"adding self to a group conferring system:user must be forbidden, got %d", resp.StatusCode)
+}
+
+// Escalation on behalf of someone else is the same defect; the guard is actor-relative.
+func (ts *GroupAuthzTestSuite) TestAddAnotherUserToPrivilegedGroupIsForbidden() {
+	payload := ts.mustMarshal(map[string]any{
+		"members": []map[string]string{{"id": ts.memberUserOU1ID, "type": "user"}},
+	})
+
+	resp := ts.doGroup(http.MethodPost, "/groups/"+ts.librarianGroupID+"/members/add", payload)
+	defer resp.Body.Close()
+
+	ts.Equalf(http.StatusForbidden, resp.StatusCode,
+		"adding another user to a privileged group must be forbidden, got %d", resp.StatusCode)
+}
+
+// Joining a group nested inside the privileged one confers its permissions transitively. This fails
+// unless the guard walks the ancestor chain rather than only the target group's own roles.
+func (ts *GroupAuthzTestSuite) TestAddSelfToGroupNestedInPrivilegedGroupIsForbidden() {
+	payload := ts.mustMarshal(map[string]any{
+		"members": []map[string]string{{"id": ts.groupMgrUserID, "type": "user"}},
+	})
+
+	resp := ts.doGroup(http.MethodPost, "/groups/"+ts.nestedInLibraryID+"/members/add", payload)
+	defer resp.Body.Close()
+
+	ts.Equalf(http.StatusForbidden, resp.StatusCode,
+		"joining a group nested inside a privileged group must be forbidden, got %d", resp.StatusCode)
+}
+
+// Nesting a group the caller controls into the privileged group makes that group's members
+// transitive members of it, so group-typed members are guarded too.
+func (ts *GroupAuthzTestSuite) TestNestingControlledGroupIntoPrivilegedGroupIsForbidden() {
+	payload := ts.mustMarshal(map[string]any{
+		"members": []map[string]string{{"id": ts.targetGroupOU1ID, "type": "group"}},
+	})
+
+	resp := ts.doGroup(http.MethodPost, "/groups/"+ts.librarianGroupID+"/members/add", payload)
+	defer resp.Body.Close()
+
+	ts.Equalf(http.StatusForbidden, resp.StatusCode,
+		"nesting a controlled group into a privileged group must be forbidden, got %d", resp.StatusCode)
+}
+
+// Removal carries the same standing requirement, so a limited administrator cannot strip members
+// from a group more powerful than itself.
+func (ts *GroupAuthzTestSuite) TestRemoveMemberFromPrivilegedGroupIsForbidden() {
+	payload := ts.mustMarshal(map[string]any{
+		"members": []map[string]string{{"id": ts.nestedInLibraryID, "type": "group"}},
+	})
+
+	resp := ts.doGroup(http.MethodPost, "/groups/"+ts.librarianGroupID+"/members/remove", payload)
+	defer resp.Body.Close()
+
+	ts.Equalf(http.StatusForbidden, resp.StatusCode,
+		"removing a member from a privileged group must be forbidden, got %d", resp.StatusCode)
+}
+
+// The guard must not disturb ordinary delegation: a group conferring nothing stays manageable.
+func (ts *GroupAuthzTestSuite) TestAddMemberToUnprivilegedGroupStillSucceeds() {
+	payload := ts.mustMarshal(map[string]any{
+		"members": []map[string]string{{"id": ts.memberUserOU1ID, "type": "user"}},
+	})
+
+	resp := ts.doGroup(http.MethodPost, "/groups/"+ts.targetGroupOU1ID+"/members/add", payload)
+	defer resp.Body.Close()
+
+	ts.Equalf(http.StatusOK, resp.StatusCode,
+		"managing a group that confers nothing must still succeed, got %d", resp.StatusCode)
 }

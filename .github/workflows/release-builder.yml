@@ -158,15 +158,6 @@ jobs:
           sed -i -E "s/^version: .*/version: ${SEMVER_VERSION}/" install/helm/Chart.yaml
           sed -i -E "s/^appVersion: .*/appVersion: \"${SEMVER_VERSION}\"/" install/helm/Chart.yaml
 
-          echo "📝 Updating OpenChoreo Helm chart versions to $SEMVER_VERSION"
-          sed -i -E "s/^version: .*/version: ${SEMVER_VERSION}/" install/openchoreo/helm/Chart.yaml
-          sed -i -E "s/^appVersion: .*/appVersion: \"${SEMVER_VERSION}\"/" install/openchoreo/helm/Chart.yaml
-          sed -i -E "s/^version: .*/version: ${SEMVER_VERSION}/" install/openchoreo/helm/charts/${PRODUCT_NAME_LOWER}-oc-componenttype/Chart.yaml
-          sed -i -E "s/^version: .*/version: ${SEMVER_VERSION}/" install/openchoreo/helm/charts/${PRODUCT_NAME_LOWER}-component/Chart.yaml
-          sed -i -E "s/^version: .*/version: ${SEMVER_VERSION}/" install/openchoreo/${PRODUCT_NAME_LOWER}-oc-resourcetype/Chart.yaml
-          # Update sub-chart dependency versions in the umbrella chart (indented version: entries)
-          sed -i -E "s/(^[[:space:]]+version: \")[^\"]*/\1${SEMVER_VERSION}/" install/openchoreo/helm/Chart.yaml
-
           echo "📝 Updating sample app package versions to $SEMVER_VERSION"
           cd samples/apps/react-api-based-sample
           npm version "$SEMVER_VERSION" --no-git-tag-version --allow-same-version
@@ -195,10 +186,6 @@ jobs:
             version.txt \
             README.md \
             install/helm/Chart.yaml \
-            install/openchoreo/helm/Chart.yaml \
-            install/openchoreo/helm/charts/${PRODUCT_NAME_LOWER}-oc-componenttype/Chart.yaml \
-            install/openchoreo/helm/charts/${PRODUCT_NAME_LOWER}-component/Chart.yaml \
-            install/openchoreo/${PRODUCT_NAME_LOWER}-oc-resourcetype/Chart.yaml \
             samples/apps/react-api-based-sample/package.json \
             samples/apps/react-sdk-sample/package.json \
             samples/apps/vanilla-sample/package.json \
@@ -472,10 +459,6 @@ jobs:
           # Update values.yaml with the new image tag
           sed -i "s/tag: \"[^\"]*\"/tag: \"${CHART_VERSION}\"/" install/helm/values.yaml
 
-          echo "📝 Updating OpenChoreo Helm values with image tag ${CHART_VERSION}"
-          sed -i "s/tag: \"[^\"]*\"/tag: \"${CHART_VERSION}\"/" install/openchoreo/helm/values.yaml
-          sed -i "s/tag: \"[^\"]*\"/tag: \"${CHART_VERSION}\"/" install/openchoreo/helm/charts/${PRODUCT_NAME_LOWER}-component/values.yaml
-          
           # Verify the replacement was successful
           if ! grep -q "tag: \"${CHART_VERSION}\"" install/helm/values.yaml; then
             echo "❌ Error: Failed to update image tag in values.yaml"

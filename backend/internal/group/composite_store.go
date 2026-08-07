@@ -406,6 +406,34 @@ func (c *compositeGroupStore) GetTransitiveGroupsForEntity(
 	return result, nil
 }
 
+// GetDirectGroupParents returns the deduplicated IDs of groups from both stores that directly
+// contain any of the given groups. Unioning at every level is what lets a caller resolve
+// mixed-store nesting, which GetTransitiveGroupsForEntity cannot do.
+func (c *compositeGroupStore) GetDirectGroupParents(
+	ctx context.Context, groupIDs []string,
+) ([]string, error) {
+	dbParents, err := c.dbStore.GetDirectGroupParents(ctx, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	fileParents, err := c.fileStore.GetDirectGroupParents(ctx, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool, len(dbParents)+len(fileParents))
+	parents := make([]string, 0, len(dbParents)+len(fileParents))
+	for _, id := range append(dbParents, fileParents...) {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		parents = append(parents, id)
+	}
+	return parents, nil
+}
+
 // mergeMembers deduplicates and merges members from database and file stores.
 // Database members take precedence over file-based members with the same ID and type.
 func mergeMembers(dbMembers, fileMembers []Member) []Member {

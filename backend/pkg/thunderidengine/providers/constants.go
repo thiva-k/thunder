@@ -45,6 +45,8 @@ const (
 	FlowTypeRecovery FlowType = "RECOVERY"
 	// FlowTypeSignOut represents a flow execution for terminating an SSO session.
 	FlowTypeSignOut FlowType = "SIGNOUT"
+	// FlowTypeAdministration represents an administrator-designed operational flow.
+	FlowTypeAdministration FlowType = "ADMINISTRATION"
 )
 
 // ValidFlowTypes is the set of supported flow types.
@@ -54,6 +56,7 @@ var ValidFlowTypes = []FlowType{
 	FlowTypeUserOnboarding,
 	FlowTypeRecovery,
 	FlowTypeSignOut,
+	FlowTypeAdministration,
 }
 
 // NodeVariant identifies a PROMPT node sub-type that activates a variant-specific code path.
@@ -321,6 +324,17 @@ type ConsentType string
 const (
 	// ConsentTypeAuthentication represents a consent record related to authentication flows.
 	ConsentTypeAuthentication ConsentType = "AUTHENTICATION"
+)
+
+// ConsentDecisionReason defines the possible reasons a consent decision was submitted.
+type ConsentDecisionReason string
+
+const (
+	// ConsentDecisionReasonTimeout marks decisions submitted because the consent prompt expired
+	// rather than because the user chose anything.
+	ConsentDecisionReasonTimeout ConsentDecisionReason = "timeout"
+	// ConsentDecisionReasonUserDenied marks decisions submitted because the user denied the prompt.
+	ConsentDecisionReasonUserDenied ConsentDecisionReason = "user_denied"
 )
 
 // Namespace represents the consent namespace to scope consent elements and purposes.

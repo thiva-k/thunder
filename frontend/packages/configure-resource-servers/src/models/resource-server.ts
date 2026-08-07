@@ -5,6 +5,13 @@ import type {PermissionDelimiter} from './permissions';
 
 export type ResourceServerType = 'API' | 'MCP' | 'CUSTOM';
 
+const DEFAULT_ELIGIBLE_TYPES: readonly ResourceServerType[] = ['API', 'CUSTOM'];
+
+// MCP servers are always addressed by their own identifier, so they never act as the fallback.
+export function isDefaultEligibleType(type: ResourceServerType | undefined): boolean {
+  return type !== undefined && DEFAULT_ELIGIBLE_TYPES.includes(type);
+}
+
 export interface ResourceServer {
   id: string;
   name: string;

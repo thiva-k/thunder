@@ -108,6 +108,11 @@ func (suite *RefreshTokenGrantHandlerTestSuite) SetupTest() {
 		ClientID:                testRefreshTokenClientID,
 		GrantTypes:              []providers.GrantType{providers.GrantTypeRefreshToken},
 		TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodClientSecretPost,
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name", "given_name", "family_name", "picture"},
+			"email":   {"email", "email_verified"},
+		},
 		Token: &providers.OAuthTokenConfig{
 			AccessToken: &providers.AccessTokenConfig{
 				UserConfig: &providers.AccessTokenSubConfig{

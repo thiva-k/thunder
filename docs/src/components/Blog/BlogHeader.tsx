@@ -57,8 +57,8 @@ export default function BlogHeader(): JSX.Element {
       </Typography>
 
       <Typography sx={{fontSize: '17px', lineHeight: 1.65, color: 'text.secondary', maxWidth: 560}}>
-        Deep dives, release notes, and engineering write-ups from the team building an open-source identity stack for
-        humans, AI agents, and workloads.
+        Deep dives, release notes, and engineering write-ups from the team building an open-source IAM stack for
+        humans, AI agents, and machines.
       </Typography>
     </Box>
   );

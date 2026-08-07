@@ -223,6 +223,24 @@ describe('DraftTextField', () => {
       expect(input).toHaveValue('20');
     });
 
+    it('should not commit the minimum when an empty field unmounts untouched', () => {
+      // `clampToInteger('')` resolves to the minimum, so flushing an unedited field would
+      // store a value the author never entered — and, before the selection-change fix, store
+      // it against whichever component the panel had just switched to.
+      const {unmount} = render(
+        <DraftTextField
+          value=""
+          onCommit={mockOnCommit}
+          normalize={(raw) => clampToInteger(raw, 1, 20)}
+          inputProps={{'aria-label': 'field'}}
+        />,
+      );
+
+      unmount();
+
+      expect(mockOnCommit).not.toHaveBeenCalled();
+    });
+
     it('should restore the committed value when normalization rejects the draft', () => {
       render(
         <DraftTextField

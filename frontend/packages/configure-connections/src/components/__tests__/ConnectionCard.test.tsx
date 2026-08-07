@@ -37,6 +37,30 @@ describe('ConnectionCard', () => {
     expect(onAction).toHaveBeenCalledWith(baseCard);
   });
 
+  it('invokes onAction when Enter is pressed on the card', () => {
+    render(<ConnectionCard card={baseCard} onAction={onAction} />);
+    fireEvent.keyDown(screen.getByTestId('connection-card-action-google'), {key: 'Enter'});
+    expect(onAction).toHaveBeenCalledWith(baseCard);
+  });
+
+  it('invokes onAction when Space is pressed on the card', () => {
+    render(<ConnectionCard card={baseCard} onAction={onAction} />);
+    fireEvent.keyDown(screen.getByTestId('connection-card-action-google'), {key: ' '});
+    expect(onAction).toHaveBeenCalledWith(baseCard);
+  });
+
+  it('ignores unrelated key presses on the card', () => {
+    render(<ConnectionCard card={baseCard} onAction={onAction} />);
+    fireEvent.keyDown(screen.getByTestId('connection-card-action-google'), {key: 'a'});
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('shows the configured status for a configured connection', () => {
+    const configured: ConnectionCardModel = {...baseCard, status: 'configured'};
+    render(<ConnectionCard card={configured} onAction={onAction} />);
+    expect(screen.getByText('Configured')).toBeInTheDocument();
+  });
+
   it('disables interaction for coming-soon cards (no clickable action area)', () => {
     const soon: ConnectionCardModel = {
       ...baseCard,

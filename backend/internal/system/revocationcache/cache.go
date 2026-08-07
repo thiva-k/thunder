@@ -16,6 +16,7 @@ type revokedCache struct {
 	mu       sync.RWMutex
 	tokens   map[string]time.Time
 	families map[string]time.Time
+	subjects map[string]revokedEntry
 }
 
 // newRevokedCache creates an empty cache. It holds nothing until the first snapshot is loaded.
@@ -23,6 +24,7 @@ func newRevokedCache() *revokedCache {
 	return &revokedCache{
 		tokens:   make(map[string]time.Time),
 		families: make(map[string]time.Time),
+		subjects: make(map[string]revokedEntry),
 	}
 }
 
@@ -31,10 +33,29 @@ func newRevokedCache() *revokedCache {
 func (c *revokedCache) replace(snapshot revokedSnapshot) {
 	tokens := indexByValue(snapshot.Tokens)
 	families := indexByValue(snapshot.Families)
+	subjects := indexEntriesByValue(snapshot.Subjects)
 	c.mu.Lock()
 	c.tokens = tokens
 	c.families = families
+	c.subjects = subjects
 	c.mu.Unlock()
+}
+
+func (c *revokedCache) isSubjectRevoked(subject string, establishedAt time.Time) bool {
+	c.mu.RLock()
+	entry, ok := c.subjects[subject]
+	c.mu.RUnlock()
+	return ok && time.Now().Before(entry.ExpiryTime) &&
+		(!entry.Boundary || establishedAt.IsZero() || !establishedAt.After(entry.RevokedAt))
+}
+
+// indexEntriesByValue builds a value-to-entry map while preserving criterion metadata.
+func indexEntriesByValue(entries []revokedEntry) map[string]revokedEntry {
+	indexed := make(map[string]revokedEntry, len(entries))
+	for _, entry := range entries {
+		indexed[entry.Value] = entry
+	}
+	return indexed
 }
 
 // isTokenRevoked reports whether jti is on the single-token deny list and has not yet expired.

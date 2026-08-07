@@ -1,17 +1,16 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
-import {Alert, AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
-import {ChevronLeft} from '@wso2/oxygen-ui-icons-react';
+import {Alert, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useCreateConnection from '../api/useCreateConnection';
 import ConnectionCreateHint from '../components/ConnectionCreateHint';
 import ConnectionForm from '../components/ConnectionForm';
-import ConnectionFullPageLayout from '../components/ConnectionFullPageLayout';
 import ConnectionNameStep from '../components/create-connection/ConnectionNameStep';
 import SelectConnectionType, {
   type SelectableConnectionType,
@@ -120,55 +119,73 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
     ...(step === Step.CONFIGURE ? [{key: 'configure', label: t('form.chrome.configure')}] : []),
   ];
 
+  const footer: JSX.Element | null = (() => {
+    if (step === Step.TYPE) {
+      return (
+        <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
+          <Button
+            variant="contained"
+            disabled={!selectedType}
+            onClick={() => setStep(Step.NAME)}
+            data-testid="wizard-continue"
+          >
+            {t('common:actions.continue', 'Continue')}
+          </Button>
+        </Box>
+      );
+    }
+    if (step === Step.NAME) {
+      return (
+        <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <Button variant="outlined" onClick={() => setStep(Step.TYPE)} sx={{minWidth: 100}}>
+            {t('common:actions.back', 'Back')}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!trimmedName}
+            onClick={() => setStep(Step.CONFIGURE)}
+            data-testid="wizard-continue"
+          >
+            {t('common:actions.continue', 'Continue')}
+          </Button>
+        </Box>
+      );
+    }
+    // The trusted-idp step renders its own Back + submit footer (see TrustedIssuerCreateForm).
+    if (isTrustedIdp) {
+      return null;
+    }
+    return (
+      <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <Button variant="outlined" onClick={() => setStep(Step.NAME)} sx={{minWidth: 100}}>
+          {t('common:actions.back', 'Back')}
+        </Button>
+        <Button
+          variant="contained"
+          disabled={!formValid || createMutation.isPending}
+          onClick={handleCreate}
+          data-testid="wizard-create"
+        >
+          {t('form.actions.create', 'Create connection')}
+        </Button>
+      </Box>
+    );
+  })();
+
   return (
-    <ConnectionFullPageLayout
-      label={t('wizard.title')}
-      onClose={close}
-      progress={progress}
-      breadcrumb={<AppBreadcrumbs items={crumbs} />}
-      fullWidthContent={step === Step.TYPE}
-    >
-      {step === Step.TYPE && (
-        <>
-          <SelectConnectionType selectedType={selectedType} onSelect={setSelectedType} />
-          <Box sx={{mt: 4, display: 'flex', justifyContent: 'flex-end'}}>
-            <Button
-              variant="contained"
-              disabled={!selectedType}
-              onClick={() => setStep(Step.NAME)}
-              data-testid="wizard-continue"
-            >
-              {t('common:actions.continue')}
-            </Button>
-          </Box>
-        </>
-      )}
+    <FullScreenCreationWizardLayout onClose={close} progress={progress} breadcrumbItems={crumbs} footer={footer}>
+      {step === Step.TYPE && <SelectConnectionType selectedType={selectedType} onSelect={setSelectedType} />}
 
       {step === Step.NAME && (
-        <Stack direction="column" spacing={3}>
-          <ConnectionNameStep
-            name={connectionName}
-            onNameChange={(name) => {
-              setConnectionName(name);
-              setNameError(null);
-              setGeneralError(null);
-            }}
-            nameError={nameError}
-          />
-          <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <Button variant="outlined" startIcon={<ChevronLeft size={16} />} onClick={() => setStep(Step.TYPE)}>
-              {t('common:actions.back')}
-            </Button>
-            <Button
-              variant="contained"
-              disabled={!trimmedName}
-              onClick={() => setStep(Step.CONFIGURE)}
-              data-testid="wizard-continue"
-            >
-              {t('common:actions.continue')}
-            </Button>
-          </Box>
-        </Stack>
+        <ConnectionNameStep
+          name={connectionName}
+          onNameChange={(name) => {
+            setConnectionName(name);
+            setNameError(null);
+            setGeneralError(null);
+          }}
+          nameError={nameError}
+        />
       )}
 
       {step === Step.CONFIGURE && isTrustedIdp && (
@@ -222,22 +239,8 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
               {generalError}
             </Alert>
           )}
-
-          <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <Button variant="outlined" startIcon={<ChevronLeft size={16} />} onClick={() => setStep(Step.NAME)}>
-              {t('common:actions.back')}
-            </Button>
-            <Button
-              variant="contained"
-              disabled={!formValid || createMutation.isPending}
-              onClick={handleCreate}
-              data-testid="wizard-create"
-            >
-              {t('form.actions.create')}
-            </Button>
-          </Box>
         </Stack>
       )}
-    </ConnectionFullPageLayout>
+    </FullScreenCreationWizardLayout>
   );
 }

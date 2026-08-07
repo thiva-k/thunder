@@ -15,6 +15,9 @@ type contextKey string
 const (
 	// TraceIDKey is the context key for storing the trace ID (correlation ID).
 	TraceIDKey contextKey = "trace_id"
+
+	// CSPNonceKey is the context key for storing the per-request Content-Security-Policy nonce.
+	CSPNonceKey contextKey = "csp_nonce"
 )
 
 // ============================================================================
@@ -79,4 +82,27 @@ func EnsureTraceID(ctx context.Context) context.Context {
 	}
 
 	return ctx
+}
+
+// ============================================================================
+// CSP Nonce Functions
+// ============================================================================
+
+// GetCSPNonce retrieves the Content-Security-Policy nonce from the context. Returns "" if absent; it
+// does not generate one, since the nonce must be generated once per request by the middleware that
+// also emits it in the CSP header.
+func GetCSPNonce(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	nonce, _ := ctx.Value(CSPNonceKey).(string)
+	return nonce
+}
+
+// WithCSPNonce adds the Content-Security-Policy nonce to the context.
+func WithCSPNonce(ctx context.Context, nonce string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, CSPNonceKey, nonce)
 }

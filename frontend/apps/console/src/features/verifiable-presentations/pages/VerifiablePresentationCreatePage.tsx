@@ -271,9 +271,9 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
             : undefined,
       }))}
       footer={
-        <Stack direction="row" justifyContent="flex-end" spacing={2}>
+        <Stack direction="row" justifyContent={stepIndex > 0 ? 'space-between' : 'flex-end'} spacing={2}>
           {stepIndex > 0 && (
-            <Button variant="text" onClick={handleBack} disabled={createVP.isPending}>
+            <Button variant="outlined" onClick={handleBack} sx={{minWidth: 100}} disabled={createVP.isPending}>
               {t('common:actions.back')}
             </Button>
           )}

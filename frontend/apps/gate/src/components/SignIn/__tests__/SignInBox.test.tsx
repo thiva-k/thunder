@@ -179,6 +179,20 @@ describe('SignInBox', () => {
     expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
   });
 
+  // An expired consent prompt auto-submits, and the expiry error is raised against that in-flight
+  // request. Rendering it would flash an error over a submission that goes on to succeed.
+  it('holds back the error alert while a submission is in flight', () => {
+    mockSignInRenderProps = createMockSignInRenderProps({
+      components: [{id: 'text-1', type: 'TEXT', label: 'Consent', variant: 'H1'}],
+      error: {message: 'Time allowed to complete the step has expired.'},
+      isLoading: true,
+    });
+    render(<SignInBox />);
+
+    expect(screen.queryByText('Time allowed to complete the step has expired.')).not.toBeInTheDocument();
+    expect(screen.getByText('Consent')).toBeInTheDocument();
+  });
+
   it('renders TEXT component as heading', () => {
     mockSignInRenderProps = createMockSignInRenderProps({
       components: [

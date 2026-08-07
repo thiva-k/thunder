@@ -13,7 +13,6 @@ import {
   Typography,
   IconButton,
   LinearProgress,
-  Alert,
   AppBreadcrumbs,
 } from '@wso2/oxygen-ui';
 import {
@@ -366,9 +365,6 @@ export default function TryoutSecuringConsumerApp(): JSX.Element {
                     <Typography variant="body2" color="text.secondary">
                       {t('common:welcome.applicationTryout.scenarios.onboard.description', {productName})}
                     </Typography>
-                    <Alert severity="info" sx={{fontSize: '0.8rem'}}>
-                      {t('common:welcome.applicationTryout.scenarios.onboard.smtpNote', {productName})}
-                    </Alert>
                     <StepList
                       steps={[
                         t('common:welcome.applicationTryout.scenarios.onboard.step1', {productName}),

@@ -45,6 +45,11 @@ export const FlowType = {
    * SignOut flows terminate an established SSO session
    */
   SIGNOUT: 'SIGNOUT',
+
+  /**
+   * Administration flows orchestrate authenticated administrative operations
+   */
+  ADMINISTRATION: 'ADMINISTRATION',
 } as const;
 
 /**

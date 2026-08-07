@@ -15,6 +15,7 @@ const IMPORT_ID = 'thunderid-font-import';
 
 afterEach(() => {
   cleanup();
+  document.querySelector('meta[property="csp-nonce"]')?.remove();
 });
 
 describe('FontImporter', () => {
@@ -57,5 +58,24 @@ describe('FontImporter', () => {
     unmount();
     expect(document.getElementById(OVERRIDE_ID)).toBeNull();
     expect(document.getElementById(IMPORT_ID)).toBeNull();
+  });
+
+  it("tags its injected <style> element with the page's csp nonce", () => {
+    const meta = document.createElement('meta');
+    meta.setAttribute('property', 'csp-nonce');
+    meta.setAttribute('content', 'abc123');
+    document.head.appendChild(meta);
+
+    render(<FontImporter fontFamily="Poppins" />);
+
+    const style = document.getElementById(OVERRIDE_ID);
+    expect(style?.getAttribute('nonce')).toBe('abc123');
+  });
+
+  it('renders the <style> element without a nonce attribute when none is available', () => {
+    render(<FontImporter fontFamily="Poppins" />);
+
+    const style = document.getElementById(OVERRIDE_ID);
+    expect(style?.hasAttribute('nonce')).toBe(false);
   });
 });

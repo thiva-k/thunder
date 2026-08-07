@@ -2346,7 +2346,9 @@ describe('ApplicationCreatePage', () => {
         publicClient: true,
       });
 
-      expect(requestBody.userAttributes).toEqual(['given_name', 'family_name', 'email', 'groups']);
+      // User attributes are not sent: the server derives them from the seeded scope-to-claims
+      // mapping, intersected with the allowed user types' schemas.
+      expect(requestBody.userAttributes).toBeUndefined();
       expect(requestBody.isRegistrationFlowEnabled).toBe(true);
     });
 

@@ -6,56 +6,41 @@ ouHandle: default
 allowSelfRegistration: true
 systemAttributes:
   display: username
-schema: {
-    "username": {
-      "type": "string",
-      "displayName": "Username",
-      "required": true,
-      "unique": true
-    },
-    "password": {
-      "type": "string",
-      "displayName": "Password",
-      "required": false,
-      "credential": true
-    },
-    "email": {
-      "type": "string",
-      "displayName": "Email",
-      "required": true,
-      "unique": true,
-      "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-    },
-    "given_name": {
-      "type": "string",
-      "displayName": "First Name",
-      "required": false
-    },
-    "family_name": {
-      "type": "string",
-      "displayName": "Last Name",
-      "required": false
-    },
-    "mobile_number": {
-      "type": "string",
-      "displayName": "Mobile Number",
-      "required": false
-    },
-    "full_name": {
-      "type": "string",
-      "displayName": "Full Name",
-      "required": false
-    },
-    "member_id": {
-      "type": "string",
-      "displayName": "Member ID",
-      "required": false
-    },
-    "tier": {
-      "type": "string",
-      "displayName": "Tier",
-      "required": false
-    }
+schema:
+  {
+    "username":
+      {
+        "type": "string",
+        "displayName": "Username",
+        "required": true,
+        "unique": true,
+      },
+    "password":
+      {
+        "type": "string",
+        "displayName": "Password",
+        "required": false,
+        "credential": true,
+      },
+    "email":
+      {
+        "type": "string",
+        "displayName": "Email",
+        "required": true,
+        "unique": true,
+        "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+      },
+    "given_name":
+      { "type": "string", "displayName": "First Name", "required": false },
+    "family_name":
+      { "type": "string", "displayName": "Last Name", "required": false },
+    "mobile_number":
+      { "type": "string", "displayName": "Mobile Number", "required": false },
+    "full_name":
+      { "type": "string", "displayName": "Full Name", "required": false },
+    "member_id":
+      { "type": "string", "displayName": "Member ID", "required": false },
+    "tier": { "type": "string", "displayName": "Tier", "required": false },
   }
 
 ---
@@ -67,31 +52,32 @@ ouHandle: default
 allowSelfRegistration: false
 systemAttributes:
   display: username
-schema: {
-    "username": {
-      "type": "string",
-      "displayName": "Username",
-      "required": true,
-      "unique": true
-    },
-    "password": {
-      "type": "string",
-      "displayName": "Password",
-      "required": false,
-      "credential": true
-    },
-    "email": {
-      "type": "string",
-      "displayName": "Email",
-      "required": true,
-      "unique": true,
-      "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-    },
-    "displayName": {
-      "type": "string",
-      "displayName": "Display Name",
-      "required": false
-    }
+schema:
+  {
+    "username":
+      {
+        "type": "string",
+        "displayName": "Username",
+        "required": true,
+        "unique": true,
+      },
+    "password":
+      {
+        "type": "string",
+        "displayName": "Password",
+        "required": false,
+        "credential": true,
+      },
+    "email":
+      {
+        "type": "string",
+        "displayName": "Email",
+        "required": true,
+        "unique": true,
+        "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+      },
+    "displayName":
+      { "type": "string", "displayName": "Display Name", "required": false },
   }
 
 ---
@@ -257,6 +243,7 @@ nodes:
     executor:
       name: CredentialsAuthExecutor
     onSuccess: provisioning
+    onFailure: prompt_credentials
   - id: provisioning
     type: TASK_EXECUTION
     properties:
@@ -273,7 +260,7 @@ nodes:
           identifier: password
           type: PASSWORD_INPUT
           required: true
-    onSuccess: registration_complete
+    onSuccess: end
     onIncomplete: prompt_schema_attrs
   - id: prompt_schema_attrs
     type: PROMPT
@@ -299,42 +286,6 @@ nodes:
         action:
           ref: action_schema_attrs
           nextNode: provisioning
-  - id: registration_complete
-    type: PROMPT
-    meta:
-      components:
-        - align: center
-          type: TEXT
-          id: registration_complete_icon
-          label: "✅"
-          variant: HEADING_1
-        - align: center
-          type: TEXT
-          id: registration_complete_heading
-          label: Account Created
-          variant: HEADING_1
-        - align: center
-          type: TEXT
-          id: registration_complete_message
-          label: Your Wayfinder account is ready. Sign in to start exploring.
-          variant: HEADING_6
-        - type: STACK
-          id: registration_complete_link_stack
-          category: BLOCK
-          align: center
-          direction: row
-          justify: center
-          gap: 2
-          items: 1
-          resourceType: ELEMENT
-          components:
-            - type: RICH_TEXT
-              id: registration_complete_link
-              category: DISPLAY
-              resourceType: ELEMENT
-              label: '<h3 class="rich-text-heading-h3"><a href="{{meta(application.url)}}" target="_blank" rel="noopener noreferrer" class="rich-text-link"><span class="rich-text-pre-wrap">Go to Wayfinder</span></a></h3>'
-    message: Registration complete
-    next: end
   - id: call_authentication
     type: CALL
     flow:
@@ -342,7 +293,6 @@ nodes:
     onSuccess: end
   - id: end
     type: END
-
 
 ---
 resource_type: flow
@@ -982,7 +932,7 @@ nodes:
     type: CALL
     flow:
       ref: 0193b0a1-1001-7000-8000-000000000001
-    onSuccess: end
+    onSuccess: authorization_check
   - id: end
     type: END
 
@@ -1226,8 +1176,6 @@ nodes:
           nextNode: consent_check
   - id: auth_assert
     type: TASK_EXECUTION
-    properties:
-      callbackType: "urn:openid:params:grant-type:ciba"
     executor:
       name: AuthAssertExecutor
     onSuccess: auth_success
@@ -1430,8 +1378,6 @@ nodes:
           nextNode: consent_check
   - id: auth_assert
     type: TASK_EXECUTION
-    properties:
-      callbackType: "urn:openid:params:grant-type:ciba"
     executor:
       name: AuthAssertExecutor
     onSuccess: auth_success
@@ -1971,3 +1917,11 @@ name: cors
 value:
   allowedOrigins:
     - "http://localhost:5173"
+
+---
+resource_type: server_config
+# Activates the Wayfinder staff onboarding flow.
+name: flow
+value:
+  userOnboardingFlow:
+    defaultHandle: wayfinder-onboarding-flow

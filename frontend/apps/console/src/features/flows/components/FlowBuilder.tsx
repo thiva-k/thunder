@@ -38,7 +38,11 @@ import useFlowEvents from '@/features/flows/hooks/useFlowEvents';
 import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
 import {FlowType} from '@/features/flows/models/flows';
 import {ExecutionTypes, StepTypes, type StepData} from '@/features/flows/models/steps';
-import {GRAPH_VALIDATION_RULES, SIGN_OUT_GRAPH_VALIDATION_RULES} from '@/features/flows/validation/validation-rules';
+import {
+  COMMON_GRAPH_VALIDATION_RULES,
+  GRAPH_VALIDATION_RULES,
+  SIGN_OUT_GRAPH_VALIDATION_RULES,
+} from '@/features/flows/validation/validation-rules';
 
 const SMS_EXECUTORS = new Set<string>([ExecutionTypes.SMSExecutor]);
 
@@ -226,8 +230,8 @@ function FlowBuilder() {
 
   const flowType = (existingFlowData as {flowType?: string} | undefined)?.flowType ?? 'AUTHENTICATION';
 
-  // The SSO pairing rules only apply to AUTHENTICATION flows; other flow
-  // types run without graph-level rules.
+  // SSO pairing is AUTHENTICATION-only and the confirm-action rule SIGNOUT-only.
+  // Every flow type still gets the common rules.
   useEffect(() => {
     if (flowType === FlowType.AUTHENTICATION) {
       setGraphValidationRules(GRAPH_VALIDATION_RULES);
@@ -239,7 +243,7 @@ function FlowBuilder() {
       return;
     }
 
-    setGraphValidationRules([]);
+    setGraphValidationRules(COMMON_GRAPH_VALIDATION_RULES);
   }, [flowType, setGraphValidationRules]);
 
   // Undo/redo history over the canvas graph.

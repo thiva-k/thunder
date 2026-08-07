@@ -139,4 +139,13 @@ func registerSMSVendorRoutes(mux *http.ServeMux, h *handler, base string, provid
 	mux.HandleFunc(middleware.WithCORS("PUT "+base+"/{id}", update, itemOpts))
 	mux.HandleFunc(middleware.WithCORS("DELETE "+base+"/{id}", h.deleteSMSInstance(provider), itemOpts))
 	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}", noContent, itemOpts))
+
+	usagesOpts := middleware.CORSOptions{
+		AllowedMethods:   []string{"GET"},
+		AllowedHeaders:   middleware.DefaultAllowedHeaders,
+		AllowCredentials: true,
+		MaxAge:           600,
+	}
+	mux.HandleFunc(middleware.WithCORS("GET "+base+"/{id}/usages", h.usagesSMSInstance(provider), usagesOpts))
+	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}/usages", noContent, usagesOpts))
 }

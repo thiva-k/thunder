@@ -18,8 +18,7 @@ vi.mock('../../../../constants/token-constants', () => ({
 }));
 
 const defaultProps = {
-  scopes: ['openid', 'profile'],
-  scopeClaims: {},
+  scopeClaims: {openid: [], profile: []},
   userAttributes: ['email', 'username', 'given_name'],
   isLoadingUserAttributes: false,
   onScopeClaimsChange: vi.fn(),
@@ -30,10 +29,9 @@ describe('ScopeMapper', () => {
     vi.clearAllMocks();
   });
 
-  it('renders an info alert when scopes list is empty', () => {
+  it('prompts to add a scope when the mapping is empty', () => {
     render(
       <ScopeMapper
-        scopes={[]}
         scopeClaims={{}}
         userAttributes={[]}
         isLoadingUserAttributes={false}
@@ -41,10 +39,10 @@ describe('ScopeMapper', () => {
       />,
     );
 
-    expect(screen.getByText('Add at least one scope above to start mapping attributes.')).toBeInTheDocument();
+    expect(screen.getByText('Add a scope to start mapping attributes.')).toBeInTheDocument();
   });
 
-  it('renders scope names in the left panel when scopes exist', () => {
+  it('renders the mapped scopes in the left panel', () => {
     render(<ScopeMapper {...defaultProps} />);
 
     expect(screen.getByText('openid')).toBeInTheDocument();
@@ -74,13 +72,11 @@ describe('ScopeMapper', () => {
     const onScopeClaimsChange = vi.fn();
     const user = userEvent.setup();
 
-    render(
-      <ScopeMapper {...defaultProps} scopes={['openid']} scopeClaims={{}} onScopeClaimsChange={onScopeClaimsChange} />,
-    );
+    render(<ScopeMapper {...defaultProps} scopeClaims={{openid: []}} onScopeClaimsChange={onScopeClaimsChange} />);
 
     // email is an available attribute (not in DEFAULT_TOKEN_ATTRIBUTES mock)
-    const emailChip = screen.getByText('email');
-    await user.click(emailChip);
+    const availableSection = screen.getByText('Available Attributes').closest('div')!.parentElement!;
+    await user.click(within(availableSection).getByText('email'));
 
     expect(onScopeClaimsChange).toHaveBeenCalledWith({openid: ['email']});
   });
@@ -90,12 +86,7 @@ describe('ScopeMapper', () => {
     const user = userEvent.setup();
 
     render(
-      <ScopeMapper
-        {...defaultProps}
-        scopes={['openid']}
-        scopeClaims={{openid: ['email']}}
-        onScopeClaimsChange={onScopeClaimsChange}
-      />,
+      <ScopeMapper {...defaultProps} scopeClaims={{openid: ['email']}} onScopeClaimsChange={onScopeClaimsChange} />,
     );
 
     const mappedSection = screen.getByText('Mapped Attributes').closest('div')!.parentElement!;
@@ -114,7 +105,7 @@ describe('ScopeMapper', () => {
   });
 
   it('auto-selects the first scope on mount', () => {
-    render(<ScopeMapper {...defaultProps} scopes={['openid', 'profile']} />);
+    render(<ScopeMapper {...defaultProps} />);
 
     // Mapped Attributes panel visible means a scope was auto-selected
     expect(screen.getByText('Mapped Attributes')).toBeInTheDocument();
@@ -124,12 +115,54 @@ describe('ScopeMapper', () => {
     render(
       <ScopeMapper
         {...defaultProps}
-        scopes={['openid']}
         scopeClaims={{openid: ['email', 'given_name', 'username']}}
         userAttributes={['email', 'given_name', 'username']}
       />,
     );
 
     expect(screen.getByText('All available attributes are already mapped to this scope')).toBeInTheDocument();
+  });
+
+  it('adds a custom scope from the input', async () => {
+    const onScopeClaimsChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(<ScopeMapper {...defaultProps} scopeClaims={{openid: []}} onScopeClaimsChange={onScopeClaimsChange} />);
+
+    await user.type(screen.getByPlaceholderText('e.g. custom:read'), 'custom:read');
+    await user.click(screen.getByRole('button', {name: 'Add'}));
+
+    expect(onScopeClaimsChange).toHaveBeenCalledWith({'custom:read': [], openid: []});
+  });
+
+  it('rejects a custom scope that is already mapped', async () => {
+    const onScopeClaimsChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(<ScopeMapper {...defaultProps} scopeClaims={{openid: []}} onScopeClaimsChange={onScopeClaimsChange} />);
+
+    await user.type(screen.getByPlaceholderText('e.g. custom:read'), 'openid');
+    await user.click(screen.getByRole('button', {name: 'Add'}));
+
+    expect(screen.getByText('This scope is already added')).toBeInTheDocument();
+    expect(onScopeClaimsChange).not.toHaveBeenCalled();
+  });
+
+  it('removing a scope deletes its entry from the mapping', async () => {
+    const onScopeClaimsChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ScopeMapper
+        {...defaultProps}
+        scopeClaims={{openid: ['email'], profile: []}}
+        onScopeClaimsChange={onScopeClaimsChange}
+      />,
+    );
+
+    const removeButtons = screen.getAllByRole('button', {name: 'Remove scope'});
+    await user.click(removeButtons[1]);
+
+    expect(onScopeClaimsChange).toHaveBeenCalledWith({openid: ['email']});
   });
 });

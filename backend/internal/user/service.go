@@ -48,6 +48,7 @@ type UserServiceInterface interface {
 	UpdateUserCredentials(ctx context.Context, userID string,
 		credentials json.RawMessage) *tidcommon.ServiceError
 	DeleteUser(ctx context.Context, userID string) *tidcommon.ServiceError
+	ValidateDeleteUser(ctx context.Context, userID string) *tidcommon.ServiceError
 	ResolveUserOUHandle(ctx context.Context, user *User) *tidcommon.ServiceError
 	SetDependencyRegistry(r resourcedependency.Registry)
 	GetUserUsages(ctx context.Context, userID string) (
@@ -777,7 +778,34 @@ func (us *userService) UpdateUserCredentials(
 	return nil
 }
 
-// DeleteUser delete the user for given user id.
+// ValidateDeleteUser checks whether the caller may delete the user and whether the target is deletable,
+// without changing persistent state.
+func (us *userService) ValidateDeleteUser(ctx context.Context, userID string) *tidcommon.ServiceError {
+	if userID == "" {
+		return &ErrorMissingUserID
+	}
+	existingEntity, err := us.entityService.GetEntity(ctx, userID)
+	if err != nil {
+		if errors.Is(err, entity.ErrEntityNotFound) {
+			return &ErrorUserNotFound
+		}
+		return &tidcommon.InternalServerError
+	}
+	if existingEntity.Category != providers.EntityCategoryUser {
+		return &ErrorUserNotFound
+	}
+	if svcErr := us.checkUserAccess(ctx, security.ActionDeleteUser,
+		entityToUser(existingEntity).OUID, userID); svcErr != nil {
+		return svcErr
+	}
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+	if svcErr := us.checkUserDeclarative(ctx, userID, logger); svcErr != nil {
+		return svcErr
+	}
+	return us.ensureNoBlockingDependencies(ctx, userID, logger)
+}
+
+// DeleteUser deletes the user with the given ID.
 func (us *userService) DeleteUser(ctx context.Context, userID string) *tidcommon.ServiceError {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 	logger.Debug(ctx, "Deleting user", log.MaskedString(log.LoggerKeyUserID, userID))

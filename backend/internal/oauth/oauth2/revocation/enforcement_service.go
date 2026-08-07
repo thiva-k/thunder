@@ -16,11 +16,8 @@ import (
 // refresh grant, token exchange) under a fail-closed policy: when a deny list cannot be consulted,
 // tokens are rejected rather than allowed.
 type EnforcementServiceInterface interface {
-	// EnsureNotRevoked returns nil when the token may proceed. It returns ErrTokenRevoked when the
-	// token's jti is on the single-token deny list or its token family id (tfid) is on the criteria
-	// deny list, and ErrEnforcementUnavailable when a deny list cannot be consulted (fail-closed).
-	// Empty jti and tokenFamilyID are each a no-op for their respective check.
-	EnsureNotRevoked(ctx context.Context, jti, tokenFamilyID string) error
+	// EnsureNotRevoked rejects an artifact when its JTI or any supplied criterion is revoked.
+	EnsureNotRevoked(ctx context.Context, identity RevocationIdentity) error
 }
 
 // enforcement service is the default EnforcementServiceInterface. It consults the runtime persistent DB behind a
@@ -47,10 +44,11 @@ func newEnforcementService(observabilitySvc providers.ObservabilityProvider,
 	}
 }
 
-// EnsureNotRevoked checks the single-token deny list (by jti) and the criteria deny list (by token
-// family id), applying the circuit breaker and the fail-closed policy.
-func (c *enforcementService) EnsureNotRevoked(ctx context.Context, jti, tokenFamilyID string) error {
-	if jti == "" && tokenFamilyID == "" {
+// EnsureNotRevoked checks the single-token deny list (by jti) and the criteria deny list (every
+// criterion in one query), applying the circuit breaker and the fail-closed policy.
+func (c *enforcementService) EnsureNotRevoked(ctx context.Context, identity RevocationIdentity) error {
+	criteria := populatedCriteria(identity.Criteria)
+	if identity.JTI == "" && len(criteria) == 0 {
 		return nil
 	}
 
@@ -59,8 +57,8 @@ func (c *enforcementService) EnsureNotRevoked(ctx context.Context, jti, tokenFam
 		return ErrEnforcementUnavailable
 	}
 
-	if jti != "" {
-		revoked, err := c.store.IsTokenRevoked(ctx, jti)
+	if identity.JTI != "" {
+		revoked, err := c.store.IsTokenRevoked(ctx, identity.JTI)
 		if err != nil {
 			return c.failClosed(ctx, err)
 		}
@@ -70,8 +68,8 @@ func (c *enforcementService) EnsureNotRevoked(ctx context.Context, jti, tokenFam
 		}
 	}
 
-	if tokenFamilyID != "" {
-		revoked, err := c.store.isCriterionRevoked(ctx, criterionTypeTokenFamily, tokenFamilyID)
+	if len(criteria) > 0 {
+		revoked, err := c.store.areCriteriaRevoked(ctx, criteria, identity.EstablishedAt)
 		if err != nil {
 			return c.failClosed(ctx, err)
 		}
@@ -83,6 +81,18 @@ func (c *enforcementService) EnsureNotRevoked(ctx context.Context, jti, tokenFam
 
 	c.breaker.recordSuccess()
 	return nil
+}
+
+// populatedCriteria drops criteria the artifact did not carry, so an absent dimension never widens
+// the deny-list query.
+func populatedCriteria(criteria []Criterion) []Criterion {
+	populated := make([]Criterion, 0, len(criteria))
+	for _, criterion := range criteria {
+		if criterion.Value != "" {
+			populated = append(populated, criterion)
+		}
+	}
+	return populated
 }
 
 // failClosed records a deny-list lookup failure against the circuit breaker (alerting when it trips)

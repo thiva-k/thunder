@@ -498,4 +498,105 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery_DeduplicatesAlgorithms() {
 	assert.Contains(suite.T(), algs, "RS256")
 }
 
+func (suite *DiscoveryTestSuite) TestAuthorizationGrantProfilesSupported_JWTBearerEnabled() {
+	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
+
+	meta, err := suite.discoveryService.GetOIDCMetadata(context.Background())
+	assert.NoError(suite.T(), err)
+
+	// Default config allows the JWT Bearer grant type, so the ID-JAG profile should be advertised.
+	assert.Contains(suite.T(), meta.GrantTypesSupported, string(providers.GrantTypeJWTBearer))
+	assert.Contains(
+		suite.T(), meta.AuthorizationGrantProfilesSupported, constants.SupportedAuthorizationGrantProfileIDJAG)
+}
+
+func (suite *DiscoveryTestSuite) TestAuthorizationGrantProfilesSupported_JWTBearerDisabled() {
+	testConfig := &config.Config{
+		Server: engineconfig.ServerConfig{Hostname: "localhost", Port: 8080},
+		JWT:    engineconfig.JWTConfig{Issuer: "https://auth.example.com"},
+		OAuth: engineconfig.OAuthConfig{
+			AllowedGrantTypes: []string{"client_credentials", "refresh_token"},
+		},
+	}
+	cryptoMock := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
+	cryptoMock.EXPECT().GetSupportedSigningAlgorithms().Return(suite.oauthCfg.OAuth.DPoP.AllowedAlgs).Maybe()
+	cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().
+		Return([]string{string(cryptolib.AlgorithmRSAOAEP256)}).Maybe()
+	cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
+
+	svc := newDiscoveryService(cryptoMock, newTestJWEService(cryptoMock), oauthCfgFromServerConfig(testConfig))
+	meta, err := svc.GetOIDCMetadata(context.Background())
+	assert.NoError(suite.T(), err)
+
+	assert.NotContains(suite.T(), meta.GrantTypesSupported, string(providers.GrantTypeJWTBearer))
+	assert.Empty(suite.T(), meta.AuthorizationGrantProfilesSupported)
+
+	body, err := json.Marshal(meta)
+	assert.NoError(suite.T(), err)
+	assert.NotContains(suite.T(), string(body), "authorization_grant_profiles_supported")
+}
+
+func (suite *DiscoveryTestSuite) TestAuthorizationGrantProfilesSupported_AdvertisedOverHTTP() {
+	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
+
+	req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+	w := httptest.NewRecorder()
+	suite.handler.HandleOIDCDiscovery(w, req)
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var metadata OIDCProviderMetadata
+	err := json.NewDecoder(w.Body).Decode(&metadata)
+	assert.NoError(suite.T(), err)
+	assert.Equal(
+		suite.T(),
+		[]string{constants.SupportedAuthorizationGrantProfileIDJAG},
+		metadata.AuthorizationGrantProfilesSupported,
+	)
+}
+
+func (suite *DiscoveryTestSuite) TestAuthorizationGrantProfilesSupported_OnOAuth2AuthorizationServerMetadata() {
+	req := httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil)
+	w := httptest.NewRecorder()
+
+	suite.handler.HandleOAuth2AuthorizationServerMetadata(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var metadata OAuth2AuthorizationServerMetadata
+	err := json.NewDecoder(w.Body).Decode(&metadata)
+	assert.NoError(suite.T(), err)
+
+	// Default config allows the JWT Bearer grant type, so the ID-JAG profile should be
+	// advertised on the OAuth 2.0 Authorization Server Metadata endpoint too.
+	assert.Contains(suite.T(), metadata.GrantTypesSupported, string(providers.GrantTypeJWTBearer))
+	assert.Equal(
+		suite.T(),
+		[]string{constants.SupportedAuthorizationGrantProfileIDJAG},
+		metadata.AuthorizationGrantProfilesSupported,
+	)
+}
+
+func (suite *DiscoveryTestSuite) TestAuthorizationGrantProfilesSupported_NotOnOAuth2ServerMetadataWhenUnsupported() {
+	testConfig := &config.Config{
+		Server: engineconfig.ServerConfig{Hostname: "localhost", Port: 8080},
+		JWT:    engineconfig.JWTConfig{Issuer: "https://auth.example.com"},
+		OAuth: engineconfig.OAuthConfig{
+			AllowedGrantTypes: []string{"client_credentials", "refresh_token"},
+		},
+	}
+	svc := newDiscoveryService(
+		suite.cryptoMock, newTestJWEService(suite.cryptoMock), oauthCfgFromServerConfig(testConfig))
+	handler := newDiscoveryHandler(svc)
+
+	req := httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil)
+	w := httptest.NewRecorder()
+	handler.HandleOAuth2AuthorizationServerMetadata(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+	assert.NotContains(suite.T(), w.Body.String(), "authorization_grant_profiles_supported")
+}
+
 func boolPtr(b bool) *bool { return &b }

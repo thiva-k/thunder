@@ -53,6 +53,21 @@ export const IDENTIFYING_MODES = [
 ] as const;
 
 /**
+ * Available revocation modes for the Administrative Flow Pre executor.
+ *
+ * Must stay in step with the executor's SupportedModes in the backend
+ * (backend/internal/flow/executor/administrative_flow_pre_executor.go). Offering a mode the backend
+ * does not support would let the builder save a flow that fails validation.
+ */
+export const REVOCATION_MODES = [
+  {
+    value: 'revoke_all',
+    translationKey: 'flows:core.executions.preDelete.mode.revokeAll',
+    displayLabel: 'Validate and Plan Full Revocation',
+  },
+] as const;
+
+/**
  * Available modes for Passkey executor.
  */
 export const PASSKEY_MODES = [
@@ -167,4 +182,5 @@ export const EXECUTORS_WITH_FIXED_INPUTS = new Set<string>([
   ExecutionTypes.SSOCheck,
   ExecutionTypes.Session,
   ExecutionTypes.SessionSignOut,
+  ExecutionTypes.PreDelete,
 ]);

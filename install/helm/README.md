@@ -1,6 +1,6 @@
 # ThunderID Helm Chart
 
-This repository contains the Helm chart for ThunderID, a lightweight user and identity management system designed for modern application development.
+This repository contains the Helm chart for ThunderID, an open-source IAM stack designed for modern application development.
 
 ## Configuration Value Types
 
@@ -504,6 +504,7 @@ Password fields are available in `configuration.database.config.postgres`, `conf
 | `configuration.oauth.refreshToken.validityPeriod` | Refresh token validity period in seconds                                                                                                                | `86400`                      |
 | `configuration.oauth.authorizationCode.validityPeriod` | Authorization code validity period in seconds                                                                                                      | `600`                        |
 | `configuration.oauth.authorizationRequest.validityPeriod` | How long the authorization request context stays valid while the user completes the login flow, in seconds                                       | `3600`                       |
+| `configuration.oauth.sendServerErrorsToClient`    | Report an authentication flow failure that maps to the OAuth `server_error` code to the client | `false`                      |
 | `configuration.flow.maxVersionHistory`            | Maximum flow version history to retain                                                                                                                  | `3`                          |
 | `configuration.flow.autoInferRegistration`        | Enable auto-infer registration flow                                                                                                                     | `true`                       |
 | `configuration.passkey.allowedOrigins`            | Passkey allowed origins                                                                                                                                 | `[]`                         |

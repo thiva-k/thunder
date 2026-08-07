@@ -45,6 +45,8 @@ export {default as NodeIcon} from './icons/logos/vendor/NodeIcon';
 export {default as JavaScriptIcon} from './icons/logos/vendor/JavaScriptIcon';
 export {default as PythonLogo} from './icons/logos/vendor/PythonLogo';
 export {default as LangChainLogo} from './icons/logos/vendor/LangChainLogo';
+export {default as JsonLogo} from './icons/logos/vendor/JsonLogo';
+export {default as JwtLogo} from './icons/logos/vendor/JwtLogo';
 
 /* -------------------------- LAB -------------------------- */
 

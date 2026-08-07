@@ -7,11 +7,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	sysContext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/csp"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
@@ -63,7 +65,10 @@ func TestSecurityHeadersMiddleware_DefaultReportOnlyBaseline(t *testing.T) {
 	}
 	assert.NotContains(t, policy, "unsafe-inline")
 	assert.NotContains(t, policy, "unsafe-eval")
-	assert.NotContains(t, policy, "nonce-")
+	// script-src always carries a nonce, even with zero csp config, since it never carries
+	// unsafe-inline. style-src-elem isn't configured here, so style-src stays nonce-free.
+	assert.Regexp(t, `script-src 'self' 'nonce-[A-Za-z0-9_-]+'`, policy)
+	assert.NotContains(t, policy, "style-src 'self' 'nonce-")
 
 	// X-Frame-Options is always enforced.
 	assert.Equal(t, serverconst.XFrameOptionsDeny, rr.Header().Get(serverconst.XFrameOptionsHeaderName))
@@ -110,6 +115,59 @@ func TestSecurityHeadersMiddleware_PerPath(t *testing.T) {
 	console := serve("/console/apps").Header().Get(serverconst.ContentSecurityPolicyHeaderName)
 	assert.NotContains(t, console, "unsafe-inline")
 	assert.Contains(t, console, "style-src 'self';")
+}
+
+// cspNoncePattern matches the 'nonce-<value>' token this package emits into style-src-elem.
+var cspNoncePattern = regexp.MustCompile(`'nonce-([A-Za-z0-9_-]+)'`)
+
+func TestSecurityHeadersMiddleware_Nonce(t *testing.T) {
+	csp.InitializeConfigReader(fakeCSPReader{cfg: csp.PolicyConfig{
+		ReportOnly: boolPtr(false),
+		Directives: map[string][]string{"style-src-elem": {"'self'"}},
+	}})
+	t.Cleanup(func() { csp.InitializeConfigReader(nil) })
+
+	t.Run("header carries a nonce token on style-src-elem", func(t *testing.T) {
+		policy := serve("/console/apps").Header().Get(serverconst.ContentSecurityPolicyHeaderName)
+		match := cspNoncePattern.FindStringSubmatch(policy)
+		assert.NotNil(t, match, "expected a 'nonce-<value>' token in: %s", policy)
+		assert.NotEmpty(t, match[1])
+	})
+
+	t.Run("nonce is unique per request", func(t *testing.T) {
+		first := cspNoncePattern.FindStringSubmatch(
+			serve("/console/apps").Header().Get(serverconst.ContentSecurityPolicyHeaderName))
+		second := cspNoncePattern.FindStringSubmatch(
+			serve("/console/apps").Header().Get(serverconst.ContentSecurityPolicyHeaderName))
+		assert.NotEqual(t, first[1], second[1])
+	})
+
+	t.Run("the same nonce reaches both the header and the request context", func(t *testing.T) {
+		var fromContext string
+		handler := SecurityHeadersMiddleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fromContext = sysContext.GetCSPNonce(r.Context())
+			w.WriteHeader(http.StatusOK)
+		}))
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/console/apps", nil))
+
+		policy := rr.Header().Get(serverconst.ContentSecurityPolicyHeaderName)
+		match := cspNoncePattern.FindStringSubmatch(policy)
+		assert.NotNil(t, match)
+		assert.Equal(t, match[1], fromContext)
+		assert.NotEmpty(t, fromContext)
+	})
+
+	t.Run("non-app paths get no nonce in context", func(t *testing.T) {
+		var fromContext string
+		handler := SecurityHeadersMiddleware()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fromContext = sysContext.GetCSPNonce(r.Context())
+			w.WriteHeader(http.StatusOK)
+		}))
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/oauth2/token", nil))
+		assert.Empty(t, fromContext)
+	})
 }
 
 func TestSecurityHeadersMiddleware_ScopedToConsoleAndGate(t *testing.T) {

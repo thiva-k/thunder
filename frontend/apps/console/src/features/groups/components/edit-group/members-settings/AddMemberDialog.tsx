@@ -23,17 +23,20 @@ import {
   Tab,
   useTheme,
 } from '@wso2/oxygen-ui';
-import {AppWindow, Bot, User as UserIcon} from '@wso2/oxygen-ui-icons-react';
+import {AppWindow, Bot, User as UserIcon, Users} from '@wso2/oxygen-ui-icons-react';
 import {useState, useMemo, useCallback, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import useGetAgents from '../../../../agents/api/useGetAgents';
 import type {BasicAgent} from '../../../../agents/models/agent';
-import type {Member} from '../../../models/group';
+import useGetGroups from '../../../api/useGetGroups';
+import type {GroupBasic, Member} from '../../../models/group';
 
 interface AddMemberDialogProps {
   open: boolean;
   onClose: () => void;
   onAdd: (members: Member[]) => void;
+  /** Group being edited, excluded from the groups tab so it cannot be made a member of itself. */
+  excludeGroupId?: string;
   /** Inline error shown in the dialog when the last add attempt failed. */
   error?: string | null;
   /** Called when the tab or a selection changes, so the parent can clear a stale error. */
@@ -43,12 +46,13 @@ interface AddMemberDialogProps {
 }
 
 /**
- * Dialog for searching and adding user or app members to a group.
+ * Dialog for searching and adding user, app, agent, or group members to a group.
  */
 export default function AddMemberDialog({
   open,
   onClose,
   onAdd,
+  excludeGroupId = undefined,
   error = null,
   onErrorDismiss = undefined,
   isSubmitting = false,
@@ -70,9 +74,17 @@ export default function AddMemberDialog({
     type: 'include',
     ids: new Set(),
   });
+  const [groupSelectionModel, setGroupSelectionModel] = useState<DataGrid.GridRowSelectionModel>({
+    type: 'include',
+    ids: new Set(),
+  });
   const [userPaginationModel, setUserPaginationModel] = useState<DataGrid.GridPaginationModel>({pageSize: 10, page: 0});
   const [appPaginationModel, setAppPaginationModel] = useState<DataGrid.GridPaginationModel>({pageSize: 10, page: 0});
   const [agentPaginationModel, setAgentPaginationModel] = useState<DataGrid.GridPaginationModel>({
+    pageSize: 10,
+    page: 0,
+  });
+  const [groupPaginationModel, setGroupPaginationModel] = useState<DataGrid.GridPaginationModel>({
     pageSize: 10,
     page: 0,
   });
@@ -98,13 +110,31 @@ export default function AddMemberDialog({
     }),
     [agentPaginationModel],
   );
+  const groupsParams = useMemo(
+    () => ({
+      limit: groupPaginationModel.pageSize,
+      offset: groupPaginationModel.page * groupPaginationModel.pageSize,
+    }),
+    [groupPaginationModel],
+  );
   const {data: usersData, isLoading: usersLoading, error: usersError} = useGetUsers(usersParams);
   const {data: appsData, isLoading: appsLoading, error: appsError} = useGetApplications(appsParams);
   const {data: agentsData, isLoading: agentsLoading, error: agentsError} = useGetAgents(agentsParams);
+  const {data: groupsData, isLoading: groupsLoading, error: groupsError} = useGetGroups(groupsParams);
 
   const users: User[] = useMemo(() => usersData?.users ?? [], [usersData]);
   const applications: BasicApplication[] = useMemo(() => appsData?.applications ?? [], [appsData]);
   const agents: BasicAgent[] = useMemo(() => agentsData?.agents ?? [], [agentsData]);
+  // The listing is server-paginated, so the edited group is dropped from the current page and the
+  // total is adjusted by one rather than being filtered out of the query itself.
+  const groups: GroupBasic[] = useMemo(
+    () => (groupsData?.groups ?? []).filter((group) => group.id !== excludeGroupId),
+    [groupsData, excludeGroupId],
+  );
+  const groupsRowCount: number = useMemo(() => {
+    const total = groupsData?.totalResults ?? 0;
+    return excludeGroupId ? Math.max(total - 1, 0) : total;
+  }, [groupsData, excludeGroupId]);
 
   const userColumns: DataGrid.GridColDef<User>[] = useMemo(
     () => [
@@ -231,6 +261,56 @@ export default function AddMemberDialog({
     [theme, t],
   );
 
+  const groupColumns: DataGrid.GridColDef<GroupBasic>[] = useMemo(
+    () => [
+      {
+        field: 'avatar',
+        headerName: '',
+        width: 70,
+        sortable: false,
+        filterable: false,
+        renderCell: (): JSX.Element => (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+            }}
+          >
+            <Avatar
+              sx={{
+                p: 0.5,
+                backgroundColor: theme.vars?.palette.grey[500],
+                width: 30,
+                height: 30,
+                fontSize: '0.875rem',
+                ...theme.applyStyles('dark', {
+                  backgroundColor: theme.vars?.palette.grey[900],
+                }),
+              }}
+            >
+              <Users size={14} />
+            </Avatar>
+          </Box>
+        ),
+      },
+      {
+        field: 'name',
+        headerName: t('groups:addMember.columns.displayName'),
+        flex: 1,
+        minWidth: 200,
+      },
+      {
+        field: 'id',
+        headerName: t('groups:edit.members.sections.manage.listing.columns.id'),
+        flex: 1,
+        minWidth: 250,
+      },
+    ],
+    [theme, t],
+  );
+
   const appColumns: DataGrid.GridColDef<BasicApplication>[] = useMemo(
     () => [
       {
@@ -286,11 +366,12 @@ export default function AddMemberDialog({
       ...[...userSelectionModel.ids].map((id) => ({id: String(id), type: 'user' as const})),
       ...[...appSelectionModel.ids].map((id) => ({id: String(id), type: 'app' as const})),
       ...[...agentSelectionModel.ids].map((id) => ({id: String(id), type: 'agent' as const})),
+      ...[...groupSelectionModel.ids].map((id) => ({id: String(id), type: 'group' as const})),
     ];
     // Selections are deliberately left as-is here: the dialog unmounts on a successful add (the
     // parent closes it), and on failure the user needs their selection intact to retry.
     onAdd(newMembers);
-  }, [userSelectionModel, appSelectionModel, agentSelectionModel, onAdd]);
+  }, [userSelectionModel, appSelectionModel, agentSelectionModel, groupSelectionModel, onAdd]);
 
   const handleClose = (): void => {
     // Also reached via Escape and backdrop clicks, so guard the in-flight case here rather than
@@ -300,10 +381,15 @@ export default function AddMemberDialog({
     setUserSelectionModel({type: 'include', ids: new Set()});
     setAppSelectionModel({type: 'include', ids: new Set()});
     setAgentSelectionModel({type: 'include', ids: new Set()});
+    setGroupSelectionModel({type: 'include', ids: new Set()});
     onClose();
   };
 
-  const totalSelected = userSelectionModel.ids.size + appSelectionModel.ids.size + agentSelectionModel.ids.size;
+  const totalSelected =
+    userSelectionModel.ids.size +
+    appSelectionModel.ids.size +
+    agentSelectionModel.ids.size +
+    groupSelectionModel.ids.size;
 
   const handleTabChange = (_event: SyntheticEvent, tab: number): void => {
     setActiveTab(tab);
@@ -318,6 +404,7 @@ export default function AddMemberDialog({
           <Tab icon={<UserIcon size={16} />} iconPosition="start" label={t('groups:addMember.tabs.users')} />
           <Tab icon={<AppWindow size={16} />} iconPosition="start" label={t('groups:addMember.tabs.apps')} />
           <Tab icon={<Bot size={16} />} iconPosition="start" label={t('groups:addMember.tabs.agents', 'Agents')} />
+          <Tab icon={<Users size={16} />} iconPosition="start" label={t('groups:addMember.tabs.groups', 'Groups')} />
         </Tabs>
 
         {activeTab === 0 && (
@@ -438,6 +525,48 @@ export default function AddMemberDialog({
                 rowCount={agentsData?.totalResults ?? 0}
                 paginationModel={agentPaginationModel}
                 onPaginationModelChange={setAgentPaginationModel}
+                pageSizeOptions={[5, 10]}
+                disableRowSelectionOnClick
+                localeText={dataGridLocaleText}
+              />
+            </Box>
+          </>
+        )}
+
+        {activeTab === 3 && (
+          <>
+            {groupsError && !groupsLoading && (
+              <Alert severity="error" sx={{mb: 2}}>
+                {getErrorMessage(
+                  groupsError,
+                  t,
+                  'groups:addMember.fetchGroupsError',
+                  'Failed to load groups. Please try again.',
+                )}
+              </Alert>
+            )}
+            {!groupsError && groups.length === 0 && !groupsLoading && (
+              <Alert severity="info" sx={{mb: 2}}>
+                {t('groups:addMember.noResultsGroups', 'No groups found')}
+              </Alert>
+            )}
+
+            <Box sx={{height: 400, width: '100%'}}>
+              <DataGrid.DataGrid
+                rows={groups}
+                columns={groupColumns}
+                loading={groupsLoading}
+                getRowId={(row): string => row.id}
+                checkboxSelection
+                rowSelectionModel={groupSelectionModel}
+                onRowSelectionModelChange={(newSelection) => {
+                  setGroupSelectionModel(newSelection);
+                  onErrorDismiss?.();
+                }}
+                paginationMode="server"
+                rowCount={groupsRowCount}
+                paginationModel={groupPaginationModel}
+                onPaginationModelChange={setGroupPaginationModel}
                 pageSizeOptions={[5, 10]}
                 disableRowSelectionOnClick
                 localeText={dataGridLocaleText}

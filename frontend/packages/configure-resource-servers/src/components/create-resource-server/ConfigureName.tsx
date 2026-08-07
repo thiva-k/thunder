@@ -2,28 +2,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {NameSuggestion} from '@thunderid/components';
-import {FormControl, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {Checkbox, FormControl, FormControlLabel, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
 import {useEffect, type ChangeEvent, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
-import type {ResourceServerType} from '../../models/resource-server';
+import {isDefaultEligibleType, type ResourceServerType} from '../../models/resource-server';
 
 interface ConfigureNameProps {
   name: string;
   identifier: string;
   /** The resource server type selected in the previous step, used to tailor copy for MCP servers. */
   selectedType?: ResourceServerType;
+  /**
+   * Whether the default resource server choice can be offered at all. False while the server config
+   * is still loading and when a declarative default has locked it, since the backend rejects writes.
+   */
+  canSetDefault?: boolean;
+  /** Whether the server being created should become the default resource server. */
+  makeDefault?: boolean;
   onNameChange: (name: string) => void;
   onIdentifierChange: (identifier: string) => void;
   onReadyChange?: (isReady: boolean) => void;
+  onMakeDefaultChange?: (makeDefault: boolean) => void;
 }
 
 export default function ConfigureName({
   name,
   identifier,
   selectedType = undefined,
+  canSetDefault = false,
+  makeDefault = false,
   onNameChange,
   onIdentifierChange,
   onReadyChange = undefined,
+  onMakeDefaultChange = undefined,
 }: ConfigureNameProps): JSX.Element {
   const {t} = useTranslation();
 
@@ -40,6 +51,12 @@ export default function ConfigureName({
   const handleIdentifierChange = (e: ChangeEvent<HTMLInputElement>): void => {
     onIdentifierChange(e.target.value);
   };
+
+  const handleMakeDefaultChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    onMakeDefaultChange?.(e.target.checked);
+  };
+
+  const isDefaultEligible = canSetDefault && isDefaultEligibleType(selectedType);
 
   return (
     <Stack direction="column" spacing={4}>
@@ -93,6 +110,27 @@ export default function ConfigureName({
           }
         />
       </FormControl>
+
+      {isDefaultEligible && (
+        <FormControl fullWidth>
+          <FormControlLabel
+            control={
+              <Checkbox
+                id="resource-server-make-default-input"
+                checked={makeDefault}
+                onChange={handleMakeDefaultChange}
+              />
+            }
+            label={t('resourceServers:create.name.makeDefaultLabel', 'Make this the default resource server')}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {t(
+              'resourceServers:setDefault.explanation',
+              'When an application requests a token without naming a resource server, its permissions come from this one. Only one resource server can be the default at a time.',
+            )}
+          </Typography>
+        </FormControl>
+      )}
     </Stack>
   );
 }

@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/thunder-id/thunderid/internal/system/security"
+
 	"github.com/thunder-id/thunderid/internal/system/config"
 )
 
@@ -21,7 +23,7 @@ func TestInitialize_DisabledReturnsNoops(t *testing.T) {
 	assert.NoError(t, err)
 	assert.IsType(t, noopEnforcer{}, enforcer)
 	assert.IsType(t, noopSyncer{}, syncer)
-	assert.NoError(t, enforcer.EnsureNotRevoked(context.Background(), "anything", ""))
+	assert.NoError(t, enforcer.EnsureNotRevoked(context.Background(), security.RevocationIdentity{JTI: "anything"}))
 }
 
 func TestInitialize_UnsupportedSource(t *testing.T) {
@@ -38,8 +40,9 @@ func TestInitializeWithSource_InitialLoadPopulatesCache(t *testing.T) {
 	enforcer, syncer := initializeWithSource(Config{Enabled: true, SyncInterval: time.Minute}, source)
 
 	assert.Equal(t, 1, source.callCount(), "the initial snapshot is loaded synchronously")
-	assert.ErrorIs(t, enforcer.EnsureNotRevoked(context.Background(), "jti-1", ""), errTokenRevoked)
-	assert.NoError(t, enforcer.EnsureNotRevoked(context.Background(), "other", ""))
+	assert.ErrorIs(t, enforcer.EnsureNotRevoked(context.Background(),
+		security.RevocationIdentity{JTI: "jti-1"}), errTokenRevoked)
+	assert.NoError(t, enforcer.EnsureNotRevoked(context.Background(), security.RevocationIdentity{JTI: "other"}))
 	assert.NotNil(t, syncer, "initializeWithSource returns a syncer whose loop the caller starts")
 }
 
@@ -51,7 +54,7 @@ func TestInitializeWithSource_InitialLoadFailureStartsWithEmptyDenyList(t *testi
 	require.NotNil(t, enforcer, "a failed initial load must not stop startup")
 	require.NotNil(t, syncer)
 	// With no snapshot loaded, the deny list is empty and nothing is treated as revoked.
-	assert.NoError(t, enforcer.EnsureNotRevoked(context.Background(), "jti-1", ""))
+	assert.NoError(t, enforcer.EnsureNotRevoked(context.Background(), security.RevocationIdentity{JTI: "jti-1"}))
 }
 
 func TestSelectSource(t *testing.T) {

@@ -21,8 +21,14 @@ import {
   FormControl,
   FormLabel,
   Divider,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
 } from '@wso2/oxygen-ui';
+import {ChevronDown} from '@wso2/oxygen-ui-icons-react';
 import type React from 'react';
+import type {ReactNode} from 'react';
+import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import JwtPreview from './JwtPreview';
 import TokenConstants from '../../../constants/token-constants';
@@ -162,6 +168,12 @@ interface TokenUserAttributesSectionProps {
    * Value shown for `act.sub` in the actor claim preview (the acting agent's ID).
    */
   actorSub?: string;
+  /**
+   * Scope-to-claims mapping UI, rendered once beneath the ID Token and User Info tab panels.
+   * The mapping feeds both, so it is a single shared instance rather than a copy per tab, and it
+   * is not shown on the Access Token tab, whose attributes are not scope-driven.
+   */
+  scopeMapping?: ReactNode;
 }
 
 /**
@@ -210,8 +222,12 @@ export default function TokenUserAttributesSection({
   showUserInfoTab = true,
   showActorClaim = false,
   actorSub = '<agent-id>',
+  scopeMapping = undefined,
 }: TokenUserAttributesSectionProps) {
   const {t} = useTranslation();
+  // Which of the two sinks the combined tab was last showing, so switching away to Access Token
+  // and back returns to the same one.
+  const [lastUserSinkTab, setLastUserSinkTab] = useState<'id' | 'userinfo'>('id');
 
   const isOAuthMode = accessTokenAttributes !== undefined;
 
@@ -340,6 +356,85 @@ export default function TokenUserAttributesSection({
       new Set([...userAttributes, ...TokenConstants.ADDITIONAL_USER_ATTRIBUTES, ...currentAttrs]),
     ).filter((attr) => !(defaultAttrs as readonly string[]).includes(attr));
 
+    // On the ID Token and User Info tabs the scope mapping below is the primary control, so the
+    // attribute allow-list is collapsed behind a disclosure. The access token has no scope mapping,
+    // so its picker stays open.
+    const isCollapsible = tokenType === 'id' || tokenType === 'userinfo';
+
+    const attributeCard = (
+      <Card>
+        <CardContent>
+          {isLoadingUserAttributes && (
+            <Typography variant="body2" color="text.secondary">
+              {t('applications:edit.token.loading_attributes', 'Loading user attributes...')}
+            </Typography>
+          )}
+          {!isLoadingUserAttributes && (userAttributes.length > 0 || currentAttrs.length > 0) && (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {availableAttributes.sort().map((attr) => {
+                const isAdded = currentAttrs.includes(attr);
+                const isPendingAddition = pendingAdditions.has(attr) && isPendingTab;
+                const isPendingRemoval = pendingRemovals.has(attr) && isPendingTab;
+                const isHighlighted = highlightedAttributes.has(attr);
+                const isActive = (isAdded && !isPendingRemoval) || isPendingAddition;
+
+                return (
+                  <Chip
+                    key={attr}
+                    label={attr}
+                    size="small"
+                    variant={isActive ? 'filled' : 'outlined'}
+                    color={isActive ? 'primary' : 'default'}
+                    onClick={disabled ? undefined : () => onAttributeClick(attr, tokenType)}
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
+                      boxShadow: isHighlighted ? '0 0 0 2px rgba(25, 118, 210, 0.4)' : 'none',
+                      '&:hover': isActive ? {backgroundColor: 'primary.dark'} : {backgroundColor: 'action.hover'},
+                    }}
+                  />
+                );
+              })}
+            </Stack>
+          )}
+          {!isLoadingUserAttributes && userAttributes.length === 0 && (
+            <Alert severity="info">
+              {t(
+                'applications:edit.token.no_user_attributes',
+                'No user attributes available. Configure allowed user types for this {{entity}}.',
+                {entity: entityLabel},
+              )}
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    );
+
+    // Accordion rather than a bare button: it carries the aria-expanded/aria-controls semantics of
+    // a disclosure for free. Its card chrome is stripped since this already sits inside a card.
+    if (isCollapsible) {
+      return (
+        <Accordion
+          disableGutters
+          square
+          sx={{bgcolor: 'transparent', boxShadow: 'none', '&:before': {display: 'none'}}}
+        >
+          <AccordionSummary
+            expandIcon={<ChevronDown size={16} />}
+            sx={{px: 0, minHeight: 'auto', '& .MuiAccordionSummary-content': {my: 1}}}
+          >
+            <Typography variant="body2">
+              {t('applications:edit.token.configure_attributes.toggle', 'Allowed Attributes ({{count}})', {
+                count: currentAttrs.length,
+              })}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{px: 0, pt: 0}}>{attributeCard}</AccordionDetails>
+        </Accordion>
+      );
+    }
+
     return (
       <Box>
         <Typography variant="body2" sx={{mb: 1}}>
@@ -348,54 +443,7 @@ export default function TokenUserAttributesSection({
         <Typography variant="body2" color="text.disabled" sx={{mb: 2}}>
           {t('applications:edit.token.configure_attributes.hint', 'Click on user attributes to add them to the token.')}
         </Typography>
-
-        <Card>
-          <CardContent>
-            {isLoadingUserAttributes && (
-              <Typography variant="body2" color="text.secondary">
-                {t('applications:edit.token.loading_attributes', 'Loading user attributes...')}
-              </Typography>
-            )}
-            {!isLoadingUserAttributes && (userAttributes.length > 0 || currentAttrs.length > 0) && (
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {availableAttributes.sort().map((attr) => {
-                  const isAdded = currentAttrs.includes(attr);
-                  const isPendingAddition = pendingAdditions.has(attr) && isPendingTab;
-                  const isPendingRemoval = pendingRemovals.has(attr) && isPendingTab;
-                  const isHighlighted = highlightedAttributes.has(attr);
-                  const isActive = (isAdded && !isPendingRemoval) || isPendingAddition;
-
-                  return (
-                    <Chip
-                      key={attr}
-                      label={attr}
-                      size="small"
-                      variant={isActive ? 'filled' : 'outlined'}
-                      color={isActive ? 'primary' : 'default'}
-                      onClick={disabled ? undefined : () => onAttributeClick(attr, tokenType)}
-                      sx={{
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
-                        boxShadow: isHighlighted ? '0 0 0 2px rgba(25, 118, 210, 0.4)' : 'none',
-                        '&:hover': isActive ? {backgroundColor: 'primary.dark'} : {backgroundColor: 'action.hover'},
-                      }}
-                    />
-                  );
-                })}
-              </Stack>
-            )}
-            {!isLoadingUserAttributes && userAttributes.length === 0 && (
-              <Alert severity="info">
-                {t(
-                  'applications:edit.token.no_user_attributes',
-                  'No user attributes available. Configure allowed user types for this {{entity}}.',
-                  {entity: entityLabel},
-                )}
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+        {attributeCard}
       </Box>
     );
   };
@@ -411,7 +459,7 @@ export default function TokenUserAttributesSection({
     return (
       <Grid container spacing={3}>
         <Grid size={{xs: 12, lg: 7}}>{renderAttributeChips(currentAttrs, tokenType)}</Grid>
-        <Grid size={{xs: 12, lg: 5}}>
+        <Grid size={{xs: 12, lg: 5}} sx={{minWidth: 0}}>
           {tokenType === 'access' && showActorClaim && (
             <Alert severity="info" sx={{mb: 2}}>
               {t(
@@ -460,38 +508,56 @@ export default function TokenUserAttributesSection({
   const cardTitle = resolveCardTitle();
   const cardDescription = resolveCardDescription();
   if (isOAuthMode) {
-    let tabIndex = showUserInfoTab ? 2 : 0;
-
-    if (activeTab === 'access') {
-      tabIndex = 0;
-    } else if (activeTab === 'id') {
-      tabIndex = 1;
-    }
-
-    const availableTabs: ('access' | 'id' | 'userinfo')[] = showUserInfoTab
-      ? ['access', 'id', 'userinfo']
-      : ['access', 'id'];
+    // The ID token and UserInfo share one scope-to-claims mapping, so they live under a single
+    // top-level tab with the mapping above them: rendering the mapping inside either tab panel
+    // would make one shared control look like two separate per-tab ones.
+    const isUserSinkTab = activeTab === 'id' || activeTab === 'userinfo';
 
     return (
       <SettingsCard slotProps={{content: {sx: {p: 0}}}} title={cardTitle} description={cardDescription}>
         <Stack spacing={3}>
           <Tabs
-            value={tabIndex}
+            value={activeTab === 'access' ? 0 : 1}
             onChange={(_, newValue: number) => {
-              onTabChange?.(availableTabs[newValue]);
+              // Returning to the combined tab restores whichever sink was open last.
+              onTabChange?.(newValue === 0 ? 'access' : lastUserSinkTab);
             }}
             sx={{borderBottom: 1, borderColor: 'divider'}}
           >
             <Tab label={t('applications:edit.token.tabs.access_token', 'Access Token')} />
-            <Tab label={t('applications:edit.token.tabs.id_token', 'ID Token')} />
-            {showUserInfoTab && (
-              <Tab label={t('applications:edit.token.tabs.user_info_endpoint', 'User Info Endpoint')} />
-            )}
+            <Tab
+              label={
+                showUserInfoTab
+                  ? t('applications:edit.token.tabs.id_token_and_user_info', 'ID Token & User Info')
+                  : t('applications:edit.token.tabs.id_token', 'ID Token')
+              }
+            />
           </Tabs>
 
           <Box sx={{p: 3}}>
             {/* Access Token Tab Panel */}
             {activeTab === 'access' && <Box>{renderAttributePanel(accessTokenAttributes ?? [], 'access')}</Box>}
+
+            {isUserSinkTab && (
+              <Stack spacing={3} sx={{mb: 3}}>
+                {/* One shared mapping, above the sinks it feeds. */}
+                {scopeMapping}
+                {showUserInfoTab && (
+                  <Tabs
+                    value={activeTab === 'id' ? 0 : 1}
+                    onChange={(_, newValue: number) => {
+                      const sink = newValue === 0 ? 'id' : 'userinfo';
+                      setLastUserSinkTab(sink);
+                      onTabChange?.(sink);
+                    }}
+                    sx={{borderBottom: 1, borderColor: 'divider'}}
+                  >
+                    <Tab label={t('applications:edit.token.tabs.id_token', 'ID Token')} />
+                    <Tab label={t('applications:edit.token.tabs.user_info_endpoint', 'User Info Endpoint')} />
+                  </Tabs>
+                )}
+              </Stack>
+            )}
 
             {/* ID Token Tab Panel */}
             {activeTab === 'id' &&
@@ -505,8 +571,6 @@ export default function TokenUserAttributesSection({
                     {/* Left Column - Attributes + Response Format */}
                     <Grid size={{xs: 12, lg: 7}}>
                       <Stack spacing={3}>
-                        {renderAttributeChips(idAttrs, 'id')}
-                        <Divider />
                         {/* Response Format */}
                         <Box>
                           <Typography variant="subtitle2" sx={{mb: 1}}>
@@ -647,11 +711,13 @@ export default function TokenUserAttributesSection({
                             )}
                           </Stack>
                         </Box>
+                        <Divider />
+                        {renderAttributeChips(idAttrs, 'id')}
                       </Stack>
                     </Grid>
 
                     {/* Right Column - JWT Preview */}
-                    <Grid size={{xs: 12, lg: 5}}>
+                    <Grid size={{xs: 12, lg: 5}} sx={{minWidth: 0}}>
                       <JwtPreview payload={jwtPreview} defaultClaims={defaultAttrs} header={buildIdTokenHeader()} />
                     </Grid>
                   </Grid>
@@ -673,47 +739,6 @@ export default function TokenUserAttributesSection({
                     {/* Left Column - Attributes + Response Format */}
                     <Grid size={{xs: 12, lg: 7}}>
                       <Stack spacing={3}>
-                        {/* User Attributes */}
-                        <Box>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={!isUserInfoCustomAttributes}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                  onToggleUserInfo?.(!e.target.checked)
-                                }
-                                name="userinfo-inherit"
-                                size="small"
-                                disabled={disabled}
-                              />
-                            }
-                            label={
-                              <Box sx={{ml: 0.5}}>
-                                <Typography variant="body2" fontWeight={500}>
-                                  {t(
-                                    'applications:edit.token.inherit_from_id_token',
-                                    'Use same attributes as ID Token',
-                                  )}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {t(
-                                    'applications:edit.token.user_info.inherit_hint',
-                                    'When enabled, the User Info endpoint returns the same attributes configured for the ID Token',
-                                  )}
-                                </Typography>
-                              </Box>
-                            }
-                            sx={{mb: 2, alignItems: 'center'}}
-                          />
-                          {isUserInfoCustomAttributes ? (
-                            renderAttributeChips(userInfoAttributes ?? [], 'userinfo')
-                          ) : (
-                            <Box sx={{opacity: 0.45, pointerEvents: 'none', userSelect: 'none'}}>
-                              {renderAttributeChips(idTokenAttributes ?? [], 'userinfo')}
-                            </Box>
-                          )}
-                        </Box>
-                        <Divider />
                         {/* Response Format */}
                         <Box>
                           <Typography variant="subtitle2" sx={{mb: 1}}>
@@ -855,11 +880,52 @@ export default function TokenUserAttributesSection({
                             )}
                           </Stack>
                         </Box>
+                        <Divider />
+                        {/* User Attributes */}
+                        <Box>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={!isUserInfoCustomAttributes}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                  onToggleUserInfo?.(!e.target.checked)
+                                }
+                                name="userinfo-inherit"
+                                size="small"
+                                disabled={disabled}
+                              />
+                            }
+                            label={
+                              <Box sx={{ml: 0.5}}>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {t(
+                                    'applications:edit.token.inherit_from_id_token',
+                                    'Use same attributes as ID Token',
+                                  )}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {t(
+                                    'applications:edit.token.user_info.inherit_hint',
+                                    'When enabled, the User Info endpoint returns the same attributes configured for the ID Token',
+                                  )}
+                                </Typography>
+                              </Box>
+                            }
+                            sx={{mb: 2, alignItems: 'center'}}
+                          />
+                          {isUserInfoCustomAttributes ? (
+                            renderAttributeChips(userInfoAttributes ?? [], 'userinfo')
+                          ) : (
+                            <Box sx={{opacity: 0.45, pointerEvents: 'none', userSelect: 'none'}}>
+                              {renderAttributeChips(idTokenAttributes ?? [], 'userinfo')}
+                            </Box>
+                          )}
+                        </Box>
                       </Stack>
                     </Grid>
 
                     {/* Right Column - JWT/JSON Preview */}
-                    <Grid size={{xs: 12, lg: 5}}>
+                    <Grid size={{xs: 12, lg: 5}} sx={{minWidth: 0}}>
                       <JwtPreview
                         payload={jwtPreview}
                         defaultClaims={defaultAttrs}

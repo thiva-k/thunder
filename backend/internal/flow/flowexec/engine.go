@@ -165,20 +165,21 @@ func (fe *flowEngine) executeNodePackage(ctx *EngineContext,
 		FlowVersion: ctx.SSOFlowVersion,
 	})
 	nodeCtx := &providers.NodeContext{
-		Context:          ssoCtx,
-		ExecutionID:      ctx.ExecutionID,
-		FlowType:         ctx.FlowType,
-		EntityID:         ctx.AppID,
-		CurrentAction:    ctx.CurrentAction,
-		Verbose:          ctx.Verbose,
-		NodeInputs:       getNodeInputs(ctx.CurrentNode),
-		UserInputs:       ctx.UserInputs,
-		CurrentNodeID:    ctx.CurrentNode.GetID(),
-		RuntimeData:      ctx.RuntimeData,
-		ForwardedData:    ctx.ForwardedData,
-		Application:      ctx.Application,
-		AuthUser:         ctx.AuthUser,
-		ExecutionHistory: ctx.ExecutionHistory,
+		Context:           ssoCtx,
+		ExecutionID:       ctx.ExecutionID,
+		FlowType:          ctx.FlowType,
+		EntityID:          ctx.AppID,
+		CurrentAction:     ctx.CurrentAction,
+		Verbose:           ctx.Verbose,
+		NodeInputs:        getNodeInputs(ctx.CurrentNode),
+		UserInputs:        ctx.UserInputs,
+		CurrentNodeID:     ctx.CurrentNode.GetID(),
+		RuntimeData:       ctx.RuntimeData,
+		SharedRuntimeData: ctx.sharedRuntimeData,
+		ForwardedData:     ctx.ForwardedData,
+		Application:       ctx.Application,
+		AuthUser:          ctx.AuthUser,
+		ExecutionHistory:  ctx.ExecutionHistory,
 	}
 	nodeCtx.SetInitiatorRequest(ctx.GetInitiatorRequest())
 	if nodeCtx.NodeInputs == nil {
@@ -688,6 +689,13 @@ func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, no
 			engineCtx.RuntimeData = make(map[string]string)
 		}
 		engineCtx.RuntimeData = sysutils.MergeStringMaps(engineCtx.RuntimeData, nodeResp.RuntimeData)
+	}
+	if len(nodeResp.SharedRuntimeData) > 0 {
+		if engineCtx.sharedRuntimeData == nil {
+			engineCtx.sharedRuntimeData = make(map[string]string)
+		}
+		engineCtx.sharedRuntimeData = sysutils.MergeStringMaps(
+			engineCtx.sharedRuntimeData, nodeResp.SharedRuntimeData)
 	}
 
 	// Handle additional data from the node response (e.g., passkeyCreationOptions, passkeyChallenge)

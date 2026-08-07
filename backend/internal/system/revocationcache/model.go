@@ -12,13 +12,18 @@ type revokedEntry struct {
 	// ExpiryTime is the revoked token's (or family's) original expiry; the entry is prunable once it
 	// passes.
 	ExpiryTime time.Time
+	// RevokedAt is the latest establishment time affected by this criterion.
+	RevokedAt time.Time
+	// Boundary indicates that only artifacts established at or before RevokedAt are revoked.
+	Boundary bool
 }
 
-// revokedSnapshot is one source read: the revoked single-token jtis and the revoked token-family ids
-// for a deployment, held in separate cache dimensions so a jti is never matched against a tfid.
+// revokedSnapshot is one source read. Dimensions are separate so values of different types cannot collide.
 type revokedSnapshot struct {
 	// Tokens holds the revoked single-token entries (keyed by jti).
 	Tokens []revokedEntry
 	// Families holds the revoked token-family entries (keyed by tfid).
 	Families []revokedEntry
+	// Subjects holds revoked user-subject entries.
+	Subjects []revokedEntry
 }

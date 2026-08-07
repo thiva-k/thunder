@@ -1,16 +1,8 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {Box, Card, CardActionArea, CardContent, Chip, Stack, Typography} from '@wso2/oxygen-ui';
-import {
-  ArrowLeftRight,
-  CircleCheck,
-  KeyRound,
-  LogIn,
-  MessagesSquare,
-  Send,
-  ShieldCheck,
-} from '@wso2/oxygen-ui-icons-react';
+import {Box, Card, CardContent, Chip, Stack, Typography} from '@wso2/oxygen-ui';
+import {CircleCheck, KeyRound, MessagesSquare, ShieldCheck} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {type ConnectionType, ConnectionTypes} from '../../models/connection';
@@ -31,10 +23,12 @@ interface SelectConnectionTypeProps {
 interface TypeOption {
   type: SelectableConnectionType;
   labelKey: string;
+  labelDefault: string;
   descriptionKey: string;
+  descriptionDefault: string;
   tagKey: string;
+  tagDefault: string;
   icon: JSX.Element;
-  tagIcon: JSX.Element;
   comingSoon: boolean;
 }
 
@@ -45,97 +39,134 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
     {
       type: ConnectionTypes.OIDC,
       labelKey: 'wizard.type.oidc.label',
+      labelDefault: 'OpenID Connect Provider',
       descriptionKey: 'wizard.type.oidc.description',
+      descriptionDefault: 'Connect any OpenID Connect identity provider.',
       tagKey: 'wizard.type.oidc.tag',
+      tagDefault: 'Login provider · Enterprise',
       icon: <ShieldCheck size={28} />,
-      tagIcon: <LogIn size={14} />,
       comingSoon: false,
     },
     {
       type: ConnectionTypes.OAUTH,
       labelKey: 'wizard.type.oauth.label',
+      labelDefault: 'OAuth 2.0 Provider',
       descriptionKey: 'wizard.type.oauth.description',
+      descriptionDefault: 'Connect any OAuth 2.0 identity provider.',
       tagKey: 'wizard.type.oauth.tag',
+      tagDefault: 'Login provider · Enterprise',
       icon: <KeyRound size={28} />,
-      tagIcon: <LogIn size={14} />,
       comingSoon: false,
     },
     {
       type: 'trusted-idp',
       labelKey: 'wizard.type.trustedIdp.label',
+      labelDefault: 'Trusted Token Issuer',
       descriptionKey: 'wizard.type.trustedIdp.description',
+      descriptionDefault: "Trust an external IdP's identity assertions and exchange them for access tokens.",
       tagKey: 'wizard.type.trustedIdp.tag',
+      tagDefault: 'Token exchange · ID-JAG',
       icon: <ShieldCheck size={28} />,
-      tagIcon: <ArrowLeftRight size={14} />,
       comingSoon: false,
     },
     {
       type: ConnectionTypes.SMS_GATEWAY,
       labelKey: 'wizard.type.sms.label',
+      labelDefault: 'SMS gateway',
       descriptionKey: 'wizard.type.sms.description',
+      descriptionDefault: 'Route SMS through your own HTTP gateway.',
       tagKey: 'wizard.type.sms.tag',
+      tagDefault: 'Message sender · SMS',
       icon: <MessagesSquare size={28} />,
-      tagIcon: <Send size={14} />,
       comingSoon: false,
     },
   ];
 
   return (
-    <Stack direction="column" spacing={1} data-testid="select-connection-type">
-      <Typography variant="h1" gutterBottom>
-        {t('wizard.type.heading')}
-      </Typography>
-      <Typography variant="subtitle1" gutterBottom>
-        {t('wizard.type.subheading')}
-      </Typography>
+    <Stack direction="column" spacing={3} data-testid="select-connection-type">
+      <Stack direction="column" spacing={0.5}>
+        <Typography variant="h1">{t('wizard.type.heading', 'What kind of connection do you want to add?')}</Typography>
+        <Typography variant="body1" color="text.secondary">
+          {t(
+            'wizard.type.subheading',
+            "Custom connections aren't in the vendor catalog. Pick the type of integration you want to wire up.",
+          )}
+        </Typography>
+      </Stack>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)'},
-          gap: 2,
-          mt: 3,
-        }}
-      >
+      <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2}}>
         {options.map((option) => {
           const isSelected: boolean = selectedType === option.type;
           return (
-            <Card key={option.type} variant="outlined" sx={{opacity: option.comingSoon ? 0.6 : 1}}>
-              <CardActionArea
-                disabled={option.comingSoon}
-                onClick={() => onSelect(option.type)}
-                data-testid={`connection-type-option-${option.type}`}
-                sx={{
-                  height: '100%',
-                  border: 1,
-                  borderColor: isSelected ? 'primary.main' : 'divider',
-                  transition: 'all 0.2s ease-in-out',
-                  '&:hover': {borderColor: option.comingSoon ? 'divider' : 'primary.main'},
-                }}
-              >
-                <CardContent sx={{p: 2.5}}>
+            <Card
+              key={option.type}
+              variant="outlined"
+              role="button"
+              tabIndex={option.comingSoon ? -1 : 0}
+              aria-pressed={isSelected}
+              aria-disabled={option.comingSoon}
+              data-testid={`connection-type-option-${option.type}`}
+              onClick={option.comingSoon ? undefined : () => onSelect(option.type)}
+              onKeyDown={(e) => {
+                if (!option.comingSoon && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  onSelect(option.type);
+                }
+              }}
+              sx={{
+                cursor: option.comingSoon ? 'not-allowed' : 'pointer',
+                opacity: option.comingSoon ? 0.6 : 1,
+                borderColor: isSelected ? 'primary.main' : 'divider',
+                transition: 'border-color 0.15s',
+                '&:hover': option.comingSoon ? {} : {borderColor: 'primary.main'},
+                '&:focus-visible': option.comingSoon ? {} : {outline: 'none', borderColor: 'primary.main'},
+              }}
+            >
+              <CardContent sx={{p: 2.5, '&:last-child': {pb: 2.5}}}>
+                <Stack direction="column" spacing={2}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Box sx={{color: isSelected ? 'primary.main' : 'text.secondary'}}>{option.icon}</Box>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 48,
+                        height: 48,
+                        color: isSelected ? 'primary.main' : 'text.secondary',
+                      }}
+                    >
+                      {option.icon}
+                    </Box>
                     {option.comingSoon ? (
-                      <Chip size="small" label={t('card.comingSoon')} />
+                      <Chip size="small" label={t('card.comingSoon', 'Coming soon')} />
                     ) : (
                       isSelected && <CircleCheck size={20} color="var(--mui-palette-primary-main)" />
                     )}
                   </Stack>
-                  <Typography variant="h6" sx={{mt: 2}}>
-                    {t(option.labelKey)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{mt: 0.5}}>
-                    {t(option.descriptionKey)}
-                  </Typography>
-                  <Stack direction="row" spacing={0.5} alignItems="center" sx={{mt: 1.5, color: 'text.secondary'}}>
-                    {option.tagIcon}
-                    <Typography variant="caption" color="text.secondary">
-                      {t(option.tagKey)}
+                  <Stack direction="column" spacing={0.75}>
+                    <Typography variant="subtitle1" sx={{fontWeight: 600, lineHeight: 1.3}}>
+                      {t(option.labelKey, option.labelDefault)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{lineHeight: 1.5}}>
+                      {t(option.descriptionKey, option.descriptionDefault)}
                     </Typography>
                   </Stack>
-                </CardContent>
-              </CardActionArea>
+                  <Stack direction="row" spacing={0.75} flexWrap="wrap">
+                    {t(option.tagKey, option.tagDefault)
+                      .split(' · ')
+                      .map((tag) => (
+                        <Typography
+                          key={tag}
+                          variant="caption"
+                          color="text.disabled"
+                          sx={{fontWeight: 500, letterSpacing: 0.2}}
+                        >
+                          #{tag.toLocaleLowerCase()}
+                        </Typography>
+                      ))}
+                  </Stack>
+                </Stack>
+              </CardContent>
             </Card>
           );
         })}

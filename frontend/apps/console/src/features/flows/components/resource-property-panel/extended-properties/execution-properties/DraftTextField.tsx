@@ -83,6 +83,13 @@ function DraftTextField({value, onCommit, normalize = undefined, ...rest}: Draft
 
   useEffect(() => {
     pendingCommitRef.current = (): void => {
+      // Only an edit in progress may be flushed. Normalization can turn an untouched draft
+      // into a different value (an empty field falling back to its minimum), so an unedited
+      // field is left alone rather than storing a value the user never entered.
+      if (draft === committed) {
+        return;
+      }
+
       const next: string | null = resolve();
 
       if (next !== null && next !== committed) {

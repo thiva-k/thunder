@@ -17,9 +17,9 @@ describe('SignInSlogan', () => {
 
   it('renders all slogan items', () => {
     render(<SignInSlogan />);
-    expect(screen.getByText('Native Agent Identity')).toBeInTheDocument();
-    expect(screen.getByText('Post-Quantum Ready')).toBeInTheDocument();
-    expect(screen.getByText('Lightweight, High-Performant Runtime')).toBeInTheDocument();
+    expect(screen.getByText('Agent-native Identity')).toBeInTheDocument();
+    expect(screen.getByText('Post-quantum-safe by Design')).toBeInTheDocument();
+    expect(screen.getByText('Lightweight Runtime with GitOps Support')).toBeInTheDocument();
   });
 
   it('renders item descriptions', () => {

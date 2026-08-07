@@ -235,6 +235,20 @@ paths:
                     description:
                       key: "error.roleservice.cannot_create_role_in_declarative_only_mode_description"
                       defaultValue: "Role creation is not allowed when running in declarative-only mode. Roles must be defined in declarative configuration files"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "SAZ-4030"
+                message:
+                  key: "error.sysauthz.grant_not_permitted"
+                  defaultValue: "Insufficient privileges to grant these permissions"
+                description:
+                  key: "error.sysauthz.grant_not_permitted_description"
+                  defaultValue: "The operation would grant permissions that the caller does not hold"
         "409":
           description: Conflict
           content:
@@ -462,6 +476,20 @@ paths:
                     description:
                       key: "error.roleservice.cannot_modify_declarative_role_description"
                       defaultValue: "The role is defined in declarative configuration and cannot be modified"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "SAZ-4030"
+                message:
+                  key: "error.sysauthz.grant_not_permitted"
+                  defaultValue: "Insufficient privileges to grant these permissions"
+                description:
+                  key: "error.sysauthz.grant_not_permitted_description"
+                  defaultValue: "The operation would grant permissions that the caller does not hold"
         "404":
           description: Role not found
           content:
@@ -761,6 +789,20 @@ paths:
                     description:
                       key: "error.roleservice.empty_assignments_list_description"
                       defaultValue: "At least one assignment must be provided"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "SAZ-4030"
+                message:
+                  key: "error.sysauthz.grant_not_permitted"
+                  defaultValue: "Insufficient privileges to grant these permissions"
+                description:
+                  key: "error.sysauthz.grant_not_permitted_description"
+                  defaultValue: "The operation would grant permissions that the caller does not hold"
         "404":
           description: Role not found
           content:
@@ -845,6 +887,20 @@ paths:
                     description:
                       key: "error.roleservice.empty_assignments_list_description"
                       defaultValue: "At least one assignment must be provided"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "SAZ-4030"
+                message:
+                  key: "error.sysauthz.grant_not_permitted"
+                  defaultValue: "Insufficient privileges to grant these permissions"
+                description:
+                  key: "error.sysauthz.grant_not_permitted_description"
+                  defaultValue: "The operation would grant permissions that the caller does not hold"
         "404":
           description: Role not found
           content:
@@ -1175,7 +1231,7 @@ components:
       properties:
         code:
           type: string
-          description: "Error code. Codes follow the ROL-XXXX convention."
+          description: "Error code. The prefix identifies the service that produced the error, for example ROL for role management or SAZ for system authorization."
           example: "ROL-1001"
         message:
           $ref: '#/components/schemas/I18nMessage'

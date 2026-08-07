@@ -311,8 +311,6 @@ const translations = {
 
     'welcome.applicationTryout.scenarios.onboard.description':
       'Invite and onboard two new staff members entirely from the {{productName}} Console: Sam Rivera (Support) and Maya Patel (DestinationsAdmin). The admin picks the staff role and sends the invitation, and the matching role is attached automatically when the invitee completes their profile.',
-    'welcome.applicationTryout.scenarios.onboard.smtpNote':
-      "Before trying this flow, set flow.user_onboarding_flow_handle to wayfinder-onboarding-flow in {{productName}}'s deployment.yaml and restart the server.",
     'welcome.applicationTryout.scenarios.onboard.step1': 'Sign in to the {{productName}} Console as your admin user.',
     'welcome.applicationTryout.scenarios.onboard.step2': 'Navigate to Users and select Add User.',
     'welcome.applicationTryout.scenarios.onboard.step3': 'Select Staff as the user type.',
@@ -1583,10 +1581,12 @@ const translations = {
     'addMember.tabs.users': 'Users',
     'addMember.tabs.apps': 'Apps',
     'addMember.tabs.agents': 'Agents',
+    'addMember.tabs.groups': 'Groups',
     'addMember.search.placeholder': 'Search users...',
     'addMember.noResults': 'No users found',
     'addMember.noResultsApps': 'No apps found',
     'addMember.noResultsAgents': 'No agents found',
+    'addMember.noResultsGroups': 'No groups found',
     'addMember.add': 'Add Selected',
     'addMember.columns.displayName': 'Display Name',
     'addMember.columns.userType': 'User Type',
@@ -1595,6 +1595,7 @@ const translations = {
     'addMember.fetchError': 'Failed to load users. Please try again.',
     'addMember.fetchAppsError': 'Failed to load apps. Please try again.',
     'addMember.fetchAgentsError': 'Failed to load agents. Please try again.',
+    'addMember.fetchGroupsError': 'Failed to load groups. Please try again.',
     'removeMember.error': 'Failed to remove member. Please try again.',
 
     // Delete dialog
@@ -3152,6 +3153,8 @@ const translations = {
     'configureExport.fallback.unnamedCredentialConfiguration': 'Unnamed Credential Configuration',
     'configureExport.labels.agents': 'Agents',
     'configureExport.fallback.unnamedAgent': 'Unnamed Agent',
+    'configureExport.fallback.unnamedAgentType': 'Unnamed agent type',
+    'configureExport.labels.agentTypes': 'Agent Types',
     'configureExport.labels.serverConfigs': 'Server Configurations',
     'configureExport.fallback.unnamedServerConfig': 'Unnamed Server Configuration',
     'configureExport.fallback.unnamedUser': 'User {{index}}',
@@ -3182,6 +3185,7 @@ const translations = {
     'summary.fallback.theme': 'Theme {{index}}',
     'summary.fallback.user': 'User {{index}}',
     'summary.fallback.schema': 'Schema {{index}}',
+    'summary.fallback.agentType': 'Agent Type {{index}}',
     'summary.precheck.readyNoEnvRequired': 'Ready to proceed. No environment values are required for this import.',
     'summary.precheck.readyAllEnvAvailable':
       'Ready to proceed. All {{count}} referenced environment values are available.',
@@ -3511,6 +3515,15 @@ const translations = {
     'core.executions.identifying.description':
       'Configure the identifying executor mode. Use "Resolve" to enable user disambiguation when multiple users match.',
 
+    // Administrative flow pre executor
+    'core.executions.preDelete.mode.revokeAll': 'Revoke all grants',
+    'core.executions.preDelete.mode.label': 'Revocation mode',
+    'core.executions.preDelete.mode.placeholder': 'Select a revocation mode',
+    'core.executions.preDelete.mode.hint':
+      'Applies to every grant the subject holds. The executors that follow act on this setting, so it cannot be changed per request.',
+    'core.executions.preDelete.description':
+      'Validate the target of an administrative operation and plan the revocation carried out by the executors that follow.',
+
     // Passkey executor modes
     'core.executions.passkey.mode.challenge': 'Challenge',
     'core.executions.passkey.mode.verify': 'Verify',
@@ -3785,6 +3798,10 @@ const translations = {
       'Sign-out button <code>{{id}}</code> is not connected, so it will not sign the user out. Connect it to the session sign-out step, or change its action.',
     'core.validation.signOut.confirmInvalidTarget':
       'Sign-out button <code>{{id}}</code> does not lead to a session sign-out step, so it will not sign the user out. Connect it to one, or change its action.',
+
+    // Validation messages - rich text links
+    'core.validation.richText.actionNotConnected':
+      'Link <code>{{id}}</code> is not connected to a step, so clicking it will fail at runtime. Connect it to the step it should open, or turn off "Use as an interactive link".',
 
     // Elements - rich text
     'core.elements.richText.placeholder': 'Enter text here...',
@@ -4109,6 +4126,8 @@ const translations = {
     'page.title': 'Translations',
     'page.subtitle': 'Manage and customize UI text and translations for your application.',
 
+    'editor.back': 'Back to Translations',
+
     'listing.addLanguage': 'Add Language',
     'listing.columns.language': 'Language',
     'listing.columns.actions': 'Actions',
@@ -4123,7 +4142,6 @@ const translations = {
     'language.create.steps.country': 'Country',
     'language.create.steps.language': 'Language',
     'language.create.steps.localeCode': 'Locale Code',
-    'language.create.steps.initialize': 'Initialize',
 
     'language.create.country.title': 'Choose a Country',
     'language.create.country.subtitle': 'Select the country for the language you want to add.',
@@ -4142,15 +4160,6 @@ const translations = {
     'language.create.localeCode.title': 'Review Locale Code',
     'language.create.localeCode.subtitle':
       'The locale code was derived from your selection. Override it here if you need a different tag.',
-
-    'language.create.initialize.title': 'Initialize Translations',
-    'language.create.initialize.subtitle': 'Choose how to populate the translation keys for this language.',
-    'language.create.initialize.copyFromEnglish.label': 'Copy from English',
-    'language.create.initialize.copyFromEnglish.description':
-      'All keys will be pre-filled with English (en-US) text as a starting point. You can edit them afterwards.',
-    'language.create.initialize.startEmpty.label': 'Start empty',
-    'language.create.initialize.startEmpty.description':
-      'All keys will be created with empty values. Useful when you have your own translations ready to paste in.',
 
     'language.create.createButton': 'Create Language',
 
@@ -4189,7 +4198,6 @@ const translations = {
     'editor.namespace.helperText':
       'A namespace typically represents a page or a section within a page. It helps group and organize related translation keys for better structure and maintainability.',
     'editor.textFields': 'Fields',
-    'editor.rawJson': 'Raw JSON',
     'editor.addKey': 'Add Key',
     'editor.addKey.keyLabel': 'Key',
     'editor.addKey.valueLabel': 'Value',
@@ -4510,7 +4518,7 @@ const translations = {
     'next_steps.invite_members.actions.primary.label': 'Add User',
     'next_steps.invite_members.status.count': '{{count}} member',
     'next_steps.invite_members.status.count_other': '{{count}} members',
-    'next_steps.invite_members.status.empty': 'No members yet — add collaborators',
+    'next_steps.invite_members.status.empty': 'No members yet',
 
     // Login Box card
     'next_steps.login_box.title': 'Sign-in Box',
@@ -4624,13 +4632,20 @@ const translations = {
     'listing.columns.type': 'Type',
     'listing.columns.identifier': 'Identifier',
     'listing.columns.actions': 'Actions',
+    'listing.actions.more': 'More actions',
     'listing.systemResourceServer': 'System resource server',
     'listing.default': 'Default',
     'listing.error': 'Failed to load resource servers',
     'actions.setAsDefault': 'Set as default',
     'setDefault.title': 'Set default resource server',
-    'setDefault.message':
-      'will become the default resource server. Requests without a resource parameter will fall back to it.',
+    'setDefault.message': '<bold>{{name}}</bold> will become the default resource server.',
+    'setDefault.unavailableReason': 'Checking the current default resource server.',
+    'setDefault.lockedReason': 'The default resource server is fixed by the deployment configuration.',
+    'setDefault.alreadyDefaultReason': 'This is already the default resource server.',
+    'setDefault.ineligibleTypeReason': 'Only API and custom resource servers can be the default.',
+    'setDefault.explanation':
+      'When an application requests a token without naming a resource server, its permissions come from this one. Only one resource server can be the default at a time.',
+    'setDefault.action': 'Make default resource server',
     'setDefault.confirm': 'Set as default',
     'setDefault.setting': 'Setting…',
     'setDefault.success': '{{name}} is now the default resource server.',
@@ -4716,6 +4731,8 @@ const translations = {
       'A unique identifier for this resource server. When set as an absolute URI, it becomes the token audience for RFC 8707 resource indicators.',
     'create.name.identifierHintMcp':
       'A unique identifier for this MCP server. When set as an absolute URI, it becomes the token audience for RFC 8707 resource indicators.',
+    'create.name.makeDefaultLabel': 'Make this the default resource server',
+    'create.setDefaultError': 'Resource server created, but it could not be made the default.',
     'create.separator.title': 'Choose your permission delimiter',
     'create.separator.subtitle':
       'The delimiter character joins parts of a permission string. This cannot be changed after creation.',

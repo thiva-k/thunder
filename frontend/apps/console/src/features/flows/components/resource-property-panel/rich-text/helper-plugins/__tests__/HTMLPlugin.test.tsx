@@ -860,6 +860,126 @@ describe('HTMLPlugin', () => {
     });
   });
 
+  describe('Action Sentinel Restore', () => {
+    // Lexical drops `data-component-ref` and `data-action-ref` on export because no registered
+    // node declares them. The plugin copies them back from the label the editor was seeded with.
+    const exportWith = (label: string, exportedHtml: string): string => {
+      mockGenerateHtmlFromNodes.mockReturnValue(exportedHtml);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let capturedCallback: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockRegisterUpdateListener.mockImplementation((callback: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        capturedCallback = callback;
+        return vi.fn();
+      });
+
+      render(<HTMLPlugin onChange={mockOnChange} resource={createMockResource({label})} />);
+
+      // The first invocation is the EXTERNAL update from seeding the editor; it is skipped.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      capturedCallback({editorState: {read: (cb: () => void) => cb()}});
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      capturedCallback({editorState: {read: (cb: () => void) => cb()}});
+
+      return mockOnChange.mock.lastCall?.[0] as string;
+    };
+
+    it('restores both sentinels onto the exported HTML', () => {
+      const result = exportWith(
+        '<p data-component-ref="recovery-link"><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        '<p><a href="#">Reset</a></p>',
+      );
+
+      expect(result).toBe(
+        '<p data-component-ref="recovery-link"><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+      );
+    });
+
+    it('keeps the sentinel on its own anchor when a link is inserted ahead of it', () => {
+      // Positional matching would move the ref onto the new link and kill the real one.
+      const result = exportWith(
+        '<p><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        '<p><a href="https://example.com">Help</a><a href="#">Reset</a></p>',
+      );
+
+      expect(result).toBe(
+        '<p><a href="https://example.com">Help</a><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+      );
+    });
+
+    it('falls back to position when the link itself was edited', () => {
+      const result = exportWith(
+        '<p><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        '<p><a href="#">Reset password</a></p>',
+      );
+
+      expect(result).toBe('<p><a href="#" data-action-ref="action_recovery">Reset password</a></p>');
+    });
+
+    it('does not give a duplicated link the original ref', () => {
+      // Two anchors dispatching the same action is ambiguous at runtime; only one may carry it.
+      const result = exportWith(
+        '<p><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        '<p><a href="#">Reset</a><a href="#">Reset</a></p>',
+      );
+
+      expect(result).toBe('<p><a href="#" data-action-ref="action_recovery">Reset</a><a href="#">Reset</a></p>');
+    });
+
+    it('does not copy a ref onto a duplicate of an anchor that kept it', () => {
+      // Should an export ever retain the sentinel, the anchor holding it owns its identity;
+      // giving its twin the same ref would make both anchors dispatch the one action.
+      const result = exportWith(
+        '<p><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        '<p><a href="#" data-action-ref="action_recovery">Reset</a><a href="#">Reset</a></p>',
+      );
+
+      expect(result).toBe('<p><a href="#" data-action-ref="action_recovery">Reset</a><a href="#">Reset</a></p>');
+    });
+
+    it('does not give an unwired duplicate the ref of its twin', () => {
+      // The label's first anchor never carried a ref; only its identical twin below did.
+      // Identity cannot tell the two apart, so both must fall through to position.
+      const result = exportWith(
+        '<p><a href="#">Reset</a><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+        '<p><a href="#">Reset</a><a href="#">Reset</a></p>',
+      );
+
+      expect(result).toBe('<p><a href="#">Reset</a><a href="#" data-action-ref="action_recovery">Reset</a></p>');
+    });
+
+    it('leaves HTML untouched when the label carries no sentinel', () => {
+      const result = exportWith('<p><a href="#">Reset</a></p>', '<p><a href="#">Reset</a></p>');
+
+      expect(result).toBe('<p><a href="#">Reset</a></p>');
+    });
+
+    it('re-serialises a shipped widget label without altering anything but the sentinels', () => {
+      // The restore round-trips through DOMParser, so this pins what that costs: restored
+      // attributes are appended rather than kept in their authored position, and nothing else
+      // (classes, entities, non-breaking spaces) is rewritten.
+      const result = exportWith(
+        '<p data-component-ref="self-sign-up-link" class="rich-text-paragraph">' +
+          '<span class="rich-text-pre-wrap">Don\'t have an account?&nbsp;</span>' +
+          '<a href="#" data-action-ref="action_signup_ab12" class="rich-text-link">' +
+          '<span class="rich-text-pre-wrap">Sign up</span></a></p>',
+        '<p class="rich-text-paragraph">' +
+          '<span class="rich-text-pre-wrap">Don\'t have an account?&nbsp;</span>' +
+          '<a href="#" class="rich-text-link">' +
+          '<span class="rich-text-pre-wrap">Sign up</span></a></p>',
+      );
+
+      expect(result).toBe(
+        '<p class="rich-text-paragraph" data-component-ref="self-sign-up-link">' +
+          '<span class="rich-text-pre-wrap">Don\'t have an account?&nbsp;</span>' +
+          '<a href="#" class="rich-text-link" data-action-ref="action_signup_ab12">' +
+          '<span class="rich-text-pre-wrap">Sign up</span></a></p>',
+      );
+    });
+  });
+
   describe('EXTERNAL Update Type Skip', () => {
     it('should skip onChange when updateType is EXTERNAL and reset to NONE', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

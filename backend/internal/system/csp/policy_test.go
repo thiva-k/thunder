@@ -4,6 +4,7 @@
 package csp
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func TestPolicyConfig_HeaderName(t *testing.T) {
 }
 
 func TestPolicyConfig_HeaderValue_Baseline(t *testing.T) {
-	got := PolicyConfig{}.HeaderValue("/anything")
+	got := PolicyConfig{}.HeaderValue("/anything", "")
 	assert.Equal(t,
 		"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; "+
 			"frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
@@ -41,7 +42,7 @@ func TestPolicyConfig_HeaderValue_DefaultOverride(t *testing.T) {
 			"style-src": {"'self'", "'unsafe-inline'", "https://fonts.googleapis.com"},
 			"font-src":  {"'self'", "https://fonts.gstatic.com"},
 		},
-	}.HeaderValue("/anything")
+	}.HeaderValue("/anything", "")
 
 	// An overridden baseline directive is replaced, not appended to.
 	assert.Contains(t, got, "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com")
@@ -61,9 +62,9 @@ func TestPolicyConfig_HeaderValue_PerPath(t *testing.T) {
 		},
 	}
 
-	console := cfg.HeaderValue("/console/apps")
-	gate := cfg.HeaderValue("/gate/signin")
-	api := cfg.HeaderValue("/oauth2/token")
+	console := cfg.HeaderValue("/console/apps", "")
+	gate := cfg.HeaderValue("/gate/signin", "")
+	api := cfg.HeaderValue("/oauth2/token", "")
 
 	// Default directive applies everywhere.
 	for _, h := range []string{console, gate, api} {
@@ -84,13 +85,77 @@ func TestPolicyConfig_HeaderValue_LongestPrefixWins(t *testing.T) {
 		{Location: "/console/", Directives: map[string][]string{"img-src": {"'self'"}}},
 		{Location: "/console/design/", Directives: map[string][]string{"img-src": {"'self'", "https:"}}},
 	}}
-	assert.Contains(t, cfg.HeaderValue("/console/design/themes"), "img-src 'self' https:")
-	assert.Contains(t, cfg.HeaderValue("/console/apps"), "img-src 'self';")
+	assert.Contains(t, cfg.HeaderValue("/console/design/themes", ""), "img-src 'self' https:")
+	assert.Contains(t, cfg.HeaderValue("/console/apps", ""), "img-src 'self';")
 }
 
 func TestPolicyConfig_HeaderValue_ReportURI(t *testing.T) {
-	got := PolicyConfig{ReportURI: "https://collector.example.com/csp"}.HeaderValue("/x")
+	got := PolicyConfig{ReportURI: "https://collector.example.com/csp"}.HeaderValue("/x", "")
 	assert.Contains(t, got, "report-uri https://collector.example.com/csp")
+}
+
+func TestPolicyConfig_HeaderValue_Nonce(t *testing.T) {
+	t.Run("appended to style-src-elem when configured", func(t *testing.T) {
+		cfg := PolicyConfig{
+			Directives: map[string][]string{"style-src-elem": {"'self'", "https://fonts.googleapis.com"}},
+		}
+		got := cfg.HeaderValue("/console/apps", "abc123")
+		assert.Contains(t, got, "style-src-elem 'self' https://fonts.googleapis.com 'nonce-abc123'")
+	})
+
+	t.Run("also appended to the baseline script-src, since it never carries unsafe-inline", func(t *testing.T) {
+		cfg := PolicyConfig{Directives: map[string][]string{"style-src-elem": {"'self'"}}}
+		got := cfg.HeaderValue("/console/apps", "abc123")
+		assert.Contains(t, got, "script-src 'self' 'nonce-abc123'")
+	})
+
+	t.Run("not appended to other directives, notably plain style-src", func(t *testing.T) {
+		cfg := PolicyConfig{Directives: map[string][]string{"style-src-elem": {"'self'"}}}
+		got := cfg.HeaderValue("/console/apps", "abc123")
+		assert.NotContains(t, got, "style-src 'self' 'nonce-abc123'")
+		assert.NotContains(t, got, "img-src 'self' 'nonce-abc123'")
+	})
+
+	t.Run("empty nonce adds nothing", func(t *testing.T) {
+		cfg := PolicyConfig{Directives: map[string][]string{"style-src-elem": {"'self'"}}}
+		got := cfg.HeaderValue("/console/apps", "")
+		assert.NotContains(t, got, "nonce-")
+	})
+
+	t.Run("does not mutate the configured directive slice", func(t *testing.T) {
+		sources := []string{"'self'"}
+		cfg := PolicyConfig{Directives: map[string][]string{"style-src-elem": sources}}
+
+		cfg.HeaderValue("/console/apps", "first")
+		cfg.HeaderValue("/console/apps", "second")
+
+		assert.Equal(t, []string{"'self'"}, sources, "the caller's slice must be left untouched")
+	})
+
+	t.Run("per-path style-src-elem override also receives the nonce", func(t *testing.T) {
+		cfg := PolicyConfig{Paths: []PathPolicy{
+			{Location: "/gate/", Directives: map[string][]string{"style-src-elem": {"'self'"}}},
+		}}
+		got := cfg.HeaderValue("/gate/signin", "abc123")
+		assert.Contains(t, got, "style-src-elem 'self' 'nonce-abc123'")
+	})
+
+	t.Run("not appended when 'unsafe-inline' is already configured on the directive", func(t *testing.T) {
+		cfg := PolicyConfig{
+			Directives: map[string][]string{"style-src-elem": {"'self'", "'unsafe-inline'"}},
+		}
+		got := cfg.HeaderValue("/console/apps", "abc123")
+		directives := strings.Split(got, "; ")
+		assert.Contains(t, directives, "style-src-elem 'self' 'unsafe-inline'")
+	})
+
+	t.Run("the unsafe-inline guard is per directive: script-src still gets the nonce", func(t *testing.T) {
+		cfg := PolicyConfig{
+			Directives: map[string][]string{"style-src-elem": {"'self'", "'unsafe-inline'"}},
+		}
+		got := cfg.HeaderValue("/console/apps", "abc123")
+		assert.Contains(t, got, "script-src 'self' 'nonce-abc123'")
+	})
 }
 
 func TestPolicyConfig_Validate(t *testing.T) {

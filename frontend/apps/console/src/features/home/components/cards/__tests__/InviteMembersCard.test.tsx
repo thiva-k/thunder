@@ -57,7 +57,7 @@ describe('InviteMembersCard', () => {
 
       // MUI Skeleton renders with role="img" by default or just as a div
       // We verify skeletons indirectly by ensuring empty/avatar content is absent
-      expect(screen.queryByText('No members yet — add collaborators')).not.toBeInTheDocument();
+      expect(screen.queryByText('No members yet')).not.toBeInTheDocument();
       expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
   });
@@ -68,7 +68,7 @@ describe('InviteMembersCard', () => {
 
       render(<InviteMembersCard />);
 
-      expect(screen.getByText('No members yet — add collaborators')).toBeInTheDocument();
+      expect(screen.getByText('No members yet')).toBeInTheDocument();
     });
 
     it('renders empty state message when totalResults is 0', () => {
@@ -76,7 +76,7 @@ describe('InviteMembersCard', () => {
 
       render(<InviteMembersCard />);
 
-      expect(screen.getByText('No members yet — add collaborators')).toBeInTheDocument();
+      expect(screen.getByText('No members yet')).toBeInTheDocument();
     });
   });
 

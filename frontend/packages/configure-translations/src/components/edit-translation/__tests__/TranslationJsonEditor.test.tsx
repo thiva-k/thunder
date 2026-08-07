@@ -194,5 +194,87 @@ describe('TranslationJsonEditor', () => {
 
       expect(parsed).toEqual(newValues);
     });
+
+    it('does not reformat the editor text when the values prop echoes back its own onChange call', () => {
+      const onChange = vi.fn();
+
+      const {rerender} = render(
+        <TranslationJsonEditor
+          values={sampleValues}
+          serverKeys={sampleServerKeys}
+          isCustomNamespace
+          colorMode="light"
+          onChange={onChange}
+        />,
+      );
+
+      // A new key typed in the middle of the document, rather than appended at the end.
+      const typed = '{\n  "actions.save": "Save",\n  "new.key": "New Value",\n  "actions.cancel": "Cancel"\n}';
+      changeEditor(screen.getByTestId('monaco-editor'), typed);
+
+      const expectedRecord = {'actions.save': 'Save', 'new.key': 'New Value', 'actions.cancel': 'Cancel'};
+      expect(onChange).toHaveBeenCalledWith(expectedRecord);
+
+      // The parent merges the change and passes a freshly-built object back down, as
+      // `{...serverValues, ...localChanges}` would — a new reference, same shape.
+      rerender(
+        <TranslationJsonEditor
+          values={{...expectedRecord}}
+          serverKeys={sampleServerKeys}
+          isCustomNamespace
+          colorMode="light"
+          onChange={onChange}
+        />,
+      );
+
+      // JSON.stringify would have moved "new.key" to the end (insertion order); the editor
+      // must keep showing exactly what the user typed instead of snapping to that reformat.
+      const editor = screen.getByTestId('monaco-editor');
+      expect((editor as HTMLTextAreaElement).value).toBe(typed);
+    });
+
+    it('still syncs from an external change immediately after a self-triggered one', () => {
+      const onChange = vi.fn();
+
+      const {rerender} = render(
+        <TranslationJsonEditor
+          values={sampleValues}
+          serverKeys={sampleServerKeys}
+          isCustomNamespace
+          colorMode="light"
+          onChange={onChange}
+        />,
+      );
+
+      changeEditor(screen.getByTestId('monaco-editor'), '{"actions.save": "Enregistrer"}');
+      expect(onChange).toHaveBeenCalledWith({'actions.save': 'Enregistrer'});
+
+      // Self-triggered echo — consumes the skip-once flag.
+      rerender(
+        <TranslationJsonEditor
+          values={{'actions.save': 'Enregistrer'}}
+          serverKeys={sampleServerKeys}
+          isCustomNamespace
+          colorMode="light"
+          onChange={onChange}
+        />,
+      );
+
+      // A genuinely external change (e.g. switching namespace) must still sync normally.
+      const externalValues = {'page.title': 'My Page'};
+      rerender(
+        <TranslationJsonEditor
+          values={externalValues}
+          serverKeys={Object.keys(externalValues)}
+          isCustomNamespace
+          colorMode="light"
+          onChange={onChange}
+        />,
+      );
+
+      const editor = screen.getByTestId('monaco-editor');
+      const parsed = JSON.parse((editor as HTMLTextAreaElement).value) as Record<string, string>;
+      expect(parsed).toEqual(externalValues);
+    });
   });
 });

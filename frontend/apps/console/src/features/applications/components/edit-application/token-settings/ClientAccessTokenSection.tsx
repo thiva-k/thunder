@@ -167,7 +167,7 @@ export default function ClientAccessTokenSection({
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{xs: 12, lg: 5}}>
+          <Grid size={{xs: 12, lg: 5}} sx={{minWidth: 0}}>
             <JwtPreview payload={jwtPreview} defaultClaims={ACCESS_TOKEN_DEFAULT_CLAIMS} />
           </Grid>
         </Grid>

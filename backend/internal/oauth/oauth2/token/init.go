@@ -12,6 +12,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/discovery"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/granthandlers"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/oauth/scope"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
@@ -29,6 +30,7 @@ func Initialize(
 	observabilitySvc providers.ObservabilityProvider,
 	discoveryService discovery.DiscoveryServiceInterface,
 	dpopVerifier dpop.VerifierInterface,
+	jtiStore jti.JTIStoreInterface,
 	cfg oauthconfig.Config,
 ) TokenHandlerInterface {
 	tokenEndpoint := discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background()).TokenEndpoint
@@ -36,7 +38,8 @@ func Initialize(
 	tokenSvc := newTokenService(grantHandlerProvider, scopeValidator, observabilitySvc,
 		dpopVerifier, tokenEndpoint, dpopRequired)
 	tokenHandler := newTokenHandler(tokenSvc, observabilitySvc)
-	registerRoutes(mux, tokenHandler, actorProvider, authnProvider, jwtService, discoveryService)
+	registerRoutes(mux, tokenHandler, actorProvider, authnProvider, jwtService, discoveryService,
+		jtiStore, cfg.JWT.Leeway)
 	return tokenHandler
 }
 
@@ -48,6 +51,8 @@ func registerRoutes(
 	authnProvider providers.AuthnProviderManager,
 	jwtService jwt.JWTServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
+	jtiStore jti.JTIStoreInterface,
+	leeway int64,
 ) {
 	corsOpts := middleware.CORSOptions{
 		AllowedMethods:   []string{"POST"},
@@ -57,7 +62,8 @@ func registerRoutes(
 	}
 
 	issuer := discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background()).Issuer
-	clientAuthMiddleware := clientauth.ClientAuthMiddleware(actorProvider, authnProvider, jwtService, issuer)
+	clientAuthMiddleware := clientauth.ClientAuthMiddleware(actorProvider, authnProvider, jwtService,
+		jtiStore, issuer, leeway)
 	handler := clientAuthMiddleware(http.HandlerFunc(tokenHandler.HandleTokenRequest))
 
 	pattern, wrappedHandler := middleware.WithCORS(

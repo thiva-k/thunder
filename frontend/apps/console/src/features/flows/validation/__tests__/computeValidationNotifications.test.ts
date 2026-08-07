@@ -6,7 +6,12 @@ import {describe, it, expect, vi} from 'vitest';
 import {NotificationType} from '../../models/notification';
 import type {StepData} from '../../models/steps';
 import {computeValidationNotifications} from '../computeValidationNotifications';
-import {GRAPH_VALIDATION_RULES, SIGN_OUT_GRAPH_VALIDATION_RULES, VALIDATION_RULES} from '../validation-rules';
+import {
+  COMMON_GRAPH_VALIDATION_RULES,
+  GRAPH_VALIDATION_RULES,
+  SIGN_OUT_GRAPH_VALIDATION_RULES,
+  VALIDATION_RULES,
+} from '../validation-rules';
 
 // Simple mock t function that returns the key
 const t = vi.fn((key: string) => key) as unknown as import('i18next').TFunction;
@@ -654,6 +659,59 @@ describe('computeValidationNotifications', () => {
       // rule must stay silent.
       const signOutIds = [...result.keys()].filter((id) => id.includes('SIGN_OUT_CONFIRM'));
       expect(signOutIds).toEqual([]);
+    });
+  });
+
+  describe('Rich text action wiring rule', () => {
+    const NOTIFICATION_ID = 'rt_1_RICH_TEXT_ACTION_NOT_CONNECTED';
+
+    const richText = (action: unknown): Record<string, unknown> => ({
+      id: 'rt_1',
+      type: 'RICH_TEXT',
+      category: 'DISPLAY',
+      action,
+      label: '<p><a href="#" data-action-ref="action_recovery">Reset</a></p>',
+    });
+
+    const compute = (nodes: Node[], edges: Edge[] = []) =>
+      computeValidationNotifications(nodes, VALIDATION_RULES, t, COMMON_GRAPH_VALIDATION_RULES, edges);
+
+    it('should accept a link wired to a step', () => {
+      const nodes = [createElementNode('prompt_1', [richText({ref: 'action_recovery'})]), createNode({id: 'call_1'})];
+      const edges = [{id: 'e-1', source: 'prompt_1', sourceHandle: 'rt_1_NEXT', target: 'call_1'} as Edge];
+
+      expect(compute(nodes, edges).has(NOTIFICATION_ID)).toBe(false);
+    });
+
+    it('should report a link whose target step was deleted', () => {
+      // React Flow drops the edge and leaves `action.ref` in place, so the link keeps
+      // dispatching a ref that no longer resolves to a prompt.
+      const result = compute([createElementNode('prompt_1', [richText({ref: 'action_recovery'})])]);
+
+      const notification = result.get(NOTIFICATION_ID)!;
+      expect(notification).toBeDefined();
+      // Must not block saving: saving is how the author fixes the rest of the flow.
+      expect(notification.getType()).toBe(NotificationType.WARNING);
+      expect(notification.hasResource('rt_1')).toBe(true);
+    });
+
+    it('should report a link nested inside a block', () => {
+      const nodes = [
+        createElementNode('prompt_1', [
+          {id: 'block_1', type: 'BLOCK', category: 'BLOCK', components: [richText({ref: 'action_recovery'})]},
+        ]),
+      ];
+
+      expect(compute(nodes).has(NOTIFICATION_ID)).toBe(true);
+    });
+
+    it('should ignore a rich text whose action was toggled off', () => {
+      expect(compute([createElementNode('prompt_1', [richText(null)])]).has(NOTIFICATION_ID)).toBe(false);
+    });
+
+    it('should ignore a plain rich text and one carrying an empty ref', () => {
+      expect(compute([createElementNode('prompt_1', [richText(undefined)])]).has(NOTIFICATION_ID)).toBe(false);
+      expect(compute([createElementNode('prompt_1', [richText({ref: ''})])]).has(NOTIFICATION_ID)).toBe(false);
     });
   });
 });

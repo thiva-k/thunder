@@ -30,9 +30,10 @@ export interface OrganizationUnitSummaryChipProps {
   value: ReactNode;
 
   /**
-   * Invoked when the "Change" link is clicked.
+   * Invoked when the "Change" link is clicked. Omit to render the chip as read-only, e.g. when
+   * there is no picker step to return to.
    */
-  onChange: () => void;
+  onChange?: () => void;
 
   /**
    * Overrides the trailing link's default "Change" text.
@@ -49,7 +50,7 @@ export default function OrganizationUnitSummaryChip({
   icon,
   label,
   value,
-  onChange,
+  onChange = undefined,
   changeLabel = undefined,
 }: OrganizationUnitSummaryChipProps): JSX.Element {
   const {t} = useTranslation('common');
@@ -82,22 +83,24 @@ export default function OrganizationUnitSummaryChip({
           {value}
         </Typography>
       </Box>
-      <Typography
-        component="span"
-        variant="body2"
-        onClick={onChange}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onChange();
-          }
-        }}
-        sx={{fontWeight: 500, color: 'primary.main', cursor: 'pointer', flexShrink: 0}}
-      >
-        {changeLabel ?? t('actions.change', 'Change')}
-      </Typography>
+      {onChange && (
+        <Typography
+          component="span"
+          variant="body2"
+          onClick={onChange}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onChange();
+            }
+          }}
+          sx={{fontWeight: 500, color: 'primary.main', cursor: 'pointer', flexShrink: 0}}
+        >
+          {changeLabel ?? t('actions.change', 'Change')}
+        </Typography>
+      )}
     </Box>
   );
 }

@@ -15,6 +15,7 @@ import RouteConfig from '../../configs/RouteConfig';
 export interface FlowChangeResponse {
   flowStatus?: string;
   assertion?: string;
+  errorAssertion?: string;
   data?: {additionalData?: Record<string, string>};
   error?: {
     code?: string;
@@ -44,17 +45,18 @@ export default function AcceptInviteBox(): JSX.Element {
   };
 
   /**
-   * Posts the completed flow assertion to the callback endpoint.
-   * Requires authId (from URL params) and assertion (from flow completion).
-   * callbackType is optional — the backend defaults to authorization_code when absent.
+   * Posts a flow outcome to the callback endpoint: a completed flow's assertion (success) or a signed
+   * error assertion (terminal failure). Both go in the same field; the backend tells them apart from
+   * the assertion's own claims. Requires authId (from URL params). callbackType is optional; the
+   * backend defaults to authorization_code when absent.
    *
    * Response handling is generic:
-   *   - redirect_uri present → redirect the browser (e.g. auth code flow)
-   *   - redirect_uri absent  → no redirect; the flow's completion components display the outcome
+   *   - redirect_uri present: redirect the browser (e.g. auth code flow, or an error redirect)
+   *   - redirect_uri absent: no redirect; the flow's completion components display the outcome
    */
   const handleFlowCallback = async (authId: string, assertion: string, callbackType?: string): Promise<void> => {
     try {
-      const body: Record<string, string> = {authId, assertion};
+      const body: Record<string, string> = {assertion, authId};
       if (callbackType) {
         body.type = callbackType;
       }
@@ -104,25 +106,32 @@ export default function AcceptInviteBox(): JSX.Element {
         }}
         onFlowChange={(response: FlowChangeResponse) => {
           const messageKey: string | undefined = response?.error?.message?.key;
-          if (messageKey) {
-            const translated: string = t(messageKey);
-            if (translated !== messageKey) {
-              setFlowError(translated);
+          const translated: string | undefined = messageKey ? t(messageKey) : undefined;
 
-              return;
-            }
+          if (translated && translated !== messageKey) {
+            setFlowError(translated);
+          } else {
+            const fallback: string | undefined =
+              response?.error?.message?.defaultValue ?? response?.error?.description?.defaultValue;
+            setFlowError(fallback ?? null);
           }
-          const fallback: string | undefined =
-            response?.error?.message?.defaultValue ?? response?.error?.description?.defaultValue;
-          setFlowError(fallback ?? null);
 
-          if (response.flowStatus === 'COMPLETE' && response.assertion) {
+          // Relay the terminal flow outcome to the waiting OAuth request: the assertion on success, or
+          // the signed error assertion on failure (auth code: error redirect; CIBA: request denied).
+          // flowStatus selects which field to read, since both are relayed in the same request field.
+          let assertion: string | undefined;
+
+          if (response.flowStatus === 'COMPLETE') {
+            assertion = response.assertion;
+          } else if (response.flowStatus === 'ERROR') {
+            assertion = response.errorAssertion;
+          }
+
+          if (assertion) {
             const authId = searchParams.get('auth_req_id') ?? searchParams.get('authId');
-            const {assertion} = response;
-            const callbackType = response.data?.additionalData?.callbackType;
 
-            if (authId && assertion) {
-              void handleFlowCallback(authId, assertion, callbackType);
+            if (authId) {
+              void handleFlowCallback(authId, assertion, response.data?.additionalData?.callbackType);
             }
           }
         }}

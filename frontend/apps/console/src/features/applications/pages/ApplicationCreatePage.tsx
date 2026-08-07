@@ -328,7 +328,6 @@ export default function ApplicationCreatePage(): JSX.Element {
       responseTypes: [...(oauthInboundConfig.responseTypes ?? [])],
       redirectUris: oauthInboundConfig.redirectUris ? [...oauthInboundConfig.redirectUris] : [],
       tokenEndpointAuthMethod: oauthInboundConfig.tokenEndpointAuthMethod,
-      scopes: ['openid', 'profile', 'email'],
     };
   }, [selectedTemplateConfig]);
 
@@ -604,10 +603,9 @@ export default function ApplicationCreatePage(): JSX.Element {
         ...(finalThemeId && {themeId: finalThemeId}),
         ...(finalLayoutId && {layoutId: finalLayoutId}),
       }),
+      // User attributes are not sent: the server derives them from the seeded scope-to-claims
+      // mapping, intersected with the schemas of the allowed user types.
       ...(includesSecurity && {
-        userAttributes: isSmsOtpMfaEnabled
-          ? ['given_name', 'family_name', 'email', 'phone_number', 'groups']
-          : ['given_name', 'family_name', 'email', 'groups'],
         isRegistrationFlowEnabled: finalIsRegistrationFlowEnabled,
         ...(finalRegistrationFlowId && {registrationFlowId: finalRegistrationFlowId}),
         isRecoveryFlowEnabled: finalIsRecoveryFlowEnabled,
@@ -615,7 +613,6 @@ export default function ApplicationCreatePage(): JSX.Element {
       }),
       ...(isMcpClientTemplate &&
         mcpClientType === McpClientTypes.USER_DELEGATED && {
-          userAttributes: ['given_name', 'family_name', 'email', 'groups'],
           isRegistrationFlowEnabled: true,
         }),
       ...(finalSignOutFlowId && {

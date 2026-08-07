@@ -62,6 +62,20 @@ var (
 			DefaultValue: "The provided token is invalid",
 		},
 	}
+	// ErrorReservedCredentialType is the error when the request carries a credential type that is
+	// reserved for ThunderID's internal authentication flows.
+	ErrorReservedCredentialType = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "AUTH-CRED-1005",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.authnservice.reserved_credential_type",
+			DefaultValue: "Reserved credential type",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.authnservice.reserved_credential_type_description",
+			DefaultValue: "The provided credentials contain a credential type that is reserved for internal use",
+		},
+	}
 	// ErrorOTPAuthenticationFailed is the error when the OTP authentication attempt fails.
 	ErrorOTPAuthenticationFailed = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,

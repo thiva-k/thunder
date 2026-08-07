@@ -268,9 +268,9 @@ export default function VerifiableCredentialCreatePage(): JSX.Element {
         onClick: index < array.length - 1 ? () => setStep(s) : undefined,
       }))}
       footer={
-        <Stack direction="row" justifyContent="flex-end" spacing={2}>
+        <Stack direction="row" justifyContent={stepIndex > 0 ? 'space-between' : 'flex-end'} spacing={2}>
           {stepIndex > 0 && (
-            <Button variant="text" onClick={handleBack} disabled={createVC.isPending}>
+            <Button variant="outlined" onClick={handleBack} sx={{minWidth: 100}} disabled={createVC.isPending}>
               {t('common:actions.back')}
             </Button>
           )}

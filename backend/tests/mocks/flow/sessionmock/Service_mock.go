@@ -414,3 +414,60 @@ func (_c *ServiceMock_Terminate_Call) RunAndReturn(run func(ctx context.Context,
 	_c.Call.Return(run)
 	return _c
 }
+
+// TerminateBySubject provides a mock function for the type ServiceMock
+func (_mock *ServiceMock) TerminateBySubject(ctx context.Context, subjectID string) error {
+	ret := _mock.Called(ctx, subjectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TerminateBySubject")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, subjectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ServiceMock_TerminateBySubject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TerminateBySubject'
+type ServiceMock_TerminateBySubject_Call struct {
+	*mock.Call
+}
+
+// TerminateBySubject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - subjectID string
+func (_e *ServiceMock_Expecter) TerminateBySubject(ctx interface{}, subjectID interface{}) *ServiceMock_TerminateBySubject_Call {
+	return &ServiceMock_TerminateBySubject_Call{Call: _e.mock.On("TerminateBySubject", ctx, subjectID)}
+}
+
+func (_c *ServiceMock_TerminateBySubject_Call) Run(run func(ctx context.Context, subjectID string)) *ServiceMock_TerminateBySubject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ServiceMock_TerminateBySubject_Call) Return(err error) *ServiceMock_TerminateBySubject_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ServiceMock_TerminateBySubject_Call) RunAndReturn(run func(ctx context.Context, subjectID string) error) *ServiceMock_TerminateBySubject_Call {
+	_c.Call.Return(run)
+	return _c
+}

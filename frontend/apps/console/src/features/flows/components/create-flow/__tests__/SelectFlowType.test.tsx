@@ -18,6 +18,7 @@ vi.mock('@wso2/oxygen-ui-icons-react', async (importOriginal) => {
   return {
     ...actual,
     KeyRound: ({size}: {size: number}) => <span data-testid="icon-key-round">{size}</span>,
+    UserCog: ({size}: {size: number}) => <span data-testid="icon-user-cog">{size}</span>,
     UserPlus: ({size}: {size: number}) => <span data-testid="icon-user-plus">{size}</span>,
   };
 });
@@ -76,6 +77,14 @@ describe('SelectFlowType', () => {
       expect(screen.getByText('Sign Out')).toBeInTheDocument();
       expect(screen.getByText('Confirm and terminate an established SSO session')).toBeInTheDocument();
     });
+
+    it('should render Administration option', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      expect(screen.getByText('Administration')).toBeInTheDocument();
+      expect(screen.getByText('Perform authenticated administrative and security operations')).toBeInTheDocument();
+      expect(screen.getByTestId('icon-user-cog')).toBeInTheDocument();
+    });
   });
 
   describe('Selection', () => {
@@ -106,6 +115,15 @@ describe('SelectFlowType', () => {
       expect(mockOnReadyChange).toHaveBeenCalledWith(true);
     });
 
+    it('should call onTypeChange with ADMINISTRATION when Administration is clicked', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Administration'));
+
+      expect(mockOnTypeChange).toHaveBeenCalledWith('ADMINISTRATION');
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+
     it('should visually indicate the selected type via the card action area', () => {
       const {rerender} = render(<SelectFlowType {...defaultProps} selectedType="AUTHENTICATION" />);
 
@@ -115,6 +133,32 @@ describe('SelectFlowType', () => {
       rerender(<SelectFlowType {...defaultProps} selectedType="REGISTRATION" />);
 
       expect(screen.getByText('Self Sign-up')).toBeInTheDocument();
+    });
+
+    it('should call onTypeChange and onReadyChange when Enter is pressed on a card', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByText('Sign-in').closest('[role="button"]')!, {key: 'Enter'});
+
+      expect(mockOnTypeChange).toHaveBeenCalledWith('AUTHENTICATION');
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onTypeChange and onReadyChange when Space is pressed on a card', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByText('Sign-in').closest('[role="button"]')!, {key: ' '});
+
+      expect(mockOnTypeChange).toHaveBeenCalledWith('AUTHENTICATION');
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should ignore unrelated key presses on a card', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByText('Sign-in').closest('[role="button"]')!, {key: 'a'});
+
+      expect(mockOnTypeChange).not.toHaveBeenCalled();
     });
 
     it('should allow changing selection from one type to another', () => {

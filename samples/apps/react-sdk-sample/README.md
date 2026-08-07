@@ -29,8 +29,8 @@ The sample ships with a `thunderid-config/` directory containing a declarative Y
 
     ```bash
     REACT_SDK_SAMPLE_CLIENT_ID=REACT_SDK_SAMPLE
-    REACT_SDK_SAMPLE_REDIRECT_URIS=["https://localhost:3000"]
-    REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS=["https://localhost:3000"]
+    REACT_SDK_SAMPLE_REDIRECT_URIS=["http://localhost:3000"]
+    REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS=["http://localhost:3000"]
     ```
 
     `REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS` lists the URLs the server is allowed to return the browser to after sign-out. Sign-out fails unless the URL the app lands on is registered here.
@@ -68,7 +68,7 @@ npm start
 
 ### 4. Access the Application
 
-Open your browser and navigate to [https://localhost:3000](https://localhost:3000) (or `http://localhost:3000` if running without SSL)
+Open your browser and navigate to [http://localhost:3000](http://localhost:3000).
 
 ## Development
 
@@ -135,7 +135,7 @@ If a value is missing from `runtime.json`, the app falls back to Vite environmen
 
 Before running the app, ensure your application is configured with:
 
-1. **Authorized Redirect URLs**: Add your application URL (e.g., `https://localhost:3000`)
+1. **Authorized Redirect URLs**: Add your application URL (e.g., `http://localhost:3000` by default, or `https://localhost:3000` when using SSL certificates)
 2. **Allowed Origins**: Add your application origin for CORS
 3. **Grant Types**: Authorization Code (with PKCE required for SPAs)
 
@@ -159,11 +159,12 @@ Before running the app, ensure your application is configured with:
     name: cors
     value:
       allowedOrigins:
+        - "http://localhost:3000"
         - "https://localhost:3000"
     ```
   - Or update it at runtime with `PUT /server-config/cors`:
     ```json
-    { "allowedOrigins": ["https://localhost:3000"] }
+    { "allowedOrigins": ["http://localhost:3000", "https://localhost:3000"] }
     ```
 
 ## How It Works

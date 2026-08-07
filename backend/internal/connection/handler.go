@@ -392,3 +392,22 @@ func (h *handler) deleteSMSInstance(provider ncommon.MessageProviderType) http.H
 		sysutils.WriteSuccessResponse(ctx, w, http.StatusNoContent, nil)
 	}
 }
+
+// usagesSMSInstance returns a handler that lists the resources referencing a sender of a message
+// provider. Drives the pre-delete confirmation dialog.
+func (h *handler) usagesSMSInstance(provider ncommon.MessageProviderType) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id := r.PathValue("id")
+		if strings.TrimSpace(id) == "" {
+			writeServiceError(ctx, w, &notification.ErrorInvalidSenderID)
+			return
+		}
+		usages, svcErr := h.svc.usagesSMSByProvider(ctx, provider, id)
+		if svcErr != nil {
+			writeServiceError(ctx, w, svcErr)
+			return
+		}
+		sysutils.WriteSuccessResponse(ctx, w, http.StatusOK, usages)
+	}
+}

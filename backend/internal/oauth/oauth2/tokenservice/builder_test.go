@@ -1222,6 +1222,11 @@ func (suite *TokenBuilderTestSuite) TestBuildIDToken_Success_WithScopeClaims() {
 func (suite *TokenBuilderTestSuite) TestBuildIDToken_Success_WithStandardOIDCScopes() {
 	oauthAppWithUserAttrs := &providers.OAuthClient{
 		ClientID: "test-client",
+		ScopeClaims: map[string][]string{
+			"openid":  {"sub"},
+			"profile": {"name"},
+			"email":   {"email", "email_verified"},
+		},
 		Token: &providers.OAuthTokenConfig{
 			IDToken: &providers.IDTokenConfig{
 				ValidityPeriod: 3600,

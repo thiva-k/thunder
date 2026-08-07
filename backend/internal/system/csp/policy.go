@@ -99,9 +99,36 @@ func (c PolicyConfig) effectiveDirectives(path string) map[string][]string {
 	return eff
 }
 
+// nonceDirectives are the directives the per-request nonce is appended to. style-src-attr (inline
+// style="" attributes) is deliberately excluded: attributes can't carry a nonce per spec, and it needs
+// 'unsafe-inline' for React/MUI's style={{}} usage, which a nonce elsewhere wouldn't affect since it's
+// a separate directive.
+var nonceDirectives = map[string]struct{}{"script-src": {}, "style-src-elem": {}}
+
+// sourcesWithNonce appends a 'nonce-<value>' token to sources for a nonce directive, without mutating
+// the caller's slice (a config value shared across concurrent requests). Leaves sources untouched if
+// 'unsafe-inline' is already there: per spec, a nonce present in a directive makes browsers ignore
+// 'unsafe-inline' in that same directive, so appending one would defeat an operator's relaxation
+// instead of tightening it (see csp.yaml's Console entry for why that relaxation exists).
+func sourcesWithNonce(name string, sources []string, nonce string) []string {
+	if _, ok := nonceDirectives[name]; !ok || nonce == "" {
+		return sources
+	}
+	for _, source := range sources {
+		if source == "'unsafe-inline'" {
+			return sources
+		}
+	}
+	withNonce := make([]string, len(sources)+1)
+	copy(withNonce, sources)
+	withNonce[len(sources)] = "'nonce-" + nonce + "'"
+	return withNonce
+}
+
 // HeaderValue renders the effective policy for a request path, followed by a report-uri directive when
-// a report endpoint is set.
-func (c PolicyConfig) HeaderValue(path string) string {
+// a report endpoint is set. nonce, generated fresh per request by the middleware, is appended to each
+// directive in nonceDirectives.
+func (c PolicyConfig) HeaderValue(path string, nonce string) string {
 	overrides := c.effectiveDirectives(path)
 	baselineNames := make(map[string]struct{}, len(baseline))
 	directives := make([]string, 0, len(baseline)+len(overrides)+1)
@@ -112,6 +139,7 @@ func (c PolicyConfig) HeaderValue(path string) string {
 		if override, ok := overrides[d.name]; ok {
 			sources = override
 		}
+		sources = sourcesWithNonce(d.name, sources, nonce)
 		directives = append(directives, d.name+" "+strings.Join(sources, " "))
 	}
 
@@ -124,7 +152,8 @@ func (c PolicyConfig) HeaderValue(path string) string {
 	}
 	sort.Strings(extraNames)
 	for _, name := range extraNames {
-		directives = append(directives, name+" "+strings.Join(overrides[name], " "))
+		sources := sourcesWithNonce(name, overrides[name], nonce)
+		directives = append(directives, name+" "+strings.Join(sources, " "))
 	}
 
 	if c.ReportURI != "" {

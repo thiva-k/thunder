@@ -24,12 +24,12 @@ func Initialize(
 	cacheManager cache.CacheManagerInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	authzService sysauthz.SystemAuthorizationServiceInterface,
-) (EntityTypeServiceInterface, declarativeresource.ResourceExporter, error) {
+) (EntityTypeServiceInterface, declarativeresource.ResourceExporter, declarativeresource.ResourceExporter, error) {
 	// Step 1: Determine store mode and initialize store and transactioner
 	storeMode := getEntityTypeStoreMode()
 	entityTypeStore, transactioner, err := initializeStore(storeMode, cacheManager)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Step 2: Create service with store
@@ -39,7 +39,7 @@ func Initialize(
 	// Step 3: Load declarative resources into store (if applicable)
 	if storeMode == serverconst.StoreModeComposite || storeMode == serverconst.StoreModeDeclarative {
 		if err := loadDeclarativeResources(entityTypeStore, entityTypeService); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -52,8 +52,9 @@ func Initialize(
 		registerMCPTools(mcpServer, entityTypeService)
 	}
 
-	exporter := newEntityTypeExporter(entityTypeService)
-	return entityTypeService, exporter, nil
+	userTypeExporter := newEntityTypeExporter(entityTypeService, TypeCategoryUser)
+	agentTypeExporter := newEntityTypeExporter(entityTypeService, TypeCategoryAgent)
+	return entityTypeService, userTypeExporter, agentTypeExporter, nil
 }
 
 // Store Selection (based on entity_type.store configuration):

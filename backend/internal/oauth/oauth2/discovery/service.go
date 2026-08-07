@@ -59,6 +59,7 @@ func (ds *discoveryService) GetOAuth2AuthorizationServerMetadata(
 		CodeChallengeMethodsSupported:              ds.getSupportedCodeChallengeMethods(),
 		AuthorizationResponseIssParameterSupported: true,
 		DPoPSigningAlgValuesSupported:              ds.getSupportedDPoPSigningAlgs(),
+		AuthorizationGrantProfilesSupported:        ds.getSupportedAuthorizationGrantProfiles(),
 	}
 
 	if slices.Contains(metadata.GrantTypesSupported, string(providers.GrantTypeCIBA)) {
@@ -243,4 +244,14 @@ func (ds *discoveryService) getSupportedClaims() []string {
 	}
 
 	return uniqueClaims
+}
+
+func (ds *discoveryService) getSupportedAuthorizationGrantProfiles() []string {
+	supportedProfiles := make([]string, 0)
+	// support Identity Assertion JWT Authorization Grant profile if the JWT Bearer grant type is supported
+	if slices.Contains(ds.getSupportedGrantTypes(), string(providers.GrantTypeJWTBearer)) {
+		supportedProfiles = append(supportedProfiles, string(constants.SupportedAuthorizationGrantProfileIDJAG))
+	}
+
+	return supportedProfiles
 }

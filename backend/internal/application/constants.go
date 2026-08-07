@@ -3,13 +3,17 @@
 
 package application
 
+import (
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+)
+
 // Field keys for entity system attributes.
 const (
 	fieldName         = "name"
 	fieldDescription  = "description"
 	fieldClientID     = "clientId"
-	fieldClientSecret = "clientSecret"
-	fieldFlowSecret   = "flowSecret"
+	fieldClientSecret = authnprovidercm.CredentialTypeClientSecret
+	fieldFlowSecret   = authnprovidercm.CredentialTypeFlowSecret
 )
 
 // Field keys for application config properties.

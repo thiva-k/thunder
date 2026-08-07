@@ -21,6 +21,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/authn/assert"
 	"github.com/thunder-id/thunderid/internal/authn/common"
 	"github.com/thunder-id/thunderid/internal/authn/passkey"
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
 	notifcommon "github.com/thunder-id/thunderid/internal/notification/common"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -269,6 +270,44 @@ func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentials() {
 			tc.validateAssertion(result)
 		})
 	}
+}
+
+// TestAuthenticateWithCredentialsRejectsReservedCredentialTypes asserts every reserved credential
+// type is rejected before the provider chain is reached. Iterating the exported slices covers any
+// type added to them later.
+func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentialsRejectsReservedCredentialTypes() {
+	identifiers := map[string]interface{}{
+		"username": "testuser",
+	}
+
+	reservedTypes := append([]string{},
+		append(authnprovidercm.InternalCredentialTypes, authnprovidercm.SystemCredentialTypes...)...)
+
+	for _, reserved := range reservedTypes {
+		suite.Run(reserved, func() {
+			result, err := suite.service.AuthenticateWithCredentials(context.Background(), identifiers,
+				map[string]interface{}{reserved: "attacker-supplied-value"}, false, "")
+
+			suite.Nil(result)
+			suite.NotNil(err)
+			suite.Equal(ErrorReservedCredentialType.Code, err.Code)
+			suite.Equal(tidcommon.ClientErrorType, err.Type)
+		})
+	}
+
+	suite.Run("alongside a valid password", func() {
+		result, err := suite.service.AuthenticateWithCredentials(context.Background(), identifiers,
+			map[string]interface{}{
+				"password": "testpass",
+				authnprovidercm.CredentialTypeProvisionedEntityID: testUserID,
+			}, false, "")
+
+		suite.Nil(result)
+		suite.NotNil(err)
+		suite.Equal(ErrorReservedCredentialType.Code, err.Code)
+	})
+
+	suite.mockAuthnProvider.AssertNotCalled(suite.T(), "AuthenticateUser")
 }
 
 func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentialsServiceError() {

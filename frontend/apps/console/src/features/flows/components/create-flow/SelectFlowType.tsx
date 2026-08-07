@@ -1,8 +1,8 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {Box, Card, CardActionArea, CardContent, Stack, Typography} from '@wso2/oxygen-ui';
-import {KeyRound, Lock, LogOut, UserPlus} from '@wso2/oxygen-ui-icons-react';
+import {Box, Card, CardContent, Stack, Typography} from '@wso2/oxygen-ui';
+import {KeyRound, Lock, LogOut, UserCog, UserPlus} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {FlowType} from '../../models/flows';
@@ -10,7 +10,7 @@ import {FlowType} from '../../models/flows';
 interface SelectFlowTypeProps {
   selectedType: string | null;
   onTypeChange: (type: string) => void;
-  onReadyChange: (ready: boolean) => void;
+  onReadyChange: (isReady: boolean) => void;
 }
 
 interface FlowTypeOption {
@@ -58,6 +58,14 @@ export default function SelectFlowType({selectedType, onTypeChange, onReadyChang
       descriptionDefault: 'Confirm and terminate an established SSO session',
       icon: <LogOut size={28} />,
     },
+    {
+      type: FlowType.ADMINISTRATION,
+      labelKey: 'flows:create.type.administration.label',
+      labelDefault: 'Administration',
+      descriptionKey: 'flows:create.type.administration.description',
+      descriptionDefault: 'Perform authenticated administrative and security operations',
+      icon: <UserCog size={28} />,
+    },
   ];
 
   const handleSelect = (type: string): void => {
@@ -73,7 +81,7 @@ export default function SelectFlowType({selectedType, onTypeChange, onReadyChang
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           maxWidth: 1040,
           gap: 2,
           mt: 3,
@@ -82,34 +90,41 @@ export default function SelectFlowType({selectedType, onTypeChange, onReadyChang
         {options.map((option) => {
           const isSelected = selectedType === option.type;
           return (
-            <Card key={option.type} variant="outlined">
-              <CardActionArea
-                onClick={() => handleSelect(option.type)}
-                sx={{
-                  height: '100%',
-                  border: 1,
-                  borderColor: isSelected ? 'primary.main' : 'divider',
-                  transition: 'all 0.2s ease-in-out',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    bgcolor: isSelected ? 'action.selected' : 'action.hover',
-                  },
-                }}
-              >
-                <CardContent sx={{py: 2, px: 2}}>
-                  <Stack direction="column" spacing={1.5} alignItems="flex-start">
-                    <Box sx={{color: isSelected ? 'primary.main' : 'text.secondary'}}>{option.icon}</Box>
-                    <Stack direction="column" spacing={0.5}>
-                      <Typography variant="subtitle1" sx={{fontWeight: 500}}>
-                        {t(option.labelKey, option.labelDefault)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t(option.descriptionKey, option.descriptionDefault)}
-                      </Typography>
-                    </Stack>
+            <Card
+              key={option.type}
+              variant="outlined"
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
+              onClick={() => handleSelect(option.type)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleSelect(option.type);
+                }
+              }}
+              sx={{
+                cursor: 'pointer',
+                borderColor: isSelected ? 'primary.main' : 'divider',
+                bgcolor: isSelected ? 'action.selected' : undefined,
+                transition: 'border-color 0.15s',
+                '&:hover': {borderColor: 'primary.main'},
+                '&:focus-visible': {outline: 'none', borderColor: 'primary.main'},
+              }}
+            >
+              <CardContent sx={{py: 2, px: 2}}>
+                <Stack direction="column" spacing={1.5} alignItems="flex-start">
+                  <Box sx={{color: isSelected ? 'primary.main' : 'text.secondary'}}>{option.icon}</Box>
+                  <Stack direction="column" spacing={0.5}>
+                    <Typography variant="subtitle1" sx={{fontWeight: 500}}>
+                      {t(option.labelKey, option.labelDefault)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t(option.descriptionKey, option.descriptionDefault)}
+                    </Typography>
                   </Stack>
-                </CardContent>
-              </CardActionArea>
+                </Stack>
+              </CardContent>
             </Card>
           );
         })}

@@ -117,6 +117,20 @@ describe('useGetFlowsMeta', () => {
       expect(templates.every((t: FlowTemplate) => t.flowType === 'REGISTRATION')).toBe(true);
     });
 
+    it('should provide the secure user deletion flow template', () => {
+      const {result} = renderHook(() => useGetFlowsMeta({flowType: 'ADMINISTRATION'}));
+
+      const template = result.current.data.templates.find((item) => item.type === 'USER_DELETION');
+      expect(template?.display.label).toBe('User Deletion Flow');
+      expect(template?.config.nodes.map((node) => node.executor?.name).filter(Boolean)).toEqual([
+        'PermissionValidator',
+        'PreDeleteExecutor',
+        'CriteriaRevocationExecutor',
+        'SessionRevocationExecutor',
+        'UserDeleteExecutor',
+      ]);
+    });
+
     it('should not affect non-template resources when filtering by flowType', () => {
       const {result} = renderHook(() => useGetFlowsMeta({flowType: 'AUTHENTICATION'}));
 

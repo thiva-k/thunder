@@ -1,6 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {
@@ -13,20 +14,15 @@ import {
 import {
   Alert,
   AlertTitle,
-  Box,
   Stack,
   Typography,
   Button,
   TextField,
-  IconButton,
   FormControl,
   FormLabel,
   Select,
   MenuItem,
-  LinearProgress,
-  AppBreadcrumbs,
 } from '@wso2/oxygen-ui';
-import {X} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useState, useCallback, useEffect, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -301,71 +297,25 @@ export default function UserCreatePage(): JSX.Element {
   );
 
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      <LinearProgress variant="determinate" value={0} sx={{height: 6}} />
-
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>
-        {/* Header with close button and breadcrumb */}
-        <Box sx={{p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <IconButton
-              aria-label={t('common:actions.close', 'Close')}
-              onClick={handleClose}
-              sx={{
-                bgcolor: 'background.paper',
-                '&:hover': {bgcolor: 'action.hover'},
-                boxShadow: 1,
-              }}
-            >
-              <X size={24} />
-            </IconButton>
-            <AppBreadcrumbs
-              items={breadcrumbs.map((label, idx) => ({
-                key: `breadcrumb-${idx}`,
-                label,
-              }))}
-            />
-          </Stack>
-        </Box>
-
-        {/* Main content */}
-        <Box sx={{flex: 1, display: 'flex', minHeight: 0}}>
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              pt: 8,
-              pb: 8,
-              px: 20,
-              mx: 'auto',
-              alignItems: 'flex-start',
-              justifyContent: 'flex-start',
-            }}
-          >
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 800,
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <InviteUser onError={handleError}>
-                {(renderProps: InviteUserRenderProps) => (
-                  <UserCreateStepContent
-                    renderProps={renderProps}
-                    error={error}
-                    onFieldChange={() => setError(null)}
-                    onStepLabelChange={handleStepLabelChange}
-                  />
-                )}
-              </InviteUser>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={0}
+      breadcrumbItems={breadcrumbs.map((label, idx) => ({
+        key: `breadcrumb-${idx}`,
+        label,
+      }))}
+      footer={null}
+    >
+      <InviteUser onError={handleError}>
+        {(renderProps: InviteUserRenderProps) => (
+          <UserCreateStepContent
+            renderProps={renderProps}
+            error={error}
+            onFieldChange={() => setError(null)}
+            onStepLabelChange={handleStepLabelChange}
+          />
+        )}
+      </InviteUser>
+    </FullScreenCreationWizardLayout>
   );
 }

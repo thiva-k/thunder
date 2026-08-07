@@ -32,6 +32,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/constants"
+	sysContext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
 )
@@ -441,6 +442,39 @@ func TestCreateStaticFileHandler_CacheHeaders(t *testing.T) {
 		assert.Empty(t, rr.Header().Get(constants.ExpiresHeaderName),
 			"Expires should not be set for files that contain 'index.html' but are not exactly 'index.html'")
 		assert.Equal(t, string(customIndexFile), rr.Body.String())
+	})
+}
+
+func TestCreateStaticFileHandler_CSPNonce(t *testing.T) {
+	logger := log.GetLogger()
+	tmpDir := t.TempDir()
+
+	requireWriteFile(t, filepath.Join(tmpDir, "index.html"),
+		[]byte(`<meta property="csp-nonce" content="__CSP_NONCE__" />`))
+
+	handler, err := createStaticFileHandler("/app/", tmpDir, logger)
+	require.NoError(t, err)
+
+	t.Run("substitutes the placeholder with the request's nonce", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/app/", nil)
+		req = req.WithContext(sysContext.WithCSPNonce(req.Context(), "abc123"))
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, `<meta property="csp-nonce" content="abc123" />`, rr.Body.String())
+		assert.NotContains(t, rr.Body.String(), constants.CSPNoncePlaceholder)
+		assert.Equal(t, constants.ContentTypeHTML, rr.Header().Get(constants.ContentTypeHeaderName))
+	})
+
+	t.Run("leaves the placeholder empty when no nonce is in context", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/app/", nil)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, `<meta property="csp-nonce" content="" />`, rr.Body.String())
 	})
 }
 
