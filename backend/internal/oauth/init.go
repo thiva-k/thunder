@@ -64,21 +64,22 @@ func Initialize(
 	resolver := jwksresolver.Initialize(httpClient)
 	scopeValidator := scope.Initialize()
 	discoveryService := discovery.Initialize(mux, runtimeCrypto, jweService, cfg)
+	jtiStore := jti.Initialize(runtimeStore)
 	// The revocation services are constructed by the service manager, not here: the session service
 	// needs the same criteria revoker, and it is wired before the OAuth engine. This registers the
 	// RFC 7009 routes against the already-built service.
 	if cfg.OAuth.TokenRevocation.IsEnabled() {
-		revocation.RegisterRoutes(mux, jwtService, actorProvider, authnProvider, discoveryService, revocationSvc)
+		revocation.RegisterRoutes(mux, jwtService, actorProvider, authnProvider, discoveryService,
+			revocationSvc, jtiStore, cfg.JWT.Leeway)
 	} else {
 		enforcementService = nil
 		revocationSvc = nil
 	}
 
-	jtiStore := jti.Initialize(runtimeStore)
 	tokenBuilder, tokenValidator := tokenservice.Initialize(
 		cfg, jwtService, jweService, resolver, idpService, enforcementService, jtiStore)
 	parService := par.Initialize(mux, actorProvider, authnProvider, jwtService, discoveryService,
-		resourceService, dpopVerifier, cfg, runtimeStore)
+		resourceService, dpopVerifier, cfg, runtimeStore, jtiStore)
 	oauth2AuthzService, err := oauth2authz.Initialize(mux, actorProvider, resourceService,
 		jwtService, flowExecService, parService, revocationSvc, cfg, runtimeStore, transactioner)
 	if err != nil {
@@ -89,7 +90,7 @@ func Initialize(
 	if len(cfg.OAuth.AllowedGrantTypes) == 0 ||
 		slices.Contains(cfg.OAuth.AllowedGrantTypes, string(providers.GrantTypeCIBA)) {
 		cibaService = ciba.Initialize(mux, jwtService, actorProvider, authnProvider, flowExecService,
-			discoveryService, resourceService, runtimeStore, cfg)
+			discoveryService, resourceService, runtimeStore, jtiStore, cfg)
 	}
 
 	grantHandlerProvider := granthandlers.Initialize(
@@ -98,8 +99,9 @@ func Initialize(
 		cibaService, revocationSvc, revocationSvc, cfg)
 
 	token.Initialize(mux, jwtService, actorProvider, authnProvider, grantHandlerProvider,
-		scopeValidator, observabilitySvc, discoveryService, dpopVerifier, cfg)
-	introspect.Initialize(mux, jwtService, actorProvider, authnProvider, discoveryService, tokenValidator)
+		scopeValidator, observabilitySvc, discoveryService, dpopVerifier, jtiStore, cfg)
+	introspect.Initialize(mux, jwtService, actorProvider, authnProvider, discoveryService, tokenValidator,
+		jtiStore, cfg.JWT.Leeway)
 	userinfo.Initialize(mux, jwtService, jweService, resolver,
 		tokenValidator, actorProvider, attributeCacheSvc,
 		discoveryService, dpopVerifier, cfg)

@@ -14,6 +14,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/clientauth"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/discovery"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -39,9 +40,12 @@ func RegisterRoutes(
 	authnProvider providers.AuthnProviderManager,
 	discoveryService discovery.DiscoveryServiceInterface,
 	revocationService RevocationServiceInterface,
+	jtiStore jti.JTIStoreInterface,
+	leeway int64,
 ) {
 	revocationHandler := newRevocationHandler(revocationService)
-	registerRoutes(mux, revocationHandler, actorProvider, authnProvider, jwtService, discoveryService)
+	registerRoutes(mux, revocationHandler, actorProvider, authnProvider, jwtService, discoveryService,
+		jtiStore, leeway)
 }
 
 // registerRoutes registers the routes for the token revocation endpoint.
@@ -52,6 +56,8 @@ func registerRoutes(
 	authnProvider providers.AuthnProviderManager,
 	jwtService jwt.JWTServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
+	jtiStore jti.JTIStoreInterface,
+	leeway int64,
 ) {
 	opts := middleware.CORSOptions{
 		AllowedMethods:   []string{"POST", "OPTIONS"},
@@ -61,7 +67,8 @@ func registerRoutes(
 	}
 
 	issuer := discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background()).Issuer
-	clientAuthMiddleware := clientauth.ClientAuthMiddleware(actorProvider, authnProvider, jwtService, issuer)
+	clientAuthMiddleware := clientauth.ClientAuthMiddleware(actorProvider, authnProvider, jwtService,
+		jtiStore, issuer, leeway)
 	handler := clientAuthMiddleware(http.HandlerFunc(revocationHandler.HandleRevoke))
 
 	pattern, wrappedHandler := middleware.WithCORS(
