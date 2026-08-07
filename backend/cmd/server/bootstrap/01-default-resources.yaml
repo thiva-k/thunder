@@ -55,9 +55,8 @@ schema:
     required: false
     credential: true
 ---
-resource_type: user_type
+resource_type: agent_type
 id: 01900000-0000-7000-8000-000000000011
-category: agent
 name: default
 ouHandle: default
 schema:
