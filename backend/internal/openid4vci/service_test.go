@@ -21,14 +21,16 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 	"github.com/thunder-id/thunderid/internal/user"
 	"github.com/thunder-id/thunderid/internal/vc/credential"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/actorprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
-	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
+	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/tokenservicemock"
 	"github.com/thunder-id/thunderid/tests/mocks/usermock"
 	"github.com/thunder-id/thunderid/tests/mocks/vc/credentialmock"
 )
@@ -44,15 +46,16 @@ func TestServiceTestSuite(t *testing.T) {
 func (s *ServiceTestSuite) TestNewOpenID4VCIService() {
 	provider := cryptomock.NewRuntimeCryptoProviderMock(s.T())
 	store := newOpenID4VCIStoreInterfaceMock(s.T())
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
+	tokenVal := tokenservicemock.NewTokenValidatorInterfaceMock(s.T())
 	userSvc := usermock.NewUserServiceInterfaceMock(s.T())
 	creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
+	apps := actorprovidermock.NewActorProviderMock(s.T())
 
 	s.Run("Success", func() {
 		svc, err := newOpenID4VCIService(
 			serviceConfig{CredentialIssuer: testIssuer},
 			provider, providers.KeyRef{}, "ES256", "", nil,
-			store, jwtSvc, userSvc, creds)
+			store, tokenVal, userSvc, creds, apps)
 		s.Require().NoError(err)
 		s.Require().NotNil(svc)
 	})
@@ -61,7 +64,16 @@ func (s *ServiceTestSuite) TestNewOpenID4VCIService() {
 		svc, err := newOpenID4VCIService(
 			serviceConfig{CredentialIssuer: testIssuer},
 			nil, providers.KeyRef{}, "ES256", "", nil,
-			store, jwtSvc, userSvc, creds)
+			store, tokenVal, userSvc, creds, apps)
+		s.ErrorIs(err, ErrPolicy)
+		s.Nil(svc)
+	})
+
+	s.Run("MissingApplicationResolver", func() {
+		svc, err := newOpenID4VCIService(
+			serviceConfig{CredentialIssuer: testIssuer},
+			provider, providers.KeyRef{}, "ES256", "", nil,
+			store, tokenVal, userSvc, creds, nil)
 		s.ErrorIs(err, ErrPolicy)
 		s.Nil(svc)
 	})
@@ -70,7 +82,7 @@ func (s *ServiceTestSuite) TestNewOpenID4VCIService() {
 		svc, err := newOpenID4VCIService(
 			serviceConfig{},
 			provider, providers.KeyRef{}, "ES256", "", nil,
-			store, jwtSvc, userSvc, creds)
+			store, tokenVal, userSvc, creds, apps)
 		s.ErrorIs(err, ErrPolicy)
 		s.Nil(svc)
 	})
@@ -408,6 +420,37 @@ func newTestVerifyCryptoProvider(t *testing.T) *cryptomock.RuntimeCryptoProvider
 	return provider
 }
 
+// testWalletClientID is the client_id carried by access tokens in issuance tests.
+const testWalletClientID = "wallet-client"
+
+// testSubject is the access-token subject used across issuance tests.
+const testSubject = "u1"
+
+// stubAccessToken returns an opaque token string plus a validator that accepts it and reports
+// testSubject with the given client and scopes. Access-token shape (typ, issuer, required claims,
+// revocation) is the OAuth token validator's contract and is covered by its own tests.
+func stubAccessToken(t *testing.T, ctx context.Context, clientID string, scopes ...string,
+) (string, *tokenservicemock.TokenValidatorInterfaceMock) {
+	t.Helper()
+	const token = "access-token"
+	tv := tokenservicemock.NewTokenValidatorInterfaceMock(t)
+	tv.EXPECT().ValidateAccessToken(ctx, token).
+		Return(&tokenservice.AccessTokenClaims{Sub: testSubject, ClientID: clientID, Scopes: scopes}, nil)
+	return token, tv
+}
+
+// walletApps returns an application resolver that resolves testWalletClientID to a wallet
+// application, so issuance proceeds past the wallet-client check.
+func walletApps(t *testing.T, ctx context.Context) *actorprovidermock.ActorProviderMock {
+	t.Helper()
+	apps := actorprovidermock.NewActorProviderMock(t)
+	apps.EXPECT().GetOAuthClientByClientID(ctx, testWalletClientID).
+		Return(&providers.OAuthClient{ID: "app-1", ClientID: testWalletClientID}, nil)
+	apps.EXPECT().GetInboundClientByID(ctx, "app-1").
+		Return(&providers.InboundClient{ID: "app-1", Properties: map[string]interface{}{"template": "wallet"}}, nil)
+	return apps
+}
+
 // encodeJWT assembles a compact JWS from a header and payload, appending sig as
 // the (already base64url-encoded) signature segment. Useful for crafting proofs
 // whose header/payload exercise specific validation branches.
@@ -547,53 +590,56 @@ func (s *CredentialTestSuite) TestIssueCredentialErrors() {
 		s.ErrorIs(err, ErrInvalidToken)
 	})
 
-	s.Run("VerifyFails", func() {
-		jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-		jwtSvc.EXPECT().VerifyJWT(ctx, "tok", "", "").Return(&tidcommon.ServiceError{Code: "x"})
-		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, jwtService: jwtSvc}
+	// A token the OAuth validator rejects (wrong typ, wrong issuer, revoked, missing claims)
+	// never reaches issuance.
+	s.Run("ValidationFails", func() {
+		tokenVal := tokenservicemock.NewTokenValidatorInterfaceMock(s.T())
+		tokenVal.EXPECT().ValidateAccessToken(ctx, "tok").Return(nil, errors.New("invalid token type"))
+		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal}
 		_, err := svc.IssueCredential(ctx, "tok", nil)
 		s.ErrorIs(err, ErrInvalidToken)
 	})
 
-	s.Run("MissingSubject", func() {
-		token := makeToken(s.T(), map[string]any{})
-		jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-		jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
-		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, jwtService: jwtSvc}
+	// Fail closed when the token carries no client to resolve a wallet application from.
+	s.Run("EmptyClientID", func() {
+		token, tokenVal := stubAccessToken(s.T(), ctx, "")
+		apps := actorprovidermock.NewActorProviderMock(s.T())
+		apps.EXPECT().GetOAuthClientByClientID(ctx, "").Return(nil, &tidcommon.ServiceError{Code: "x"})
+		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, actors: apps}
 		_, err := svc.IssueCredential(ctx, token, []byte("{}"))
 		s.ErrorIs(err, ErrInvalidToken)
 	})
 
 	s.Run("BadBody", func() {
-		token := makeToken(s.T(), map[string]any{"sub": "u1"})
-		jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-		jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
-		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, jwtService: jwtSvc}
+		token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID)
+		svc := &openid4vciService{
+			cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, actors: walletApps(s.T(), ctx),
+		}
 		_, err := svc.IssueCredential(ctx, token, []byte("not-json"))
 		s.ErrorIs(err, ErrInvalidRequest)
 	})
 
 	s.Run("MissingProof", func() {
-		token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "eudi-pid"})
-		jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-		jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+		token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
 		creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
 		creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "eudi-pid").
 			Return(&credential.CredentialConfigurationDTO{Handle: "eudi-pid", VCT: "v"}, nil)
-		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, jwtService: jwtSvc, creds: creds}
+		svc := &openid4vciService{
+			cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, creds: creds, actors: walletApps(s.T(), ctx),
+		}
 		body, _ := json.Marshal(CredentialRequest{CredentialConfigurationID: "eudi-pid"})
 		_, err := svc.IssueCredential(ctx, token, body)
 		s.ErrorIs(err, ErrInvalidProof)
 	})
 
 	s.Run("BatchSizeExceeded", func() {
-		token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "eudi-pid"})
-		jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-		jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+		token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
 		creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
 		creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "eudi-pid").
 			Return(&credential.CredentialConfigurationDTO{Handle: "eudi-pid", VCT: "v"}, nil)
-		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 1}, jwtService: jwtSvc, creds: creds}
+		svc := &openid4vciService{
+			cfg: serviceConfig{BatchSize: 1}, tokenValidator: tokenVal, creds: creds, actors: walletApps(s.T(), ctx),
+		}
 		body, _ := json.Marshal(CredentialRequest{
 			CredentialConfigurationID: "eudi-pid",
 			Proofs:                    &Proofs{JWT: []string{"a", "b"}},
@@ -603,25 +649,66 @@ func (s *CredentialTestSuite) TestIssueCredentialErrors() {
 	})
 }
 
-func (s *CredentialTestSuite) TestIssueCredentialBadTokenPayload() {
+// The credential endpoint is reserved for wallet applications: a token minted for any other
+// registered client must not be usable to mint a credential.
+func (s *CredentialTestSuite) TestIssueCredentialNonWalletClient() {
 	ctx := context.Background()
-	token := "e30.!!!.sig"
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-	jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
-	svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, jwtService: jwtSvc}
-	_, err := svc.IssueCredential(ctx, token, []byte("{}"))
-	s.ErrorIs(err, ErrInvalidToken)
+
+	s.Run("NonWalletTemplate", func() {
+		token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
+		apps := actorprovidermock.NewActorProviderMock(s.T())
+		apps.EXPECT().GetOAuthClientByClientID(ctx, testWalletClientID).
+			Return(&providers.OAuthClient{ID: "app-1", ClientID: testWalletClientID}, nil)
+		apps.EXPECT().GetInboundClientByID(ctx, "app-1").
+			Return(&providers.InboundClient{ID: "app-1", Properties: map[string]interface{}{"template": "react"}}, nil)
+		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, actors: apps}
+		body, _ := json.Marshal(CredentialRequest{CredentialConfigurationID: "eudi-pid"})
+		_, err := svc.IssueCredential(ctx, token, body)
+		s.ErrorIs(err, ErrInvalidToken)
+	})
+
+	s.Run("UnknownClient", func() {
+		token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
+		apps := actorprovidermock.NewActorProviderMock(s.T())
+		apps.EXPECT().GetOAuthClientByClientID(ctx, testWalletClientID).
+			Return(nil, &tidcommon.ServiceError{Code: "x"})
+		svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, actors: apps}
+		body, _ := json.Marshal(CredentialRequest{CredentialConfigurationID: "eudi-pid"})
+		_, err := svc.IssueCredential(ctx, token, body)
+		s.ErrorIs(err, ErrInvalidToken)
+	})
+
+	s.Run("EmbeddedWalletTemplateAccepted", func() {
+		token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
+		apps := actorprovidermock.NewActorProviderMock(s.T())
+		apps.EXPECT().GetOAuthClientByClientID(ctx, testWalletClientID).
+			Return(&providers.OAuthClient{ID: "app-1", ClientID: testWalletClientID}, nil)
+		apps.EXPECT().GetInboundClientByID(ctx, "app-1").
+			Return(&providers.InboundClient{
+				ID: "app-1", Properties: map[string]interface{}{"template": "wallet-embedded"},
+			}, nil)
+		creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
+		creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "eudi-pid").
+			Return(&credential.CredentialConfigurationDTO{Handle: "eudi-pid", VCT: "v"}, nil)
+		svc := &openid4vciService{
+			cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, creds: creds, actors: apps,
+		}
+		body, _ := json.Marshal(CredentialRequest{CredentialConfigurationID: "eudi-pid"})
+		_, err := svc.IssueCredential(ctx, token, body)
+		// Passes the wallet-client gate and fails later, on the absent holder proof.
+		s.ErrorIs(err, ErrInvalidProof)
+	})
 }
 
 func (s *CredentialTestSuite) TestIssueCredentialUnauthorizedCredential() {
 	ctx := context.Background()
-	token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "missing"})
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-	jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+	token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "missing")
 	creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
 	creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "missing").
 		Return(nil, &tidcommon.ServiceError{Code: "x"})
-	svc := &openid4vciService{cfg: serviceConfig{BatchSize: 5}, jwtService: jwtSvc, creds: creds}
+	svc := &openid4vciService{
+		cfg: serviceConfig{BatchSize: 5}, tokenValidator: tokenVal, creds: creds, actors: walletApps(s.T(), ctx),
+	}
 	body, _ := json.Marshal(CredentialRequest{CredentialConfigurationID: "missing"})
 	_, err := svc.IssueCredential(ctx, token, body)
 	s.ErrorIs(err, ErrUnsupportedCredential)
@@ -630,17 +717,16 @@ func (s *CredentialTestSuite) TestIssueCredentialUnauthorizedCredential() {
 func (s *CredentialTestSuite) TestIssueCredentialVerifyProofsError() {
 	ctx := context.Background()
 	store := newStatefulStore(s.T())
-	token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "eudi-pid"})
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-	jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+	token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
 	creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
 	creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "eudi-pid").
 		Return(&credential.CredentialConfigurationDTO{Handle: "eudi-pid", VCT: "v"}, nil)
 	svc := &openid4vciService{
 		cfg:            serviceConfig{CredentialIssuer: testIssuer, ProofMaxAge: time.Minute, BatchSize: 5},
 		store:          store,
-		jwtService:     jwtSvc,
+		tokenValidator: tokenVal,
 		creds:          creds,
+		actors:         walletApps(s.T(), ctx),
 		cryptoProvider: newTestVerifyCryptoProvider(s.T()),
 	}
 
@@ -659,9 +745,7 @@ func (s *CredentialTestSuite) TestIssueCredentialResolveClaimsError() {
 	store := newStatefulStore(s.T())
 	nonce := "n"
 	s.Require().NoError(store.SaveNonce(ctx, nonce, &nonceRecord{ExpiresAt: time.Now().Add(time.Minute)}))
-	token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "eudi-pid"})
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-	jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+	token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
 	creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
 	creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "eudi-pid").
 		Return(&credential.CredentialConfigurationDTO{Handle: "eudi-pid", VCT: "v"}, nil)
@@ -670,9 +754,10 @@ func (s *CredentialTestSuite) TestIssueCredentialResolveClaimsError() {
 	svc := &openid4vciService{
 		cfg:            serviceConfig{CredentialIssuer: testIssuer, ProofMaxAge: time.Minute, BatchSize: 5},
 		store:          store,
-		jwtService:     jwtSvc,
+		tokenValidator: tokenVal,
 		userService:    userSvc,
 		creds:          creds,
+		actors:         walletApps(s.T(), ctx),
 		cryptoProvider: newTestVerifyCryptoProvider(s.T()),
 	}
 
@@ -691,9 +776,7 @@ func (s *CredentialTestSuite) TestIssueCredentialSignError() {
 	store := newStatefulStore(s.T())
 	nonce := "n"
 	s.Require().NoError(store.SaveNonce(ctx, nonce, &nonceRecord{ExpiresAt: time.Now().Add(time.Minute)}))
-	token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "eudi-pid"})
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-	jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+	token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
 
 	validity := 3600
 	creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
@@ -715,9 +798,10 @@ func (s *CredentialTestSuite) TestIssueCredentialSignError() {
 		cryptoProvider: provider,
 		signingAlg:     "ES256",
 		store:          store,
-		jwtService:     jwtSvc,
+		tokenValidator: tokenVal,
 		userService:    userSvc,
 		creds:          creds,
+		actors:         walletApps(s.T(), ctx),
 	}
 
 	holderKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -745,9 +829,7 @@ func (s *CredentialTestSuite) TestIssueCredentialSuccess() {
 	nonce := "the-nonce"
 	s.Require().NoError(store.SaveNonce(ctx, nonce, &nonceRecord{ExpiresAt: time.Now().Add(time.Minute)}))
 
-	token := makeToken(s.T(), map[string]any{"sub": "u1", "scope": "eudi-pid"})
-	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(s.T())
-	jwtSvc.EXPECT().VerifyJWT(ctx, token, "", "").Return(nil)
+	token, tokenVal := stubAccessToken(s.T(), ctx, testWalletClientID, "eudi-pid")
 
 	creds := credentialmock.NewCredentialConfigurationServiceInterfaceMock(s.T())
 	creds.EXPECT().GetCredentialConfigurationByHandle(ctx, "eudi-pid").
@@ -768,9 +850,10 @@ func (s *CredentialTestSuite) TestIssueCredentialSuccess() {
 		kid:            "kid",
 		x5c:            []string{base64.StdEncoding.EncodeToString([]byte("cert"))},
 		store:          store,
-		jwtService:     jwtSvc,
+		tokenValidator: tokenVal,
 		userService:    userSvc,
 		creds:          creds,
+		actors:         walletApps(s.T(), ctx),
 	}
 
 	holderKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

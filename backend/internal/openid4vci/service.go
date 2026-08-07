@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"math/big"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/internal/system/jose/jws"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/jose/sdjwt"
@@ -36,6 +38,14 @@ type OpenID4VCIServiceInterface interface {
 
 var _ OpenID4VCIServiceInterface = (*openid4vciService)(nil)
 
+// templateProperty is the inbound-client property holding the application template identifier.
+// It mirrors the key the application service persists (application.propTemplate).
+const templateProperty = "template"
+
+// walletTemplates are the application template identifiers assigned to OpenID4VCI wallet
+// applications. Credential issuance is restricted to clients registered under one of these.
+var walletTemplates = []string{"wallet", "wallet-embedded"}
+
 // openid4vciService drives the OpenID4VCI issuer: it advertises issuer metadata, issues
 // c_nonces, and issues SD-JWT VCs bound to the holder key after validating the
 // access token and holder proof.
@@ -47,9 +57,10 @@ type openid4vciService struct {
 	kid            string
 	x5c            []string
 	store          openID4VCIStoreInterface
-	jwtService     jwt.JWTServiceInterface
+	tokenValidator tokenservice.TokenValidatorInterface
 	userService    user.UserServiceInterface
 	creds          credential.CredentialConfigurationServiceInterface
+	actors         providers.ActorProvider
 }
 
 // newOpenID4VCIService creates an OpenID4VCI issuer engine.
@@ -58,11 +69,12 @@ func newOpenID4VCIService(
 	cryptoProvider providers.RuntimeCryptoProvider, signingKeyRef providers.KeyRef,
 	signingAlg, kid string, x5c []string,
 	store openID4VCIStoreInterface,
-	jwtService jwt.JWTServiceInterface, userService user.UserServiceInterface,
+	tokenValidator tokenservice.TokenValidatorInterface, userService user.UserServiceInterface,
 	creds credential.CredentialConfigurationServiceInterface,
+	actors providers.ActorProvider,
 ) (OpenID4VCIServiceInterface, error) {
 	if cryptoProvider == nil || store == nil ||
-		jwtService == nil || userService == nil || creds == nil {
+		tokenValidator == nil || userService == nil || creds == nil || actors == nil {
 		return nil, fmt.Errorf("%w: required issuer dependencies are missing", ErrPolicy)
 	}
 	if cfg.CredentialIssuer == "" {
@@ -76,9 +88,10 @@ func newOpenID4VCIService(
 		kid:            kid,
 		x5c:            x5c,
 		store:          store,
-		jwtService:     jwtService,
+		tokenValidator: tokenValidator,
 		userService:    userService,
 		creds:          creds,
+		actors:         actors,
 	}, nil
 }
 
@@ -167,18 +180,17 @@ func (s *openid4vciService) IssueCredential(
 	if accessToken == "" {
 		return nil, fmt.Errorf("%w: missing access token", ErrInvalidToken)
 	}
-	if svcErr := s.jwtService.VerifyJWT(ctx, accessToken, "", ""); svcErr != nil {
-		return nil, fmt.Errorf("%w: access token verification failed", ErrInvalidToken)
-	}
-	payload, err := jwt.DecodeJWTPayload(accessToken)
+	// Validated as an OAuth 2.0 access token (RFC 9068 typ, issuer, required claims, revocation),
+	// so other server-signed JWTs such as authentication assertions cannot be used for issuance.
+	claims, err := s.tokenValidator.ValidateAccessToken(ctx, accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidToken, err)
 	}
-	subject, _ := payload["sub"].(string)
-	if subject == "" {
-		return nil, fmt.Errorf("%w: access token missing subject", ErrInvalidToken)
+	subject := claims.Sub
+	if err := s.verifyWalletClient(ctx, claims.ClientID); err != nil {
+		return nil, err
 	}
-	scopes := strings.Fields(scopeString(payload))
+	scopes := claims.Scopes
 
 	var req CredentialRequest
 	if err := json.Unmarshal(body, &req); err != nil {
@@ -203,7 +215,7 @@ func (s *openid4vciService) IssueCredential(
 		return nil, err
 	}
 
-	claims, err := s.resolveClaims(ctx, subject, cred.SDClaims)
+	sdClaims, err := s.resolveClaims(ctx, subject, cred.SDClaims)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +243,7 @@ func (s *openid4vciService) IssueCredential(
 			VCT:             cred.VCT,
 			IssuedAt:        now,
 			ExpiresAt:       now.Add(validity),
-			SelectiveClaims: claims,
+			SelectiveClaims: sdClaims,
 			AlwaysVisible:   map[string]interface{}{"sub": subject},
 			ConfirmationJWK: holderJWK,
 		}, func(signingInput string) ([]byte, error) {
@@ -337,6 +349,25 @@ func credentialDisplay(name, description string, d *credential.CredentialDisplay
 		return nil
 	}
 	return []interface{}{entry}
+}
+
+// verifyWalletClient resolves the application registered behind the access token's client_id and
+// requires it to be a wallet application. Credential issuance is reserved for wallets, so a token
+// minted for an unrelated application cannot be replayed against the credential endpoint.
+func (s *openid4vciService) verifyWalletClient(ctx context.Context, clientID string) error {
+	oauthClient, svcErr := s.actors.GetOAuthClientByClientID(ctx, clientID)
+	if svcErr != nil || oauthClient == nil {
+		return fmt.Errorf("%w: unknown client", ErrInvalidToken)
+	}
+	inbound, svcErr := s.actors.GetInboundClientByID(ctx, oauthClient.ID)
+	if svcErr != nil || inbound == nil {
+		return fmt.Errorf("%w: unknown application for client", ErrInvalidToken)
+	}
+	template, _ := inbound.Properties[templateProperty].(string)
+	if !slices.Contains(walletTemplates, template) {
+		return fmt.Errorf("%w: client is not a wallet application", ErrInvalidToken)
+	}
+	return nil
 }
 
 // authorizedCredential resolves the credential configuration the request is
