@@ -5,6 +5,7 @@ import {useConfig} from '@thunderid/contexts';
 import {useEffect} from 'react';
 import useFontStylesheetLink from './useFontStylesheetLink';
 import {DEFAULT_FONT_STACK} from '../constants/fonts';
+import getCspNonce from '../utils/getCspNonce';
 
 /** CSS variable set by the ThunderID SDK when design data includes a custom font. */
 const THUNDERID_FONT_CSS_VAR = '--thunderid-typography-fontFamily';
@@ -56,6 +57,10 @@ export default function FontImporter({
 
     const style = doc.createElement('style');
     style.id = fontOverrideId;
+    const nonce = getCspNonce();
+    if (nonce) {
+      style.setAttribute('nonce', nonce);
+    }
     style.textContent = `${MUI_FONT_SELECTORS} { font-family: ${family} !important; }`;
 
     doc.getElementById(fontOverrideId)?.remove();

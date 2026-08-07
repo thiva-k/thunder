@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -24,6 +25,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/constants"
+	sysContext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/common"
@@ -371,16 +373,23 @@ func createStaticFileHandler(routePrefix, directory string, logger *log.Logger) 
 	rootFS := root.FS()
 	fileServer := http.FileServerFS(rootFS)
 
-	// serveIndex serves index.html with no-cache headers. It reports whether index.html
-	// existed and was served.
+	// serveIndex serves index.html with no-cache headers, substituting the request's CSP nonce
+	// (see SecurityHeadersMiddleware) for the placeholder in its <meta property="csp-nonce"> tag, so
+	// the frontend can apply the same nonce to its own inline <style> tags. It reports whether
+	// index.html existed and was served.
 	serveIndex := func(w http.ResponseWriter, r *http.Request) bool {
-		if _, err := root.Stat("index.html"); err != nil {
+		content, err := fs.ReadFile(rootFS, "index.html")
+		if err != nil {
 			return false
 		}
+		nonce := sysContext.GetCSPNonce(r.Context())
+		content = bytes.ReplaceAll(content, []byte(constants.CSPNoncePlaceholder), []byte(nonce))
+
 		w.Header().Set(constants.CacheControlHeaderName, constants.CacheControlNoCacheComposite)
 		w.Header().Set(constants.PragmaHeaderName, constants.PragmaNoCache)
 		w.Header().Set(constants.ExpiresHeaderName, constants.ExpiresZero)
-		http.ServeFileFS(w, r, rootFS, "index.html")
+		w.Header().Set(constants.ContentTypeHeaderName, constants.ContentTypeHTML)
+		_, _ = w.Write(content)
 		return true
 	}
 

@@ -241,3 +241,26 @@ func (s *ContextTestSuite) TestGenerateUUID_MultipleGenerations() {
 		seen[uuid] = true
 	}
 }
+
+func (s *ContextTestSuite) TestGetCSPNonce_WithNilContext() {
+	s.Equal("", GetCSPNonce(nil)) //nolint:staticcheck // Testing nil context handling
+}
+
+func (s *ContextTestSuite) TestGetCSPNonce_WithEmptyContext() {
+	s.Equal("", GetCSPNonce(context.Background()))
+}
+
+func (s *ContextTestSuite) TestGetCSPNonce_WithExistingNonce() {
+	ctx := WithCSPNonce(context.Background(), "abc123")
+	s.Equal("abc123", GetCSPNonce(ctx))
+}
+
+func (s *ContextTestSuite) TestGetCSPNonce_WithWrongType() {
+	ctx := context.WithValue(context.Background(), CSPNonceKey, 12345)
+	s.Equal("", GetCSPNonce(ctx))
+}
+
+func (s *ContextTestSuite) TestWithCSPNonce_NilContext() {
+	ctx := WithCSPNonce(nil, "abc123") //nolint:staticcheck // Testing nil context handling
+	s.Equal("abc123", GetCSPNonce(ctx))
+}

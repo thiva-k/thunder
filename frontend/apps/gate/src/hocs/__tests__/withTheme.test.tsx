@@ -22,6 +22,7 @@ vi.mock('@thunder/contexts', () => ({
 
 // Create mock for useDesign
 const mockUseDesign = vi.fn();
+const mockGetCspNonce = vi.fn<() => string | undefined>();
 vi.mock('@thunderid/design', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   useDesign: () => mockUseDesign(),
@@ -29,6 +30,7 @@ vi.mock('@thunderid/design', () => ({
   FontImporter: () => null,
   getFontImportURL: () => undefined,
   DefaultTheme: {},
+  getCspNonce: () => mockGetCspNonce(),
 }));
 
 const mockUseConfig = vi.hoisted(() => vi.fn());
@@ -104,6 +106,7 @@ describe('withTheme', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedThemeProviderProps = undefined;
+    mockGetCspNonce.mockReturnValue(undefined);
     mockUseDesign.mockReturnValue({
       transformedTheme: null,
       isLoading: false,
@@ -283,6 +286,18 @@ describe('withTheme', () => {
   it('renders Head', () => {
     render(<WithThemeComponent />);
     expect(screen.getByTestId('head')).toBeInTheDocument();
+  });
+
+  it('forwards the csp nonce to OxygenUIThemeProvider', () => {
+    mockGetCspNonce.mockReturnValue('abc123');
+
+    render(<WithThemeComponent />);
+    expect(capturedThemeProviderProps?.nonce).toBe('abc123');
+  });
+
+  it('passes undefined nonce to OxygenUIThemeProvider when none is available', () => {
+    render(<WithThemeComponent />);
+    expect(capturedThemeProviderProps?.nonce).toBeUndefined();
   });
 
   it('includes custom object themes from config in the theme list', () => {

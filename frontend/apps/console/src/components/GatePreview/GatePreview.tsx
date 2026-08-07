@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {ColorSchemeOption, Stylesheet, Theme} from '@thunderid/design';
+import {getCspNonce, type ColorSchemeOption, type Stylesheet, type Theme} from '@thunderid/design';
 import type {EmbeddedFlowComponent} from '@thunderid/react';
 import {Box, CircularProgress, IconButton, Tooltip, Typography, useColorScheme} from '@wso2/oxygen-ui';
 import {useCallback, useLayoutEffect, useRef, useState, type JSX, type ReactNode} from 'react';
@@ -34,14 +34,18 @@ const MIN_CONTENT_WIDTH = 520;
 const MIN_CONTENT_HEIGHT = 700;
 
 /**
- * Initial HTML written into the preview iframe. Sets up the full height chain
- * so AuthPageLayout's minHeight: 100% resolves correctly.
+ * Initial HTML written into the preview iframe. Sets up the full height chain so AuthPageLayout's
+ * minHeight: 100% resolves correctly. Its <style> tag carries the parent document's CSP nonce: this
+ * iframe has no src (an about:blank doc written to directly), so it inherits the parent's CSP,
+ * including this exact nonce value, rather than carrying its own.
  */
-const IFRAME_INITIAL_HTML = [
-  '<!DOCTYPE html><html style="height:100%"><head>',
-  '<style>body{margin:0;height:100%}#root,#root>*{height:100%}</style>',
-  '</head><body><div id="root"></div></body></html>',
-].join('');
+function buildIframeInitialHTML(nonce: string | undefined): string {
+  return [
+    '<!DOCTYPE html><html style="height:100%"><head>',
+    `<style${nonce ? ` nonce="${nonce}"` : ''}>body{margin:0;height:100%}#root,#root>*{height:100%}</style>`,
+    '</head><body><div id="root"></div></body></html>',
+  ].join('');
+}
 
 // ── Types & Props ────────────────────────────────────────────────────────────
 
@@ -181,7 +185,7 @@ export default function GatePreview({
       return;
     }
     doc.open();
-    doc.write(IFRAME_INITIAL_HTML);
+    doc.write(buildIframeInitialHTML(getCspNonce()));
     doc.close();
     setIframeDoc(doc);
   }, []);
