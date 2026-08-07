@@ -1581,10 +1581,12 @@ const translations = {
     'addMember.tabs.users': 'Users',
     'addMember.tabs.apps': 'Apps',
     'addMember.tabs.agents': 'Agents',
+    'addMember.tabs.groups': 'Groups',
     'addMember.search.placeholder': 'Search users...',
     'addMember.noResults': 'No users found',
     'addMember.noResultsApps': 'No apps found',
     'addMember.noResultsAgents': 'No agents found',
+    'addMember.noResultsGroups': 'No groups found',
     'addMember.add': 'Add Selected',
     'addMember.columns.displayName': 'Display Name',
     'addMember.columns.userType': 'User Type',
@@ -1593,6 +1595,7 @@ const translations = {
     'addMember.fetchError': 'Failed to load users. Please try again.',
     'addMember.fetchAppsError': 'Failed to load apps. Please try again.',
     'addMember.fetchAgentsError': 'Failed to load agents. Please try again.',
+    'addMember.fetchGroupsError': 'Failed to load groups. Please try again.',
     'removeMember.error': 'Failed to remove member. Please try again.',
 
     // Delete dialog
