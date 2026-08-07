@@ -87,7 +87,6 @@ describe('ConnectionCreateWizardPage', () => {
   it('shows the type heading without the redundant step label', () => {
     render(<ConnectionCreateWizardPage />);
 
-    expect(screen.getByTestId('connection-fullpage-content')).toBeInTheDocument();
     expect(screen.getByText('What kind of connection do you want to add?')).toBeInTheDocument();
     expect(screen.getAllByText('Connection type')).toHaveLength(1);
   });
@@ -110,7 +109,6 @@ describe('ConnectionCreateWizardPage', () => {
 
     selectTypeAndName('connection-type-option-oidc');
 
-    expect(screen.getByTestId('connection-fullpage-content')).toBeInTheDocument();
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
     expect(screen.getByText('Configure your connection')).toBeInTheDocument();
     // Assert on the raw step-label key: its real translation ("Configure") collides with the heading text.
@@ -131,7 +129,6 @@ describe('ConnectionCreateWizardPage', () => {
 
     selectTypeAndName('connection-type-option-oauth');
 
-    expect(screen.getByTestId('connection-fullpage-content')).toBeInTheDocument();
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
     expect(screen.getByText('Configure your connection')).toBeInTheDocument();
   });

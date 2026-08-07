@@ -83,12 +83,8 @@ describe('useTranslationCreate', () => {
         'localeCodeOverride',
         'setLocaleCodeOverride',
         'localeCode',
-        'populateFromEnglish',
-        'setPopulateFromEnglish',
         'isCreating',
         'setIsCreating',
-        'progress',
-        'setProgress',
         'error',
         'setError',
         'reset',
@@ -146,9 +142,7 @@ describe('useTranslationCreate', () => {
         setSelectedCountry,
         setSelectedLocale,
         setLocaleCodeOverride,
-        setPopulateFromEnglish,
         setIsCreating,
-        setProgress,
         setError,
         reset,
       } = useTranslationCreate();
@@ -159,9 +153,7 @@ describe('useTranslationCreate', () => {
           <div data-testid="setSelectedCountry-type">{typeof setSelectedCountry}</div>
           <div data-testid="setSelectedLocale-type">{typeof setSelectedLocale}</div>
           <div data-testid="setLocaleCodeOverride-type">{typeof setLocaleCodeOverride}</div>
-          <div data-testid="setPopulateFromEnglish-type">{typeof setPopulateFromEnglish}</div>
           <div data-testid="setIsCreating-type">{typeof setIsCreating}</div>
-          <div data-testid="setProgress-type">{typeof setProgress}</div>
           <div data-testid="setError-type">{typeof setError}</div>
           <div data-testid="reset-type">{typeof reset}</div>
         </div>
@@ -180,14 +172,12 @@ describe('useTranslationCreate', () => {
     expect(screen.getByTestId('setSelectedCountry-type')).toHaveTextContent('function');
     expect(screen.getByTestId('setSelectedLocale-type')).toHaveTextContent('function');
     expect(screen.getByTestId('setLocaleCodeOverride-type')).toHaveTextContent('function');
-    expect(screen.getByTestId('setPopulateFromEnglish-type')).toHaveTextContent('function');
     expect(screen.getByTestId('setIsCreating-type')).toHaveTextContent('function');
-    expect(screen.getByTestId('setProgress-type')).toHaveTextContent('function');
     expect(screen.getByTestId('setError-type')).toHaveTextContent('function');
     expect(screen.getByTestId('reset-type')).toHaveTextContent('function');
   });
 
-  it('has exactly 18 properties in the context interface', () => {
+  it('has exactly 14 properties in the context interface', () => {
     function TestContextProperties() {
       const context = useTranslationCreate();
 
@@ -206,6 +196,6 @@ describe('useTranslationCreate', () => {
       </TestWrapper>,
     );
 
-    expect(screen.getByTestId('property-count')).toHaveTextContent('18');
+    expect(screen.getByTestId('property-count')).toHaveTextContent('14');
   });
 });

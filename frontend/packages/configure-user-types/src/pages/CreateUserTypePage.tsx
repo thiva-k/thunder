@@ -462,9 +462,20 @@ export default function CreateUserTypePage(): JSX.Element {
               {renderStepContent()}
 
               {/* Navigation buttons */}
-              <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} sx={{mt: 4}}>
+              <Stack
+                direction="row"
+                justifyContent={activeSteps.indexOf(currentStep) > 0 ? 'space-between' : 'flex-end'}
+                alignItems="center"
+                spacing={2}
+                sx={{mt: 4}}
+              >
                 {activeSteps.indexOf(currentStep) > 0 && (
-                  <Button variant="text" onClick={handlePrevStep} disabled={createUserTypeMutation.isPending}>
+                  <Button
+                    variant="outlined"
+                    onClick={handlePrevStep}
+                    sx={{minWidth: 100}}
+                    disabled={createUserTypeMutation.isPending}
+                  >
                     {t('common:actions.back')}
                   </Button>
                 )}

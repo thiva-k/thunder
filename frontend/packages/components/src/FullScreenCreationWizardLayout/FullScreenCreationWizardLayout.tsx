@@ -36,6 +36,13 @@ export interface FullScreenCreationWizardLayoutProps {
   preview?: ReactNode;
 
   /**
+   * Max width of the content column, in px. Defaults to 800 to keep form-like steps narrow and
+   * readable. Pass `false` for steps whose content is meant to fill the available width instead
+   * (e.g. a multi-column template grid).
+   */
+  contentMaxWidth?: number | false;
+
+  /**
    * Footer action row (Back/Continue/Finish buttons, spinners, etc). Rendered directly below the
    * step content, inside the same scrollable column, so it moves with the form instead of
    * floating in a separate bar.
@@ -57,6 +64,7 @@ export default function FullScreenCreationWizardLayout({
   progress,
   children,
   preview = undefined,
+  contentMaxWidth = 800,
   footer,
 }: FullScreenCreationWizardLayoutProps): JSX.Element {
   const {t} = useTranslation('common');
@@ -92,7 +100,7 @@ export default function FullScreenCreationWizardLayout({
               width: '100%',
             }}
           >
-            <Box sx={{width: '100%', maxWidth: 800}}>
+            <Box sx={{width: '100%', maxWidth: contentMaxWidth === false ? 'none' : contentMaxWidth}}>
               {children}
               <Box sx={{mt: 6}}>{footer}</Box>
             </Box>

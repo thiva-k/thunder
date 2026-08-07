@@ -159,7 +159,13 @@ export default function UserEditPage() {
 
   const handleFieldChange = useCallback(
     (field: keyof User, value: unknown) => {
-      updateUserMutation.reset(); // a save error is stale once the form changes
+      // A save error is stale once the form changes. Only reset when there's actually an error to
+      // clear: unconditionally calling reset() churns the mutation object's identity on every
+      // field change, which recreates this callback and can retrigger consumers that depend on it
+      // (e.g. a child's useEffect), looping indefinitely.
+      if (updateUserMutation.isError) {
+        updateUserMutation.reset();
+      }
       setEditedUser((prev) => ({...prev, [field]: value}));
     },
     [updateUserMutation],

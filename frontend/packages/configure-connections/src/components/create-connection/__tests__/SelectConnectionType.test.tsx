@@ -43,6 +43,30 @@ describe('SelectConnectionType', () => {
     expect(onSelect).toHaveBeenCalledWith('trusted-idp');
   });
 
+  it('selects a type when Enter is pressed', () => {
+    render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
+    fireEvent.keyDown(screen.getByTestId('connection-type-option-oidc'), {key: 'Enter'});
+    expect(onSelect).toHaveBeenCalledWith('oidc');
+  });
+
+  it('selects a type when Space is pressed', () => {
+    render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
+    fireEvent.keyDown(screen.getByTestId('connection-type-option-oidc'), {key: ' '});
+    expect(onSelect).toHaveBeenCalledWith('oidc');
+  });
+
+  it('ignores unrelated key presses', () => {
+    render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
+    fireEvent.keyDown(screen.getByTestId('connection-type-option-oidc'), {key: 'a'});
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('marks the selected type as pressed and shows the selection checkmark', () => {
+    render(<SelectConnectionType selectedType="oidc" onSelect={onSelect} />);
+    expect(screen.getByTestId('connection-type-option-oidc')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('connection-type-option-oauth')).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('renders the Trusted Token Issuer option before the SMS gateway option', () => {
     render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
 

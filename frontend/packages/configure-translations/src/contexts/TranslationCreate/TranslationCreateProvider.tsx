@@ -26,18 +26,14 @@ const INITIAL_STATE: {
   selectedCountry: CountryOption | null;
   selectedLocale: LocaleOption | null;
   localeCodeOverride: string;
-  populateFromEnglish: boolean;
   isCreating: boolean;
-  progress: number;
   error: string | null;
 } = {
   currentStep: TranslationCreateFlowStep.COUNTRY,
   selectedCountry: null,
   selectedLocale: null,
   localeCodeOverride: '',
-  populateFromEnglish: true,
   isCreating: false,
-  progress: 0,
   error: null,
 };
 
@@ -75,9 +71,7 @@ export default function TranslationCreateProvider({children}: TranslationCreateP
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(INITIAL_STATE.selectedCountry);
   const [selectedLocale, setSelectedLocale] = useState<LocaleOption | null>(INITIAL_STATE.selectedLocale);
   const [localeCodeOverride, setLocaleCodeOverride] = useState<string>(INITIAL_STATE.localeCodeOverride);
-  const [populateFromEnglish, setPopulateFromEnglish] = useState<boolean>(INITIAL_STATE.populateFromEnglish);
   const [isCreating, setIsCreating] = useState<boolean>(INITIAL_STATE.isCreating);
-  const [progress, setProgress] = useState<number>(INITIAL_STATE.progress);
   const [error, setError] = useState<string | null>(INITIAL_STATE.error);
 
   const localeCode = (localeCodeOverride.trim() || (selectedLocale?.code ?? '')).trim();
@@ -87,9 +81,7 @@ export default function TranslationCreateProvider({children}: TranslationCreateP
     setSelectedCountry(INITIAL_STATE.selectedCountry);
     setSelectedLocale(INITIAL_STATE.selectedLocale);
     setLocaleCodeOverride(INITIAL_STATE.localeCodeOverride);
-    setPopulateFromEnglish(INITIAL_STATE.populateFromEnglish);
     setIsCreating(INITIAL_STATE.isCreating);
-    setProgress(INITIAL_STATE.progress);
     setError(INITIAL_STATE.error);
   }, []);
 
@@ -104,28 +96,13 @@ export default function TranslationCreateProvider({children}: TranslationCreateP
       localeCodeOverride,
       setLocaleCodeOverride,
       localeCode,
-      populateFromEnglish,
-      setPopulateFromEnglish,
       isCreating,
       setIsCreating,
-      progress,
-      setProgress,
       error,
       setError,
       reset,
     }),
-    [
-      currentStep,
-      selectedCountry,
-      selectedLocale,
-      localeCodeOverride,
-      localeCode,
-      populateFromEnglish,
-      isCreating,
-      progress,
-      error,
-      reset,
-    ],
+    [currentStep, selectedCountry, selectedLocale, localeCodeOverride, localeCode, isCreating, error, reset],
   );
 
   return <TranslationCreateContext.Provider value={contextValue}>{children}</TranslationCreateContext.Provider>;

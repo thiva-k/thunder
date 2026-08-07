@@ -42,6 +42,10 @@ vi.mock('@thunderid/i18n', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@thunderid/i18n')>()),
   useGetTranslations: mockUseGetTranslations,
   useUpdateTranslation: mockUseUpdateTranslation,
+  // UnsavedChangesBar is imported from the `@thunderid/components` barrel, which also re-exports
+  // components that statically import useGetLanguages from this module — an ESM named export must
+  // exist here even though nothing in this test exercises it.
+  useGetLanguages: vi.fn(),
   NamespaceConstants: {
     CUSTOM_NAMESPACE: 'custom',
     COMMON: 'common',
@@ -65,15 +69,11 @@ const mockTranslationEditorCard = vi.fn();
 vi.mock('@/components/edit-translation/TranslationEditorHeader', () => ({
   default: (props: {
     onBack: () => void;
-    onSave: () => void;
-    onDiscard: () => void;
     onResetToDefault: () => void;
-    hasDirtyChanges: boolean;
     isSaving: boolean;
     selectedLanguage: string | null;
     isFallbackLanguage: boolean;
     hasNamespace: boolean;
-    dirtyCount: number;
     error?: string;
   }) => {
     mockTranslationEditorHeader(props);
@@ -82,17 +82,10 @@ vi.mock('@/components/edit-translation/TranslationEditorHeader', () => ({
         <button type="button" onClick={props.onBack}>
           back
         </button>
-        <button type="button" onClick={props.onSave} disabled={!props.hasDirtyChanges || props.isSaving}>
-          save
-        </button>
-        <button type="button" onClick={props.onDiscard} disabled={!props.hasDirtyChanges}>
-          discard
-        </button>
         <button type="button" onClick={props.onResetToDefault} disabled={!props.hasNamespace || props.isSaving}>
           reset
         </button>
         <span data-testid="header-language">{props.selectedLanguage}</span>
-        <span data-testid="header-dirty-count">{props.dirtyCount}</span>
         <span data-testid="header-is-english">{String(props.isFallbackLanguage)}</span>
         {props.error && <span data-testid="header-error">{props.error}</span>}
       </div>
@@ -247,16 +240,16 @@ describe('TranslationsEditPage', () => {
     it('starts with no dirty changes', () => {
       render(<TranslationsEditPage />);
 
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('0');
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
     });
 
-    it('increments the dirty count after a field is changed', async () => {
+    it('shows the unsaved-changes bar after a field is changed', async () => {
       const user = userEvent.setup();
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
 
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('1');
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
     });
 
     it('resets dirty changes after Discard is clicked', async () => {
@@ -264,11 +257,11 @@ describe('TranslationsEditPage', () => {
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('1');
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
 
-      await user.click(screen.getByText('discard'));
+      await user.click(screen.getByText('Discard Changes'));
 
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('0');
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
     });
 
     it('removes a single dirty key when reset field is called', async () => {
@@ -276,11 +269,11 @@ describe('TranslationsEditPage', () => {
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('1');
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
 
       await user.click(screen.getByText('reset field'));
 
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('0');
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
     });
   });
 
@@ -290,7 +283,7 @@ describe('TranslationsEditPage', () => {
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      await user.click(screen.getByText('save'));
+      await user.click(screen.getByText('Save Changes'));
 
       expect(mockMutateAsync).toHaveBeenCalledWith({
         language: 'fr-FR',
@@ -305,9 +298,9 @@ describe('TranslationsEditPage', () => {
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      await user.click(screen.getByText('save'));
+      await user.click(screen.getByText('Save Changes'));
 
-      expect(screen.getByText('editor.jsonSaveSuccess')).toBeInTheDocument();
+      expect(screen.getByText('All translations saved.')).toBeInTheDocument();
     });
 
     it('clears dirty changes after a successful save', async () => {
@@ -315,20 +308,20 @@ describe('TranslationsEditPage', () => {
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      await user.click(screen.getByText('save'));
+      await user.click(screen.getByText('Save Changes'));
 
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('0');
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
     });
 
-    it('shows the resolved error inline in the header when at least one save request fails', async () => {
+    it('shows the resolved error inline on the page when at least one save request fails', async () => {
       mockMutateAsync.mockRejectedValueOnce(new Error('Network error'));
       const user = userEvent.setup();
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      await user.click(screen.getByText('save'));
+      await user.click(screen.getByText('Save Changes'));
 
-      expect(screen.getByTestId('header-error')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Failed to save some translations.');
     });
   });
 
@@ -347,11 +340,11 @@ describe('TranslationsEditPage', () => {
       render(<TranslationsEditPage />);
 
       await user.click(screen.getByText('change field'));
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('1');
+      expect(screen.getByText('Save Changes')).toBeInTheDocument();
 
       await user.click(screen.getByText('select namespace'));
 
-      expect(screen.getByTestId('header-dirty-count')).toHaveTextContent('0');
+      expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
     });
   });
 

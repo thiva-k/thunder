@@ -19,7 +19,7 @@ import {
   TextField,
   Typography,
 } from '@wso2/oxygen-ui';
-import {Link2, Plus, Share2, Trash2, User} from '@wso2/oxygen-ui-icons-react';
+import {Plus, Trash2, User} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {AttributeConfiguration} from '../models/connection';
@@ -627,7 +627,6 @@ export default function AttributeMappingSection({
       <SettingsCard
         title={t('attributeMapping.mappings.title')}
         description={t('attributeMapping.mappings.description')}
-        titleIcon={iconBox(<Share2 size={16} />)}
       >
         <Stack direction="column" spacing={2}>
           {groups.map((group) => (
@@ -667,11 +666,7 @@ export default function AttributeMappingSection({
       </SettingsCard>
 
       {/* Section 3 — account linking */}
-      <SettingsCard
-        title={t('attributeMapping.linking.title')}
-        description={t('attributeMapping.linking.description')}
-        titleIcon={iconBox(<Link2 size={16} />)}
-      >
+      <SettingsCard title={t('attributeMapping.linking.title')} description={t('attributeMapping.linking.description')}>
         <Stack direction="column" spacing={1.5}>
           <Typography variant="body2" color="text.secondary" fontWeight={600}>
             {linking.length > 1 ? t('attributeMapping.linking.labelCombo') : t('attributeMapping.linking.label')}

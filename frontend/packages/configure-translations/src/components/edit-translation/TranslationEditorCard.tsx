@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {JsonLogo} from '@thunderid/components';
 import {Box, Card, CircularProgress, Divider, InputAdornment, Tab, Tabs, TextField, Typography} from '@wso2/oxygen-ui';
 import {Search} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, type SyntheticEvent} from 'react';
@@ -82,8 +83,8 @@ export default function TranslationEditorCard({
             onChange={onTabChange}
             sx={{'& .MuiTab-root': {minHeight: 38, py: 0.5, fontSize: '0.8125rem', textTransform: 'none'}}}
           >
+            <Tab label={<JsonLogo size={16} />} aria-label="JSON" value="json" />
             <Tab label={t('editor.textFields')} value="fields" />
-            <Tab label={t('editor.rawJson')} value="json" />
           </Tabs>
         </Box>
 

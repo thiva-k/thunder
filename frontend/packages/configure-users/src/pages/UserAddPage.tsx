@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {zodResolver} from '@hookform/resolvers/zod';
-import {PageLoadingAnimation} from '@thunderid/components';
+import {FullScreenCreationWizardLayout, PageLoadingAnimation} from '@thunderid/components';
 import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
 import {CopyableTextAdapter, type FlowComponent, mapEmbeddedFlowTextColor} from '@thunderid/design';
 import {useLogger} from '@thunderid/logger/react';
@@ -24,19 +24,16 @@ import {
   Alert,
   AlertTitle,
   TextField,
-  IconButton,
   FormControl,
   FormLabel,
   Select,
   MenuItem,
-  LinearProgress,
-  AppBreadcrumbs,
   CircularProgress,
   Card,
   CardActionArea,
   CardContent,
 } from '@wso2/oxygen-ui';
-import {X, UserPlus, Send} from '@wso2/oxygen-ui-icons-react';
+import {UserPlus, Send} from '@wso2/oxygen-ui-icons-react';
 import {useState, useEffect, useMemo, useCallback, useRef, type JSX} from 'react';
 import {useForm, Controller} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
@@ -1010,137 +1007,77 @@ export default function UserAddPage(): JSX.Element {
   const progress = Math.min((breadcrumbs.length / totalSteps) * 100, 100);
 
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      {/* Progress bar */}
-      <LinearProgress variant="determinate" value={progress} sx={{height: 6}} />
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={progress}
+      breadcrumbItems={breadcrumbs.map((label, index) => {
+        const isFirstItem = index === 0;
 
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>
-        {/* Header with close button and breadcrumb */}
-        <Box sx={{p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <IconButton
-              aria-label={t('common:actions.close', 'Close')}
-              onClick={handleClose}
-              sx={{
-                bgcolor: 'background.paper',
-                '&:hover': {bgcolor: 'action.hover'},
-                boxShadow: 1,
-              }}
-            >
-              <X size={24} />
-            </IconButton>
-            <AppBreadcrumbs
-              items={breadcrumbs.map((label, index) => {
-                const isFirstItem = index === 0;
-
-                return {
-                  key: `breadcrumb-${index}`,
-                  label,
-                  onClick: isFirstItem
-                    ? () => {
-                        if (resetFlowRef.current) {
-                          resetFlowRef.current();
-                          setBreadcrumbs([t('users:addUser', 'Add User')]);
-                          setFlowError(null);
-                        }
-                      }
-                    : undefined,
-                  disabled: !isFirstItem,
-                };
-              })}
-            />
-          </Stack>
-        </Box>
-
-        {/* Main content */}
-        <Box sx={{flex: 1, display: 'flex', minHeight: 0}}>
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              py: 8,
-              px: 20,
-              mx: 'auto',
-              alignItems: 'flex-start',
+        return {
+          key: `breadcrumb-${index}`,
+          label,
+          onClick: isFirstItem
+            ? () => {
+                if (resetFlowRef.current) {
+                  resetFlowRef.current();
+                  handleResetLocalState();
+                }
+              }
+            : undefined,
+          disabled: !isFirstItem,
+        };
+      })}
+      footer={null}
+    >
+      <InviteUser
+        onError={(err: Error) => {
+          if (isMissingOnboardingFlow(err)) {
+            handleManualCreateFallback();
+            return;
+          }
+          logger.error('User onboarding error', {error: err});
+          setFlowError(
+            getUserErrorMessage(
+              err,
+              (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+              'errors.failed.description',
+              'An error occurred. Please try again.',
+            ),
+          );
+        }}
+        onFlowChange={(response) => {
+          if (isMissingOnboardingFlow(response)) {
+            handleManualCreateFallback();
+            return;
+          }
+          if (!response?.error) {
+            setFlowError(null);
+            return;
+          }
+          const messageKey = (response.error as unknown as Record<string, unknown>)?.['message'] as
+            | Record<string, unknown>
+            | undefined;
+          const key = messageKey?.['key'] as string | undefined;
+          const localizedFallback = t('users:errors.failed.description', 'An error occurred. Please try again.');
+          setFlowError(key ? t(key, localizedFallback) : localizedFallback);
+        }}
+      >
+        {(renderProps: InviteUserRenderProps) => (
+          <InviteUserFlowBridge
+            renderProps={renderProps}
+            flowError={flowError}
+            handleClose={handleClose}
+            onStepLabelChange={handleStepLabelChange}
+            onInviteComplete={handleInviteComplete}
+            onOuStepDetected={handleOuStepDetected}
+            onResetLocalState={handleResetLocalState}
+            onClearFlowError={handleClearFlowError}
+            onResetFlowAvailable={(resetFn) => {
+              resetFlowRef.current = resetFn;
             }}
-          >
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 800,
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <InviteUser
-                onError={(err: Error) => {
-                  if (isMissingOnboardingFlow(err)) {
-                    handleManualCreateFallback();
-                    return;
-                  }
-                  logger.error('User onboarding error', {error: err});
-                  setFlowError(
-                    getUserErrorMessage(
-                      err,
-                      (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
-                      'errors.failed.description',
-                      'An error occurred. Please try again.',
-                    ),
-                  );
-                }}
-                onFlowChange={(response) => {
-                  if (isMissingOnboardingFlow(response)) {
-                    handleManualCreateFallback();
-                    return;
-                  }
-                  const messageKey = (response?.error as Record<string, unknown> | undefined)?.['message'] as
-                    | Record<string, unknown>
-                    | undefined;
-                  const key = messageKey?.['key'] as string | undefined;
-                  if (key) {
-                    const translated: string = t(key);
-                    if (translated !== key) {
-                      setFlowError(translated);
-
-                      return;
-                    }
-                  }
-                  const fallback =
-                    (
-                      (response?.error as Record<string, unknown> | undefined)?.['message'] as
-                        | Record<string, unknown>
-                        | undefined
-                    )?.['defaultValue'] ??
-                    (
-                      (response?.error as Record<string, unknown> | undefined)?.['description'] as
-                        | Record<string, unknown>
-                        | undefined
-                    )?.['defaultValue'];
-                  setFlowError((fallback as string | undefined) ?? null);
-                }}
-              >
-                {(renderProps: InviteUserRenderProps) => (
-                  <InviteUserFlowBridge
-                    renderProps={renderProps}
-                    flowError={flowError}
-                    handleClose={handleClose}
-                    onStepLabelChange={handleStepLabelChange}
-                    onInviteComplete={handleInviteComplete}
-                    onOuStepDetected={handleOuStepDetected}
-                    onResetLocalState={handleResetLocalState}
-                    onClearFlowError={handleClearFlowError}
-                    onResetFlowAvailable={(resetFn) => {
-                      resetFlowRef.current = resetFn;
-                    }}
-                  />
-                )}
-              </InviteUser>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+          />
+        )}
+      </InviteUser>
+    </FullScreenCreationWizardLayout>
   );
 }

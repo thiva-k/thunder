@@ -654,7 +654,7 @@ describe('UserAddPage', () => {
       rerender(<UserAddPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('User already exists')).toBeInTheDocument();
+        expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument();
       });
     });
 
@@ -678,7 +678,7 @@ describe('UserAddPage', () => {
       rerender(<UserAddPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('User already exists')).toBeInTheDocument();
+        expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument();
       });
 
       // Editing any field makes the previous submit failure stale.
@@ -686,7 +686,7 @@ describe('UserAddPage', () => {
       await user.type(screen.getByLabelText(/name/i), 'J');
 
       await waitFor(() => {
-        expect(screen.queryByText('User already exists')).not.toBeInTheDocument();
+        expect(screen.queryByText('An error occurred. Please try again.')).not.toBeInTheDocument();
       });
       expect(mockHandleInputChange).toHaveBeenCalled();
     });
@@ -1085,6 +1085,28 @@ describe('UserAddPage', () => {
     });
   });
 
+  describe('onFlowChange without a message key', () => {
+    it('falls back to the localized default when the error has no message key', async () => {
+      mockInviteUserRenderProps.components = [
+        heading('Step 1'),
+        block([textInput('name', 'Name'), submitAction('Next')]),
+      ];
+
+      const {rerender} = render(<UserAddPage />);
+
+      if (capturedOnFlowChange) {
+        capturedOnFlowChange({
+          error: {code: 'FEE-60009'},
+        });
+      }
+      rerender(<UserAddPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument();
+      });
+    });
+  });
+
   /* ----- Clearing flow error on reset ----- */
 
   describe('flow error reset', () => {
@@ -1109,7 +1131,7 @@ describe('UserAddPage', () => {
       rerender(<UserAddPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Some error')).toBeInTheDocument();
+        expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument();
       });
 
       // Then clear it
@@ -1119,7 +1141,7 @@ describe('UserAddPage', () => {
       rerender(<UserAddPage />);
 
       await waitFor(() => {
-        expect(screen.queryByText('Some error')).not.toBeInTheDocument();
+        expect(screen.queryByText('An error occurred. Please try again.')).not.toBeInTheDocument();
       });
     });
   });

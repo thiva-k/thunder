@@ -6,6 +6,13 @@ import {Alert, Box} from '@wso2/oxygen-ui';
 import {useRef, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 
+/** Shallow key/value equality check for two flat string records. */
+function recordsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
+}
+
 /**
  * Props for the {@link TranslationJsonEditor} component.
  *
@@ -76,12 +83,22 @@ export default function TranslationJsonEditor({
   // Debounce ref so we don't call onChange on every keystroke
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // The record last emitted via onChange, so a `values` prop update that just echoes it back
+  // (once the parent's merge round-trips down again) is recognized as our own edit rather than
+  // an external change, and doesn't overwrite the editor's text underneath the user's cursor.
+  // Without this, adding a new key re-serializes it at the end of the object (JSON.stringify
+  // follows insertion order, and the new key is appended via `{...localChanges}` in the parent's
+  // merge), which visibly moves the text the user is still typing into.
+  const [lastEmitted, setLastEmitted] = useState<Record<string, string> | null>(null);
+
   // Keep editor in sync when values change from the outside (e.g. namespace switch)
   const [prevValues, setPrevValues] = useState(values);
   if (prevValues !== values) {
     setPrevValues(values);
-    setJsonText(JSON.stringify(values, null, 2));
-    setJsonError(false);
+    if (!lastEmitted || !recordsEqual(values, lastEmitted)) {
+      setJsonText(JSON.stringify(values, null, 2));
+      setJsonError(false);
+    }
   }
 
   const handleEditorChange = (raw: string | undefined) => {
@@ -104,6 +121,7 @@ export default function TranslationJsonEditor({
             stringRecord = Object.fromEntries(Object.entries(stringRecord).filter(([k]) => allowed.has(k)));
           }
           setJsonError(false);
+          setLastEmitted(stringRecord);
           onChange(stringRecord);
         } else {
           setJsonError(true);

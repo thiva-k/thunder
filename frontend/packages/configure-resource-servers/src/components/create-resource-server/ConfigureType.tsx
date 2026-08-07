@@ -26,17 +26,7 @@ export default function ConfigureType({selectedType, onSelect}: ConfigureTypePro
         </Typography>
       </Stack>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
-          },
-          gap: 2,
-        }}
-      >
+      <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2}}>
         {ResourceServerTypeMetadataList.map((option) => {
           const isSelected = selectedType === option.value;
 
@@ -55,23 +45,13 @@ export default function ConfigureType({selectedType, onSelect}: ConfigureTypePro
                 }
               }}
               sx={{
-                borderRadius: 2,
                 borderWidth: isSelected ? 2 : 1,
                 borderColor: isSelected ? 'primary.main' : 'divider',
                 cursor: 'pointer',
                 bgcolor: isSelected ? 'action.selected' : 'background.paper',
-                transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:focus-visible': {
-                  outline: 'none',
-                  borderColor: 'primary.main',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-2px)',
-                },
+                transition: 'border-color 0.15s',
+                '&:hover': {borderColor: 'primary.main'},
+                '&:focus-visible': {outline: 'none', borderColor: 'primary.main'},
               }}
             >
               <CardContent sx={{p: 2.5, '&:last-child': {pb: 2.5}}}>

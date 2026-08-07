@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ResourceAvatar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {
   Box,
@@ -256,9 +257,7 @@ export default function ApplicationTemplateSelectPage(): JSX.Element {
 
               <CardContent sx={{p: 2.5, '&:last-child': {pb: 2.5}}}>
                 <Stack direction="column" spacing={2}>
-                  <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48}}>
-                    {option.icon}
-                  </Box>
+                  <ResourceAvatar transparent variant="rounded" size={48} fallback={option.icon} />
 
                   <Stack direction="column" spacing={0.75} sx={{flex: 1}}>
                     <Typography variant="subtitle1" sx={{fontWeight: 600, lineHeight: 1.3}}>

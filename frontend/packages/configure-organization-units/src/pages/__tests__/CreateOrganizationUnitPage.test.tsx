@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {screen, fireEvent, waitFor, renderWithProviders, renderHook} from '@thunderid/test-utils';
+import {screen, fireEvent, waitFor, renderWithProviders, renderHook, within} from '@thunderid/test-utils';
 import {useTranslation} from 'react-i18next';
 import {describe, it, expect, vi, beforeEach, beforeAll} from 'vitest';
 import CreateOrganizationUnitPage from '../CreateOrganizationUnitPage';
@@ -89,12 +89,6 @@ describe('CreateOrganizationUnitPage', () => {
     renderWithProviders(<CreateOrganizationUnitPage />);
 
     expect(screen.getByLabelText(/Handle/i)).toBeInTheDocument();
-  });
-
-  it('should render description input field', () => {
-    renderWithProviders(<CreateOrganizationUnitPage />);
-
-    expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
   });
 
   it('should render a name suggestion', () => {
@@ -196,7 +190,7 @@ describe('CreateOrganizationUnitPage', () => {
     renderWithProviders(<CreateOrganizationUnitPage />);
 
     // Find the close button (X icon button)
-    const closeButton = screen.getByRole('button', {name: ''});
+    const closeButton = screen.getByRole('button', {name: 'Close'});
     fireEvent.click(closeButton);
 
     await waitFor(() => {
@@ -277,7 +271,7 @@ describe('CreateOrganizationUnitPage', () => {
     });
 
     // Close the alert
-    const alertCloseButton = screen.getByRole('button', {name: /close/i});
+    const alertCloseButton = within(screen.getByRole('alert')).getByRole('button', {name: /close/i});
     fireEvent.click(alertCloseButton);
 
     await waitFor(() => {
@@ -311,65 +305,10 @@ describe('CreateOrganizationUnitPage', () => {
     expect(screen.queryByText('Failed to create organization unit. Please try again.')).not.toBeInTheDocument();
   });
 
-  it('should include description in request when provided', async () => {
-    renderWithProviders(<CreateOrganizationUnitPage />);
-
-    const nameInput = screen.getByLabelText(/Name/i);
-    const descriptionInput = screen.getByLabelText(/Description/i);
-
-    fireEvent.change(nameInput, {target: {value: 'Test Organization'}});
-    fireEvent.change(descriptionInput, {target: {value: 'A test description'}});
-
-    // Wait for form validation to complete
-    await waitFor(() => {
-      const createButton = screen.getByText(t('common:actions.create'));
-      expect(createButton).not.toBeDisabled();
-    });
-
-    const createButton = screen.getByText(t('common:actions.create'));
-    fireEvent.click(createButton);
-
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          description: 'A test description',
-        }),
-        expect.any(Object),
-      );
-    });
-  });
-
-  it('should set description to null when empty', async () => {
-    renderWithProviders(<CreateOrganizationUnitPage />);
-
-    const nameInput = screen.getByLabelText(/Name/i);
-    fireEvent.change(nameInput, {target: {value: 'Test Organization'}});
-
-    // Wait for form validation to complete
-    await waitFor(() => {
-      const createButton = screen.getByText(t('common:actions.create'));
-      expect(createButton).not.toBeDisabled();
-    });
-
-    const createButton = screen.getByText(t('common:actions.create'));
-    fireEvent.click(createButton);
-
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          description: null,
-        }),
-        expect.any(Object),
-      );
-    });
-  });
-
   it('should show "Root Organization Unit" in parent field when no parent is provided', () => {
     renderWithProviders(<CreateOrganizationUnitPage />);
 
-    const parentInput = screen.getByLabelText(new RegExp(t('organizationUnits:edit.general.parent.label'), 'i'));
-    expect(parentInput).toHaveValue(t('organizationUnits:edit.general.ou.noParent.label'));
-    expect(parentInput).toHaveAttribute('readOnly');
+    expect(screen.getByText(t('organizationUnits:edit.general.ou.noParent.label'))).toBeInTheDocument();
   });
 
   it('should set parent to null when no parent is in navigation state', async () => {
@@ -402,9 +341,7 @@ describe('CreateOrganizationUnitPage', () => {
 
     renderWithProviders(<CreateOrganizationUnitPage />);
 
-    const parentInput = screen.getByLabelText(new RegExp(t('organizationUnits:edit.general.parent.label'), 'i'));
-    expect(parentInput).toHaveValue('Engineering (engineering)');
-    expect(parentInput).toHaveAttribute('readOnly');
+    expect(screen.getByText('Engineering (engineering)')).toBeInTheDocument();
   });
 
   it('should display parent name without handle when handle is not provided', () => {
@@ -412,8 +349,7 @@ describe('CreateOrganizationUnitPage', () => {
 
     renderWithProviders(<CreateOrganizationUnitPage />);
 
-    const parentInput = screen.getByLabelText(new RegExp(t('organizationUnits:edit.general.parent.label'), 'i'));
-    expect(parentInput).toHaveValue('Engineering');
+    expect(screen.getByText('Engineering')).toBeInTheDocument();
   });
 
   it('should submit with parent ID from navigation state', async () => {
@@ -483,7 +419,7 @@ describe('CreateOrganizationUnitPage', () => {
 
     renderWithProviders(<CreateOrganizationUnitPage />);
 
-    const closeButton = screen.getByRole('button', {name: ''});
+    const closeButton = screen.getByRole('button', {name: 'Close'});
     fireEvent.click(closeButton);
 
     // Should not throw - error is logged
@@ -523,11 +459,9 @@ describe('CreateOrganizationUnitPage', () => {
 
     const nameInput = screen.getByLabelText(/Name/i);
     const handleInput = screen.getByLabelText(/Handle/i);
-    const descriptionInput = screen.getByLabelText(/Description/i);
 
     fireEvent.change(nameInput, {target: {value: '  Test Organization  '}});
     fireEvent.change(handleInput, {target: {value: '  test-org  '}});
-    fireEvent.change(descriptionInput, {target: {value: '  A description  '}});
 
     // Wait for form validation to complete
     await waitFor(() => {
@@ -543,7 +477,6 @@ describe('CreateOrganizationUnitPage', () => {
         expect.objectContaining({
           name: 'Test Organization',
           handle: 'test-org',
-          description: 'A description',
         }),
         expect.any(Object),
       );

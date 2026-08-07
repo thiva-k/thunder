@@ -214,7 +214,13 @@ export default function CreateRolePage(): JSX.Element {
         onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
       }))}
       footer={
-        <Box sx={{display: 'flex', justifyContent: 'flex-end', gap: 2}}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: activeSteps.indexOf(currentStep) > 0 ? 'space-between' : 'flex-end',
+            gap: 2,
+          }}
+        >
           {activeSteps.indexOf(currentStep) > 0 && (
             <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createRole.isPending}>
               {t('common:actions.back', 'Back')}
