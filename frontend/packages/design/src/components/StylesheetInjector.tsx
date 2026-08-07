@@ -7,6 +7,7 @@ import {useEffect} from 'react';
 import useDesign from '../contexts/Design/useDesign';
 import type {Stylesheet} from '../models/layout';
 import {sanitizeCss, isValidStylesheetUrl} from '../utils/cssSanitizer';
+import getCspNonce from '../utils/getCspNonce';
 
 const logger = createLogger({component: 'StylesheetInjector'});
 
@@ -55,6 +56,10 @@ export default function StylesheetInjector({stylesheets = undefined}: Stylesheet
         const style = document.createElement('style');
         style.id = elementId;
         style.setAttribute(dataAttr, 'true');
+        const nonce = getCspNonce();
+        if (nonce) {
+          style.setAttribute('nonce', nonce);
+        }
         style.textContent = sanitizeCss(stylesheet.content);
         document.head.appendChild(style);
         injectedIds.push(elementId);

@@ -5,7 +5,7 @@ import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type {Theme} from '@thunderid/design';
 import {OxygenUIThemeProvider} from '@wso2/oxygen-ui';
-import {describe, it, expect, vi} from 'vitest';
+import {describe, it, expect, vi, afterEach} from 'vitest';
 import GatePreview from '../GatePreview';
 
 // Mock shared-design to stub DesignProvider (which internally needs ConfigProvider)
@@ -18,6 +18,7 @@ vi.mock('@thunderid/design', () => ({
   FontImporter: () => null,
   getFontImportURL: () => undefined,
   AcrylicOrangeTheme: {},
+  getCspNonce: () => document.querySelector('meta[property="csp-nonce"]')?.getAttribute('content') ?? undefined,
 }));
 
 vi.mock('@emotion/cache', async (importActual) => {
@@ -122,6 +123,33 @@ describe('GatePreview', () => {
       renderWithThemeProvider(<GatePreview theme={mockTheme} syncColorSchemeWithSystem />);
 
       expect(screen.getByTitle('Gate Preview')).toBeInTheDocument();
+    });
+  });
+
+  describe('CSP nonce', () => {
+    afterEach(() => {
+      document.querySelector('meta[property="csp-nonce"]')?.remove();
+    });
+
+    it("tags the iframe's initial inline <style> with the parent document's csp nonce", () => {
+      const meta = document.createElement('meta');
+      meta.setAttribute('property', 'csp-nonce');
+      meta.setAttribute('content', 'abc123');
+      document.head.appendChild(meta);
+
+      renderWithThemeProvider(<GatePreview theme={mockTheme} />);
+
+      const iframe = screen.getByTitle<HTMLIFrameElement>('Gate Preview');
+      const style = iframe.contentDocument?.querySelector('style');
+      expect(style?.getAttribute('nonce')).toBe('abc123');
+    });
+
+    it('renders the iframe without a nonce attribute when none is available', () => {
+      renderWithThemeProvider(<GatePreview theme={mockTheme} />);
+
+      const iframe = screen.getByTitle<HTMLIFrameElement>('Gate Preview');
+      const style = iframe.contentDocument?.querySelector('style');
+      expect(style?.hasAttribute('nonce')).toBe(false);
     });
   });
 

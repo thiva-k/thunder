@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useConfig} from '@thunderid/contexts';
+import {getCspNonce} from '@thunderid/design';
 import {ThunderIDProvider} from '@thunderid/react';
 import type {ThunderIDProviderProps} from '@thunderid/react';
 import type {JSX, ComponentType} from 'react';
@@ -18,6 +19,7 @@ export default function withConfig<P extends object>(WrappedComponent: Component
         baseUrl={getServerUrl() ?? (import.meta.env.VITE_THUNDER_BASE_URL as string)}
         applicationId={applicationId!}
         {...sdkProps}
+        cspNonce={getCspNonce()}
       >
         <WrappedComponent {...props} />
       </ThunderIDProvider>

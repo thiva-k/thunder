@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Editor, {type OnMount} from '@monaco-editor/react';
+import {getCspNonce} from '@thunderid/design';
 import {Box, Stack, Typography} from '@wso2/oxygen-ui';
 import type {editor as MonacoEditor, IDisposable, IRange} from 'monaco-editor';
 import {useRef, useEffect} from 'react';
@@ -326,7 +327,9 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
     >
       {/* Styling for default claim annotations */}
       {!isJson && (
-        <style>{`.jwt-default-claim { color: #C586C0 !important; text-decoration: underline dotted; text-decoration-color: #C586C0; cursor: help; }`}</style>
+        <style nonce={getCspNonce()}>
+          {`.jwt-default-claim { color: #C586C0 !important; text-decoration: underline dotted; text-decoration-color: #C586C0; cursor: help; }`}
+        </style>
       )}
       <Stack spacing={2}>
         <Stack direction="row" spacing={1} alignItems="center">

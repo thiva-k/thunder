@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {render, screen} from '@testing-library/react';
-import {describe, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import JwtPreview from '../JwtPreview';
 
 vi.mock('@monaco-editor/react', () => ({
@@ -66,5 +66,28 @@ describe('JwtPreview', () => {
 
     expect(screen.queryByText('Decoded Header')).not.toBeInTheDocument();
     expect(screen.queryByText('Decoded Payload')).not.toBeInTheDocument();
+  });
+
+  describe('default claim styling', () => {
+    afterEach(() => {
+      document.querySelector('meta[property="csp-nonce"]')?.remove();
+    });
+
+    it("tags the default-claim <style> tag with the page's csp nonce", () => {
+      const meta = document.createElement('meta');
+      meta.setAttribute('property', 'csp-nonce');
+      meta.setAttribute('content', 'abc123');
+      document.head.appendChild(meta);
+
+      const {container} = render(<JwtPreview payload={{sub: 'user-123'}} />);
+
+      expect(container.querySelector('style')).toHaveAttribute('nonce', 'abc123');
+    });
+
+    it('renders the <style> tag without a nonce attribute when none is available', () => {
+      const {container} = render(<JwtPreview payload={{sub: 'user-123'}} />);
+
+      expect(container.querySelector('style')).not.toHaveAttribute('nonce');
+    });
   });
 });

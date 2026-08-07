@@ -8,6 +8,7 @@ import {
   StylesheetInjector,
   DefaultTheme,
   getFontImportURL,
+  getCspNonce,
   type Theme,
 } from '@thunderid/design';
 import {LanguageSwitcher} from '@thunderid/react';
@@ -35,6 +36,7 @@ export default function withTheme<P extends object>(WrappedComponent: ComponentT
 
     return (
       <OxygenUIThemeProvider
+        nonce={getCspNonce()}
         themes={[
           {key: 'highContrast', label: 'High Contrast Theme', theme: HighContrastTheme},
           {key: 'default', label: 'Default Theme', theme: theme ?? DefaultTheme},

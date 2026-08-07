@@ -15,6 +15,7 @@ vi.mock('../../components/Head', () => ({
 
 let capturedThemes: unknown;
 let capturedInitialTheme: unknown;
+let capturedNonce: unknown;
 
 function MockChild() {
   return <div data-testid="mock-child">Child</div>;
@@ -30,13 +31,16 @@ vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
       children,
       themes = undefined,
       initialTheme = undefined,
+      nonce = undefined,
     }: {
       children: React.ReactNode;
       themes?: unknown;
       initialTheme?: unknown;
+      nonce?: unknown;
     }) => {
       capturedThemes = themes;
       capturedInitialTheme = initialTheme;
+      capturedNonce = nonce;
       return <div data-testid="theme-provider">{children}</div>;
     },
   };
@@ -50,6 +54,8 @@ describe('withTheme (console)', () => {
     vi.clearAllMocks();
     capturedThemes = undefined;
     capturedInitialTheme = undefined;
+    capturedNonce = undefined;
+    document.querySelector('meta[property="csp-nonce"]')?.remove();
     mockUseConfig.mockReturnValue({
       config: {
         brand: {
@@ -111,6 +117,21 @@ describe('withTheme (console)', () => {
   it('renders Head', () => {
     render(<WithThemeComponent />);
     expect(screen.getByTestId('head')).toBeInTheDocument();
+  });
+
+  it('passes undefined nonce to OxygenUIThemeProvider when no csp-nonce meta tag is present', () => {
+    render(<WithThemeComponent />);
+    expect(capturedNonce).toBeUndefined();
+  });
+
+  it("forwards the page's csp-nonce meta tag to OxygenUIThemeProvider", () => {
+    const meta = document.createElement('meta');
+    meta.setAttribute('property', 'csp-nonce');
+    meta.setAttribute('content', 'abc123');
+    document.head.appendChild(meta);
+
+    render(<WithThemeComponent />);
+    expect(capturedNonce).toBe('abc123');
   });
 
   it('includes custom object themes from config in the theme list', () => {

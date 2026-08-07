@@ -10,6 +10,7 @@ import {
   AuthCardLayout,
   FontImporter,
   getFontImportURL,
+  getCspNonce,
   type Theme,
   type DesignResolveResponse,
   type Stylesheet,
@@ -124,8 +125,11 @@ export default function IframeContent({
     [resolveAll],
   );
 
-  // Create an emotion cache that injects styles into the iframe's <head>.
-  const cache = useMemo(() => createCache({key: 'preview', container: iframeDoc.head}), [iframeDoc]);
+  // Create an emotion cache that injects styles into the iframe's <head>. The nonce comes from the
+  // parent document: this iframe has no src (an about:blank doc written to directly), so it inherits
+  // the parent page's CSP, including this exact nonce value, rather than carrying its own.
+  const nonce = getCspNonce();
+  const cache = useMemo(() => createCache({key: 'preview', nonce, container: iframeDoc.head}), [iframeDoc, nonce]);
 
   // Whether an actual theme is configured — mirrors the gate's isDesignEnabled
   // check, where an empty theme object counts as "no design".
@@ -151,6 +155,10 @@ export default function IframeContent({
       if (sheet.type === 'inline') {
         const style = iframeDoc.createElement('style');
         style.id = elementId;
+        const nonce = getCspNonce();
+        if (nonce) {
+          style.setAttribute('nonce', nonce);
+        }
         style.textContent = sheet.content;
         iframeDoc.head.appendChild(style);
         injectedIds.push(elementId);

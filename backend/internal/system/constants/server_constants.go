@@ -70,6 +70,13 @@ const ContentSecurityPolicyHeaderName = "Content-Security-Policy"
 // ContentSecurityPolicyReportOnlyHeaderName is the name of the Content-Security-Policy-Report-Only header.
 const ContentSecurityPolicyReportOnlyHeaderName = "Content-Security-Policy-Report-Only"
 
+// ContentTypeHTML is the content type for HTML documents.
+const ContentTypeHTML = "text/html; charset=utf-8"
+
+// CSPNoncePlaceholder is the token in index.html that serveIndex replaces with the per-request CSP
+// nonce, so the frontend's own inline <style> tags can read it from the resulting meta tag.
+const CSPNoncePlaceholder = "__CSP_NONCE__"
+
 // CacheControlHeaderName is the name of the cache-control header used in HTTP responses.
 const CacheControlHeaderName = "Cache-Control"
 
