@@ -35,3 +35,10 @@ func getI18nStoreMode(translationConfig config.TranslationConfig) serverconst.St
 
 	return serverconst.StoreModeMutable
 }
+
+// isDeclarativeModeEnabled reports whether translations run in pure declarative
+// (immutable) mode, where all write operations must be rejected. Composite and
+// mutable modes allow database-backed writes.
+func isDeclarativeModeEnabled() bool {
+	return getI18nStoreMode(config.GetServerRuntime().Config.Translation) == serverconst.StoreModeDeclarative
+}
