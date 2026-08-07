@@ -381,6 +381,27 @@ describe('FlowsList', () => {
         expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-2');
       });
     });
+
+    it('should navigate when a read-only flow row is clicked', async () => {
+      mockUseGetFlowsReturn = {
+        data: {flows: [{...mockFlowsData.flows[0], isReadOnly: true}]},
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      };
+
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      fireEvent.click(screen.getByTestId('row-flow-1'));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-1');
+      });
+    });
   });
 
   describe('Empty State', () => {
@@ -442,6 +463,32 @@ describe('FlowsList', () => {
         actionsColumn!.renderCell!({row: mockFlowsData.flows[1]} as DataGrid.GridRenderCellParams<BasicFlowDefinition>),
       );
       expect(regContainer.querySelectorAll('button').length).toBeGreaterThan(0);
+    });
+
+    it('should render a read-only flow with a single view action that navigates', async () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const actionsColumn = capturedColumns.value.find((col) => col.field === 'actions');
+
+      const {container} = render(
+        actionsColumn!.renderCell!({
+          row: {...mockFlowsData.flows[0], isReadOnly: true},
+        } as DataGrid.GridRenderCellParams<BasicFlowDefinition>),
+      );
+
+      // Read-only flows expose view only: no edit, no delete.
+      const buttons = container.querySelectorAll('button');
+      expect(buttons.length).toBe(1);
+
+      fireEvent.click(buttons[0]);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-1');
+      });
     });
   });
 
