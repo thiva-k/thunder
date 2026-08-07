@@ -569,37 +569,55 @@ name: Default Sign Out Flow
 handle: default-flow
 flowType: SIGNOUT
 nodes:
-- id: start
-  type: START
-  onSuccess: session_signout
-  layout:
-    size:
-      width: 101
-      height: 34
-    position:
-      x: 62
-      y: 278
-- id: session_signout
-  type: TASK_EXECUTION
-  layout:
-    size:
-      width: 217
-      height: 113
-    position:
-      x: 463
-      y: 240
-  executor:
-    name: SessionSignOutExecutor
-  onSuccess: end
-- id: end
-  type: END
-  layout:
-    size:
-      width: 85
-      height: 34
-    position:
-      x: 900
-      y: 278
+  - id: start
+    type: START
+    layout:
+      size:
+        width: 61
+        height: 34
+      position:
+        x: 62
+        y: 278
+    onSuccess: session_signout
+  - id: session_signout
+    type: TASK_EXECUTION
+    layout:
+      size:
+        width: 210
+        height: 117
+      position:
+        x: 463
+        y: 240
+    properties:
+      promptOnSignOut: false
+    executor:
+      name: SessionSignOutExecutor
+    onSuccess: end
+    onIncomplete: prompt_confirm
+  - id: prompt_confirm
+    type: PROMPT
+    layout:
+      size:
+        width: 350
+        height: 567
+      position:
+        x: 900
+        y: 150
+    meta: '{"components":[{"align":"center","category":"DISPLAY","id":"text_signout_title","label":"{{ t(signout:forms.confirm.title) }}","resourceType":"ELEMENT","type":"TEXT","variant":"HEADING_1"},{"align":"center","category":"DISPLAY","id":"text_signout_desc","label":"{{ t(signout:forms.confirm.description) }}","resourceType":"ELEMENT","type":"TEXT","variant":"BODY_1"},{"category":"BLOCK","components":[{"actionType":"CONFIRM","category":"ACTION","eventType":"SUBMIT","id":"action_confirm","label":"{{ t(signout:forms.confirm.actions.submit.label) }}","resourceType":"ELEMENT","type":"ACTION","variant":"PRIMARY"}],"id":"block_signout","resourceType":"ELEMENT","type":"BLOCK"}]}'
+    prompts:
+      - action:
+          ref: action_confirm
+          type: CONFIRM
+          nextNode: session_signout
+  - id: end
+    type: END
+    layout:
+      size:
+        width: 45
+        height: 34
+      position:
+        x: 1400
+        y: 278
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000067
