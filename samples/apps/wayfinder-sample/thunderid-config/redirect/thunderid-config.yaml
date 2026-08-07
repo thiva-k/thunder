@@ -243,6 +243,7 @@ nodes:
     executor:
       name: CredentialsAuthExecutor
     onSuccess: provisioning
+    onFailure: prompt_credentials
   - id: provisioning
     type: TASK_EXECUTION
     properties:

@@ -848,6 +848,7 @@ nodes:
   executor:
     name: CredentialsAuthExecutor
   onSuccess: provisioning
+  onFailure: choose_auth
 - id: google_auth
   type: TASK_EXECUTION
   properties:
@@ -1264,6 +1265,7 @@ nodes:
   executor:
     name: CredentialsAuthExecutor
   onSuccess: send_sms
+  onFailure: choose_auth
 - id: google_auth
   type: TASK_EXECUTION
   properties:

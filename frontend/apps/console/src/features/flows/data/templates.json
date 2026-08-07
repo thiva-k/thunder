@@ -6258,7 +6258,8 @@
           "executor": {
             "name": "CredentialsAuthExecutor"
           },
-          "onSuccess": "provisioning"
+          "onSuccess": "provisioning",
+          "onFailure": "prompt_credentials"
         },
         {
           "id": "provisioning",
@@ -8216,6 +8217,7 @@
             "name": "CredentialsAuthExecutor"
           },
           "onSuccess": "provisioning",
+          "onFailure": "choose_auth",
           "layout": {
             "size": {
               "width": 217,
@@ -8609,6 +8611,7 @@
             "name": "CredentialsAuthExecutor"
           },
           "onSuccess": "provisioning",
+          "onFailure": "choose_registration_method",
           "layout": {
             "size": {
               "width": 217,
@@ -9713,6 +9716,7 @@
             "name": "CredentialsAuthExecutor"
           },
           "onSuccess": "generate_otp",
+          "onFailure": "choose_auth",
           "onIncomplete": "choose_auth"
         },
         {
@@ -10357,6 +10361,7 @@
             "name": "CredentialsAuthExecutor"
           },
           "onSuccess": "provisioning",
+          "onFailure": "prompt_registration",
           "layout": {
             "size": {
               "width": 217,
