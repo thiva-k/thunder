@@ -64,6 +64,7 @@ class VisualFlowConstants {
     ElementTypes.OtpInput,
     ElementTypes.Checkbox,
     ElementTypes.Dropdown,
+    ElementTypes.Select,
     // Widgets are allowed for drop detection, but handled specially to show dialog
     WidgetTypes.GoogleFederation,
     WidgetTypes.IdentifierPassword,
@@ -84,6 +85,7 @@ class VisualFlowConstants {
   public static readonly FLOW_BUILDER_VIEW_ALLOWED_RESOURCE_TYPES: string[] = [
     BlockTypes.Form,
     ElementTypes.Action,
+    ElementTypes.Resend,
     ElementTypes.Icon,
     ElementTypes.Stack,
     ElementTypes.Text,
@@ -102,6 +104,7 @@ class VisualFlowConstants {
     ElementTypes.OtpInput,
     ElementTypes.Checkbox,
     ElementTypes.Dropdown,
+    ElementTypes.Select,
     WidgetTypes.GoogleFederation,
     WidgetTypes.IdentifierPassword,
     WidgetTypes.SMSOTP,
@@ -135,7 +138,9 @@ class VisualFlowConstants {
     ElementTypes.OtpInput,
     ElementTypes.Checkbox,
     ElementTypes.Dropdown,
+    ElementTypes.Select,
     ElementTypes.Action,
+    ElementTypes.Resend,
     ElementTypes.Icon,
     ElementTypes.Stack,
     ElementTypes.Text,
@@ -149,6 +154,7 @@ class VisualFlowConstants {
 
   public static readonly FLOW_BUILDER_STACK_ALLOWED_RESOURCE_TYPES: string[] = [
     ElementTypes.Action,
+    ElementTypes.Resend,
     ElementTypes.Icon,
     ElementTypes.Stack,
     ElementTypes.Text,

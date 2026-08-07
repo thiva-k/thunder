@@ -34,7 +34,7 @@ vi.mock('@/features/flows/utils/generateIdsForResources', () => ({
 
 // Mock componentMutations
 vi.mock('../../utils/componentMutations', () => ({
-  INPUT_ELEMENT_TYPES: new Set(['TEXT_INPUT', 'PASSWORD_INPUT', 'EMAIL_INPUT', 'OTP_INPUT', 'CHECKBOX']),
+  INPUT_ELEMENT_TYPES: new Set(['TEXT_INPUT', 'PASSWORD_INPUT', 'EMAIL_INPUT', 'OTP_INPUT', 'CHECKBOX', 'SELECT']),
   mutateComponents: (components: Element[]) => components,
 }));
 
@@ -254,6 +254,45 @@ describe('useElementAddition', () => {
       expect(form).toBeDefined();
       expect(form.components).toHaveLength(1);
       expect(form.components[0].id).toBe('generated-text-input-1');
+    });
+
+    it('should add select element to existing form in view', () => {
+      const existingForm = createMockElement({
+        id: 'form-1',
+        type: BlockTypes.Form,
+        category: ElementCategories.Block,
+        version: '0.1.0',
+        components: [],
+      });
+
+      let capturedNodes: Node[] = [];
+      mockSetNodes = vi.fn((updater: React.SetStateAction<Node[]>) => {
+        if (typeof updater === 'function') {
+          const nodes: Node[] = [createMockViewNode({id: 'view-1', data: {components: [existingForm]}})];
+          capturedNodes = updater(nodes);
+        }
+      }) as ReturnType<typeof vi.fn> & SetNodesFn;
+
+      const {result} = renderHook(() =>
+        useElementAddition({
+          setNodes: mockSetNodes,
+          updateNodeInternals: mockUpdateNodeInternals,
+        }),
+      );
+
+      const selectElement = createMockElement({id: 'select-1', type: ElementTypes.Select});
+
+      act(() => {
+        result.current.handleAddElementToView(selectElement, 'view-1');
+      });
+
+      expect(capturedNodes.length).toBe(1);
+      const form = (capturedNodes[0].data as {components: Element[]}).components.find(
+        (c: Element) => c.type === BlockTypes.Form,
+      ) as Element & {components: Element[]};
+      expect(form).toBeDefined();
+      expect(form.components).toHaveLength(1);
+      expect(form.components[0].id).toBe('generated-select-1');
     });
 
     it('should create new form when adding input element to view without form', () => {
