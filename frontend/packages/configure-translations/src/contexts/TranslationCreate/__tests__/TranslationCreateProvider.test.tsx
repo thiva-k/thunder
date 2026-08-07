@@ -19,9 +19,7 @@ function TestConsumer() {
       <div data-testid="selected-locale">{context.selectedLocale?.code ?? 'null'}</div>
       <div data-testid="locale-code-override">{context.localeCodeOverride}</div>
       <div data-testid="locale-code">{context.localeCode}</div>
-      <div data-testid="populate-from-english">{String(context.populateFromEnglish)}</div>
       <div data-testid="is-creating">{String(context.isCreating)}</div>
-      <div data-testid="progress">{String(context.progress)}</div>
       <div data-testid="error">{context.error ?? 'null'}</div>
 
       <button type="button" onClick={() => context.setCurrentStep(TranslationCreateFlowStep.LANGUAGE)}>
@@ -39,14 +37,8 @@ function TestConsumer() {
       <button type="button" onClick={() => context.setLocaleCodeOverride('fr-CA')}>
         Set Locale Code Override
       </button>
-      <button type="button" onClick={() => context.setPopulateFromEnglish(false)}>
-        Set Populate False
-      </button>
       <button type="button" onClick={() => context.setIsCreating(true)}>
         Set Creating
-      </button>
-      <button type="button" onClick={() => context.setProgress(50)}>
-        Set Progress 50
       </button>
       <button type="button" onClick={() => context.setError('Something went wrong')}>
         Set Error
@@ -75,9 +67,7 @@ describe('TranslationCreateProvider', () => {
     expect(screen.getByTestId('selected-locale')).toHaveTextContent('null');
     expect(screen.getByTestId('locale-code-override')).toHaveTextContent('');
     expect(screen.getByTestId('locale-code')).toHaveTextContent('');
-    expect(screen.getByTestId('populate-from-english')).toHaveTextContent('true');
     expect(screen.getByTestId('is-creating')).toHaveTextContent('false');
-    expect(screen.getByTestId('progress')).toHaveTextContent('0');
     expect(screen.getByTestId('error')).toHaveTextContent('null');
   });
 
@@ -168,22 +158,6 @@ describe('TranslationCreateProvider', () => {
     expect(screen.getByTestId('locale-code')).toHaveTextContent('fr-CA');
   });
 
-  it('updates populateFromEnglish when setPopulateFromEnglish is called', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <TranslationCreateProvider>
-        <TestConsumer />
-      </TranslationCreateProvider>,
-    );
-
-    expect(screen.getByTestId('populate-from-english')).toHaveTextContent('true');
-
-    await user.click(screen.getByText('Set Populate False'));
-
-    expect(screen.getByTestId('populate-from-english')).toHaveTextContent('false');
-  });
-
   it('updates isCreating when setIsCreating is called', async () => {
     const user = userEvent.setup();
 
@@ -196,20 +170,6 @@ describe('TranslationCreateProvider', () => {
     await user.click(screen.getByText('Set Creating'));
 
     expect(screen.getByTestId('is-creating')).toHaveTextContent('true');
-  });
-
-  it('updates progress when setProgress is called', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <TranslationCreateProvider>
-        <TestConsumer />
-      </TranslationCreateProvider>,
-    );
-
-    await user.click(screen.getByText('Set Progress 50'));
-
-    expect(screen.getByTestId('progress')).toHaveTextContent('50');
   });
 
   it('updates error when setError is called', async () => {
@@ -255,9 +215,7 @@ describe('TranslationCreateProvider', () => {
     expect(screen.getByTestId('selected-country')).toHaveTextContent('null');
     expect(screen.getByTestId('locale-code-override')).toHaveTextContent('');
     expect(screen.getByTestId('locale-code')).toHaveTextContent('');
-    expect(screen.getByTestId('populate-from-english')).toHaveTextContent('true');
     expect(screen.getByTestId('is-creating')).toHaveTextContent('false');
-    expect(screen.getByTestId('progress')).toHaveTextContent('0');
     expect(screen.getByTestId('error')).toHaveTextContent('null');
   });
 

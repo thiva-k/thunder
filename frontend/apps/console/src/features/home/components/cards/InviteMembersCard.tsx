@@ -97,7 +97,7 @@ export default function InviteMembersCard(): JSX.Element {
         isEmpty={isEmpty}
         users={users}
         extraCount={extraCount}
-        emptyLabel={t('next_steps.invite_members.status.empty', 'No members yet — add collaborators')}
+        emptyLabel={t('next_steps.invite_members.status.empty', 'No members yet')}
         countLabel={t('next_steps.invite_members.status.count', {
           count: totalResults,
           defaultValue: '{{count}} member',

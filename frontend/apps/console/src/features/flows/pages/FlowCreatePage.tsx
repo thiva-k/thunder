@@ -177,6 +177,7 @@ export default function FlowCreatePage(): JSX.Element {
     <FullScreenCreationWizardLayout
       onClose={handleClose}
       progress={getStepProgress()}
+      contentMaxWidth={currentStep === FlowCreateStep.TEMPLATE ? false : 800}
       breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
         key: step,
         label: steps[step].label,

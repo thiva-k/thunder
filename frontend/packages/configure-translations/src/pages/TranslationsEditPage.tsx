@@ -1,12 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {QueryErrorNotice} from '@thunderid/components';
+import {QueryErrorNotice, UnsavedChangesBar} from '@thunderid/components';
 import {useToast} from '@thunderid/contexts';
 import {useGetTranslations, useUpdateTranslation, NamespaceConstants, I18nDefaultConstants} from '@thunderid/i18n';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
-import {PageContent, useColorScheme} from '@wso2/oxygen-ui';
+import {Alert, Box, PageContent, useColorScheme} from '@wso2/oxygen-ui';
 import {useCallback, useMemo, useState, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router';
@@ -52,7 +52,7 @@ export default function TranslationsEditPage(): JSX.Element {
     ((mode === 'system' ? systemMode : mode) ?? 'light') === 'dark' ? 'dark' : 'light';
 
   const [selectedNamespace, setSelectedNamespace] = useState<string | null>(null);
-  const [editView, setEditView] = useState<'fields' | 'json'>('fields');
+  const [editView, setEditView] = useState<'fields' | 'json'>('json');
   const [search, setSearch] = useState('');
   const [localChanges, setLocalChanges] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -169,7 +169,7 @@ export default function TranslationsEditPage(): JSX.Element {
       );
     } else {
       setLocalChanges({});
-      showToast(t('editor.jsonSaveSuccess'), 'success');
+      showToast(t('editor.jsonSaveSuccess', 'All translations saved.'), 'success');
     }
   };
 
@@ -215,7 +215,7 @@ export default function TranslationsEditPage(): JSX.Element {
       );
     } else {
       setLocalChanges({});
-      showToast(t('editor.jsonSaveSuccess'), 'success');
+      showToast(t('editor.jsonSaveSuccess', 'All translations saved.'), 'success');
     }
   };
 
@@ -236,26 +236,27 @@ export default function TranslationsEditPage(): JSX.Element {
   const isCustomNamespace = selectedNamespace === NamespaceConstants.CUSTOM_NAMESPACE;
 
   return (
-    <PageContent fullWidth sx={{display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0}}>
+    <PageContent sx={{display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0}}>
       <TranslationEditorHeader
         selectedLanguage={selectedLanguage}
-        hasDirtyChanges={hasDirtyChanges}
-        dirtyCount={dirtyKeys.length}
         isSaving={isSaving}
         isFallbackLanguage={selectedLanguage === I18nDefaultConstants.FALLBACK_LANGUAGE}
         hasNamespace={!!selectedNamespace}
-        error={saveError ?? undefined}
         onBack={handleBack}
-        onDiscard={handleDiscard}
         onResetToDefault={() => {
           handleResetToDefault().catch((_error: unknown) =>
             logger.error('Failed to reset to default', {error: _error}),
           );
         }}
-        onSave={() => {
-          handleSave().catch((_error: unknown) => logger.error('Failed to save translations', {error: _error}));
-        }}
       />
+
+      <Box sx={{mb: 2}}>
+        {saveError && (
+          <Alert severity="error" sx={{py: 0}}>
+            {saveError}
+          </Alert>
+        )}
+      </Box>
 
       {translationsError ? (
         <QueryErrorNotice
@@ -291,6 +292,20 @@ export default function TranslationsEditPage(): JSX.Element {
             onResetField={handleResetField}
             onJsonChange={handleJsonChange}
           />
+
+          {hasDirtyChanges && (
+            <UnsavedChangesBar
+              message={t('editor.unsavedCount', {count: dirtyKeys.length, defaultValue: '{{count}} unsaved change'})}
+              resetLabel={t('actions.discardChanges', 'Discard Changes')}
+              saveLabel={t('actions.saveChanges', 'Save Changes')}
+              savingLabel={t('common:status.saving', {ns: 'common', defaultValue: 'Saving...'})}
+              isSaving={isSaving}
+              onReset={handleDiscard}
+              onSave={() => {
+                handleSave().catch((_error: unknown) => logger.error('Failed to save translations', {error: _error}));
+              }}
+            />
+          )}
         </>
       )}
     </PageContent>

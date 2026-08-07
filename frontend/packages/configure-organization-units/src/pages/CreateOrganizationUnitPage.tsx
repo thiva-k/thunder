@@ -2,35 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {zodResolver} from '@hookform/resolvers/zod';
-import {NameSuggestion} from '@thunderid/components';
+import {FullScreenCreationWizardLayout, NameSuggestion, OrganizationUnitSummaryChip} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
-import {
-  Box,
-  Stack,
-  Typography,
-  Button,
-  TextField,
-  Alert,
-  IconButton,
-  LinearProgress,
-  FormControl,
-  FormLabel,
-} from '@wso2/oxygen-ui';
-import {X} from '@wso2/oxygen-ui-icons-react';
+import {Box, Stack, Typography, Button, TextField, Alert, FormControl, FormLabel} from '@wso2/oxygen-ui';
 import {useState, useMemo, useRef, type JSX} from 'react';
 import {useForm, Controller} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useLocation} from 'react-router';
 import {z} from 'zod';
 import useCreateOrganizationUnit from '../api/useCreateOrganizationUnit';
+import OrganizationUnitTreeConstants from '../constants/organization-unit-tree-constants';
 import useOrganizationUnit from '../contexts/useOrganizationUnit';
 import useOrganizationUnitRoutes from '../hooks/useOrganizationUnitRoutes';
 import type {CreateOrganizationUnitRequest} from '../models/requests';
 
 /**
  * Creates a Zod schema for the create organization unit form with i18n support.
- * Validates name, handle, description, and parent fields.
+ * Validates name and handle fields.
  */
 const createFormSchema = (t: (key: string) => string) =>
   z.object({
@@ -40,7 +29,6 @@ const createFormSchema = (t: (key: string) => string) =>
       .trim()
       .min(1, t('organizationUnits:edit.general.handle.validations.required'))
       .regex(/^[a-z0-9-]+$/, t('organizationUnits:edit.general.handle.validations.format')),
-    description: z.string().optional(),
     parentId: z.string().nullable(),
   });
 
@@ -79,7 +67,6 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
     defaultValues: {
       name: '',
       handle: '',
-      description: '',
       parentId: preselectedParentId,
     },
   });
@@ -114,11 +101,6 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
     isHandleManuallyEditedRef.current = true;
   };
 
-  const handleDescriptionChange = (newDescription: string): void => {
-    setError(null); // a create error is stale once the form changes
-    setValue('description', newDescription);
-  };
-
   const handleNameSuggestionSelect = (suggestion: string): void => {
     setError(null); // a create error is stale once the form changes
     setValue('name', suggestion, {shouldValidate: true});
@@ -134,7 +116,6 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
     const requestData: CreateOrganizationUnitRequest = {
       handle: data.handle,
       name: data.name,
-      description: data.description?.trim() ? data.description.trim() : null,
       parent: data.parentId,
     };
 
@@ -161,185 +142,104 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
   };
 
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      {/* Progress bar at the very top - single step so 100% */}
-      <LinearProgress variant="determinate" value={100} sx={{height: 6}} />
-
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'row'}}>
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* Header with close button */}
-          <Box sx={{p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <IconButton
-                onClick={handleClose}
-                sx={{
-                  bgcolor: 'background.paper',
-                  '&:hover': {bgcolor: 'action.hover'},
-                  boxShadow: 1,
-                }}
-              >
-                <X size={24} />
-              </IconButton>
-              <Typography variant="h5">{t('organizationUnits:create.title')}</Typography>
-            </Stack>
-          </Box>
-
-          {/* Main content */}
-          <Box sx={{flex: 1, display: 'flex', minHeight: 0}}>
-            {/* Left side - Form content */}
-            <Box
-              sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                py: 8,
-                px: 20,
-              }}
-            >
-              <Box
-                sx={{
-                  width: '100%',
-                  maxWidth: 800,
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                {/* Error Alert */}
-                {error && (
-                  <Alert severity="error" sx={{my: 3}} onClose={() => setError(null)}>
-                    {error}
-                  </Alert>
-                )}
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSubmit(onSubmit)(e).catch((err: unknown) => {
-                      logger.error('Form submission error', {error: err});
-                    });
-                  }}
-                >
-                  <Stack direction="column" spacing={4}>
-                    {/* Large heading - matching application create style */}
-                    <Typography variant="h1" gutterBottom>
-                      {t('organizationUnits:create.heading')}
-                    </Typography>
-
-                    {/* Name field first */}
-                    <FormControl fullWidth required>
-                      <FormLabel htmlFor="ou-name-input">{t('organizationUnits:edit.general.name.label')}</FormLabel>
-                      <Controller
-                        name="name"
-                        control={control}
-                        render={({field}) => (
-                          <TextField
-                            {...field}
-                            fullWidth
-                            id="ou-name-input"
-                            onChange={(e) => handleNameChange(e.target.value)}
-                            placeholder={t('organizationUnits:edit.general.name.placeholder')}
-                            error={!!errors.name}
-                            helperText={errors.name?.message}
-                          />
-                        )}
-                      />
-
-                      <NameSuggestion onSelect={handleNameSuggestionSelect} />
-                    </FormControl>
-
-                    {/* Handle field */}
-                    <FormControl fullWidth required>
-                      <FormLabel htmlFor="ou-handle-input">
-                        {t('organizationUnits:edit.general.handle.label')}
-                      </FormLabel>
-                      <Controller
-                        name="handle"
-                        control={control}
-                        render={({field}) => (
-                          <TextField
-                            {...field}
-                            fullWidth
-                            id="ou-handle-input"
-                            onChange={(e) => handleHandleChange(e.target.value)}
-                            placeholder={t('organizationUnits:edit.general.handle.placeholder')}
-                            error={!!errors.handle}
-                            helperText={errors.handle?.message ?? t('organizationUnits:edit.general.handle.hint')}
-                          />
-                        )}
-                      />
-                    </FormControl>
-
-                    {/* Description field */}
-                    <FormControl fullWidth>
-                      <FormLabel htmlFor="ou-description-input">
-                        {t('organizationUnits:edit.general.description.label')}
-                      </FormLabel>
-                      <Controller
-                        name="description"
-                        control={control}
-                        render={({field}) => (
-                          <TextField
-                            {...field}
-                            fullWidth
-                            id="ou-description-input"
-                            onChange={(e) => handleDescriptionChange(e.target.value)}
-                            placeholder={t('organizationUnits:edit.general.description.placeholder')}
-                            multiline
-                            rows={3}
-                          />
-                        )}
-                      />
-                    </FormControl>
-
-                    {/* Parent OU field - read-only */}
-                    <FormControl fullWidth>
-                      <FormLabel htmlFor="ou-parent-input">
-                        {t('organizationUnits:edit.general.parent.label')}
-                      </FormLabel>
-                      <TextField
-                        id="ou-parent-input"
-                        fullWidth
-                        value={
-                          parentDisplayName
-                            ? `${parentDisplayName}${parentDisplayHandle ? ` (${parentDisplayHandle})` : ''}`
-                            : t('organizationUnits:edit.general.ou.noParent.label')
-                        }
-                        slotProps={{input: {readOnly: true}}}
-                        helperText={t('organizationUnits:edit.general.parent.hint')}
-                      />
-                    </FormControl>
-
-                    {/* Navigation buttons */}
-                    <Box
-                      sx={{
-                        mt: 4,
-                        display: 'flex',
-                        justifyContent: 'flex-start',
-                        gap: 2,
-                      }}
-                    >
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={createOrganizationUnit.isPending || !isValid}
-                        sx={{minWidth: 100}}
-                      >
-                        {createOrganizationUnit.isPending ? t('common:status.saving') : t('common:actions.create')}
-                      </Button>
-                    </Box>
-                  </Stack>
-                </form>
-              </Box>
-            </Box>
-          </Box>
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={100}
+      breadcrumbItems={[{key: 'create', label: t('organizationUnits:create.title', 'Create Organization Unit')}]}
+      footer={
+        <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
+          <Button
+            type="submit"
+            form="create-organization-unit-form"
+            variant="contained"
+            disabled={createOrganizationUnit.isPending || !isValid}
+            sx={{minWidth: 100}}
+          >
+            {createOrganizationUnit.isPending
+              ? t('common:status.saving', 'Saving...')
+              : t('common:actions.create', 'Create')}
+          </Button>
         </Box>
-      </Box>
-    </Box>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      <form
+        id="create-organization-unit-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit(onSubmit)(e).catch((err: unknown) => {
+            logger.error('Form submission error', {error: err});
+          });
+        }}
+      >
+        <Stack direction="column" spacing={4}>
+          <Typography variant="h1" gutterBottom>
+            {t('organizationUnits:create.heading', "Let's set up your organization unit")}
+          </Typography>
+
+          <OrganizationUnitSummaryChip
+            icon={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
+            label={t('organizationUnits:edit.general.parent.label', 'Parent Organization Unit')}
+            value={
+              parentDisplayName
+                ? `${parentDisplayName}${parentDisplayHandle ? ` (${parentDisplayHandle})` : ''}`
+                : t('organizationUnits:edit.general.ou.noParent.label', 'Root Organization Unit')
+            }
+          />
+
+          {/* Name field first */}
+          <FormControl fullWidth required>
+            <FormLabel htmlFor="ou-name-input">{t('organizationUnits:edit.general.name.label', 'Name')}</FormLabel>
+            <Controller
+              name="name"
+              control={control}
+              render={({field}) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  id="ou-name-input"
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder={t('organizationUnits:edit.general.name.placeholder', 'e.g., Engineering Department')}
+                  error={!!errors.name}
+                  helperText={errors.name?.message}
+                />
+              )}
+            />
+
+            <NameSuggestion onSelect={handleNameSuggestionSelect} />
+          </FormControl>
+
+          {/* Handle field */}
+          <FormControl fullWidth required>
+            <FormLabel htmlFor="ou-handle-input">
+              {t('organizationUnits:edit.general.handle.label', 'Handle')}
+            </FormLabel>
+            <Controller
+              name="handle"
+              control={control}
+              render={({field}) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  id="ou-handle-input"
+                  onChange={(e) => handleHandleChange(e.target.value)}
+                  placeholder={t('organizationUnits:edit.general.handle.placeholder', 'e.g., engineering, sales, hr')}
+                  error={!!errors.handle}
+                  helperText={
+                    errors.handle?.message ??
+                    t('organizationUnits:edit.general.handle.hint', 'A unique identifier for this organization unit')
+                  }
+                />
+              )}
+            />
+          </FormControl>
+        </Stack>
+      </form>
+    </FullScreenCreationWizardLayout>
   );
 }

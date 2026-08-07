@@ -11,7 +11,6 @@ export const TranslationCreateFlowStep = {
   COUNTRY: 'COUNTRY',
   LANGUAGE: 'LANGUAGE',
   LOCALE_CODE: 'LOCALE_CODE',
-  INITIALIZE: 'INITIALIZE',
 } as const;
 
 /**

@@ -68,18 +68,6 @@ export interface TranslationCreateContextType {
   localeCode: string;
 
   /**
-   * Whether the user chose to pre-populate keys from English (en-US).
-   * @remark Needed for step 04: Initialize Language.
-   */
-  populateFromEnglish: boolean;
-
-  /**
-   * Sets whether to pre-populate keys from English.
-   * @remark Needed for step 04: Initialize Language.
-   */
-  setPopulateFromEnglish: (value: boolean) => void;
-
-  /**
    * Whether language creation is currently in progress.
    */
   isCreating: boolean;
@@ -88,16 +76,6 @@ export interface TranslationCreateContextType {
    * Sets the creating state.
    */
   setIsCreating: (value: boolean) => void;
-
-  /**
-   * Creation progress percentage (0–100).
-   */
-  progress: number;
-
-  /**
-   * Sets the creation progress percentage.
-   */
-  setProgress: (value: number) => void;
 
   /**
    * Current error message, if any.

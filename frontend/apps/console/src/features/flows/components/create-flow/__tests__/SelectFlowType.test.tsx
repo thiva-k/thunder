@@ -135,6 +135,32 @@ describe('SelectFlowType', () => {
       expect(screen.getByText('Self Sign-up')).toBeInTheDocument();
     });
 
+    it('should call onTypeChange and onReadyChange when Enter is pressed on a card', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByText('Sign-in').closest('[role="button"]')!, {key: 'Enter'});
+
+      expect(mockOnTypeChange).toHaveBeenCalledWith('AUTHENTICATION');
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onTypeChange and onReadyChange when Space is pressed on a card', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByText('Sign-in').closest('[role="button"]')!, {key: ' '});
+
+      expect(mockOnTypeChange).toHaveBeenCalledWith('AUTHENTICATION');
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should ignore unrelated key presses on a card', () => {
+      render(<SelectFlowType {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByText('Sign-in').closest('[role="button"]')!, {key: 'a'});
+
+      expect(mockOnTypeChange).not.toHaveBeenCalled();
+    });
+
     it('should allow changing selection from one type to another', () => {
       render(<SelectFlowType {...defaultProps} selectedType="AUTHENTICATION" />);
 

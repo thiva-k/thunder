@@ -11,6 +11,8 @@ import GithubIcon from '../GithubIcon';
 import GoogleIcon from '../GoogleIcon';
 import HeidiIcon from '../HeidiIcon';
 import JavaScriptIcon from '../JavaScriptIcon';
+import JsonLogo from '../JsonLogo';
+import JwtLogo from '../JwtLogo';
 import LangChainLogo from '../LangChainLogo';
 import LissiIcon from '../LissiIcon';
 import NextjsIcon from '../NextjsIcon';
@@ -115,6 +117,20 @@ const ASPECT_ICONS: AspectIconCase[] = [
     heightFromSize: (size) => size,
     name: 'StackblitzIcon',
     widthFromSize: (size) => (size * 89) / 18,
+  },
+  {
+    Component: JsonLogo,
+    defaultSize: 18,
+    heightFromSize: (size) => size,
+    name: 'JsonLogo',
+    widthFromSize: (size) => (size * 108) / 32,
+  },
+  {
+    Component: JwtLogo,
+    defaultSize: 20,
+    heightFromSize: (size) => size,
+    name: 'JwtLogo',
+    widthFromSize: (size) => (size * 90) / 32,
   },
   {
     Component: VueIcon,

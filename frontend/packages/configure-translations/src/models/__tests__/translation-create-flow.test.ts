@@ -18,12 +18,8 @@ describe('translation-create-flow models', () => {
       expect(TranslationCreateFlowStep.LOCALE_CODE).toBe('LOCALE_CODE');
     });
 
-    it('should have INITIALIZE step', () => {
-      expect(TranslationCreateFlowStep.INITIALIZE).toBe('INITIALIZE');
-    });
-
-    it('should have exactly 4 steps', () => {
-      expect(Object.keys(TranslationCreateFlowStep)).toHaveLength(4);
+    it('should have exactly 3 steps', () => {
+      expect(Object.keys(TranslationCreateFlowStep)).toHaveLength(3);
     });
 
     it('should be usable as a record key', () => {
@@ -31,13 +27,11 @@ describe('translation-create-flow models', () => {
         COUNTRY: 'Select Country',
         LANGUAGE: 'Select Language',
         LOCALE_CODE: 'Review Locale Code',
-        INITIALIZE: 'Initialize Language',
       };
 
       expect(labels[TranslationCreateFlowStep.COUNTRY]).toBe('Select Country');
       expect(labels[TranslationCreateFlowStep.LANGUAGE]).toBe('Select Language');
       expect(labels[TranslationCreateFlowStep.LOCALE_CODE]).toBe('Review Locale Code');
-      expect(labels[TranslationCreateFlowStep.INITIALIZE]).toBe('Initialize Language');
     });
 
     it('step values should match their keys', () => {

@@ -101,7 +101,7 @@ export default function ConnectionsList(): JSX.Element {
         <Grid container spacing={2}>
           {Array.from({length: SKELETON_COUNT}).map((_, index) => (
             // eslint-disable-next-line react/no-array-index-key
-            <Grid key={index} size={{xs: 12, sm: 6, md: 4}}>
+            <Grid key={index} size={{xs: 12, sm: 6, md: 4, xl: 3}}>
               <Skeleton variant="rounded" height={220} />
             </Grid>
           ))}
@@ -132,12 +132,12 @@ export default function ConnectionsList(): JSX.Element {
       ) : (
         <Grid container spacing={2}>
           {filteredCards.map((card) => (
-            <Grid key={card.id} size={{xs: 12, sm: 6, md: 4}}>
+            <Grid key={card.id} size={{xs: 12, sm: 6, md: 4, xl: 3}}>
               <ConnectionCard card={card} onAction={handleAction} />
             </Grid>
           ))}
           {!hasFilters && (
-            <Grid size={{xs: 12, sm: 6, md: 4}}>
+            <Grid size={{xs: 12, sm: 6, md: 4, xl: 3}}>
               <AddCustomConnectionCard onClick={() => void navigate(routes.connections.create())} />
             </Grid>
           )}

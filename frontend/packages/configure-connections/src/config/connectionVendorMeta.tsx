@@ -1,9 +1,13 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {GitHub, Google, KeyRound, MessageSquare, MessagesSquare, Send, ShieldCheck} from '@wso2/oxygen-ui-icons-react';
+import {GithubIcon, GoogleIcon, ResourceAvatar} from '@thunderid/components';
+import {MessageSquare, Send} from '@wso2/oxygen-ui-icons-react';
 import {CONNECTION_CATEGORIES} from '../constants/connection-categories';
+import ConnectionConstants from '../constants/connection-constants';
 import {type ConnectionCategory, ConnectionTypes, type ConnectionVendorMeta} from '../models/connection';
+
+const AVATAR_SIZE = 48;
 
 /**
  * Frontend-owned catalog of every connection vendor the console presents.
@@ -18,7 +22,7 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.GOOGLE,
     displayName: 'Google',
     descriptionKey: 'connections:vendor.google.description',
-    logo: <Google />,
+    logo: <ResourceAvatar transparent variant="rounded" size={AVATAR_SIZE} fallback={<GoogleIcon size={34} />} />,
     categories: ['social-login'],
     presentation: 'branded',
     supportsAttributeMapping: true,
@@ -29,7 +33,7 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.GITHUB,
     displayName: 'GitHub',
     descriptionKey: 'connections:vendor.github.description',
-    logo: <GitHub />,
+    logo: <ResourceAvatar transparent variant="rounded" size={AVATAR_SIZE} fallback={<GithubIcon size={34} />} />,
     categories: ['social-login'],
     presentation: 'branded',
     supportsAttributeMapping: true,
@@ -40,7 +44,14 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.OIDC,
     displayName: 'OpenID Connect',
     descriptionKey: 'connections:vendor.oidc.description',
-    logo: <ShieldCheck />,
+    logo: (
+      <ResourceAvatar
+        transparent
+        variant="rounded"
+        size={AVATAR_SIZE}
+        fallback={ConnectionConstants.OIDC_AVATAR_FALLBACK}
+      />
+    ),
     categories: ['enterprise', 'custom'],
     presentation: 'custom',
     supportsAttributeMapping: true,
@@ -50,7 +61,14 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.OAUTH,
     displayName: 'OAuth 2.0',
     descriptionKey: 'connections:vendor.oauth.description',
-    logo: <KeyRound />,
+    logo: (
+      <ResourceAvatar
+        transparent
+        variant="rounded"
+        size={AVATAR_SIZE}
+        fallback={ConnectionConstants.OAUTH_AVATAR_FALLBACK}
+      />
+    ),
     categories: ['enterprise', 'custom'],
     presentation: 'custom',
     supportsAttributeMapping: true,
@@ -60,7 +78,8 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.TWILIO,
     displayName: 'Twilio',
     descriptionKey: 'connections:vendor.twilio.description',
-    logo: <MessageSquare />,
+    // Twilio's brand mark isn't cleared for use yet — keep the generic icon until that's sorted.
+    logo: <ResourceAvatar transparent variant="rounded" size={AVATAR_SIZE} fallback={<MessageSquare size={28} />} />,
     categories: ['sms'],
     presentation: 'branded',
   },
@@ -69,7 +88,8 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.VONAGE,
     displayName: 'Vonage',
     descriptionKey: 'connections:vendor.vonage.description',
-    logo: <Send />,
+    // Vonage's brand mark isn't cleared for use yet — keep the generic icon until that's sorted.
+    logo: <ResourceAvatar transparent variant="rounded" size={AVATAR_SIZE} fallback={<Send size={28} />} />,
     categories: ['sms'],
     presentation: 'branded',
   },
@@ -78,7 +98,14 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     backendType: ConnectionTypes.SMS_GATEWAY,
     displayName: 'SMS Gateway',
     descriptionKey: 'connections:vendor.sms-gateway.description',
-    logo: <MessagesSquare />,
+    logo: (
+      <ResourceAvatar
+        transparent
+        variant="rounded"
+        size={AVATAR_SIZE}
+        fallback={ConnectionConstants.SMS_GATEWAY_AVATAR_FALLBACK}
+      />
+    ),
     categories: ['sms', 'custom'],
     presentation: 'custom',
   },

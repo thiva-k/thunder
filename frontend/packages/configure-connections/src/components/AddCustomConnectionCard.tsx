@@ -30,8 +30,8 @@ export default function AddCustomConnectionCard({onClick}: AddCustomConnectionCa
         <Stack direction="column" spacing={1.5} alignItems="center" textAlign="center">
           <Box
             sx={{
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               borderRadius: 2,
               display: 'flex',
               alignItems: 'center',

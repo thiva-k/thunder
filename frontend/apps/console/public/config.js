@@ -25,50 +25,43 @@ window.__THUNDERID_RUNTIME_CONFIG__ = {
       settings: '',
       importExport: '',
       'applications.templates.react.docs': 'getting-started/connect-your-application/react/',
-      'applications.templates.react.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/react/quickstart?file=README.md',
+      'applications.templates.react.playground': '',
       'applications.templates.react.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/react/redirect-based.txt',
       'applications.templates.react.llmPrompt.embedded':
         'getting-started/connect-your-application/prompts/react/embedded.txt',
       'applications.templates.nextjs.docs': 'getting-started/connect-your-application/nextjs/',
-      'applications.templates.nextjs.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/nextjs/quickstart?file=README.md',
+      'applications.templates.nextjs.playground': '',
       'applications.templates.nextjs.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/nextjs/redirect-based.txt',
       'applications.templates.nextjs.llmPrompt.embedded':
         'getting-started/connect-your-application/prompts/nextjs/embedded.txt',
       'applications.templates.nuxt.docs': 'getting-started/connect-your-application/nuxt/',
-      'applications.templates.nuxt.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/nuxt/quickstart?file=README.md',
+      'applications.templates.nuxt.playground': '',
       'applications.templates.nuxt.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/nuxt/redirect-based.txt',
       'applications.templates.nuxt.llmPrompt.embedded':
         'getting-started/connect-your-application/prompts/nuxt/embedded.txt',
       'applications.templates.vue.docs': 'getting-started/connect-your-application/vue/',
-      'applications.templates.vue.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/vue/quickstart?file=README.md',
+      'applications.templates.vue.playground': '',
       'applications.templates.vue.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/vue/redirect-based.txt',
       'applications.templates.vue.llmPrompt.embedded':
         'getting-started/connect-your-application/prompts/vue/embedded.txt',
       'applications.templates.express.docs': 'getting-started/connect-your-application/express/',
-      'applications.templates.express.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/express/quickstart?file=README.md',
+      'applications.templates.express.playground': '',
       'applications.templates.express.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/express/redirect-based.txt',
       'applications.templates.express.llmPrompt.embedded':
         'getting-started/connect-your-application/prompts/express/embedded.txt',
       'applications.templates.node.docs': 'getting-started/connect-your-application/node/',
-      'applications.templates.node.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/node/quickstart?file=README.md',
+      'applications.templates.node.playground': '',
       'applications.templates.node.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/node/redirect-based.txt',
       'applications.templates.node.llmPrompt.embedded':
         'getting-started/connect-your-application/prompts/node/embedded.txt',
       'applications.templates.browser.docs': 'getting-started/connect-your-application/browser/',
-      'applications.templates.browser.playground':
-        'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/browser/quickstart?file=README.md',
+      'applications.templates.browser.playground': '',
       'applications.templates.browser.llmPrompt.redirectBased':
         'getting-started/connect-your-application/prompts/browser/redirect-based.txt',
       'applications.templates.browser.llmPrompt.embedded':

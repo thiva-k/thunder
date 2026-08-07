@@ -83,6 +83,20 @@ describe('ResourceAvatar', () => {
 
       expect(screen.getByText('🎉')).toBeInTheDocument();
     });
+
+    it('should render with a transparent background when transparent is true', () => {
+      render(<ResourceAvatar transparent fallback={<AppWindow data-testid="fallback-icon" />} />);
+
+      const avatar = screen.getByTestId('fallback-icon').closest('[class*="MuiAvatar-root"]');
+      expect(avatar).toHaveStyle({backgroundColor: 'transparent'});
+    });
+
+    it('should render with a filled background by default', () => {
+      render(<ResourceAvatar fallback={<AppWindow data-testid="fallback-icon" />} />);
+
+      const avatar = screen.getByTestId('fallback-icon').closest('[class*="MuiAvatar-root"]');
+      expect(avatar).not.toHaveStyle({backgroundColor: 'transparent'});
+    });
   });
 
   describe('Edit mode (onSelect provided)', () => {

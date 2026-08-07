@@ -60,7 +60,6 @@ describe('ConnectionConfigureWizardPage', () => {
     render(<ConnectionConfigureWizardPage />);
 
     // Single step: the credentials form is shown with a Create button (no attribute-mapping step).
-    expect(screen.getByTestId('connection-fullpage-content')).toBeInTheDocument();
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
     expect(screen.getByText('Configure your Google connection')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('wizard-create'));

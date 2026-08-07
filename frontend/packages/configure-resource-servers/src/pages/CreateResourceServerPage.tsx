@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {useHasMultipleOUs} from '@thunderid/configure-organization-units';
+import {OrganizationUnitPickerScreen, useHasMultipleOUs} from '@thunderid/configure-organization-units';
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
@@ -16,7 +16,7 @@ import {
   Stack,
   Typography,
 } from '@wso2/oxygen-ui';
-import {ChevronRight, X} from '@wso2/oxygen-ui-icons-react';
+import {ChevronRight, Home, X} from '@wso2/oxygen-ui-icons-react';
 import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -24,7 +24,6 @@ import useCreateResourceServer from '../api/useCreateResourceServer';
 import useGetDefaultResourceServer from '../api/useGetDefaultResourceServer';
 import useSetDefaultResourceServer from '../api/useSetDefaultResourceServer';
 import ConfigureName from '../components/create-resource-server/ConfigureName';
-import ConfigureOrgUnit from '../components/create-resource-server/ConfigureOrgUnit';
 import ConfigureSeparator from '../components/create-resource-server/ConfigureSeparator';
 import ConfigureType from '../components/create-resource-server/ConfigureType';
 import {DEFAULT_PERMISSION_DELIMITER} from '../constants/permission-constants';
@@ -60,7 +59,7 @@ export default function CreateResourceServerPage(): JSX.Element {
   const canSetDefault = isDefaultReady && !isDefaultLocked;
   const hasExistingDefault = Boolean(defaultConfig?.merged?.resourceServerId);
 
-  const [currentStep, setCurrentStep] = useState<ResourceServerCreateStep>(ResourceServerCreateStep.TYPE);
+  const [currentStep, setCurrentStep] = useState<ResourceServerCreateStep>(ResourceServerCreateStep.ORGANIZATION_UNIT);
   const [selectedType, setSelectedType] = useState<ResourceServerType | undefined>(undefined);
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -141,17 +140,24 @@ export default function CreateResourceServerPage(): JSX.Element {
     [clearCreateError],
   );
 
-  const steps: Record<ResourceServerCreateStep, {label: string; order: number}> = useMemo(
-    () => ({
-      TYPE: {label: t('resourceServers:create.steps.type', 'Type'), order: 1},
-      NAME: {label: t('resourceServers:create.steps.name', 'Details'), order: 2},
-      SEPARATOR: {label: t('resourceServers:create.steps.separator', 'Permission Delimiter'), order: 3},
-      ORGANIZATION_UNIT: {label: t('resourceServers:create.steps.organizationUnit', 'Organization'), order: 4},
-    }),
-    [t],
-  );
+  const steps: Record<ResourceServerCreateStep, {label: string; order: number}> = useMemo(() => {
+    const ouOffset = hasMultipleOUs ? 1 : 0;
+    return {
+      ORGANIZATION_UNIT: {label: t('resourceServers:create.steps.organizationUnit', 'Organization'), order: 1},
+      TYPE: {label: t('resourceServers:create.steps.type', 'Type'), order: 1 + ouOffset},
+      NAME: {label: t('resourceServers:create.steps.name', 'Details'), order: 2 + ouOffset},
+      SEPARATOR: {label: t('resourceServers:create.steps.separator', 'Permission Delimiter'), order: 3 + ouOffset},
+    };
+  }, [t, hasMultipleOUs]);
 
   const effectiveOuId = hasMultipleOUs ? ouId : (ouList[0]?.id ?? '');
+
+  // The organization unit is the wizard's first step whenever there's a choice to make. Single-OU
+  // deployments never need it, so once that's known, skip straight past it. Adjusted during render
+  // (not an effect) so the skip happens before the OU step ever paints.
+  if (!isOuLoading && !hasMultipleOUs && currentStep === ResourceServerCreateStep.ORGANIZATION_UNIT) {
+    setCurrentStep(ResourceServerCreateStep.TYPE);
+  }
 
   const handleClose = (): void => {
     (async (): Promise<void> => {
@@ -175,11 +181,6 @@ export default function CreateResourceServerPage(): JSX.Element {
     [handleStepReadyChange],
   );
 
-  const handleOuReadyChange = useCallback(
-    (isReady: boolean): void => handleStepReadyChange(ResourceServerCreateStep.ORGANIZATION_UNIT, isReady),
-    [handleStepReadyChange],
-  );
-
   const handleTypeSelect = useCallback(
     (value: ResourceServerType): void => {
       clearCreateError();
@@ -189,12 +190,15 @@ export default function CreateResourceServerPage(): JSX.Element {
     [clearCreateError, handleStepReadyChange],
   );
 
-  const isLastStep =
-    currentStep === ResourceServerCreateStep.ORGANIZATION_UNIT ||
-    (currentStep === ResourceServerCreateStep.SEPARATOR && !hasMultipleOUs);
+  const isLastStep = currentStep === ResourceServerCreateStep.SEPARATOR;
 
   const handleNext = (): void => {
     setError(null);
+
+    if (currentStep === ResourceServerCreateStep.ORGANIZATION_UNIT) {
+      setCurrentStep(ResourceServerCreateStep.TYPE);
+      return;
+    }
 
     if (currentStep === ResourceServerCreateStep.TYPE) {
       setCurrentStep(ResourceServerCreateStep.NAME);
@@ -203,11 +207,6 @@ export default function CreateResourceServerPage(): JSX.Element {
 
     if (currentStep === ResourceServerCreateStep.NAME) {
       setCurrentStep(ResourceServerCreateStep.SEPARATOR);
-      return;
-    }
-
-    if (currentStep === ResourceServerCreateStep.SEPARATOR && !isOuLoading && hasMultipleOUs) {
-      setCurrentStep(ResourceServerCreateStep.ORGANIZATION_UNIT);
       return;
     }
 
@@ -278,12 +277,12 @@ export default function CreateResourceServerPage(): JSX.Element {
   };
 
   const handleBack = (): void => {
-    if (currentStep === ResourceServerCreateStep.ORGANIZATION_UNIT) {
-      setCurrentStep(ResourceServerCreateStep.SEPARATOR);
-    } else if (currentStep === ResourceServerCreateStep.SEPARATOR) {
+    if (currentStep === ResourceServerCreateStep.SEPARATOR) {
       setCurrentStep(ResourceServerCreateStep.NAME);
     } else if (currentStep === ResourceServerCreateStep.NAME) {
       setCurrentStep(ResourceServerCreateStep.TYPE);
+    } else if (currentStep === ResourceServerCreateStep.TYPE && hasMultipleOUs) {
+      setCurrentStep(ResourceServerCreateStep.ORGANIZATION_UNIT);
     }
   };
 
@@ -303,12 +302,9 @@ export default function CreateResourceServerPage(): JSX.Element {
   };
 
   const getBreadcrumbSteps = (): ResourceServerCreateStep[] => {
-    const all: ResourceServerCreateStep[] = [
-      ResourceServerCreateStep.TYPE,
-      ResourceServerCreateStep.NAME,
-      ResourceServerCreateStep.SEPARATOR,
-    ];
+    const all: ResourceServerCreateStep[] = [];
     if (hasMultipleOUs) all.push(ResourceServerCreateStep.ORGANIZATION_UNIT);
+    all.push(ResourceServerCreateStep.TYPE, ResourceServerCreateStep.NAME, ResourceServerCreateStep.SEPARATOR);
     const idx = all.indexOf(currentStep);
     return all.slice(0, idx + 1);
   };
@@ -339,19 +335,37 @@ export default function CreateResourceServerPage(): JSX.Element {
             onReadyChange={handleSeparatorReadyChange}
           />
         );
-      case ResourceServerCreateStep.ORGANIZATION_UNIT:
-        return (
-          <ConfigureOrgUnit
-            selectedOuId={ouId}
-            selectedType={selectedType}
-            onOuIdChange={handleOuIdChange}
-            onReadyChange={handleOuReadyChange}
-          />
-        );
       default:
         return null;
     }
   };
+
+  if (currentStep === ResourceServerCreateStep.ORGANIZATION_UNIT) {
+    if (isOuLoading || !hasMultipleOUs) {
+      return (
+        <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    return (
+      <OrganizationUnitPickerScreen
+        icon={<Home size={26} />}
+        title={t('resourceServers:create.orgUnit.title', 'Choose an organization unit')}
+        subtitle={t(
+          'resourceServers:create.orgUnit.subtitle',
+          'Select which organization unit this resource server belongs to.',
+        )}
+        value={ouId}
+        onChange={handleOuIdChange}
+        onBack={handleClose}
+        onContinue={handleNext}
+        backLabel={t('common:actions.back', 'Back')}
+        continueLabel={t('common:actions.continue', 'Continue')}
+      />
+    );
+  }
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
@@ -410,11 +424,12 @@ export default function CreateResourceServerPage(): JSX.Element {
                   sx={{
                     mt: 4,
                     display: 'flex',
-                    justifyContent: currentStep === ResourceServerCreateStep.TYPE ? 'flex-end' : 'space-between',
+                    justifyContent:
+                      currentStep === ResourceServerCreateStep.TYPE && !hasMultipleOUs ? 'flex-end' : 'space-between',
                     gap: 2,
                   }}
                 >
-                  {currentStep !== ResourceServerCreateStep.TYPE && (
+                  {!(currentStep === ResourceServerCreateStep.TYPE && !hasMultipleOUs) && (
                     <Button variant="outlined" onClick={handleBack} sx={{minWidth: 100}} disabled={isSubmitting}>
                       {t('common:actions.back', 'Back')}
                     </Button>

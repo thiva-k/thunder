@@ -92,6 +92,15 @@ export interface ResourceAvatarProps extends Omit<AvatarProps, 'onSelect'> {
    * @defaultValue ['rounded']
    */
   supportedShapes?: AvatarShape[];
+
+  /**
+   * Renders the avatar with no background fill, so the icon sits directly on whatever it's
+   * placed over. Useful for brand marks (e.g. vendor logos) that already read fine on their
+   * own and shouldn't be boxed in a filled square/circle.
+   *
+   * @defaultValue false
+   */
+  transparent?: boolean;
 }
 
 /**
@@ -133,6 +142,7 @@ export default function ResourceAvatar({
   seedText = '',
   supportedShapes = undefined,
   variant = 'circular',
+  transparent = false,
   ...rest
 }: ResourceAvatarProps): JSX.Element {
   const theme = useTheme();
@@ -249,14 +259,14 @@ export default function ResourceAvatar({
         width: size,
         height: size,
         color: 'text.primary',
-        backgroundColor: theme.vars?.palette.grey[800],
+        backgroundColor: transparent ? 'transparent' : theme.vars?.palette.grey[800],
         fontSize: `${Math.round(size * 0.4)}px`,
         cursor: isInteractive ? 'pointer' : undefined,
         ...(onSelect ? {'&:hover': {opacity: 0.8}} : {}),
         '&:focus-visible': isInteractive ? {outline: '2px solid', outlineOffset: '2px'} : undefined,
         ...theme.applyStyles('light', {
-          backgroundColor: theme.palette.grey[700],
-          color: theme.palette.primary.contrastText,
+          backgroundColor: transparent ? 'transparent' : theme.palette.grey[700],
+          color: transparent ? 'text.primary' : theme.palette.primary.contrastText,
         }),
         ...sx,
       }}

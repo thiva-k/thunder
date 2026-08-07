@@ -63,7 +63,7 @@ describe('TranslationEditorCard', () => {
       render(<TranslationEditorCard {...defaultProps} />);
 
       expect(screen.getByRole('tab', {name: 'editor.textFields'})).toBeInTheDocument();
-      expect(screen.getByRole('tab', {name: 'editor.rawJson'})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: 'JSON'})).toBeInTheDocument();
     });
 
     it('calls onTabChange when a tab is clicked', async () => {
@@ -72,7 +72,7 @@ describe('TranslationEditorCard', () => {
 
       render(<TranslationEditorCard {...defaultProps} onTabChange={onTabChange} />);
 
-      await user.click(screen.getByRole('tab', {name: 'editor.rawJson'}));
+      await user.click(screen.getByRole('tab', {name: 'JSON'}));
 
       expect(onTabChange).toHaveBeenCalledTimes(1);
     });

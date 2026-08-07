@@ -21,7 +21,6 @@ export {default as ConnectionCard} from './components/ConnectionCard';
 export {default as ConnectionCategoryFilters} from './components/ConnectionCategoryFilters';
 export {default as ConnectionDeleteDialog} from './components/ConnectionDeleteDialog';
 export {default as ConnectionForm} from './components/ConnectionForm';
-export {default as ConnectionFullPageLayout} from './components/ConnectionFullPageLayout';
 export {default as ConnectionsList} from './components/ConnectionsList';
 export {default as KeyValuePairsField} from './components/KeyValuePairsField';
 export {default as MaskedSecretField} from './components/MaskedSecretField';

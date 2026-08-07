@@ -418,9 +418,14 @@ export default function AgentCreatePage(): JSX.Element {
         onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
       }))}
       footer={
-        <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          justifyContent={activeSteps.indexOf(currentStep) > 0 ? 'space-between' : 'flex-end'}
+          alignItems="center"
+          spacing={2}
+        >
           {activeSteps.indexOf(currentStep) > 0 && (
-            <Button variant="text" onClick={handlePrevStep} disabled={createAgent.isPending}>
+            <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createAgent.isPending}>
               {t('common:actions.back')}
             </Button>
           )}

@@ -1,16 +1,16 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
-import {Alert, AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
+import {Alert, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router';
 import useCreateConnection from '../api/useCreateConnection';
 import ConnectionCreateHint from '../components/ConnectionCreateHint';
 import ConnectionForm from '../components/ConnectionForm';
-import ConnectionFullPageLayout from '../components/ConnectionFullPageLayout';
 import {CONNECTION_FORM_FIELDS, fieldsForMode} from '../config/connectionFormFields';
 import {VENDOR_META_BY_TYPE} from '../config/connectionVendorMeta';
 import useConnectionRoutes from '../hooks/useConnectionRoutes';
@@ -101,10 +101,22 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
   ];
 
   return (
-    <ConnectionFullPageLayout
-      label={t('form.chrome.configure')}
+    <FullScreenCreationWizardLayout
       onClose={close}
-      breadcrumb={<AppBreadcrumbs items={crumbs} />}
+      progress={100}
+      breadcrumbItems={crumbs}
+      footer={
+        <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
+          <Button
+            variant="contained"
+            disabled={!formValid || createMutation.isPending}
+            onClick={handleCreate}
+            data-testid="wizard-create"
+          >
+            {t('form.actions.create', 'Create connection')}
+          </Button>
+        </Box>
+      }
     >
       <Stack direction="column" spacing={3}>
         <Stack direction="column" spacing={1}>
@@ -149,18 +161,7 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
             {generalError}
           </Alert>
         )}
-
-        <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
-          <Button
-            variant="contained"
-            disabled={!formValid || createMutation.isPending}
-            onClick={handleCreate}
-            data-testid="wizard-create"
-          >
-            {t('form.actions.create')}
-          </Button>
-        </Box>
       </Stack>
-    </ConnectionFullPageLayout>
+    </FullScreenCreationWizardLayout>
   );
 }

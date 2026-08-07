@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render, screen, waitFor, userEvent} from '@thunderid/test-utils';
+import {render, screen, waitFor, userEvent, fireEvent} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import ImportExportPage from '../ImportExportPage';
 
@@ -135,6 +135,43 @@ describe('ImportExportPage', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/export');
     });
+  });
+
+  it('navigates when Enter is pressed on a card', async () => {
+    render(<ImportExportPage />);
+
+    const cards = screen.getAllByRole('button', {hidden: true});
+    const importCard = cards.find((card) => card.textContent?.includes('Import'));
+
+    fireEvent.keyDown(importCard!, {key: 'Enter'});
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/import-configuration');
+    });
+  });
+
+  it('navigates when Space is pressed on a card', async () => {
+    render(<ImportExportPage />);
+
+    const cards = screen.getAllByRole('button', {hidden: true});
+    const exportCard = cards.find((card) => card.textContent?.includes('Export'));
+
+    fireEvent.keyDown(exportCard!, {key: ' '});
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/export');
+    });
+  });
+
+  it('ignores unrelated key presses on a card', () => {
+    render(<ImportExportPage />);
+
+    const cards = screen.getAllByRole('button', {hidden: true});
+    const importCard = cards.find((card) => card.textContent?.includes('Import'));
+
+    fireEvent.keyDown(importCard!, {key: 'a'});
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('handles navigation error when close button is clicked', async () => {

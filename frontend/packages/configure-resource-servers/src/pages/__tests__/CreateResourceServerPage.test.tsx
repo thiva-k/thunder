@@ -77,13 +77,43 @@ vi.mock('../../api/useSetDefaultResourceServer', () => ({
   default: () => mockUseSetDefaultResourceServer(),
 }));
 
+const mockUseHasMultipleOUs = vi.fn(() => ({
+  hasMultipleOUs: false,
+  isLoading: false,
+  ouList: [{id: 'ou-1', name: 'Default', handle: 'default', parent: null}],
+}));
+
 vi.mock('@thunderid/configure-organization-units', () => ({
-  useHasMultipleOUs: () => ({
-    hasMultipleOUs: false,
-    isLoading: false,
-    ouList: [{id: 'ou-1', name: 'Default', handle: 'default', parent: null}],
-  }),
+  useHasMultipleOUs: () => mockUseHasMultipleOUs(),
   OrganizationUnitTreePicker: () => <div data-testid="ou-tree-picker" />,
+  OrganizationUnitPickerScreen: ({
+    value,
+    onChange,
+    onBack,
+    onContinue,
+    backLabel,
+    continueLabel,
+  }: {
+    value: string;
+    onChange: (id: string) => void;
+    onBack: () => void;
+    onContinue: () => void;
+    backLabel: string;
+    continueLabel: string;
+  }) => (
+    <div data-testid="organization-unit-picker-screen">
+      <button type="button" onClick={() => onChange('ou-2')}>
+        Select OU
+      </button>
+      <span>{value}</span>
+      <button type="button" onClick={onBack}>
+        {backLabel}
+      </button>
+      <button type="button" onClick={onContinue}>
+        {continueLabel}
+      </button>
+    </div>
+  ),
 }));
 
 describe('CreateResourceServerPage', () => {
@@ -101,6 +131,11 @@ describe('CreateResourceServerPage', () => {
       error: null,
     });
     mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: false});
+    mockUseHasMultipleOUs.mockReturnValue({
+      hasMultipleOUs: false,
+      isLoading: false,
+      ouList: [{id: 'ou-1', name: 'Default', handle: 'default', parent: null}],
+    });
   });
 
   it('renders the Type step initially', () => {
@@ -405,6 +440,69 @@ describe('CreateResourceServerPage', () => {
 
     expect(mockCreateResourceServerReset).not.toHaveBeenCalled();
   });
+
+  describe('with multiple organization units', () => {
+    beforeEach(() => {
+      mockUseHasMultipleOUs.mockReturnValue({
+        hasMultipleOUs: true,
+        isLoading: false,
+        ouList: [
+          {id: 'ou-1', name: 'Default', handle: 'default', parent: null},
+          {id: 'ou-2', name: 'Other', handle: 'other', parent: null},
+        ],
+      });
+    });
+
+    it('shows the organization unit picker before the Type step', () => {
+      renderWithProviders(<CreateResourceServerPage />);
+
+      expect(screen.getByTestId('organization-unit-picker-screen')).toBeInTheDocument();
+      expect(screen.queryByText(/What type of resource server are you adding/i)).not.toBeInTheDocument();
+    });
+
+    it('advances to the Type step after picking an organization unit', () => {
+      renderWithProviders(<CreateResourceServerPage />);
+
+      fireEvent.click(screen.getByRole('button', {name: 'Select OU'}));
+      fireEvent.click(screen.getByRole('button', {name: 'Continue'}));
+
+      expect(screen.getByText(/What type of resource server are you adding/i)).toBeInTheDocument();
+    });
+
+    it('sends the picked organization unit in the create payload', async () => {
+      renderWithProviders(<CreateResourceServerPage />);
+
+      fireEvent.click(screen.getByRole('button', {name: 'Select OU'}));
+      fireEvent.click(screen.getByRole('button', {name: 'Continue'}));
+
+      fireEvent.click(screen.getByRole('button', {name: /API/i}));
+      fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByRole('textbox', {name: /resource server name/i}), {
+        target: {value: 'Payments API'},
+      });
+      fireEvent.change(screen.getByRole('textbox', {name: /identifier/i}), {
+        target: {value: 'https://api.example.com'},
+      });
+
+      fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /Create resource server/i})).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', {name: /Create resource server/i}));
+
+      expect(mockCreateResourceServerMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ouId: 'ou-2'}),
+        expect.any(Object),
+      );
+    });
+  });
 });
 
 describe('CreateResourceServerPage default resource server', () => {
@@ -422,6 +520,11 @@ describe('CreateResourceServerPage default resource server', () => {
       error: null,
     });
     mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: false});
+    mockUseHasMultipleOUs.mockReturnValue({
+      hasMultipleOUs: false,
+      isLoading: false,
+      ouList: [{id: 'ou-1', name: 'Default', handle: 'default', parent: null}],
+    });
   });
 
   const defaultCheckbox = () => screen.queryByRole('checkbox', {name: /make this the default resource server/i});
@@ -551,6 +654,11 @@ describe('CreateResourceServerPage submit locking', () => {
       error: null,
     });
     mockUseSetDefaultResourceServer.mockReturnValue({mutate: mockSetDefaultMutate, isPending: false});
+    mockUseHasMultipleOUs.mockReturnValue({
+      hasMultipleOUs: false,
+      isLoading: false,
+      ouList: [{id: 'ou-1', name: 'Default', handle: 'default', parent: null}],
+    });
   });
 
   const goToLastStep = async (): Promise<void> => {
@@ -611,5 +719,82 @@ describe('CreateResourceServerPage submit locking', () => {
     rerender(<CreateResourceServerPage />);
 
     expect(submitButton()).toBeDisabled();
+  });
+
+  describe('Back navigation', () => {
+    it('returns from the Separator step to the Name step', async () => {
+      renderWithProviders(<CreateResourceServerPage />);
+
+      fireEvent.click(screen.getByRole('button', {name: /API/i}));
+      fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+      await waitFor(() => {
+        expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+      });
+      fireEvent.change(screen.getByRole('textbox', {name: /resource server name/i}), {
+        target: {value: 'Payments API'},
+      });
+      fireEvent.change(screen.getByRole('textbox', {name: /identifier/i}), {
+        target: {value: 'https://api.example.com'},
+      });
+      fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+      await waitFor(() => {
+        expect(screen.getByRole('combobox')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', {name: /Back/i}));
+
+      await waitFor(() => {
+        expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+      });
+    });
+
+    it('returns from the Name step to the Type step', async () => {
+      renderWithProviders(<CreateResourceServerPage />);
+
+      fireEvent.click(screen.getByRole('button', {name: /API/i}));
+      fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+      await waitFor(() => {
+        expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', {name: /Back/i}));
+
+      expect(screen.getByText(/What type of resource server are you adding/i)).toBeInTheDocument();
+    });
+
+    it('returns from the Type step to the organization unit picker when there are multiple OUs', () => {
+      mockUseHasMultipleOUs.mockReturnValue({
+        hasMultipleOUs: true,
+        isLoading: false,
+        ouList: [
+          {id: 'ou-1', name: 'Default', handle: 'default', parent: null},
+          {id: 'ou-2', name: 'Other', handle: 'other', parent: null},
+        ],
+      });
+
+      renderWithProviders(<CreateResourceServerPage />);
+
+      fireEvent.click(screen.getByRole('button', {name: 'Select OU'}));
+      fireEvent.click(screen.getByRole('button', {name: 'Continue'}));
+      expect(screen.getByText(/What type of resource server are you adding/i)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', {name: /Back/i}));
+
+      expect(screen.getByTestId('organization-unit-picker-screen')).toBeInTheDocument();
+    });
+
+    it('jumps back to an earlier step via its breadcrumb', async () => {
+      renderWithProviders(<CreateResourceServerPage />);
+
+      fireEvent.click(screen.getByRole('button', {name: /API/i}));
+      fireEvent.click(screen.getByRole('button', {name: /Continue/i}));
+      await waitFor(() => {
+        expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Type'));
+
+      expect(screen.getByText(/What type of resource server are you adding/i)).toBeInTheDocument();
+    });
   });
 });

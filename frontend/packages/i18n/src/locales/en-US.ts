@@ -4123,6 +4123,8 @@ const translations = {
     'page.title': 'Translations',
     'page.subtitle': 'Manage and customize UI text and translations for your application.',
 
+    'editor.back': 'Back to Translations',
+
     'listing.addLanguage': 'Add Language',
     'listing.columns.language': 'Language',
     'listing.columns.actions': 'Actions',
@@ -4137,7 +4139,6 @@ const translations = {
     'language.create.steps.country': 'Country',
     'language.create.steps.language': 'Language',
     'language.create.steps.localeCode': 'Locale Code',
-    'language.create.steps.initialize': 'Initialize',
 
     'language.create.country.title': 'Choose a Country',
     'language.create.country.subtitle': 'Select the country for the language you want to add.',
@@ -4156,15 +4157,6 @@ const translations = {
     'language.create.localeCode.title': 'Review Locale Code',
     'language.create.localeCode.subtitle':
       'The locale code was derived from your selection. Override it here if you need a different tag.',
-
-    'language.create.initialize.title': 'Initialize Translations',
-    'language.create.initialize.subtitle': 'Choose how to populate the translation keys for this language.',
-    'language.create.initialize.copyFromEnglish.label': 'Copy from English',
-    'language.create.initialize.copyFromEnglish.description':
-      'All keys will be pre-filled with English (en-US) text as a starting point. You can edit them afterwards.',
-    'language.create.initialize.startEmpty.label': 'Start empty',
-    'language.create.initialize.startEmpty.description':
-      'All keys will be created with empty values. Useful when you have your own translations ready to paste in.',
 
     'language.create.createButton': 'Create Language',
 
@@ -4203,7 +4195,6 @@ const translations = {
     'editor.namespace.helperText':
       'A namespace typically represents a page or a section within a page. It helps group and organize related translation keys for better structure and maintainability.',
     'editor.textFields': 'Fields',
-    'editor.rawJson': 'Raw JSON',
     'editor.addKey': 'Add Key',
     'editor.addKey.keyLabel': 'Key',
     'editor.addKey.valueLabel': 'Value',
@@ -4524,7 +4515,7 @@ const translations = {
     'next_steps.invite_members.actions.primary.label': 'Add User',
     'next_steps.invite_members.status.count': '{{count}} member',
     'next_steps.invite_members.status.count_other': '{{count}} members',
-    'next_steps.invite_members.status.empty': 'No members yet — add collaborators',
+    'next_steps.invite_members.status.empty': 'No members yet',
 
     // Login Box card
     'next_steps.login_box.title': 'Sign-in Box',
