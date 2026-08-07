@@ -43,7 +43,7 @@ func getRequiredOptionalAttributes(scopes []string, app *providers.OAuthClient) 
 		}
 		userInfoAllowed := buildUserInfoAllowedSet(app.UserInfo)
 		for _, scope := range scopes {
-			for _, attr := range resolveScopeAttributes(scope, app.ScopeClaims) {
+			for _, attr := range app.ScopeClaims[scope] {
 				if idTokenAllowed[attr] || userInfoAllowed[attr] {
 					optionalAttributes[attr] = true
 				}
@@ -76,18 +76,4 @@ func buildUserInfoAllowedSet(userInfoConfig *providers.UserInfoConfig) map[strin
 		allowedSet[attr] = true
 	}
 	return allowedSet
-}
-
-// resolveScopeAttributes resolves the attributes mapped to a scope, preferring app-specific
-// scope-to-claims mappings and falling back to the standard OIDC scope definitions.
-func resolveScopeAttributes(scope string, scopeAttributesMapping map[string][]string) []string {
-	if scopeAttributesMapping != nil {
-		if appAttributes, exists := scopeAttributesMapping[scope]; exists {
-			return appAttributes
-		}
-	}
-	if standardScope, exists := oauth2const.StandardOIDCScopes[scope]; exists {
-		return standardScope.Claims
-	}
-	return nil
 }

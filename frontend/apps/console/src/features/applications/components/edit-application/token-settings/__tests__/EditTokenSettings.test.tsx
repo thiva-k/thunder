@@ -50,7 +50,9 @@ vi.mock('../TokenUserAttributesSection', () => ({
     onToggleUserInfo,
     onIdTokenConfigChange,
     onUserInfoConfigChange,
+    onAttributeClick,
     userAttributes,
+    scopeMapping,
   }: {
     accessTokenAttributes?: string[];
     idTokenAttributes?: string[];
@@ -58,7 +60,9 @@ vi.mock('../TokenUserAttributesSection', () => ({
     onToggleUserInfo?: (checked: boolean) => void;
     onIdTokenConfigChange?: (field: string, value: string) => void;
     onUserInfoConfigChange?: (field: string, value: string) => void;
+    onAttributeClick?: (attr: string, tokenType: 'shared' | 'access' | 'id' | 'userinfo') => void;
     userAttributes?: string[];
+    scopeMapping?: React.ReactNode;
   }) => {
     const isOAuthMode = accessTokenAttributes !== undefined || idTokenAttributes !== undefined;
     if (isOAuthMode) {
@@ -73,6 +77,9 @@ vi.mock('../TokenUserAttributesSection', () => ({
           <button type="button" onClick={() => onUserInfoConfigChange?.('responseType', 'JSON')}>
             user-info-to-json
           </button>
+          <button type="button" onClick={() => onAttributeClick?.('given_name', 'id')}>
+            toggle-id-given-name
+          </button>
           <label>
             <input
               type="checkbox"
@@ -82,6 +89,7 @@ vi.mock('../TokenUserAttributesSection', () => ({
             />
             Use same attributes as ID Token
           </label>
+          {scopeMapping}
         </div>
       );
     }
@@ -95,10 +103,24 @@ vi.mock('../TokenUserAttributesSection', () => ({
 }));
 
 vi.mock('../ScopeSection', () => ({
-  default: ({scopes, disabled}: {scopes: string[]; disabled?: boolean}) => (
+  default: ({
+    scopeClaims,
+    disabled,
+    onScopeClaimsChange,
+  }: {
+    scopeClaims: Record<string, string[]>;
+    disabled?: boolean;
+    onScopeClaimsChange?: (next: Record<string, string[]>) => void;
+  }) => (
     <div data-testid="scope-section">
-      Scopes: {scopes.join(', ')}
+      Scopes: {Object.keys(scopeClaims).join(', ')}
       {disabled && <span data-testid="scope-section-disabled" />}
+      <button type="button" onClick={() => onScopeClaimsChange?.({...scopeClaims, profile: ['given_name']})}>
+        map-given-name
+      </button>
+      <button type="button" onClick={() => onScopeClaimsChange?.({...scopeClaims, profile: []})}>
+        unmap-given-name
+      </button>
     </div>
   ),
 }));
@@ -417,6 +439,9 @@ describe('EditTokenSettings', () => {
     const idTokenAttrs = ['sub', 'email'];
     const mockApp = {...mockApplication};
 
+    const getInheritCheckbox = (): HTMLElement =>
+      screen.getByRole('checkbox', {name: /Use same attributes as ID Token/i});
+
     it('should render User Info section with Inherit checkbox checked by default (No UserInfo Config)', () => {
       const mockConfig = {
         token: {
@@ -425,9 +450,8 @@ describe('EditTokenSettings', () => {
       } as OAuth2Config;
 
       render(<EditTokenSettings application={mockApp} oauth2Config={mockConfig} onFieldChange={mockOnFieldChange} />);
-
       // Check for the checkbox presence
-      const checkbox = screen.getByRole('checkbox', {name: /Use same attributes as ID Token/i});
+      const checkbox = getInheritCheckbox();
       expect(checkbox).toBeInTheDocument();
       expect(checkbox).toBeChecked();
     });
@@ -443,8 +467,7 @@ describe('EditTokenSettings', () => {
       } as OAuth2Config;
 
       render(<EditTokenSettings application={mockApp} oauth2Config={mockConfig} onFieldChange={mockOnFieldChange} />);
-
-      const checkbox = screen.getByRole('checkbox', {name: /Use same attributes as ID Token/i});
+      const checkbox = getInheritCheckbox();
       expect(checkbox).toBeChecked(); // Should be inherited because attributes are identical
     });
 
@@ -459,9 +482,147 @@ describe('EditTokenSettings', () => {
       } as OAuth2Config;
 
       render(<EditTokenSettings application={mockApp} oauth2Config={mockConfig} onFieldChange={mockOnFieldChange} />);
-
-      const checkbox = screen.getByRole('checkbox', {name: /Use same attributes as ID Token/i});
+      const checkbox = getInheritCheckbox();
       expect(checkbox).not.toBeChecked();
+    });
+
+    it('carries an ID token attribute edit into User Info while inheriting, keeping the toggle on', () => {
+      const onFieldChange = vi.fn();
+      const config = {
+        token: {idToken: {userAttributes: ['sub', 'email']}},
+        userInfo: {userAttributes: ['sub', 'email']},
+      } as OAuth2Config;
+      const app = {...mockApp, inboundAuthConfig: [{type: 'oauth2', config}]} as unknown as Application;
+
+      const {rerender} = render(
+        <EditTokenSettings application={app} oauth2Config={config} onFieldChange={onFieldChange} />,
+      );
+      expect(getInheritCheckbox()).toBeChecked();
+
+      fireEvent.click(screen.getByText('toggle-id-given-name'));
+
+      const lastCall = onFieldChange.mock.calls.at(-1);
+      const updated = (lastCall?.[1] as {type: string; config: OAuth2Config}[])[0].config;
+      expect(updated.token?.idToken?.userAttributes).toEqual(['sub', 'email', 'given_name']);
+      expect(updated.userInfo?.userAttributes).toEqual(['sub', 'email', 'given_name']);
+
+      // The lists stay equal, so the derived inherit state does not flip to custom.
+      const updatedApp = {...mockApp, inboundAuthConfig: [{type: 'oauth2', config: updated}]} as unknown as Application;
+      rerender(<EditTokenSettings application={updatedApp} oauth2Config={updated} onFieldChange={onFieldChange} />);
+      expect(getInheritCheckbox()).toBeChecked();
+    });
+
+    it('leaves the User Info list alone when an ID token attribute is edited in custom mode', () => {
+      const onFieldChange = vi.fn();
+      const config = {
+        token: {idToken: {userAttributes: ['sub', 'email']}},
+        userInfo: {userAttributes: ['sub']},
+      } as OAuth2Config;
+      const app = {...mockApp, inboundAuthConfig: [{type: 'oauth2', config}]} as unknown as Application;
+
+      render(<EditTokenSettings application={app} oauth2Config={config} onFieldChange={onFieldChange} />);
+      expect(getInheritCheckbox()).not.toBeChecked();
+
+      fireEvent.click(screen.getByText('toggle-id-given-name'));
+
+      const lastCall = onFieldChange.mock.calls.at(-1);
+      const updated = (lastCall?.[1] as {type: string; config: OAuth2Config}[])[0].config;
+      expect(updated.token?.idToken?.userAttributes).toEqual(['sub', 'email', 'given_name']);
+      expect(updated.userInfo?.userAttributes).toEqual(['sub']);
+    });
+  });
+
+  describe('Scope mapping drives the token attribute lists', () => {
+    const buildAppWithConfig = (config: OAuth2Config): Application =>
+      ({...mockApplication, inboundAuthConfig: [{type: 'oauth2', config}]}) as unknown as Application;
+
+    const latestOAuthConfig = (onFieldChange: ReturnType<typeof vi.fn>): OAuth2Config => {
+      const lastCall = onFieldChange.mock.calls.at(-1);
+      const inboundAuth = lastCall?.[1] as {type: string; config: OAuth2Config}[];
+      return inboundAuth[0].config;
+    };
+
+    it('adds a newly mapped attribute to both the ID token and UserInfo lists in one write', () => {
+      const onFieldChange = vi.fn();
+      const config = {
+        scopeClaims: {},
+        token: {idToken: {userAttributes: ['email']}},
+        userInfo: {userAttributes: ['email']},
+      } as OAuth2Config;
+
+      render(
+        <EditTokenSettings
+          application={buildAppWithConfig(config)}
+          oauth2Config={config}
+          onFieldChange={onFieldChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('map-given-name'));
+
+      // A single write carries the mapping and both allow-lists.
+      expect(onFieldChange).toHaveBeenCalledTimes(1);
+      const updated = latestOAuthConfig(onFieldChange);
+      expect(updated.scopeClaims).toEqual({profile: ['given_name']});
+      expect(updated.token?.idToken?.userAttributes).toEqual(['email', 'given_name']);
+      expect(updated.userInfo?.userAttributes).toEqual(['email', 'given_name']);
+    });
+
+    it('removes an auto-added attribute from the lists when the mapping drops it', () => {
+      const onFieldChange = vi.fn();
+      const config = {
+        scopeClaims: {},
+        token: {idToken: {userAttributes: ['email']}},
+        userInfo: {userAttributes: ['email']},
+      } as OAuth2Config;
+
+      const {rerender} = render(
+        <EditTokenSettings
+          application={buildAppWithConfig(config)}
+          oauth2Config={config}
+          onFieldChange={onFieldChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('map-given-name'));
+      const afterAdd = latestOAuthConfig(onFieldChange);
+
+      rerender(
+        <EditTokenSettings
+          application={buildAppWithConfig(afterAdd)}
+          oauth2Config={afterAdd}
+          onFieldChange={onFieldChange}
+        />,
+      );
+      fireEvent.click(screen.getByText('unmap-given-name'));
+
+      const afterRemove = latestOAuthConfig(onFieldChange);
+      expect(afterRemove.token?.idToken?.userAttributes).toEqual(['email']);
+      expect(afterRemove.userInfo?.userAttributes).toEqual(['email']);
+    });
+
+    it('keeps an attribute the mapping never added when a scope drops it', () => {
+      const onFieldChange = vi.fn();
+      // given_name is already allow-listed by hand, e.g. for the claims request parameter.
+      const config = {
+        scopeClaims: {profile: ['given_name']},
+        token: {idToken: {userAttributes: ['email', 'given_name']}},
+        userInfo: {userAttributes: ['email', 'given_name']},
+      } as OAuth2Config;
+
+      render(
+        <EditTokenSettings
+          application={buildAppWithConfig(config)}
+          oauth2Config={config}
+          onFieldChange={onFieldChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('unmap-given-name'));
+
+      const updated = latestOAuthConfig(onFieldChange);
+      expect(updated.token?.idToken?.userAttributes).toEqual(['email', 'given_name']);
+      expect(updated.userInfo?.userAttributes).toEqual(['email', 'given_name']);
     });
   });
 

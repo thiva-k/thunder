@@ -14,6 +14,7 @@ import (
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
+	oauth2utils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -329,26 +330,10 @@ func buildClaimsFromScopes(
 		return claims
 	}
 
-	// For each scope, get the claims associated with that scope
+	// For each scope, get the claims it releases: the app's mapping, or the standard OIDC set
 	for _, scope := range scopes {
-		var scopeClaims []string
-
-		// Check app-specific scope claims first
-		if scopeClaimsMapping != nil {
-			if appClaims, exists := scopeClaimsMapping[scope]; exists {
-				scopeClaims = appClaims
-			}
-		}
-
-		// Fall back to standard OIDC scopes if no app-specific mapping
-		if scopeClaims == nil {
-			if standardScope, exists := constants.StandardOIDCScopes[scope]; exists {
-				scopeClaims = standardScope.Claims
-			}
-		}
-
 		// Add claims if they're in user attributes and allowed in config
-		for _, claim := range scopeClaims {
+		for _, claim := range oauth2utils.ResolveScopeClaims(scope, scopeClaimsMapping) {
 			if slices.Contains(allowedUserAttributes, claim) {
 				if value, ok := userAttributes[claim]; ok && value != nil {
 					claims[claim] = value

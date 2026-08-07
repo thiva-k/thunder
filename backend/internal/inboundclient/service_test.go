@@ -153,6 +153,101 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_PersistsBoth
 	assert.NoError(suite.T(), err)
 }
 
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_SeedsDefaultsWhenNoScopeClaimsSent() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	svc := newServiceForTest(store)
+	p := validOAuthProfile()
+
+	err := svc.CreateInboundClient(context.Background(), ptrInboundClient(), p, true)
+
+	assert.NoError(suite.T(), err)
+	// The client declares no allowed user types, so there is no schema to draw attributes from:
+	// the standard scopes are seeded, but each is pruned to nothing it cannot honor.
+	assert.Contains(suite.T(), p.ScopeClaims, "email")
+	assert.Empty(suite.T(), p.ScopeClaims["email"])
+	assert.Contains(suite.T(), p.ScopeClaims, "profile")
+	assert.Empty(suite.T(), p.ScopeClaims["profile"])
+	// roles is computed at runtime rather than declared in a schema, so it survives the prune.
+	assert.Equal(suite.T(), []string{"roles"}, p.ScopeClaims["roles"])
+	assert.NotContains(suite.T(), p.ScopeClaims, "openid", "openid is granted without a mapping entry")
+}
+
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_PrunesSeededDefaultsToSchema() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	et := entitytypemock.NewEntityTypeServiceInterfaceMock(suite.T())
+	et.EXPECT().
+		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
+		Return(&entitytypepkg.EntityTypeListResponse{
+			TotalResults: 1,
+			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+		}, nil)
+	et.EXPECT().
+		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
+			entitytypepkg.AttributeFilter{AllowNonCredential: true}).
+		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}, {Attribute: "given_name"}}, nil)
+
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil, nil)
+
+	client := ptrInboundClient()
+	client.AllowedUserTypes = []string{"users"}
+	p := validOAuthProfile()
+
+	err := svc.CreateInboundClient(context.Background(), client, p, true)
+
+	assert.NoError(suite.T(), err)
+	// The seeded defaults are intersected with the schema: email_verified and the rest of the
+	// standard profile set are dropped because the user type does not declare them.
+	assert.Equal(suite.T(), []string{"email"}, p.ScopeClaims["email"])
+	assert.Equal(suite.T(), []string{"given_name"}, p.ScopeClaims["profile"])
+	assert.Empty(suite.T(), p.ScopeClaims["phone"])
+	// The ID token allow-list is derived from the pruned mapping.
+	assert.ElementsMatch(suite.T(), []string{"email", "given_name", "roles"},
+		p.Token.IDToken.UserAttributes)
+}
+
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_KeepsSuppliedScopeClaimsAsSent() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	svc := newServiceForTest(store)
+	p := validOAuthProfile()
+	p.ScopeClaims = map[string][]string{"profile": {"name"}, "ou": {"ouId"}}
+
+	err := svc.CreateInboundClient(context.Background(), ptrInboundClient(), p, true)
+
+	assert.NoError(suite.T(), err)
+	// A supplied mapping is the whole mapping: no standard scopes are merged in alongside it.
+	assert.Equal(suite.T(), map[string][]string{"profile": {"name"}, "ou": {"ouId"}}, p.ScopeClaims)
+}
+
+func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_KeepsScopeClaimsAsStored() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().UpdateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, "p1").Return(nil, ErrInboundClientNotFound)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	svc := newServiceForTest(store)
+	p := validOAuthProfile()
+	p.ScopeClaims = map[string][]string{"profile": {"name"}}
+
+	err := svc.UpdateInboundClient(context.Background(), ptrInboundClient(), p, true, "")
+
+	assert.NoError(suite.T(), err)
+	// The mapping is authoritative after creation: removed scopes must not be seeded back.
+	assert.Equal(suite.T(), map[string][]string{"profile": {"name"}}, p.ScopeClaims)
+}
+
 func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_PersistsClientOnlyWhenOAuthNil() {
 	store := newInboundClientStoreInterfaceMock(suite.T())
 	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
@@ -682,6 +777,174 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_StripsUndecl
 	if profile.UserInfo != nil {
 		assert.NotContains(suite.T(), profile.UserInfo.UserAttributes, "custom2")
 	}
+}
+
+func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_PrunesScopeClaimsToSchema() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().UpdateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, "p1").Return(nil, ErrInboundClientNotFound)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	et := entitytypemock.NewEntityTypeServiceInterfaceMock(suite.T())
+	et.EXPECT().
+		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
+		Return(&entitytypepkg.EntityTypeListResponse{
+			TotalResults: 1,
+			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+		}, nil)
+	et.EXPECT().
+		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
+			entitytypepkg.AttributeFilter{AllowNonCredential: true}).
+		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}}, nil)
+
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil, nil)
+
+	client := ptrInboundClient()
+	client.AllowedUserTypes = []string{"users"}
+	profile := validOAuthProfile()
+	profile.ScopeClaims = map[string][]string{
+		"email":   {"email", "email_verified"},
+		"profile": {"middle_name"},
+		"roles":   {"roles"},
+	}
+
+	err := svc.UpdateInboundClient(context.Background(), client, profile, true, "")
+	assert.NoError(suite.T(), err)
+
+	// Undeclared attributes are pruned, computed ones are kept, and a scope emptied by the prune
+	// keeps its key so it stays grantable.
+	assert.Equal(suite.T(), []string{"email"}, profile.ScopeClaims["email"])
+	assert.Equal(suite.T(), []string{"roles"}, profile.ScopeClaims["roles"])
+	assert.Contains(suite.T(), profile.ScopeClaims, "profile")
+	assert.Empty(suite.T(), profile.ScopeClaims["profile"])
+}
+
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_SeedsAttributeListsFromScopeClaims() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	et := entitytypemock.NewEntityTypeServiceInterfaceMock(suite.T())
+	et.EXPECT().
+		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
+		Return(&entitytypepkg.EntityTypeListResponse{
+			TotalResults: 1,
+			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+		}, nil)
+	et.EXPECT().
+		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
+			entitytypepkg.AttributeFilter{AllowNonCredential: true}).
+		Return([]entitytypepkg.AttributeInfo{
+			{Attribute: "email"}, {Attribute: "given_name"}, {Attribute: "family_name"},
+		}, nil)
+
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil, nil)
+
+	client := ptrInboundClient()
+	client.AllowedUserTypes = []string{"users"}
+	profile := validOAuthProfile()
+
+	err := svc.CreateInboundClient(context.Background(), client, profile, true)
+	assert.NoError(suite.T(), err)
+
+	// The seeded mapping is pruned to the schema, and the OIDC attribute lists are derived from it.
+	// "roles" survives the prune without being schema-declared because it is computed at runtime.
+	expected := []string{"email", "family_name", "given_name", "roles"}
+	assert.Equal(suite.T(), expected, profile.Token.IDToken.UserAttributes)
+	assert.Equal(suite.T(), expected, profile.UserInfo.UserAttributes)
+	assert.Equal(suite.T(), []string{"email"}, profile.ScopeClaims["email"])
+
+	// The access token and the assertion are not scope-driven, so neither is seeded from the mapping.
+	assert.Empty(suite.T(), profile.Token.AccessToken.UserConfig.Attributes)
+	assert.Empty(suite.T(), client.Assertion.UserAttributes)
+}
+
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_NoAttributesForClientWithoutOAuthProfile() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+
+	et := entitytypemock.NewEntityTypeServiceInterfaceMock(suite.T())
+	et.EXPECT().
+		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
+		Return(&entitytypepkg.EntityTypeListResponse{
+			TotalResults: 1,
+			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+		}, nil)
+	et.EXPECT().
+		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
+			entitytypepkg.AttributeFilter{AllowNonCredential: true}).
+		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}, {Attribute: "given_name"}}, nil)
+
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil, nil)
+
+	client := ptrInboundClient()
+	client.AllowedUserTypes = []string{"users"}
+
+	// App-native clients have no scope-to-claims mapping, so nothing is derived for them: they
+	// carry only the attributes they were explicitly configured with.
+	err := svc.CreateInboundClient(context.Background(), client, nil, false)
+	assert.NoError(suite.T(), err)
+
+	assert.Empty(suite.T(), client.Assertion.UserAttributes)
+}
+
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_KeepsSuppliedAttributeLists() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	et := entitytypemock.NewEntityTypeServiceInterfaceMock(suite.T())
+	et.EXPECT().
+		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
+		Return(&entitytypepkg.EntityTypeListResponse{
+			TotalResults: 1,
+			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+		}, nil)
+	et.EXPECT().
+		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
+			entitytypepkg.AttributeFilter{AllowNonCredential: true}).
+		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}, {Attribute: "given_name"}}, nil)
+
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil, nil)
+
+	client := ptrInboundClient()
+	client.AllowedUserTypes = []string{"users"}
+	profile := validOAuthProfile()
+	profile.Token = &providers.OAuthTokenConfig{
+		IDToken: &providers.IDTokenConfig{UserAttributes: []string{"email"}},
+	}
+
+	err := svc.CreateInboundClient(context.Background(), client, profile, true)
+	assert.NoError(suite.T(), err)
+
+	assert.Equal(suite.T(), []string{"email"}, profile.Token.IDToken.UserAttributes)
+}
+
+func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_NoAllowedUserTypesLeavesAttributesEmpty() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().CreateInboundClient(mock.Anything, mock.Anything).Return(nil)
+	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
+
+	svc := newServiceForTest(store)
+
+	client := ptrInboundClient()
+	client.AllowedUserTypes = nil
+	profile := validOAuthProfile()
+
+	err := svc.CreateInboundClient(context.Background(), client, profile, true)
+	assert.NoError(suite.T(), err)
+
+	// With no allowed user types there is no schema to derive from, so the seeded scopes are kept
+	// but carry no attributes, and nothing is added to the token allow-lists.
+	assert.Empty(suite.T(), client.Assertion.UserAttributes)
+	assert.Empty(suite.T(), profile.Token.IDToken.UserAttributes)
+	assert.Contains(suite.T(), profile.ScopeClaims, "profile")
+	assert.Empty(suite.T(), profile.ScopeClaims["profile"])
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidate_ValidProfile() {

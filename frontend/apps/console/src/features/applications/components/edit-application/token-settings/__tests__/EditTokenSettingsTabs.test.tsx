@@ -56,11 +56,13 @@ describe('EditTokenSettingsTabs', () => {
   const onFieldChange = vi.fn();
 
   it('renders Application and User audiences in a side selector', () => {
+    // The selector only appears when both audiences apply; a single applicable audience is shown
+    // on its own.
     render(
       <EditTokenSettingsTabs
         application={application}
         editedApp={{}}
-        oauth2Config={oauthConfig(['client_credentials'])}
+        oauth2Config={oauthConfig(['client_credentials', 'authorization_code'])}
         onFieldChange={onFieldChange}
       />,
     );
@@ -73,7 +75,7 @@ describe('EditTokenSettingsTabs', () => {
     expect(screen.getByText(/configured independently for each audience/i)).toBeInTheDocument();
   });
 
-  it('unlocks the Application tab when client_credentials is granted', () => {
+  it('shows the Application settings alone when only client_credentials is granted', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
@@ -83,13 +85,14 @@ describe('EditTokenSettingsTabs', () => {
       />,
     );
 
-    expect(screen.getByRole('tab', {name: 'Application'})).toBeEnabled();
+    // Only one audience applies, so there is no picker and no locked entry to explain.
+    expect(screen.queryByRole('tablist', {name: 'Issued to'})).not.toBeInTheDocument();
     expect(screen.getByTestId('client-token-section')).toBeInTheDocument();
     expect(screen.queryByText(clientLockMessage)).not.toBeInTheDocument();
+    expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
   });
 
-  it('shows the Application notice in place of its settings when client_credentials is not granted', async () => {
-    const user = userEvent.setup();
+  it('omits the Application audience when client_credentials is not granted', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
@@ -99,17 +102,14 @@ describe('EditTokenSettingsTabs', () => {
       />,
     );
 
-    // The notice belongs to the Application sub-tab, so it stays out of the way until opened.
+    // An audience that does not apply is dropped rather than shown locked behind its own tab.
+    expect(screen.queryByRole('tablist', {name: 'Issued to'})).not.toBeInTheDocument();
     expect(screen.queryByText(clientLockMessage)).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', {name: 'Application'}));
-
-    expect(screen.getByText(clientLockMessage)).toBeInTheDocument();
     expect(screen.queryByTestId('client-token-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('user-token-section')).toBeInTheDocument();
   });
 
-  it('shows the User notice in place of its settings when no user-facing grant is present', async () => {
-    const user = userEvent.setup();
+  it('omits the User audience when no user-facing grant is present', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
@@ -119,34 +119,32 @@ describe('EditTokenSettingsTabs', () => {
       />,
     );
 
+    expect(screen.queryByRole('tablist', {name: 'Issued to'})).not.toBeInTheDocument();
     expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', {name: 'User'}));
-
-    expect(screen.getByText(userLockMessage)).toBeInTheDocument();
     expect(screen.queryByTestId('user-token-section')).not.toBeInTheDocument();
   });
 
-  it('keeps a sub-tab with no applicable settings selectable', () => {
+  it('keeps both audiences selectable when each applies', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
         editedApp={{}}
-        oauth2Config={oauthConfig(['authorization_code'])}
+        oauth2Config={oauthConfig(['client_credentials', 'authorization_code'])}
         onFieldChange={onFieldChange}
       />,
     );
 
     expect(screen.getByRole('tab', {name: 'Application'})).toBeEnabled();
+    expect(screen.getByRole('tab', {name: 'User'})).toBeEnabled();
   });
 
-  it('unlocks the User tab when a user-facing grant is present', async () => {
+  it('opens the User settings when a user-facing grant is present', async () => {
     const user = userEvent.setup();
     render(
       <EditTokenSettingsTabs
         application={application}
         editedApp={{}}
-        oauth2Config={oauthConfig(['authorization_code'])}
+        oauth2Config={oauthConfig(['client_credentials', 'authorization_code'])}
         onFieldChange={onFieldChange}
       />,
     );
@@ -157,7 +155,7 @@ describe('EditTokenSettingsTabs', () => {
     expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
   });
 
-  it('selects the User tab by default when the Application tab is locked', () => {
+  it('shows the User settings alone when the Application audience does not apply', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
@@ -167,12 +165,12 @@ describe('EditTokenSettingsTabs', () => {
       />,
     );
 
-    expect(screen.getByRole('tab', {name: 'User'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tablist', {name: 'Issued to'})).not.toBeInTheDocument();
     expect(screen.getByTestId('user-token-section')).toBeInTheDocument();
   });
 
   describe('app-native application (no OAuth2 configuration)', () => {
-    it('unlocks the User tab so the assertion config can be edited', () => {
+    it('shows the User settings so the assertion config can be edited', () => {
       render(
         <EditTokenSettingsTabs
           application={application}
@@ -182,13 +180,11 @@ describe('EditTokenSettingsTabs', () => {
         />,
       );
 
-      expect(screen.getByRole('tab', {name: 'User'})).toBeEnabled();
       expect(screen.getByTestId('user-token-section')).toBeInTheDocument();
       expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
     });
 
-    it('opens on the User sub-tab and keeps the Application notice behind its own tab', async () => {
-      const user = userEvent.setup();
+    it('omits the Application audience entirely', () => {
       render(
         <EditTokenSettingsTabs
           application={application}
@@ -198,12 +194,9 @@ describe('EditTokenSettingsTabs', () => {
         />,
       );
 
-      expect(screen.getByRole('tab', {name: 'User'})).toHaveAttribute('aria-selected', 'true');
+      // An app-native application receives no tokens for itself, so that audience is not offered.
+      expect(screen.queryByRole('tablist', {name: 'Issued to'})).not.toBeInTheDocument();
       expect(screen.queryByText(clientLockMessage)).not.toBeInTheDocument();
-
-      await user.click(screen.getByRole('tab', {name: 'Application'}));
-
-      expect(screen.getByText(clientLockMessage)).toBeInTheDocument();
     });
   });
 
@@ -248,7 +241,6 @@ describe('EditTokenSettingsTabs', () => {
       />,
     );
 
-    await user.click(screen.getByRole('tab', {name: 'User'}));
     await user.click(screen.getByTestId('user-token-section-bump'));
     expect(screen.getByTestId('user-token-section')).toHaveTextContent('Clicks: 1');
 

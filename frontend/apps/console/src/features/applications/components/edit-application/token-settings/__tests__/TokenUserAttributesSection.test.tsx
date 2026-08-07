@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render, screen, fireEvent, within} from '@testing-library/react';
+import {render, screen, fireEvent, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {describe, it, expect, vi} from 'vitest';
 import TokenUserAttributesSection from '../TokenUserAttributesSection';
@@ -249,12 +249,27 @@ describe('TokenUserAttributesSection', () => {
       onTabChange: vi.fn(),
     };
 
-    it('renders three tabs', () => {
+    it('renders the access token tab alongside the combined user-token tab', () => {
       render(<TokenUserAttributesSection {...oauthProps} />);
 
+      // The ID token and UserInfo share one scope mapping, so they sit under a single top-level tab.
       expect(screen.getByRole('tab', {name: /access token/i})).toBeInTheDocument();
-      expect(screen.getByRole('tab', {name: /id token/i})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /id token & user info/i})).toBeInTheDocument();
+      expect(screen.queryByRole('tab', {name: /user info endpoint/i})).not.toBeInTheDocument();
+    });
+
+    it('renders the ID Token and User Info sub-tabs under the combined tab', () => {
+      render(<TokenUserAttributesSection {...oauthProps} activeTab="id" />);
+
+      expect(screen.getByRole('tab', {name: /^id token$/i})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: /user info endpoint/i})).toBeInTheDocument();
+    });
+
+    it('labels the combined tab as ID Token alone when the User Info tab is hidden', () => {
+      render(<TokenUserAttributesSection {...oauthProps} showUserInfoTab={false} activeTab="id" />);
+
+      expect(screen.queryByRole('tab', {name: /user info endpoint/i})).not.toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /^id token$/i})).toBeInTheDocument();
     });
 
     it('shows Access Token panel when activeTab is "access"', () => {
@@ -752,6 +767,64 @@ describe('TokenUserAttributesSection', () => {
 
       expect(optionByValue('JWE')).not.toHaveAttribute('aria-disabled', 'true');
       expect(optionByValue('NESTED_JWT')).not.toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
+  describe('Scope mapping slot and collapsible attribute picker', () => {
+    const slotProps = {
+      ...baseProps,
+      userAttributes: ['username'],
+      accessTokenAttributes: ['email'],
+      idTokenAttributes: ['username'],
+      userInfoAttributes: [],
+      onTabChange: vi.fn(),
+      scopeMapping: <div data-testid="scope-mapping">mapping</div>,
+    };
+
+    it('renders the scope mapping under the ID Token tab', () => {
+      render(<TokenUserAttributesSection {...slotProps} activeTab="id" />);
+
+      expect(screen.getByTestId('scope-mapping')).toBeInTheDocument();
+    });
+
+    it('renders the scope mapping under the User Info tab', () => {
+      render(<TokenUserAttributesSection {...slotProps} activeTab="userinfo" />);
+
+      expect(screen.getByTestId('scope-mapping')).toBeInTheDocument();
+    });
+
+    it('does not render the scope mapping under the Access Token tab', () => {
+      render(<TokenUserAttributesSection {...slotProps} activeTab="access" />);
+
+      // Access token attributes are not scope-driven, so the mapping would be misleading there.
+      expect(screen.queryByTestId('scope-mapping')).not.toBeInTheDocument();
+    });
+
+    it('collapses the attribute picker on the ID Token tab behind a disclosure', () => {
+      render(<TokenUserAttributesSection {...slotProps} activeTab="id" />);
+
+      const toggle = screen.getByRole('button', {name: /allowed attributes/i});
+      expect(toggle).toBeInTheDocument();
+      expect(screen.getByText('username').closest('.MuiChip-root')).not.toBeVisible();
+    });
+
+    it('expands the attribute picker when the disclosure is clicked', async () => {
+      const user = userEvent.setup();
+      render(<TokenUserAttributesSection {...slotProps} activeTab="id" />);
+
+      await user.click(screen.getByRole('button', {name: /allowed attributes/i}));
+
+      await waitFor(() => {
+        expect(screen.getByText('username').closest('.MuiChip-root')).toBeVisible();
+      });
+    });
+
+    it('leaves the attribute picker expanded on the Access Token tab', () => {
+      render(<TokenUserAttributesSection {...slotProps} activeTab="access" />);
+
+      // Nothing else drives the access token, so its picker is not collapsed.
+      expect(screen.queryByRole('button', {name: /allowed attributes/i})).not.toBeInTheDocument();
+      expect(screen.getByText('username').closest('.MuiChip-root')).toBeVisible();
     });
   });
 

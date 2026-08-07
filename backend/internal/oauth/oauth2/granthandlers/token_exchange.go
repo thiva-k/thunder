@@ -254,11 +254,10 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 		return nil, errResp
 	}
 
-	// Retain OIDC scopes (governed by the app's OIDC scope configuration); only permission scopes
+	// Retain OIDC scopes (governed by the app's scope-to-claims mapping); only permission scopes
 	// are downscoped to the target resource server and filtered by the app's authorization.
 	oidcScopes, permissionScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(
 		tokenservice.JoinScopes(finalScopes), oauthApp.ScopeClaims)
-	oidcScopes = oauth2utils.FilterOIDCScopesByAllowedScopes(oidcScopes, oauthApp.Scopes)
 
 	// Bind the token to a single target resource server (RFC 8707 resource or configured default).
 	// The RFC 8693 audience parameter is not honored. A request that resolves no permission scopes

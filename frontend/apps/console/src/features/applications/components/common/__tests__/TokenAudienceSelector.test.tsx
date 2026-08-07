@@ -6,9 +6,10 @@ import {render, screen} from '@thunderid/test-utils';
 import {describe, it, expect, vi} from 'vitest';
 import TokenAudienceSelector, {type TokenAudienceOption} from '../TokenAudienceSelector';
 
+// Both audiences selectable: the list only renders when there is a choice to make.
 const options: TokenAudienceOption[] = [
   {value: 'application', label: 'Application', description: 'M2M access token'},
-  {value: 'user', label: 'User', description: 'Tokens for a signed-in user', isLocked: true},
+  {value: 'user', label: 'User', description: 'Tokens for a signed-in user'},
 ];
 
 const renderSelector = (value = 'application', onChange = vi.fn()) => {
@@ -125,5 +126,45 @@ describe('TokenAudienceSelector', () => {
     await user.click(screen.getByRole('tab', {name: 'User'}));
 
     expect(onChange).toHaveBeenCalledWith('user');
+  });
+  it('collapses to the settings alone when only one audience is selectable', () => {
+    render(
+      <TokenAudienceSelector
+        title="Issued to"
+        options={[
+          {value: 'application', label: 'Application', description: 'M2M access token'},
+          {value: 'user', label: 'User', description: 'Tokens for a signed-in user', isLocked: true},
+        ]}
+        value="application"
+        onChange={vi.fn()}
+        footnote="Attribute sets are configured independently for each audience."
+      >
+        <div data-testid="panel-content" />
+      </TokenAudienceSelector>,
+    );
+
+    // Nothing to choose between, so the picker and the locked audience are both gone.
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.getByTestId('panel-content')).toBeInTheDocument();
+  });
+
+  it('collapses to the settings alone when every audience is locked', () => {
+    render(
+      <TokenAudienceSelector
+        title="Issued to"
+        options={[
+          {value: 'application', label: 'Application', description: 'M2M access token', isLocked: true},
+          {value: 'user', label: 'User', description: 'Tokens for a signed-in user', isLocked: true},
+        ]}
+        value="user"
+        onChange={vi.fn()}
+      >
+        <div data-testid="panel-content" />
+      </TokenAudienceSelector>,
+    );
+
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.getByTestId('panel-content')).toBeInTheDocument();
   });
 });

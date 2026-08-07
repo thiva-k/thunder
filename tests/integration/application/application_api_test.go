@@ -2023,17 +2023,13 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithOnlyIDToken() {
 	ts.Assert().NotNil(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Token)
 	ts.Assert().NotNil(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken)
 	ts.Assert().Equal(int64(3600), retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken.ValidityPeriod)
-	// The response returns the effective scope-claims mapping: the standard OIDC defaults with the
-	// app's stored overrides applied on top, so all six standard scopes are present. The overridden
-	// scopes carry the stored values; the rest carry the exact standard defaults.
+	// A mapping sent at creation is stored exactly as sent: standard scopes the app does not declare
+	// are not added to it, and openid needs no entry because it is always granted.
 	scopeClaims := retrievedApp.InboundAuthConfig[0].OAuthAppConfig.ScopeClaims
-	ts.Assert().Len(scopeClaims, 6)
+	ts.Assert().Len(scopeClaims, 2)
 	ts.Assert().Equal([]string{"name", "given_name", "family_name", "middle_name"}, scopeClaims["profile"])
 	ts.Assert().Equal([]string{"email", "email_verified"}, scopeClaims["email"])
-	ts.Assert().Equal([]string{"sub"}, scopeClaims["openid"])
-	ts.Assert().Equal([]string{"phone_number", "phone_number_verified"}, scopeClaims["phone"])
-	ts.Assert().Equal([]string{"address"}, scopeClaims["address"])
-	ts.Assert().Equal([]string{"roles"}, scopeClaims["roles"])
+	ts.Assert().NotContains(scopeClaims, "openid")
 }
 
 // TestApplicationWithBothTokenTypes tests creating application with both AccessToken and IDToken.
@@ -2265,13 +2261,25 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithComplexScopeClaims() {
 	retrievedApp, err := getApplicationByID(appID)
 	ts.Require().NoError(err)
 	ts.Assert().NotNil(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken)
-	// The response returns the effective mapping: the six standard OIDC scopes (defaults with the
-	// app's overrides applied) plus the "custom" scope carried through.
+	// The response returns the mapping exactly as sent: the four standard OIDC scopes the app
+	// declared plus its "custom" scope, with no defaults merged in.
 	scopeClaims := retrievedApp.InboundAuthConfig[0].OAuthAppConfig.ScopeClaims
-	ts.Assert().Len(scopeClaims, 7)
-	ts.Assert().Contains(scopeClaims, "profile")
-	ts.Assert().GreaterOrEqual(len(scopeClaims["profile"]), 10)
-	ts.Assert().Equal([]string{"organization", "department", "employee_id"}, scopeClaims["custom"])
+	ts.Assert().Equal(map[string][]string{
+		"profile": {
+			"name", "given_name", "family_name", "middle_name",
+			"nickname", "preferred_username", "profile", "picture",
+			"website", "gender", "birthdate", "zoneinfo", "locale",
+			"updated_at",
+		},
+		"email": {"email", "email_verified"},
+		"address": {
+			"address.formatted", "address.street_address",
+			"address.locality", "address.region",
+			"address.postal_code", "address.country",
+		},
+		"phone":  {"phone_number", "phone_number_verified"},
+		"custom": {"organization", "department", "employee_id"},
+	}, scopeClaims)
 }
 
 // TestApplicationCertificateRollbackOnOAuthFail tests certificate rollback when OAuth creation fails.

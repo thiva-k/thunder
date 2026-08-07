@@ -6,7 +6,7 @@ import {JsonLogo, JwtLogo} from '@thunderid/components';
 import {getCspNonce} from '@thunderid/design';
 import {Stack, Typography, Box} from '@wso2/oxygen-ui';
 import type {editor as MonacoEditor, IDisposable, IRange} from 'monaco-editor';
-import {useRef, useEffect} from 'react';
+import {useRef, useEffect, useState} from 'react';
 
 /**
  * Descriptions for standard JWT claims, shown as hover tooltips in the preview.
@@ -73,6 +73,8 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
   const decorationIdsRef = useRef<string[]>([]);
   const defaultClaimsRef = useRef<readonly string[]>(defaultClaims);
   const contentListenerRef = useRef<IDisposable | null>(null);
+  const sizeListenerRef = useRef<IDisposable | null>(null);
+  const [measuredPayloadHeight, setMeasuredPayloadHeight] = useState<number | null>(null);
 
   const applyDecorations = () => {
     if (format === 'json') return;
@@ -133,12 +135,20 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
     contentListenerRef.current = editorInstance.onDidChangeModelContent(() => {
       applyDecorations();
     });
+
+    // Follow the height the editor actually needs, so wrapped values are never cut off.
+    setMeasuredPayloadHeight(editorInstance.getContentHeight());
+    sizeListenerRef.current?.dispose();
+    sizeListenerRef.current = editorInstance.onDidContentSizeChange((event) => {
+      setMeasuredPayloadHeight(event.contentHeight);
+    });
   };
 
-  // Clean up content listener on unmount
+  // Clean up editor listeners on unmount
   useEffect(
     () => () => {
       contentListenerRef.current?.dispose();
+      sizeListenerRef.current?.dispose();
     },
     [],
   );
@@ -147,7 +157,10 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
   const headerJson = !isJson && header ? JSON.stringify(header, null, 2) : null;
   const payloadJson = JSON.stringify(payload, null, 2);
   const headerHeight = headerJson ? Math.min(200, Math.max(60, headerJson.split('\n').length * 20 + 16)) : 0;
-  const payloadHeight = Math.min(600, Math.max(80, payloadJson.split('\n').length * 20 + 16));
+  // Line count alone under-measures: the rendered line height differs from any constant we pick,
+  // and wrapped values occupy more than one line each. The editor reports what it actually needs,
+  // so the estimate is only the starting height until it does.
+  const payloadHeight = Math.min(600, Math.max(80, measuredPayloadHeight ?? payloadJson.split('\n').length * 20 + 16));
 
   const editorOptions = {
     readOnly: true,
@@ -162,11 +175,14 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
     renderLineHighlight: 'none' as const,
     wordWrap: 'on' as const,
     scrollbar: {
-      vertical: 'hidden' as const,
+      vertical: 'auto' as const,
+      // Lines wrap, so there is nothing to scroll horizontally.
       horizontal: 'hidden' as const,
-      verticalScrollbarSize: 0,
+      verticalScrollbarSize: 8,
       horizontalScrollbarSize: 0,
-      handleMouseWheel: false,
+      handleMouseWheel: true,
+      // Once the preview reaches its end the wheel goes back to the page, so scrolling past the
+      // preview never traps the cursor.
       alwaysConsumeMouseWheel: false,
     },
     guides: {
@@ -183,6 +199,10 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
         borderRadius: 1,
         p: 2,
         height: '100%',
+        // The editor measures its own container, so without these it can widen the column it sits
+        // in rather than scrolling inside it.
+        minWidth: 0,
+        overflow: 'hidden',
       }}
     >
       {/* Styling for default claim annotations */}
