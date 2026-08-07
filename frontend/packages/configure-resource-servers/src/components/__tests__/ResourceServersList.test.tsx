@@ -37,6 +37,11 @@ vi.mock('../ResourceServerDeleteDialog', () => ({
   default: () => null,
 }));
 
+vi.mock('../SetDefaultResourceServerDialog', () => ({
+  default: ({open, resourceServer}: {open: boolean; resourceServer: {name: string} | null}) =>
+    open ? <div data-testid="set-default-dialog">{resourceServer?.name}</div> : null,
+}));
+
 const mockUseGetResourceServers = vi.fn();
 const mockRefetch = vi.fn();
 
@@ -169,5 +174,137 @@ describe('ResourceServersList', () => {
     fireEvent.click(screen.getByRole('button', {name: /Refresh/i}));
 
     expect(mockRefetch).toHaveBeenCalled();
+  });
+});
+
+describe('ResourceServersList make default action', () => {
+  const eligibleRow = {
+    id: 'rs-eligible',
+    name: 'Billing API',
+    identifier: 'https://billing.example.com',
+    ouId: 'ou-1',
+    delimiter: ':',
+    type: 'API' as const,
+  };
+
+  const listWith = (...resourceServers: ResourceServerListResponse['resourceServers']): ResourceServerListResponse => ({
+    totalResults: resourceServers.length,
+    startIndex: 0,
+    count: resourceServers.length,
+    resourceServers,
+  });
+
+  const renderWithDefault = (
+    rows: ResourceServerListResponse,
+    defaultConfig: DefaultResourceServerConfigResponse | undefined,
+    defaultQueryState: {isLoading?: boolean; error?: Error | null} = {},
+  ): void => {
+    mockUseGetResourceServers.mockReturnValue({data: rows, isLoading: false, error: null, refetch: mockRefetch});
+    mockUseGetDefaultResourceServer.mockReturnValue({
+      data: defaultConfig,
+      isLoading: defaultQueryState.isLoading ?? false,
+      error: defaultQueryState.error ?? null,
+    });
+    renderWithProviders(<ResourceServersList />);
+  };
+
+  const noDefault: DefaultResourceServerConfigResponse = {readOnly: {}, writable: {}, merged: {}};
+  const moreButton = () => screen.queryByRole('button', {name: /more actions/i});
+
+  const openMakeDefaultItem = (): HTMLElement => {
+    fireEvent.click(moreButton()!);
+    return screen.getByRole('menuitem', {name: /make default resource server/i});
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('keeps the actions menu available on every editable row', () => {
+    renderWithDefault(listWith(eligibleRow), noDefault);
+
+    expect(moreButton()).toBeInTheDocument();
+  });
+
+  it('enables the action for a resource server that could become the default', () => {
+    renderWithDefault(listWith(eligibleRow), noDefault);
+
+    expect(openMakeDefaultItem()).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('disables the action for the resource server that is already the default', () => {
+    renderWithDefault(listWith(eligibleRow), {
+      readOnly: {},
+      writable: {resourceServerId: eligibleRow.id},
+      merged: {resourceServerId: eligibleRow.id},
+    });
+
+    const item = openMakeDefaultItem();
+
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent(/already the default/i);
+  });
+
+  it('disables the action for an MCP server', () => {
+    renderWithDefault(listWith({...eligibleRow, type: 'MCP'}), noDefault);
+
+    const item = openMakeDefaultItem();
+
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent(/only api and custom/i);
+  });
+
+  it('disables the action when a declarative default has locked it', () => {
+    renderWithDefault(listWith(eligibleRow), {
+      readOnly: {resourceServerId: 'rs-locked'},
+      writable: {},
+      merged: {resourceServerId: 'rs-locked'},
+    });
+
+    const item = openMakeDefaultItem();
+
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent(/deployment configuration/i);
+  });
+
+  it('does not offer any actions for a read-only resource server', () => {
+    renderWithDefault(listWith({...eligibleRow, isReadOnly: true}), noDefault);
+
+    expect(moreButton()).toBeNull();
+  });
+
+  it('opens the set default dialog for the chosen resource server', () => {
+    renderWithDefault(listWith(eligibleRow), noDefault);
+
+    fireEvent.click(openMakeDefaultItem());
+
+    expect(screen.getByTestId('set-default-dialog')).toHaveTextContent('Billing API');
+  });
+
+  it('does not open the set default dialog when the action is disabled', () => {
+    renderWithDefault(listWith(eligibleRow), {
+      readOnly: {resourceServerId: 'rs-locked'},
+      writable: {},
+      merged: {resourceServerId: 'rs-locked'},
+    });
+
+    fireEvent.click(openMakeDefaultItem());
+
+    expect(screen.queryByTestId('set-default-dialog')).toBeNull();
+  });
+
+  it('disables the action while the default configuration is still loading', () => {
+    renderWithDefault(listWith(eligibleRow), undefined, {isLoading: true});
+
+    const item = openMakeDefaultItem();
+
+    expect(item).toHaveAttribute('aria-disabled', 'true');
+    expect(item).toHaveTextContent(/checking the current default/i);
+  });
+
+  it('disables the action when the default configuration failed to load', () => {
+    renderWithDefault(listWith(eligibleRow), undefined, {error: new Error('boom')});
+
+    expect(openMakeDefaultItem()).toHaveAttribute('aria-disabled', 'true');
   });
 });

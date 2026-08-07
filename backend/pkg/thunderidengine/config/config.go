@@ -56,9 +56,17 @@ type SecurityConfig struct {
 // today; future values may include an endpoint or event stream. SyncIntervalSeconds bounds how stale
 // the cache may be; a non-positive value falls back to the built-in default.
 type TokenRevocationConfig struct {
-	Enabled             bool   `yaml:"enabled"               json:"enabled"`
+	// Enabled uses a pointer so an explicit false in deployment.yaml overrides the
+	// default.json default of true; a nil pointer means "not set" and keeps the default.
+	Enabled             *bool  `yaml:"enabled"               json:"enabled"`
 	Source              string `yaml:"source"                json:"source"`
 	SyncIntervalSeconds int    `yaml:"sync_interval_seconds" json:"sync_interval_seconds"`
+}
+
+// IsEnabled reports whether Resource Server token-revocation enforcement is enabled,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c TokenRevocationConfig) IsEnabled() bool {
+	return c.Enabled != nil && *c.Enabled
 }
 
 // tokenRevocationSourceDB is the operation-database sync source, the only supported
@@ -162,9 +170,17 @@ type AuthClassConfig struct {
 
 // RefreshTokenConfig holds the refresh token configuration details.
 type RefreshTokenConfig struct {
-	RenewOnGrant          bool  `yaml:"renew_on_grant"           json:"renew_on_grant"`
-	RevokePreviousOnRenew bool  `yaml:"revoke_previous_on_renew" json:"revoke_previous_on_renew"`
+	RenewOnGrant bool `yaml:"renew_on_grant"           json:"renew_on_grant"`
+	// RevokePreviousOnRenew uses a pointer so an explicit false in deployment.yaml overrides
+	// the default.json default of true; a nil pointer means "not set" and keeps the default.
+	RevokePreviousOnRenew *bool `yaml:"revoke_previous_on_renew" json:"revoke_previous_on_renew"`
 	ValidityPeriod        int64 `yaml:"validity_period"          json:"validity_period"`
+}
+
+// RevokePreviousOnRenewEnabled reports whether the previous refresh token is revoked on renewal,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c RefreshTokenConfig) RevokePreviousOnRenewEnabled() bool {
+	return c.RevokePreviousOnRenew != nil && *c.RevokePreviousOnRenew
 }
 
 // AuthorizationCodeConfig holds the authorization code configuration details.
@@ -239,14 +255,30 @@ type OAuthConfig struct {
 
 // OAuthTokenRevocationConfig holds the configuration details for the token revocation feature
 type OAuthTokenRevocationConfig struct {
-	// Enabled controls whether the OAuth token revocation endpoint is active.
-	Enabled bool `yaml:"enabled" json:"enabled"`
+	// Enabled controls whether the OAuth token revocation endpoint is active. It uses a pointer
+	// so an explicit false in deployment.yaml overrides the default.json default of true; a nil
+	// pointer means "not set" and keeps the default.
+	Enabled *bool `yaml:"enabled" json:"enabled"`
+}
+
+// IsEnabled reports whether the OAuth token revocation endpoint is active,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c OAuthTokenRevocationConfig) IsEnabled() bool {
+	return c.Enabled != nil && *c.Enabled
 }
 
 // LogoutConfig holds the configuration details for the logout endpoint
 type LogoutConfig struct {
-	// Enabled controls whether the OAuth logout endpoint is active.
-	Enabled bool `yaml:"enabled" json:"enabled"`
+	// Enabled controls whether the OAuth logout endpoint is active. It uses a pointer so an
+	// explicit false in deployment.yaml overrides the default.json default of true; a nil
+	// pointer means "not set" and keeps the default.
+	Enabled *bool `yaml:"enabled" json:"enabled"`
+}
+
+// IsEnabled reports whether the OAuth logout endpoint is active,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c LogoutConfig) IsEnabled() bool {
+	return c.Enabled != nil && *c.Enabled
 }
 
 // RevocationConfig holds grant-scoped (token family) revocation settings.
@@ -256,16 +288,36 @@ type RevocationConfig struct {
 
 // TokenFamilyRevocationConfig toggles the triggers that revoke a whole token family (one authorization
 // grant). Each defaults to on (set in default.json), matching the fail-closed security posture.
+// Each toggle uses a pointer so an explicit false in deployment.yaml overrides the default.json
+// default of true; a nil pointer means "not set" and keeps the default.
 type TokenFamilyRevocationConfig struct {
 	// OnRefreshReplay revokes the family when a rotated (already-revoked) refresh token is replayed.
 	// It has no effect unless refresh-token rotation (renew_on_grant) is enabled, since a token is only
 	// revoked, and thus only replayable, once it has been rotated.
-	OnRefreshReplay bool `yaml:"on_refresh_replay"   json:"on_refresh_replay"`
+	OnRefreshReplay *bool `yaml:"on_refresh_replay"   json:"on_refresh_replay"`
 	// OnExplicitRevoke revokes the family when a token carrying a tfid is revoked via RFC 7009, so a
 	// login's access tokens drop with its refresh token.
-	OnExplicitRevoke bool `yaml:"on_explicit_revoke" json:"on_explicit_revoke"`
+	OnExplicitRevoke *bool `yaml:"on_explicit_revoke" json:"on_explicit_revoke"`
 	// OnCodeReplay revokes the family when an authorization code is redeemed twice (replay).
-	OnCodeReplay bool `yaml:"on_code_replay"     json:"on_code_replay"`
+	OnCodeReplay *bool `yaml:"on_code_replay"     json:"on_code_replay"`
+}
+
+// OnRefreshReplayEnabled reports whether the family is revoked on refresh-token replay,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c TokenFamilyRevocationConfig) OnRefreshReplayEnabled() bool {
+	return c.OnRefreshReplay != nil && *c.OnRefreshReplay
+}
+
+// OnExplicitRevokeEnabled reports whether the family is revoked on explicit RFC 7009 revocation,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c TokenFamilyRevocationConfig) OnExplicitRevokeEnabled() bool {
+	return c.OnExplicitRevoke != nil && *c.OnExplicitRevoke
+}
+
+// OnCodeReplayEnabled reports whether the family is revoked on authorization-code replay,
+// defaulting to false when unset (an explicit default lives in default.json).
+func (c TokenFamilyRevocationConfig) OnCodeReplayEnabled() bool {
+	return c.OnCodeReplay != nil && *c.OnCodeReplay
 }
 
 // TokenExchangeConfig holds RFC 8693 token-exchange settings.

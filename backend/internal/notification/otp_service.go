@@ -150,7 +150,7 @@ func (s *otpService) validateOTPVerifyRequest(request common.VerifyOTPDTO) *tidc
 // An optional otpCfg override can override specific fields (length, numeric-only, validity).
 func (s *otpService) generateOTP(otpCfg *common.OTPConfig) (generatedOTP, error) {
 	mergedCfg := s.resolveOTPConfig(otpCfg)
-	charSet := s.getOTPCharset(mergedCfg.UseNumericOnly)
+	charSet := s.getOTPCharset(mergedCfg.UsesNumericOnly())
 	length := mergedCfg.Length
 
 	chars := []rune(charSet)
@@ -235,7 +235,7 @@ func (s *otpService) resolveOTPConfig(otpCfg *common.OTPConfig) config.OTPConfig
 		}
 	}
 	if otpCfg.UseNumericOnly != nil {
-		cfg.UseNumericOnly = *otpCfg.UseNumericOnly
+		cfg.UseNumericOnly = otpCfg.UseNumericOnly
 	}
 	if otpCfg.ValidityPeriodSeconds != nil {
 		if *otpCfg.ValidityPeriodSeconds >= 30 && *otpCfg.ValidityPeriodSeconds <= 600 {

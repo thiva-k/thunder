@@ -20,7 +20,7 @@ The application registers redirect URIs for MCP Inspector:
 
 `EXTERNAL-MCP-CLIENT` is wired to the same authentication flow as the Wayfinder Concierge, so the OAuth consent screen surfaces each requested `booking:*` permission as an individual toggle at sign-in time.
 
-See [Manage Applications](../../../../guides/applications/manage-applications).
+See [Manage Applications](../../../../guides/applications/manage-applications), or [Register an MCP Client in the Console](../../../../guides/mcp/mcp-clients/register-a-client) for the MCP-specific version of this task.
 
 ## Consent at Sign-In
 
@@ -44,7 +44,7 @@ Each MCP tool checks for the same scope its REST counterpart checks for:
 | `create_booking` | `POST /api/bookings` | `booking:create` |
 | `delete_all_bookings` | `DELETE /api/bookings/flights` | `booking:cancel` |
 
-See [Resource Servers](../../../../guides/resource-servers).
+See [Resource Servers](../../../../guides/resource-servers), or [Secure Your MCP Server](../../../../guides/mcp/mcp-server/secure-your-mcp-server) for the MCP-specific version of this task.
 
 ## AuthZEN Authorization Mode
 

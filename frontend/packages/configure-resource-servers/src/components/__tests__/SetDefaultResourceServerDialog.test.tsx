@@ -44,7 +44,12 @@ describe('SetDefaultResourceServerDialog', () => {
     renderWithProviders(<SetDefaultResourceServerDialog open resourceServer={resourceServer} onClose={vi.fn()} />);
 
     expect(screen.getByText('Set default resource server')).toBeInTheDocument();
-    expect(screen.getByText('Payments API')).toBeInTheDocument();
+    // Emphasised inside the translated sentence, not concatenated around it, so translators can
+    // reorder it.
+    expect(screen.getByText('Payments API').tagName).toBe('STRONG');
+    expect(screen.getByText(/will become the default resource server/)).toHaveTextContent(
+      'Payments API will become the default resource server.',
+    );
   });
 
   it('does not render when closed', () => {

@@ -24,6 +24,8 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
 )
 
+func boolPtr(b bool) *bool { return &b }
+
 // buildTestJWT builds a minimal JWT whose payload encodes the given otpSessionData.
 // The header and signature are synthetic; VerifyJWT is mocked so no real crypto is needed.
 func buildTestJWT(sessionData otpSessionData) string {
@@ -59,7 +61,7 @@ func (suite *OTPServiceTestSuite) SetupSuite() {
 		Notification: config.NotificationConfig{
 			OTP: config.OTPConfig{
 				Length:                6,
-				UseNumericOnly:        true,
+				UseNumericOnly:        boolPtr(true),
 				ValidityPeriodSeconds: 120,
 			},
 		},
@@ -73,7 +75,7 @@ func (suite *OTPServiceTestSuite) SetupSuite() {
 func (suite *OTPServiceTestSuite) SetupTest() {
 	config.GetServerRuntime().Config.Notification.OTP = config.OTPConfig{
 		Length:                6,
-		UseNumericOnly:        true,
+		UseNumericOnly:        boolPtr(true),
 		ValidityPeriodSeconds: 120,
 	}
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
@@ -335,7 +337,7 @@ func (suite *OTPServiceTestSuite) TestResolveOTPConfig_NilOverride() {
 	cfg := suite.service.resolveOTPConfig(nil)
 
 	suite.Equal(6, cfg.Length)
-	suite.True(cfg.UseNumericOnly)
+	suite.True(cfg.UsesNumericOnly())
 	suite.Equal(120, cfg.ValidityPeriodSeconds)
 }
 
@@ -385,5 +387,5 @@ func (suite *OTPServiceTestSuite) TestResolveOTPConfig_UseNumericOnly() {
 	numericOnly := false
 	cfg := suite.service.resolveOTPConfig(&common.OTPConfig{UseNumericOnly: &numericOnly})
 
-	suite.False(cfg.UseNumericOnly)
+	suite.False(cfg.UsesNumericOnly())
 }

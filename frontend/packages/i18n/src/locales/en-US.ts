@@ -4624,13 +4624,20 @@ const translations = {
     'listing.columns.type': 'Type',
     'listing.columns.identifier': 'Identifier',
     'listing.columns.actions': 'Actions',
+    'listing.actions.more': 'More actions',
     'listing.systemResourceServer': 'System resource server',
     'listing.default': 'Default',
     'listing.error': 'Failed to load resource servers',
     'actions.setAsDefault': 'Set as default',
     'setDefault.title': 'Set default resource server',
-    'setDefault.message':
-      'will become the default resource server. Requests without a resource parameter will fall back to it.',
+    'setDefault.message': '<bold>{{name}}</bold> will become the default resource server.',
+    'setDefault.unavailableReason': 'Checking the current default resource server.',
+    'setDefault.lockedReason': 'The default resource server is fixed by the deployment configuration.',
+    'setDefault.alreadyDefaultReason': 'This is already the default resource server.',
+    'setDefault.ineligibleTypeReason': 'Only API and custom resource servers can be the default.',
+    'setDefault.explanation':
+      'When an application requests a token without naming a resource server, its permissions come from this one. Only one resource server can be the default at a time.',
+    'setDefault.action': 'Make default resource server',
     'setDefault.confirm': 'Set as default',
     'setDefault.setting': 'Setting…',
     'setDefault.success': '{{name}} is now the default resource server.',
@@ -4716,6 +4723,8 @@ const translations = {
       'A unique identifier for this resource server. When set as an absolute URI, it becomes the token audience for RFC 8707 resource indicators.',
     'create.name.identifierHintMcp':
       'A unique identifier for this MCP server. When set as an absolute URI, it becomes the token audience for RFC 8707 resource indicators.',
+    'create.name.makeDefaultLabel': 'Make this the default resource server',
+    'create.setDefaultError': 'Resource server created, but it could not be made the default.',
     'create.separator.title': 'Choose your permission delimiter',
     'create.separator.subtitle':
       'The delimiter character joins parts of a permission string. This cannot be changed after creation.',

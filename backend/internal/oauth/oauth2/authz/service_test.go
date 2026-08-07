@@ -83,6 +83,8 @@ const (
 		"eyJzdWIiOiJ0ZXN0LXVzZXIiLCJpYXQiOjE3MDE0MjEyMDAsImF1dGhvcml6YXRpb25fcmVxdWVzdF9pZCI6NDJ9."
 )
 
+func boolPtr(b bool) *bool { return &b }
+
 type AuthorizeServiceTestSuite struct {
 	suite.Suite
 	mockInboundClient   *inboundclientmock.InboundClientServiceInterfaceMock
@@ -967,7 +969,7 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_ReplayRe
 
 	svc := suite.newService()
 	svc.criteriaRevoker = revoker
-	svc.cfg.OAuth.Revocation.TokenFamily.OnCodeReplay = true
+	svc.cfg.OAuth.Revocation.TokenFamily.OnCodeReplay = boolPtr(true)
 
 	result, err := svc.GetAuthorizationCodeDetails(context.Background(), "client-id", "code")
 
