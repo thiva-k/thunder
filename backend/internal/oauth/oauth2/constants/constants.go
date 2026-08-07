@@ -335,6 +335,11 @@ const (
 	CIBAMaxExpiresInSeconds = 600
 )
 
+const (
+	// SupportedAuthorizationGrantProfileIDJAG is the constant for supported authorization grant profile ID-JAG.
+	SupportedAuthorizationGrantProfileIDJAG = "urn:ietf:params:oauth:grant-profile:id-jag"
+)
+
 // GetSupportedResponseTypes returns all supported OAuth2 response types.
 func GetSupportedResponseTypes(oauthConfig oauthconfig.Config) []string {
 	allowedResponseTypes := oauthConfig.OAuth.AllowedResponseTypes
