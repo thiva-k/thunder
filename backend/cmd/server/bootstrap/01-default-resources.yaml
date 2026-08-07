@@ -1049,6 +1049,7 @@ nodes:
   executor:
     name: CredentialsAuthExecutor
   onSuccess: provisioning
+  onFailure: prompt_credentials
   layout:
     size:
       width: 244
@@ -1253,6 +1254,7 @@ nodes:
   executor:
     name: CredentialsAuthExecutor
   onSuccess: provisioning
+  onFailure: prompt_registration
 - id: provisioning
   type: TASK_EXECUTION
   executor:
