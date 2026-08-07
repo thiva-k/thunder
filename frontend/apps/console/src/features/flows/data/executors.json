@@ -950,7 +950,8 @@
         "executor": {
           "name": "SessionSignOutExecutor"
         },
-        "onSuccess": ""
+        "onSuccess": "",
+        "onIncomplete": ""
       },
       "properties": {
         "promptOnSignOut": false
@@ -972,7 +973,9 @@
       "action": {
         "type": "EXECUTOR",
         "executor": {"name": "PreDeleteExecutor", "mode": "revoke_all"},
-        "onSuccess": ""
+        "onSuccess": "",
+        "onFailure": "",
+        "onIncomplete": ""
       }
     }
   },
@@ -1029,7 +1032,8 @@
       "action": {
         "type": "EXECUTOR",
         "executor": {"name": "UserDeleteExecutor"},
-        "onSuccess": ""
+        "onSuccess": "",
+        "onFailure": ""
       }
     }
   }

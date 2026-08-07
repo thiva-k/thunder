@@ -142,6 +142,81 @@ describe('flowToCanvasTransformer', () => {
         expect(result.nodes[0].data.action?.onIncomplete).toBe('incomplete-node');
       });
 
+      it('should restore the branching outcomes the executor declares when the flow omits them', () => {
+        // A flow only persists an outcome that was wired to an edge, so a node saved without a
+        // failure/incomplete connection came back without the keys that drive its output handles.
+        const flowData = createBaseFlowData([
+          {
+            id: 'invite-node',
+            type: 'TASK_EXECUTION',
+            executor: {name: 'InviteExecutor', mode: 'generate'},
+            onSuccess: 'next-node',
+            layout: {position: {x: 300, y: 0}, size: {width: 200, height: 100}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        expect(result.nodes[0].data.action).toMatchObject({
+          onSuccess: 'next-node',
+          onFailure: '',
+          onIncomplete: '',
+        });
+      });
+
+      it('should keep the persisted target over the restored default outcome', () => {
+        const flowData = createBaseFlowData([
+          {
+            id: 'invite-node',
+            type: 'TASK_EXECUTION',
+            executor: {name: 'InviteExecutor', mode: 'generate'},
+            onSuccess: 'next-node',
+            onFailure: 'failure-node',
+            layout: {position: {x: 300, y: 0}, size: {width: 200, height: 100}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        expect(result.nodes[0].data.action?.onFailure).toBe('failure-node');
+        expect(result.nodes[0].data.action?.onIncomplete).toBe('');
+      });
+
+      it('should not restore branching outcomes for an executor that declares none', () => {
+        const flowData = createBaseFlowData([
+          {
+            id: 'revoke-node',
+            type: 'TASK_EXECUTION',
+            executor: {name: 'SessionRevocationExecutor'},
+            onSuccess: 'next-node',
+            layout: {position: {x: 300, y: 0}, size: {width: 200, height: 100}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        expect(result.nodes[0].data.action).not.toHaveProperty('onFailure');
+        expect(result.nodes[0].data.action).not.toHaveProperty('onIncomplete');
+      });
+
+      it('should keep only the persisted outcomes for an executor missing from the catalog', () => {
+        const flowData = createBaseFlowData([
+          {
+            id: 'unknown-node',
+            type: 'TASK_EXECUTION',
+            executor: {name: 'NotACatalogExecutor'},
+            onSuccess: 'next-node',
+            onFailure: 'failure-node',
+            layout: {position: {x: 300, y: 0}, size: {width: 200, height: 100}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        expect(result.nodes[0].data.action?.onFailure).toBe('failure-node');
+        expect(result.nodes[0].data.action).not.toHaveProperty('onIncomplete');
+      });
+
       it('should transform DECISION node correctly', () => {
         const flowData = createBaseFlowData([
           {

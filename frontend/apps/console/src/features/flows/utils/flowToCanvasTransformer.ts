@@ -4,6 +4,7 @@
 import type {Edge, Node} from '@xyflow/react';
 import {MarkerType} from '@xyflow/react';
 import VisualFlowConstants from '../constants/VisualFlowConstants';
+import executors from '../data/executors.json';
 import type {Element} from '../models/elements';
 import {ElementTypes} from '../models/elements';
 import type {FlowDefinitionResponse, FlowNode, FlowNodeAction, FlowPrompt} from '../models/responses';
@@ -66,6 +67,77 @@ const DEFAULT_LAYOUT = {
   height: 100,
   position: {x: 0, y: 0},
 };
+
+/**
+ * Branching outcomes whose presence on a node's action drives the failure/incomplete output handles
+ */
+const BRANCHING_OUTCOME_KEYS = ['onFailure', 'onIncomplete'] as const;
+
+/**
+ * Shape of an executor definition read from the resource catalog
+ */
+type ExecutorDefinition = {
+  data?: {
+    action?: {
+      executor?: {name?: string; mode?: string};
+      onFailure?: string;
+      onIncomplete?: string;
+    };
+  };
+};
+
+/**
+ * Builds the catalog lookup key for an executor. Mode is part of the key because the same executor
+ * can declare different outcomes per mode (e.g. `OTPExecutor` generate vs verify).
+ */
+function getExecutorKey(name?: string, mode?: string): string {
+  return `${name ?? ''}::${mode ?? ''}`;
+}
+
+/**
+ * Branching outcomes each executor declares, keyed by executor name and mode.
+ *
+ * Supporting an outcome is a property of the executor definition, not of whichever edges happened
+ * to be connected when the flow was saved, so this is the authoritative source on load.
+ */
+const EXECUTOR_DECLARED_OUTCOMES: Map<string, string[]> = new Map(
+  (executors as ExecutorDefinition[]).map((definition: ExecutorDefinition) => {
+    const action = definition.data?.action;
+
+    return [
+      getExecutorKey(action?.executor?.name, action?.executor?.mode),
+      BRANCHING_OUTCOME_KEYS.filter((key: string) => action?.[key as 'onFailure' | 'onIncomplete'] !== undefined),
+    ];
+  }),
+);
+
+/**
+ * Resolves the branching outcome keys for a TASK_EXECUTION node.
+ *
+ * A flow only persists an outcome key when it was wired to an edge at save time, so a node saved
+ * without a failure/incomplete connection loses the key and the canvas stops rendering its handle.
+ * Re-deriving the keys the executor declares keeps those handles available on every load, while
+ * persisted targets still win over the empty defaults. Nodes whose executor is not in the catalog
+ * keep exactly the keys the flow persisted.
+ */
+function resolveBranchingOutcomes(apiNode: FlowNode): Record<string, string> {
+  const outcomes: Record<string, string> = {};
+  const declaredOutcomes = EXECUTOR_DECLARED_OUTCOMES.get(
+    getExecutorKey(apiNode.executor?.name, apiNode.executor?.mode as string | undefined),
+  );
+
+  declaredOutcomes?.forEach((key: string) => {
+    outcomes[key] = '';
+  });
+
+  BRANCHING_OUTCOME_KEYS.forEach((key: 'onFailure' | 'onIncomplete') => {
+    if (apiNode[key] !== undefined) {
+      outcomes[key] = apiNode[key] as string;
+    }
+  });
+
+  return outcomes;
+}
 
 /**
  * Normalizes INPUT element properties to top-level format.
@@ -264,11 +336,10 @@ function transformNodeToCanvas(apiNode: FlowNode): CanvasNode {
         type: 'EXECUTOR',
         executor: apiNode.executor,
         onSuccess: apiNode.onSuccess,
-        // Only carry the branching outcomes the node actually declares. Their presence drives
-        // the failure/incomplete output handles, so a node without them stays single-outcome
-        // rather than showing a dangling handle.
-        ...(apiNode.onFailure !== undefined ? {onFailure: apiNode.onFailure} : {}),
-        ...(apiNode.onIncomplete !== undefined ? {onIncomplete: apiNode.onIncomplete} : {}),
+        // Carry the branching outcomes the executor declares, not just the ones the flow
+        // persisted. Their presence drives the failure/incomplete output handles, so an executor
+        // that supports them keeps its handles even when they were never connected.
+        ...resolveBranchingOutcomes(apiNode),
       },
     };
 
