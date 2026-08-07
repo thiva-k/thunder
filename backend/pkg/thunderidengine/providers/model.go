@@ -863,7 +863,15 @@ type PromptElement struct {
 }
 
 // ConsentDecisions holds the user's consent decisions.
+//
+// Approval is hierarchical: ConsentDecisions, PurposeDecision and ElementDecision each carry their
+// own Approved flag, and a denial at any level denies everything below it. Approval does not flow
+// the other way, so an approved parent still honors a denied child.
 type ConsentDecisions struct {
+	// Approved indicates whether the user approved the consent as a whole
+	Approved bool `json:"approved"`
+	// Reason optionally records why the decision was made, e.g. the prompt timed out
+	Reason ConsentDecisionReason `json:"reason,omitempty"`
 	// Purposes contains the per-purpose element approval decisions
 	Purposes []PurposeDecision `json:"purposes"`
 }

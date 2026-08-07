@@ -2218,6 +2218,12 @@
                 },
                 {
                   "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TIMER",
+                  "label": "This request expires in {time}. You will then be returned to the application."
+                },
+                {
+                  "id": "{{ID}}",
                   "category": "BLOCK",
                   "type": "BLOCK",
                   "components": [
