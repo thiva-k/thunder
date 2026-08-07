@@ -1,9 +1,8 @@
 # Copyright 2026 The ThunderID Authors
 # SPDX-License-Identifier: Apache-2.0
-
 ---
 apiVersion: openchoreo.dev/v1alpha1
-kind: {{ if .Values.resourceType.cluster }}ClusterResourceType{{ else }}ResourceType{{ end }}
+kind: ClusterResourceType
 metadata:
   name: thunderid
   annotations:
@@ -31,7 +30,7 @@ spec:
         # ExternalSecret is rendered that extracts every property stored at
         # the remote key into a Secret on the data plane, injected into the
         # container via envFrom. Required properties at the key:
-        #   CRYPTO_ENCRYPTION_KEY
+        #   crypto.key (mounted as a file under config/certs/)
         # With runtime.dbType postgres, additionally:
         #   DB_CONFIG_HOSTNAME,  DB_CONFIG_PORT,  DB_CONFIG_NAME,
         #   DB_CONFIG_USERNAME,  DB_CONFIG_PASSWORD,  DB_CONFIG_SSLMODE
@@ -41,11 +40,11 @@ spec:
         #   DB_ENTITY_USERNAME,    DB_ENTITY_PASSWORD,    DB_ENTITY_SSLMODE
         #   DB_RUNTIME_PERSISTENT_HOSTNAME, DB_RUNTIME_PERSISTENT_PORT, DB_RUNTIME_PERSISTENT_NAME,
         #   DB_RUNTIME_PERSISTENT_USERNAME, DB_RUNTIME_PERSISTENT_PASSWORD, DB_RUNTIME_PERSISTENT_SSLMODE
-        # Additionally, one property per {{ "{{.VAR}}" }} placeholder used in
+        # Additionally, one property per {{.VAR}} placeholder used in
         # declarativeResources and not covered by parameters.env — e.g.
         # ADMIN_PASSWORD, which the samples reference for the admin user's
         # credentials.
-        # ThunderID resolves the {{ "{{.VAR}}" }} placeholders in its
+        # ThunderID resolves the {{.VAR}} placeholders in its
         # deployment.yaml and declarative resources from these env vars at
         # startup and fails fast if any is missing.
         secretStore:
@@ -90,7 +89,7 @@ spec:
         # replaces the built-in default entirely when set; the value is used
         # verbatim — no CEL rendering, so environmentConfigs like
         # serverPublicUrl are not interpolated into overrides. deployment.yaml
-        # {{ "{{.VAR}}" }} env placeholders still resolve at startup from the
+        # {{.VAR}} env placeholders still resolve at startup from the
         # secret store values and parameters.env. Leave empty to use the
         # built-in defaults driven by runtime.* and environmentConfigs.
         configOverrides:
@@ -145,7 +144,7 @@ spec:
             # Certificate/key material projected under
             # /opt/thunderid/config/certs/. The image ships NO key material,
             # so the JWT signing pairs must be supplied as properties of a
-            # platform secret store entry (the same way CRYPTO_ENCRYPTION_KEY
+            # platform secret store entry (the same way crypto.key
             # is). By default they are read from secretStore.key alongside the
             # environment values; set storeKey to read the certificate files
             # from a separate store entry instead. The JWT signing pairs are
@@ -514,39 +513,39 @@ spec:
               config:
                 type: "postgres"
                 postgres:
-                  hostname: "{{ "{{.DB_CONFIG_HOSTNAME}}" }}"
-                  port: {{ "{{.DB_CONFIG_PORT}}" }}
-                  name: "{{ "{{.DB_CONFIG_NAME}}" }}"
-                  username: "{{ "{{.DB_CONFIG_USERNAME}}" }}"
-                  password: "{{ "{{.DB_CONFIG_PASSWORD}}" }}"
-                  sslmode: "{{ "{{.DB_CONFIG_SSLMODE}}" }}"
+                  hostname: "{{.DB_CONFIG_HOSTNAME}}"
+                  port: {{.DB_CONFIG_PORT}}
+                  name: "{{.DB_CONFIG_NAME}}"
+                  username: "{{.DB_CONFIG_USERNAME}}"
+                  password: "{{.DB_CONFIG_PASSWORD}}"
+                  sslmode: "{{.DB_CONFIG_SSLMODE}}"
               runtime_transient:
                 type: "postgres"
                 postgres:
-                  hostname: "{{ "{{.DB_RUNTIME_TRANSIENT_HOSTNAME}}" }}"
-                  port: {{ "{{.DB_RUNTIME_TRANSIENT_PORT}}" }}
-                  name: "{{ "{{.DB_RUNTIME_TRANSIENT_NAME}}" }}"
-                  username: "{{ "{{.DB_RUNTIME_TRANSIENT_USERNAME}}" }}"
-                  password: "{{ "{{.DB_RUNTIME_TRANSIENT_PASSWORD}}" }}"
-                  sslmode: "{{ "{{.DB_RUNTIME_TRANSIENT_SSLMODE}}" }}"
+                  hostname: "{{.DB_RUNTIME_TRANSIENT_HOSTNAME}}"
+                  port: {{.DB_RUNTIME_TRANSIENT_PORT}}
+                  name: "{{.DB_RUNTIME_TRANSIENT_NAME}}"
+                  username: "{{.DB_RUNTIME_TRANSIENT_USERNAME}}"
+                  password: "{{.DB_RUNTIME_TRANSIENT_PASSWORD}}"
+                  sslmode: "{{.DB_RUNTIME_TRANSIENT_SSLMODE}}"
               entity:
                 type: "postgres"
                 postgres:
-                  hostname: "{{ "{{.DB_ENTITY_HOSTNAME}}" }}"
-                  port: {{ "{{.DB_ENTITY_PORT}}" }}
-                  name: "{{ "{{.DB_ENTITY_NAME}}" }}"
-                  username: "{{ "{{.DB_ENTITY_USERNAME}}" }}"
-                  password: "{{ "{{.DB_ENTITY_PASSWORD}}" }}"
-                  sslmode: "{{ "{{.DB_ENTITY_SSLMODE}}" }}"
+                  hostname: "{{.DB_ENTITY_HOSTNAME}}"
+                  port: {{.DB_ENTITY_PORT}}
+                  name: "{{.DB_ENTITY_NAME}}"
+                  username: "{{.DB_ENTITY_USERNAME}}"
+                  password: "{{.DB_ENTITY_PASSWORD}}"
+                  sslmode: "{{.DB_ENTITY_SSLMODE}}"
               runtime_persistent:
                 type: "postgres"
                 postgres:
-                  hostname: "{{ "{{.DB_RUNTIME_PERSISTENT_HOSTNAME}}" }}"
-                  port: {{ "{{.DB_RUNTIME_PERSISTENT_PORT}}" }}
-                  name: "{{ "{{.DB_RUNTIME_PERSISTENT_NAME}}" }}"
-                  username: "{{ "{{.DB_RUNTIME_PERSISTENT_USERNAME}}" }}"
-                  password: "{{ "{{.DB_RUNTIME_PERSISTENT_PASSWORD}}" }}"
-                  sslmode: "{{ "{{.DB_RUNTIME_PERSISTENT_SSLMODE}}" }}"
+                  hostname: "{{.DB_RUNTIME_PERSISTENT_HOSTNAME}}"
+                  port: {{.DB_RUNTIME_PERSISTENT_PORT}}
+                  name: "{{.DB_RUNTIME_PERSISTENT_NAME}}"
+                  username: "{{.DB_RUNTIME_PERSISTENT_USERNAME}}"
+                  password: "{{.DB_RUNTIME_PERSISTENT_PASSWORD}}"
+                  sslmode: "{{.DB_RUNTIME_PERSISTENT_SSLMODE}}"
 
             cache:
               disabled: false
