@@ -13,23 +13,24 @@ const items: {
 }[] = [
   {
     icon: <Bot className="text-muted-foreground" />,
-    title: 'Native Agent Identity',
-    description: 'Engineered with native Agent ID to secure end-to-end workflows among humans, agents, and resources.',
+    title: 'Agent-native Identity',
+    description:
+      'Engineered with native Agent ID to secure end-to-end workflows among humans, AI agents, and machines.',
   },
   {
     icon: <Wallet className="text-muted-foreground" />,
-    title: 'Verifiable Credentials',
+    title: 'Decentralized Identity',
     description:
-      'Standards-based issuance and verification of wallet-held digital credentials for user-controlled identity.',
+      'Standards-based support for DIDs, verifiable credentials, and digital wallets for user-controlled identity.',
   },
   {
     icon: <ShieldCheck className="text-muted-foreground" />,
-    title: 'Post-Quantum Ready',
+    title: 'Post-quantum-safe by Design',
     description: 'Built on a post-quantum cryptographic foundation to be inherently resistant to attacks by design.',
   },
   {
     icon: <Zap className="text-muted-foreground" />,
-    title: 'Lightweight, High-Performant Runtime',
+    title: 'Lightweight Runtime with GitOps Support',
     description:
       'Cloud-native, API-first runtime that integrates into modern CI/CD, GitOps, and containerized workflows.',
   },

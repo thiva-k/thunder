@@ -1,6 +1,6 @@
 # ThunderID Documentation ⚡
 
-Documentation for **ThunderID** - a modern identity management suite. This documentation covers installation, configuration, development, and contribution guidelines for the ThunderID platform.
+Documentation for **ThunderID** - an open-source IAM stack. This documentation covers installation, configuration, development, and contribution guidelines for the ThunderID platform.
 
 ## Writing and reviewing docs with agent skills
 

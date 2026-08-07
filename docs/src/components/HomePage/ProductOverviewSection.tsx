@@ -155,9 +155,9 @@ const highlights = [
         <path d="M9 17h6" />
       </svg>
     ),
-    title: 'Native agent identity',
+    title: 'Agent-native identity',
     description:
-      'Engineered with native Agent ID and inherent agentic AI capabilities to secure end-to-end workflows among humans, agents, and resources, including full MCP and A2A authorization.',
+      'Engineered with native Agent ID and inherent agentic AI capabilities to secure end-to-end workflows among humans, AI agents, and machines, including full MCP and A2A authorization.',
   },
   {
     icon: (
@@ -176,7 +176,7 @@ const highlights = [
         <circle cx="12" cy="13" r="1" />
       </svg>
     ),
-    title: 'Post-quantum ready',
+    title: 'Post-quantum-safe by design',
     description:
       'Built upon a Post-Quantum Cryptographic (PQC) foundation to be inherently resistant to "Harvest Now, Decrypt Later" and "Trust Now, Forge Later" attacks and crypto agility by design.',
   },
@@ -201,7 +201,7 @@ const highlights = [
         <path d="M4.5 7.5l6 3M19.5 7.5l-6 3M4.5 16.5l6-3M19.5 16.5l-6-3" />
       </svg>
     ),
-    title: 'Decentralized identity integration',
+    title: 'Decentralized identity',
     description:
       'Designed for integration with decentralized identity infrastructure, including digital wallets, verifiable credentials, DIDs, and trust registries, reducing integration complexity for developers.',
   },
@@ -220,7 +220,7 @@ const highlights = [
         <path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2z" />
       </svg>
     ),
-    title: 'Lightweight, high-performant runtime',
+    title: 'Lightweight runtime with GitOps support',
     description:
       'Built for cloud-native delivery with a lightweight, high-performant, API-first runtime that integrates into modern CI/CD, GitOps, and containerized workflows.',
   },
@@ -414,7 +414,7 @@ const capabilities = [
         <path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32" />
       </svg>
     ),
-    title: 'Standards-first identity engine',
+    title: 'Standards-first identity',
     description:
       'Built on proven open standards including OpenID Connect, OAuth2, SCIM, and SAML and designed to evolve with next-generation standards.',
   },
@@ -530,8 +530,8 @@ export default function ProductOverviewSection(): JSX.Element {
               color: 'text.secondary',
             }}
           >
-            {productName} is an open source IAM stack built in Go, focused on open standards and designed to handle
-            identity for humans, AI agents, and workloads with fully orchestratable identity flows.
+            {productName} is an open-source IAM stack built in Go, focused on open standards and designed to handle
+            identity for humans, AI agents, and machines with fully orchestratable identity flows.
           </Typography>
         </Box>
 

@@ -1,7 +1,7 @@
 # ThunderID OpenChoreo ResourceType
 
 This Helm chart registers a `ClusterResourceType` (or namespace-scoped
-`ResourceType`) that runs the ThunderID Identity Provider as an
+`ResourceType`) that runs ThunderID, an open-source IAM stack, as an
 OpenChoreo-managed platform Resource. It runs on the **SQLite databases
 bundled in the image** by default (zero prerequisites, development only) or
 an **externally hosted PostgreSQL database** (e.g. AWS RDS) for production.

@@ -4,7 +4,7 @@
 apiVersion: v2
 name: thunderid-oc-componenttype
 description: |
-  ComponentType definition for the ThunderID Identity Provider.
+  ComponentType definition for ThunderID, an open-source IAM stack.
   Install this once per cluster (or namespace) to register the thunderid
   component type. The thunderid-component chart depends on this type being present.
 type: application
