@@ -9,7 +9,9 @@ interface Component {
   id: string;
   type?: string;
   label?: string;
+  ref?: string;
   src?: string;
+  variant?: string;
   components?: Component[];
 }
 
@@ -338,8 +340,8 @@ describe('generateFlowGraph', () => {
       expect(new Set(ids).size).toBe(ids.length);
     });
 
-    describe('as a second factor alongside Basic auth', () => {
-      it('should not offer Magic Link as an alternative button next to the password form', () => {
+    describe('alongside Basic auth', () => {
+      it('should offer Magic Link as an alternative button next to the password form', () => {
         const request = generateFlowGraph({
           hasCredentialsAuth: true,
           hasPasskey: false,
@@ -347,14 +349,16 @@ describe('generateFlowGraph', () => {
           hasSmsOtp: false,
         });
 
-        const components = getPromptComponents(request);
-        expect(components.find((c) => c.id === 'block_magic_link')).toBeUndefined();
+        const magicLinkBlock = getPromptComponents(request).find((c) => c.id === 'block_magic_link');
+        expect(magicLinkBlock).toBeDefined();
+        expect(magicLinkBlock?.components?.[0]?.variant).toBe('SECONDARY');
 
         const mainPrompt = request.nodes.find((n) => n.id === 'choose_auth_method');
-        expect(mainPrompt?.prompts?.find((p) => p.action?.ref === 'action_magic_link')).toBeUndefined();
+        const magicLinkAction = mainPrompt?.prompts?.find((p) => p.action?.ref === 'action_magic_link');
+        expect(magicLinkAction?.action?.nextNode).toBe('magic_link_prompt_email');
       });
 
-      it('should route credentials success through an email-collecting step instead of straight to auth_assert', () => {
+      it('should route credentials success straight to auth_assert, without an email-collecting step', () => {
         const request = generateFlowGraph({
           hasCredentialsAuth: true,
           hasPasskey: false,
@@ -362,18 +366,11 @@ describe('generateFlowGraph', () => {
           hasSmsOtp: false,
         });
 
-        expect(request.nodes.find((n) => n.id === 'credentials_auth')?.onSuccess).toBe('collect_email');
-
-        const collectEmail = request.nodes.find((n) => n.id === 'collect_email');
-        expect(collectEmail?.executor?.name).toBe('AttributeCollector');
-        expect(collectEmail?.executor?.inputs).toEqual([
-          {ref: 'input_magic_link_email', identifier: 'email', type: 'EMAIL_INPUT', required: false},
-        ]);
-        expect(collectEmail?.onSuccess).toBe('magic_link_generate');
-        expect(collectEmail?.onIncomplete).toBe('magic_link_prompt_email');
+        expect(request.nodes.find((n) => n.id === 'credentials_auth')?.onSuccess).toBe('auth_assert');
+        expect(request.nodes.find((n) => n.id === 'collect_email')).toBeUndefined();
       });
 
-      it('should route every chain failure back to the primary credentials screen instead of the email prompt', () => {
+      it('should route every chain failure back to its own email prompt', () => {
         const request = generateFlowGraph({
           hasCredentialsAuth: true,
           hasPasskey: false,
@@ -382,15 +379,15 @@ describe('generateFlowGraph', () => {
         });
 
         const generateNode = request.nodes.find((n) => n.id === 'magic_link_generate');
-        expect(generateNode?.onIncomplete).toBe('choose_auth_method');
-        expect(generateNode?.onFailure).toBe('choose_auth_method');
+        expect(generateNode?.onIncomplete).toBe('magic_link_prompt_email');
+        expect(generateNode?.onFailure).toBe('magic_link_prompt_email');
 
         const sendNode = request.nodes.find((n) => n.id === 'magic_link_send_email');
-        expect(sendNode?.onIncomplete).toBe('choose_auth_method');
-        expect(sendNode?.onFailure).toBe('choose_auth_method');
+        expect(sendNode?.onIncomplete).toBe('magic_link_prompt_email');
+        expect(sendNode?.onFailure).toBe('magic_link_prompt_email');
 
         const verifyNode = request.nodes.find((n) => n.id === 'magic_link_verify');
-        expect(verifyNode?.onFailure).toBe('choose_auth_method');
+        expect(verifyNode?.onFailure).toBe('magic_link_prompt_email');
         expect(verifyNode?.onSuccess).toBe('auth_assert');
       });
 
@@ -415,7 +412,48 @@ describe('generateFlowGraph', () => {
         });
 
         expect(request.nodes.find((n) => n.id === 'passkey_verify')?.onSuccess).toBe('auth_assert');
-        expect(request.nodes.find((n) => n.id === 'credentials_auth')?.onSuccess).toBe('collect_email');
+        expect(request.nodes.find((n) => n.id === 'credentials_auth')?.onSuccess).toBe('auth_assert');
+      });
+    });
+
+    describe('button emphasis', () => {
+      const primaryActionIds = (request: ReturnType<typeof generateFlowGraph>): string[] =>
+        getPromptComponents(request)
+          .flatMap((c) => (c.type === 'BLOCK' ? (c.components ?? []) : [c]))
+          .filter((c) => c.type === 'ACTION' && c.variant === 'PRIMARY')
+          .map((c) => c.id);
+
+      it('should make the password form the only primary action when credentials are enabled', () => {
+        const request = generateFlowGraph({
+          hasCredentialsAuth: true,
+          hasPasskey: true,
+          hasMagicLink: true,
+          hasSmsOtp: false,
+        });
+
+        expect(primaryActionIds(request)).toEqual(['action_basic']);
+      });
+
+      it('should promote Passkey to the only primary action when credentials are disabled', () => {
+        const request = generateFlowGraph({
+          hasCredentialsAuth: false,
+          hasPasskey: true,
+          hasMagicLink: true,
+          hasSmsOtp: false,
+        });
+
+        expect(primaryActionIds(request)).toEqual(['action_passkey']);
+      });
+
+      it('should promote Magic Link to the only primary action when it is the only method', () => {
+        const request = generateFlowGraph({
+          hasCredentialsAuth: false,
+          hasPasskey: false,
+          hasMagicLink: true,
+          hasSmsOtp: false,
+        });
+
+        expect(primaryActionIds(request)).toEqual(['action_magic_link']);
       });
     });
   });
@@ -499,6 +537,114 @@ describe('generateFlowGraph', () => {
       const second = generateFlowGraph(options);
 
       expect(first.handle).not.toBe(second.handle);
+    });
+  });
+
+  describe('graph integrity across every toggle combination', () => {
+    const flatten = (components: Component[]): Component[] =>
+      components.flatMap((c) => [c, ...flatten(c.components ?? [])]);
+
+    // Mirrors every option the wizard can pass, so a new combination cannot silently skip the checks.
+    const allCombinations = (): Parameters<typeof generateFlowGraph>[0][] => {
+      const combos: Parameters<typeof generateFlowGraph>[0][] = [];
+      [false, true].forEach((hasCredentialsAuth) =>
+        [false, true].forEach((hasPasskey) =>
+          [false, true].forEach((hasMagicLink) =>
+            [false, true].forEach((hasSmsOtp) =>
+              [false, true].forEach((hasEmailOtpMfa) =>
+                [undefined, 'idp-1'].forEach((socialIdpId) => {
+                  combos.push({
+                    githubIdpId: socialIdpId,
+                    googleIdpId: socialIdpId,
+                    hasCredentialsAuth,
+                    hasEmailOtpMfa,
+                    hasMagicLink,
+                    hasPasskey,
+                    hasSmsOtp,
+                  });
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+      return combos;
+    };
+
+    // The React SDK names each submitted field after the meta component's `ref`, rewriting it only
+    // when the ref matches an entry in the prompt's `inputs[].ref -> identifier` map
+    // (flowTransformer.ts createInputRefMapping). A component whose id an input points at must
+    // therefore carry that input's identifier as its ref, or the field is submitted under a name
+    // the executor never reads.
+    it('names every input component ref after the identifier its executor reads', () => {
+      const mismatched: string[] = [];
+
+      allCombinations().forEach((options) => {
+        const request = generateFlowGraph(options);
+
+        request.nodes
+          .filter((node) => node.type === FlowNodeType.PROMPT)
+          .forEach((node) => {
+            const components = flatten((node.meta?.components as Component[]) ?? []);
+
+            (node.prompts ?? [])
+              .flatMap((prompt) => prompt.inputs ?? [])
+              .forEach((input) => {
+                const component = components.find((c) => c.id === input.ref);
+                if (component && component.ref !== input.identifier) {
+                  mismatched.push(`${node.id}/${component.id} ref=${component.ref} identifier=${input.identifier}`);
+                }
+              });
+          });
+      });
+
+      expect(mismatched).toEqual([]);
+    });
+
+    it('points every edge at a node that exists', () => {
+      const dangling: string[] = [];
+
+      allCombinations().forEach((options) => {
+        const request = generateFlowGraph(options);
+        const ids = new Set(request.nodes.map((node) => node.id));
+
+        request.nodes.forEach((node) => {
+          const targets: [string, string | undefined][] = [
+            ['onSuccess', node.onSuccess],
+            ['onFailure', node.onFailure],
+            ['onIncomplete', node.onIncomplete],
+            ['next', node.next],
+            ['condition.onSkip', node.condition?.onSkip],
+            ...(node.prompts ?? []).map((prompt): [string, string | undefined] => [
+              'action.nextNode',
+              prompt.action?.nextNode,
+            ]),
+          ];
+
+          targets.forEach(([key, target]) => {
+            if (target && !ids.has(target)) {
+              dangling.push(`${node.id}.${key} -> ${target}`);
+            }
+          });
+        });
+      });
+
+      expect(dangling).toEqual([]);
+    });
+
+    it('keeps the Magic Link chain looping back to its own email prompt on failure', () => {
+      const request = generateFlowGraph({
+        hasCredentialsAuth: true,
+        hasMagicLink: true,
+        hasPasskey: false,
+        hasSmsOtp: false,
+      });
+
+      ['magic_link_generate', 'magic_link_send_email', 'magic_link_verify'].forEach((id) => {
+        const node = request.nodes.find((n) => n.id === id);
+        expect(node?.onFailure).toBe('magic_link_prompt_email');
+      });
+      expect(request.nodes.find((n) => n.id === 'magic_link_prompt_email')).toBeDefined();
     });
   });
 });
