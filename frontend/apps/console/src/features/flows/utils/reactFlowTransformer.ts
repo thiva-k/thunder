@@ -188,6 +188,33 @@ export function shouldPromoteToSubmit(components: Element[]): boolean {
   return hasInputs && actionCount === 1;
 }
 
+/** Matches the first `data-action-ref` attribute in a rich text's label and captures its value. */
+const LABEL_ACTION_REF = /\sdata-action-ref\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
+
+/**
+ * Resolves the ref a rich text's action is serialized with. An empty ref reaches here from a link
+ * that was never authored; the label's own sentinel is then preferred, so the serialized action,
+ * the prompt and the label all carry one value the runtime can match. The component id is the
+ * last resort, used when the label has no sentinel either.
+ *
+ * TODO(#4658): drop once the ref is no longer duplicated into the label HTML.
+ *
+ * @param component - The rich text component.
+ * @param ref - The authored ref, if any.
+ * @returns The ref to serialize.
+ */
+function resolveRichTextActionRef(component: Element, ref: string | undefined): string {
+  if (ref !== undefined && ref !== '') {
+    return ref;
+  }
+
+  const label = (component as Element & {label?: string}).label;
+  const sentinel = typeof label === 'string' ? LABEL_ACTION_REF.exec(label) : null;
+  const labelRef = sentinel?.[1] ?? sentinel?.[2];
+
+  return labelRef !== undefined && labelRef !== '' ? labelRef : component.id;
+}
+
 /**
  * Removes internal properties (variants, display, config, action) from components recursively.
  * These transformations prepare the component for the API payload.
@@ -218,11 +245,14 @@ function cleanComponents(components: Element[], promoteSubmit = false): Record<s
     // renderer can dispatch the anchor click as a flow action. Only `ref` survives —
     // `onSuccess` is a canvas-only hint used by the widget-drop edge generator, and the
     // nextNode wiring lives in `prompts.action.nextNode` from `extractActionFromComponent`.
-    if (component.type === ElementTypes.RichText && action !== undefined) {
+    // `action` is `null`, not `undefined`, once the author toggles the link off — the panel
+    // writes an explicit disabled sentinel — so both have to be excluded before reading `ref`.
+    // A present action is always serialized, even with no `ref` of its own: `extractPrompts`
+    // emits a prompt for it, and the resolved ref has to be on the component too or the
+    // runtime has a prompt it can never reach.
+    if (component.type === ElementTypes.RichText && action !== undefined && action !== null) {
       const richTextAction = action as {ref?: string};
-      if (richTextAction.ref !== undefined) {
-        cleanedComponent.action = {ref: richTextAction.ref};
-      }
+      cleanedComponent.action = {ref: resolveRichTextActionRef(component, richTextAction.ref)};
     }
 
     // For input field components, ensure ref property is set
@@ -393,7 +423,7 @@ function extractPrompts(components: Element[], nodeId: string, edges: Edge[]): F
       if (!connectedEdge) {
         return undefined;
       }
-      return {ref: richTextAction.ref ?? component.id, nextNode: connectedEdge.target};
+      return {ref: resolveRichTextActionRef(component, richTextAction.ref), nextNode: connectedEdge.target};
     }
 
     return undefined;
@@ -406,9 +436,12 @@ function extractPrompts(components: Element[], nodeId: string, edges: Edge[]): F
     // Check if this component is an action
     const action = extractActionFromComponent(component);
     if (action) {
-      // This action gets the parent's inputs (all accumulated up to this point)
+      // This action gets the parent's inputs (all accumulated up to this point). A rich-text
+      // link navigates rather than submitting the surrounding form, so it must not inherit
+      // them: the runtime validates the selected action's inputs, and a link sitting inside a
+      // credentials block would otherwise demand a username and password before it could fire.
       const prompt: FlowPrompt = {action};
-      if (parentInputs.length > 0) {
+      if (parentInputs.length > 0 && component.type !== ElementTypes.RichText) {
         prompt.inputs = parentInputs;
       }
       prompts.push(prompt);

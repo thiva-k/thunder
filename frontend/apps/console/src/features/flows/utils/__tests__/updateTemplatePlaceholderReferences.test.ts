@@ -49,6 +49,34 @@ describe('updateTemplatePlaceholderReferences', () => {
 
       expect(result.field).toBe('{{NAME}}');
     });
+
+    it('should replace a placeholder embedded in a longer string', () => {
+      const obj = {label: '<p><a href="#" data-action-ref="{{RECOVERY_ACTION_REF}}">Reset</a></p>'};
+      const replacers = [{key: 'RECOVERY_ACTION_REF', value: 'action_recovery'}];
+
+      const [result] = updateTemplatePlaceholderReferences(obj, replacers);
+
+      expect(result.label).toBe('<p><a href="#" data-action-ref="action_recovery">Reset</a></p>');
+    });
+
+    it('should leave a literal that reads like a replacer key unchanged', () => {
+      const obj = {key: 'ID', title: 'Set the ID'};
+      const replacers = [{key: 'ID', value: 'generated-id'}];
+
+      const [result] = updateTemplatePlaceholderReferences(obj, replacers);
+
+      expect(result.key).toBe('ID');
+      expect(result.title).toBe('Set the ID');
+    });
+
+    it('should leave a runtime template literal unchanged', () => {
+      const obj = {placeholder: '{{ t(signin:forms.credentials.fields.username.placeholder) }}'};
+      const replacers = [{key: 'username', value: 'replaced'}];
+
+      const [result] = updateTemplatePlaceholderReferences(obj, replacers);
+
+      expect(result.placeholder).toBe('{{ t(signin:forms.credentials.fields.username.placeholder) }}');
+    });
   });
 
   describe('ID Type Replacer', () => {

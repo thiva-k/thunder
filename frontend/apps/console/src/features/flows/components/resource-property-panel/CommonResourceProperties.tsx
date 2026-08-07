@@ -105,6 +105,11 @@ function CommonResourceProperties(): ReactElement {
   const {renameStep} = useRenameStep();
   const renameStepRef = useRef(renameStep);
 
+  // Set while a pending edit is being flushed because the selection changed. The flush must
+  // still commit the edit to the node it was made on, but must not re-select that resource,
+  // which would bounce the panel back from whatever the user just clicked.
+  const isFlushingOnSelectionChangeRef = useRef<boolean>(false);
+
   useEffect(() => {
     renameStepRef.current = renameStep;
   }, [renameStep]);
@@ -269,7 +274,9 @@ function CommonResourceProperties(): ReactElement {
           const updatedResource: Resource = cloneDeep(currentResource);
           set(updatedResource as unknown as Record<string, unknown>, propertyKey, newValue);
           lastInteractedResourceRef.current = updatedResource;
-          setLastInteractedResourceRef.current(updatedResource);
+          if (!isFlushingOnSelectionChangeRef.current) {
+            setLastInteractedResourceRef.current(updatedResource);
+          }
         }
         return;
       }
@@ -333,7 +340,9 @@ function CommonResourceProperties(): ReactElement {
         // properties, such as the button's Action selector) would rebase on the
         // pre-change resource and drop the first one.
         lastInteractedResourceRef.current = updatedResource;
-        setLastInteractedResourceRef.current(updatedResource);
+        if (!isFlushingOnSelectionChangeRef.current) {
+          setLastInteractedResourceRef.current(updatedResource);
+        }
       }
     };
   }, [emitPropertyChange]);
@@ -368,7 +377,12 @@ function CommonResourceProperties(): ReactElement {
   // are re-synced below, so the flush still lands on the resource it was typed into.
   useEffect(
     () => () => {
-      (handlePropertyChangeDebouncedRef.current as ReturnType<typeof debounce> | null)?.flush();
+      isFlushingOnSelectionChangeRef.current = true;
+      try {
+        (handlePropertyChangeDebouncedRef.current as ReturnType<typeof debounce> | null)?.flush();
+      } finally {
+        isFlushingOnSelectionChangeRef.current = false;
+      }
     },
     [lastInteractedResource?.id, lastInteractedStepId],
   );

@@ -2279,11 +2279,17 @@
       "data": {
         "__generationMeta__": {
           "strategy": "MERGE_WITH_DROP_POINT",
+          "defaultPropertySelectorId": "{{SELF_SIGN_UP_CALL_STEP_ID}}",
           "replacers": [
             {
               "key": "SELF_SIGN_UP_CALL_STEP_ID",
               "type": "ID",
               "prefix": "self_sign_up_call"
+            },
+            {
+              "key": "SELF_SIGN_UP_ACTION_REF",
+              "type": "ID",
+              "prefix": "action_signup"
             }
           ]
         },
@@ -2300,10 +2306,10 @@
                   "type": "RICH_TEXT",
                   "id": "{{ID}}",
                   "action": {
-                    "ref": "action_signup",
+                    "ref": "{{SELF_SIGN_UP_ACTION_REF}}",
                     "onSuccess": "{{SELF_SIGN_UP_CALL_STEP_ID}}"
                   },
-                  "label": "<p data-component-ref=\"self-sign-up-link\" class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Don't have an account? </span><a href=\"#\" data-action-ref=\"action_signup\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign up</span></a></p>"
+                  "label": "<p data-component-ref=\"self-sign-up-link\" class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Don't have an account? </span><a href=\"#\" data-action-ref=\"{{SELF_SIGN_UP_ACTION_REF}}\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign up</span></a></p>"
                 }
               ]
             }
@@ -2352,11 +2358,17 @@
       "data": {
         "__generationMeta__": {
           "strategy": "MERGE_WITH_DROP_POINT",
+          "defaultPropertySelectorId": "{{SIGN_IN_CALL_STEP_ID}}",
           "replacers": [
             {
               "key": "SIGN_IN_CALL_STEP_ID",
               "type": "ID",
               "prefix": "sign_in_call"
+            },
+            {
+              "key": "SIGN_IN_ACTION_REF",
+              "type": "ID",
+              "prefix": "action_signin"
             }
           ]
         },
@@ -2373,10 +2385,10 @@
                   "type": "RICH_TEXT",
                   "id": "{{ID}}",
                   "action": {
-                    "ref": "action_signin",
+                    "ref": "{{SIGN_IN_ACTION_REF}}",
                     "onSuccess": "{{SIGN_IN_CALL_STEP_ID}}"
                   },
-                  "label": "<p data-component-ref=\"sign-in-link\" class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Already have an account? </span><a href=\"#\" data-action-ref=\"action_signin\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign in</span></a></p>"
+                  "label": "<p data-component-ref=\"sign-in-link\" class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Already have an account? </span><a href=\"#\" data-action-ref=\"{{SIGN_IN_ACTION_REF}}\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign in</span></a></p>"
                 }
               ]
             }
@@ -2425,11 +2437,17 @@
       "data": {
         "__generationMeta__": {
           "strategy": "MERGE_WITH_DROP_POINT",
+          "defaultPropertySelectorId": "{{RECOVERY_CALL_STEP_ID}}",
           "replacers": [
             {
               "key": "RECOVERY_CALL_STEP_ID",
               "type": "ID",
               "prefix": "recovery_call"
+            },
+            {
+              "key": "RECOVERY_ACTION_REF",
+              "type": "ID",
+              "prefix": "action_recovery"
             }
           ]
         },
@@ -2446,10 +2464,10 @@
                   "type": "RICH_TEXT",
                   "id": "{{ID}}",
                   "action": {
-                    "ref": "action_recovery",
+                    "ref": "{{RECOVERY_ACTION_REF}}",
                     "onSuccess": "{{RECOVERY_CALL_STEP_ID}}"
                   },
-                  "label": "<p data-component-ref=\"recovery-link\" class=\"rich-text-paragraph\"><a href=\"#\" data-action-ref=\"action_recovery\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Forgot password?</span></a></p>"
+                  "label": "<p data-component-ref=\"recovery-link\" class=\"rich-text-paragraph\"><a href=\"#\" data-action-ref=\"{{RECOVERY_ACTION_REF}}\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Forgot password?</span></a></p>"
                 }
               ]
             }
