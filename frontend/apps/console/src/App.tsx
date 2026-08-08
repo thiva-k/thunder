@@ -116,23 +116,23 @@ const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage')
 const TrustedIssuerDetailPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.TrustedIssuerDetailPage})),
 );
-const VerifiablePresentationsListPage = lazy(
-  () => import('./features/verifiable-presentations/pages/VerifiablePresentationsListPage'),
+const VerifiablePresentationsListPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiablePresentationsListPage})),
 );
-const VerifiablePresentationCreatePage = lazy(
-  () => import('./features/verifiable-presentations/pages/VerifiablePresentationCreatePage'),
+const VerifiablePresentationCreatePage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiablePresentationCreatePage})),
 );
-const VerifiablePresentationEditPage = lazy(
-  () => import('./features/verifiable-presentations/pages/VerifiablePresentationEditPage'),
+const VerifiablePresentationEditPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiablePresentationEditPage})),
 );
-const VerifiableCredentialsListPage = lazy(
-  () => import('./features/verifiable-credentials/pages/VerifiableCredentialsListPage'),
+const VerifiableCredentialsListPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiableCredentialsListPage})),
 );
-const VerifiableCredentialCreatePage = lazy(
-  () => import('./features/verifiable-credentials/pages/VerifiableCredentialCreatePage'),
+const VerifiableCredentialCreatePage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiableCredentialCreatePage})),
 );
-const VerifiableCredentialEditPage = lazy(
-  () => import('./features/verifiable-credentials/pages/VerifiableCredentialEditPage'),
+const VerifiableCredentialEditPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiableCredentialEditPage})),
 );
 const CreateUserTypePage = lazy(() =>
   import('@thunderid/configure-user-types').then((m) => ({default: m.CreateUserTypePage})),

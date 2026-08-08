@@ -8,6 +8,7 @@ import type {ResourceServerRoutePaths} from '@thunderid/configure-resource-serve
 import type {TranslationRoutePaths} from '@thunderid/configure-translations';
 import type {UserTypeRoutePaths} from '@thunderid/configure-user-types';
 import type {UserRoutePaths} from '@thunderid/configure-users';
+import type {VerifiableCredentialRoutePaths} from '@thunderid/configure-verifiable-credentials';
 
 /**
  * Route paths for the domains Console implements itself, rather than through a
@@ -39,16 +40,6 @@ export interface ConsoleRoutePaths {
     create: () => string;
   };
   roles: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  verifiableCredentials: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  verifiablePresentations: {
     list: () => string;
     detail: (id: string) => string;
     create: () => string;
@@ -112,6 +103,7 @@ export type RouteConfig = OrganizationUnitRoutePaths &
   ConnectionRoutePaths &
   ResourceServerRoutePaths &
   TranslationRoutePaths &
+  VerifiableCredentialRoutePaths &
   ConsoleRoutePaths;
 
 /**

@@ -31,6 +31,8 @@ beforeAll(async () => {
         signin: enUS.signin,
         signup: enUS.signup,
         validations: enUS.validations,
+        'verifiable-credentials': enUS['verifiable-credentials'],
+        'verifiable-presentations': enUS['verifiable-presentations'],
       },
     },
     lng: 'en-US',

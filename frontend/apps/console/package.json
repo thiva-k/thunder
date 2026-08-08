@@ -69,7 +69,7 @@
     "@thunderid/configure-organization-units": "workspace:^",
     "@thunderid/configure-translations": "workspace:^",
     "@thunderid/configure-resource-servers": "workspace:^",
-    "@thunderid/configure-verifiable-presentations": "workspace:^",
+    "@thunderid/configure-verifiable-credentials": "workspace:^",
     "@thunderid/utils": "workspace:^",
     "@wso2/oxygen-ui": "catalog:",
     "@wso2/oxygen-ui-icons-react": "catalog:",

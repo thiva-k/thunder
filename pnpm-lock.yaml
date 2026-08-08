@@ -677,9 +677,9 @@ importers:
       '@thunderid/configure-users':
         specifier: workspace:^
         version: link:../../packages/configure-users
-      '@thunderid/configure-verifiable-presentations':
+      '@thunderid/configure-verifiable-credentials':
         specifier: workspace:^
-        version: link:../../packages/configure-verifiable-presentations
+        version: link:../../packages/configure-verifiable-credentials
       '@thunderid/contexts':
         specifier: workspace:^
         version: link:../../packages/contexts
@@ -1966,7 +1966,7 @@ importers:
         specifier: '>=4.1.0'
         version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.7.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(jsdom@27.0.1)(vite@8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3))
 
-  frontend/packages/configure-verifiable-presentations:
+  frontend/packages/configure-verifiable-credentials:
     devDependencies:
       '@playwright/test':
         specifier: 'catalog:'
@@ -1983,12 +1983,27 @@ importers:
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@10.4.1)
+      '@thunderid/components':
+        specifier: workspace:^
+        version: link:../components
+      '@thunderid/configure-organization-units':
+        specifier: workspace:^
+        version: link:../configure-organization-units
       '@thunderid/contexts':
         specifier: workspace:^
         version: link:../contexts
+      '@thunderid/design':
+        specifier: workspace:^
+        version: link:../design
       '@thunderid/eslint-plugin':
         specifier: workspace:^
         version: link:../eslint-plugin
+      '@thunderid/hooks':
+        specifier: workspace:^
+        version: link:../hooks
+      '@thunderid/logger':
+        specifier: workspace:^
+        version: link:../logger
       '@thunderid/prettier-config':
         specifier: workspace:^
         version: link:../prettier-config
@@ -1998,6 +2013,9 @@ importers:
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
+      '@thunderid/utils':
+        specifier: workspace:^
+        version: link:../utils
       '@types/node':
         specifier: 'catalog:'
         version: 24.7.2
@@ -2010,6 +2028,12 @@ importers:
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
+      '@wso2/oxygen-ui':
+        specifier: 'catalog:'
+        version: 0.13.0(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.0(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@wso2/oxygen-ui-icons-react':
+        specifier: 'catalog:'
+        version: 0.13.0(react@19.2.3)
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
@@ -2022,6 +2046,12 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.3(react@19.2.3)
+      react-i18next:
+        specifier: 'catalog:'
+        version: 16.0.1(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      react-router:
+        specifier: 'catalog:'
+        version: 8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
