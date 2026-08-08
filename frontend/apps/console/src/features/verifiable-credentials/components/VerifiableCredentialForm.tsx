@@ -65,7 +65,7 @@ interface TabPanelProps {
 function TabPanel({children, value, index}: TabPanelProps): JSX.Element {
   return (
     <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{pt: 3}}>{children}</Box>}
+      {value === index && <Box sx={{pb: 3}}>{children}</Box>}
     </div>
   );
 }
@@ -229,6 +229,7 @@ export default function VerifiableCredentialForm({
         <Tab label={t('form.tabs.general')} />
         <Tab label={t('form.tabs.protocolSettings')} />
         <Tab label={t('form.tabs.claims')} />
+        {initial?.id && onDelete && <Tab label={t('form.tabs.advanced', 'Advanced')} />}
       </Tabs>
 
       <TabPanel value={tab} index={0}>
@@ -380,20 +381,6 @@ export default function VerifiableCredentialForm({
               )}
             </Stack>
           </SettingsCard>
-
-          {initial?.id && onDelete && (
-            <SettingsCard title={t('form.dangerZone.title')} description={t('form.dangerZone.description')}>
-              <Typography variant="h6" gutterBottom color="error">
-                {t('form.dangerZone.delete')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
-                {t('form.dangerZone.deleteDescription')}
-              </Typography>
-              <Button variant="contained" color="error" onClick={onDelete}>
-                {t('common:actions.delete')}
-              </Button>
-            </SettingsCard>
-          )}
         </Stack>
       </TabPanel>
 
@@ -433,6 +420,22 @@ export default function VerifiableCredentialForm({
       <TabPanel value={tab} index={2}>
         <ClaimsEditor claims={claims} onChange={handleClaimsChange} />
       </TabPanel>
+
+      {initial?.id && onDelete && (
+        <TabPanel value={tab} index={3}>
+          <SettingsCard title={t('form.dangerZone.title')} description={t('form.dangerZone.description')}>
+            <Typography variant="h6" gutterBottom color="error">
+              {t('form.dangerZone.delete')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
+              {t('form.dangerZone.deleteDescription')}
+            </Typography>
+            <Button variant="contained" color="error" onClick={onDelete}>
+              {t('common:actions.delete')}
+            </Button>
+          </SettingsCard>
+        </TabPanel>
+      )}
 
       {dirty && (
         <UnsavedChangesBar

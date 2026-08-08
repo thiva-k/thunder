@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {screen, waitFor, fireEvent} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {renderWithProviders} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import type {Group} from '../../models/group';
@@ -21,7 +20,6 @@ describe('EditGeneralSettings', () => {
 
   const defaultProps = {
     group: mockGroup,
-    onDeleteClick: vi.fn(),
   };
 
   beforeEach(() => {
@@ -48,22 +46,6 @@ describe('EditGeneralSettings', () => {
 
     expect(screen.getAllByText('Organization Unit').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('ou-123')).toBeInTheDocument();
-  });
-
-  it('should render danger zone section', () => {
-    renderWithProviders(<EditGeneralSettings {...defaultProps} />);
-
-    expect(screen.getByText('Danger Zone')).toBeInTheDocument();
-    expect(screen.getByText('Delete this group')).toBeInTheDocument();
-  });
-
-  it('should call onDeleteClick when delete button is clicked', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<EditGeneralSettings {...defaultProps} />);
-
-    await user.click(screen.getByText('Delete'));
-
-    expect(defaultProps.onDeleteClick).toHaveBeenCalled();
   });
 
   it('should have read-only organization unit field', () => {

@@ -12,7 +12,7 @@ const options: TokenAudienceOption[] = [
   {value: 'user', label: 'User', description: 'Tokens for a signed-in user'},
 ];
 
-const renderSelector = (value = 'application', onChange = vi.fn()) => {
+const renderSelector = (value = 'application', onChange = vi.fn(), disabled = false) => {
   const result = render(
     <TokenAudienceSelector
       title="Issued to"
@@ -20,6 +20,7 @@ const renderSelector = (value = 'application', onChange = vi.fn()) => {
       value={value}
       onChange={onChange}
       footnote="Attribute sets are configured independently for each audience."
+      disabled={disabled}
     >
       <div data-testid="panel-content" />
     </TokenAudienceSelector>,
@@ -166,5 +167,15 @@ describe('TokenAudienceSelector', () => {
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(screen.getByTestId('panel-content')).toBeInTheDocument();
+  });
+
+  describe('disabled', () => {
+    it('marks every tab disabled', () => {
+      renderSelector('application', vi.fn(), true);
+
+      screen.getAllByRole('tab').forEach((tab) => {
+        expect(tab).toBeDisabled();
+      });
+    });
   });
 });

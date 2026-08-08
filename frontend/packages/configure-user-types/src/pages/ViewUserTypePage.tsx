@@ -28,6 +28,7 @@ import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
 import useGetUserType from '../api/useGetUserType';
 import useUpdateUserType from '../api/useUpdateUserType';
+import EditAdvancedSettings from '../components/edit-user-type/advanced-settings/EditAdvancedSettings';
 import EditGeneralSettings from '../components/edit-user-type/general-settings/EditGeneralSettings';
 import EditSchemaSettings from '../components/edit-user-type/schema-settings/EditSchemaSettings';
 import UserTypeDeleteDialog from '../components/edit-user-type/UserTypeDeleteDialog';
@@ -461,6 +462,12 @@ export default function ViewUserTypePage(): JSX.Element {
           aria-controls="usertype-tabpanel-1"
           sx={{textTransform: 'none'}}
         />
+        <Tab
+          label={t('userTypes:edit.tabs.advanced', 'Advanced')}
+          id="usertype-tab-2"
+          aria-controls="usertype-tabpanel-2"
+          sx={{textTransform: 'none'}}
+        />
       </Tabs>
 
       {/* Tab Panels */}
@@ -472,7 +479,6 @@ export default function ViewUserTypePage(): JSX.Element {
             editedAllowSelfRegistration={editedUserType.allowSelfRegistration}
             editedDisplayAttribute={editedUserType.displayAttribute}
             onFieldChange={handleFieldChange}
-            onDeleteClick={userType.isReadOnly ? undefined : () => setDeleteDialogOpen(true)}
             eligibleDisplayProperties={eligibleDisplayProperties}
           />
         </TabPanel>
@@ -484,6 +490,10 @@ export default function ViewUserTypePage(): JSX.Element {
             userTypeName={effectiveName}
             disabled={userType.isReadOnly}
           />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <EditAdvancedSettings onDeleteClick={userType.isReadOnly ? undefined : () => setDeleteDialogOpen(true)} />
         </TabPanel>
       </>
 

@@ -15,12 +15,12 @@ const JWT_CLAIM_DESCRIPTIONS: Record<string, string> = {
   aud: 'Audience — who or what the token is intended for',
   client_id: 'Client ID that requested this token',
   exp: 'Expiration time — Unix timestamp when the token expires',
-  grant_type: 'OAuth 2.0 grant type used to obtain this token',
+  grant_type: 'OAuth 2 grant type used to obtain this token',
   iat: 'Issued at — Unix timestamp when the token was created',
   iss: 'Issuer — entity that created and signed the token',
   jti: 'JWT ID — unique identifier for this specific token',
   nbf: 'Not before — token not valid before this Unix timestamp',
-  scope: 'OAuth 2.0 scopes granted to the token',
+  scope: 'OAuth 2 scopes granted to the token',
   sub: 'Subject — the principal (user) this token represents',
 };
 

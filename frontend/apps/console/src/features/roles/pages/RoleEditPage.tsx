@@ -26,6 +26,7 @@ import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
 import useGetRole from '../api/useGetRole';
 import useUpdateRole, {ROLE_MUTATION_KEY} from '../api/useUpdateRole';
+import EditAdvancedSettings from '../components/edit-role/advanced-settings/EditAdvancedSettings';
 import EditAssignmentsSettings from '../components/edit-role/assignments-settings/EditAssignmentsSettings';
 import EditGeneralSettings from '../components/edit-role/general-settings/EditGeneralSettings';
 import EditPermissionsSettings from '../components/edit-role/permissions-settings/EditPermissionsSettings';
@@ -321,15 +322,18 @@ export default function RoleEditPage(): JSX.Element {
           aria-controls="role-tabpanel-2"
           sx={{textTransform: 'none'}}
         />
+        <Tab
+          label={t('edit.page.tabs.advanced', 'Advanced')}
+          id="role-tab-3"
+          aria-controls="role-tabpanel-3"
+          sx={{textTransform: 'none'}}
+        />
       </Tabs>
 
       {/* Tab Panels */}
       <>
         <TabPanel value={activeTab} index={0}>
-          <EditGeneralSettings
-            role={role}
-            onDeleteClick={role.isReadOnly ? undefined : () => setDeleteDialogOpen(true)}
-          />
+          <EditGeneralSettings role={role} />
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
@@ -342,6 +346,10 @@ export default function RoleEditPage(): JSX.Element {
 
         <TabPanel value={activeTab} index={2}>
           <EditAssignmentsSettings roleId={role.id} isReadOnly={role.isReadOnly} />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
+          <EditAdvancedSettings onDeleteClick={role.isReadOnly ? undefined : () => setDeleteDialogOpen(true)} />
         </TabPanel>
       </>
 

@@ -117,7 +117,7 @@ interface TokenUserAttributesSectionProps {
   hasCertificate?: boolean;
   /**
    * Name of the tab where the OAuth client certificate is configured, used in the
-   * certificate-required hint. Applications use "Advanced Settings"; agents use "Credentials".
+   * certificate-required hint. Applications use "Advanced"; agents use "Credentials".
    */
   certificateLocation?: string;
   /**
@@ -210,7 +210,7 @@ export default function TokenUserAttributesSection({
   disabled = false,
   signingAlg = undefined,
   hasCertificate = false,
-  certificateLocation = 'Advanced Settings',
+  certificateLocation = 'Advanced',
   idTokenResponseType = undefined,
   idTokenEncryptionAlg = undefined,
   idTokenEncryptionEnc = undefined,

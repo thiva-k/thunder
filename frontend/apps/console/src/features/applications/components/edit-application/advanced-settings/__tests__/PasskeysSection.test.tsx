@@ -20,13 +20,12 @@ describe('PasskeysSection', () => {
   });
 
   describe('Rendering', () => {
-    it('renders the section title and description', () => {
+    it('renders the section title, description, and field label', () => {
       render(<PasskeysSection onPasskeysChange={mockOnChange} />);
 
-      expect(screen.getByText('Passkey Allowed Origins')).toBeInTheDocument();
-      expect(
-        screen.getByText('Allowed origins for passkey operations initiated through this application.'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Passkeys')).toBeInTheDocument();
+      expect(screen.getByText('Passkey settings for this application.')).toBeInTheDocument();
+      expect(screen.getByText('Allowed Origins')).toBeInTheDocument();
     });
 
     it('renders an existing origin', () => {
@@ -47,10 +46,11 @@ describe('PasskeysSection', () => {
       expect(screen.getByDisplayValue('https://mobile.example.com')).toBeInTheDocument();
     });
 
-    it('renders no inputs when allowedOrigins is empty', () => {
+    it('renders one empty input when allowedOrigins is empty', () => {
       render(<PasskeysSection allowedOrigins={[]} onPasskeysChange={mockOnChange} />);
 
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('textbox')).toHaveLength(1);
+      expect(screen.getByRole('textbox')).toHaveValue('');
     });
 
     it('shows the Add Origin button when editable', () => {
@@ -90,13 +90,13 @@ describe('PasskeysSection', () => {
       expect(mockOnChange).toHaveBeenCalledWith(['https://app.example.com', '']);
     });
 
-    it('appends to an empty list', async () => {
+    it('appends a second row to an empty list, rather than no-op-ing on the placeholder row', async () => {
       const user = userEvent.setup();
       render(<PasskeysSection allowedOrigins={[]} onPasskeysChange={mockOnChange} />);
 
       await user.click(screen.getByRole('button', {name: /Add Origin/i}));
 
-      expect(mockOnChange).toHaveBeenCalledWith(['']);
+      expect(mockOnChange).toHaveBeenCalledWith(['', '']);
     });
   });
 

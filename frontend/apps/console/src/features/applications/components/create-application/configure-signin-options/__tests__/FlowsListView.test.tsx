@@ -272,7 +272,7 @@ describe('FlowsListView', () => {
       const specialFlows: BasicFlowDefinition[] = [
         {
           id: 'special-flow',
-          name: 'OAuth 2.0 & OIDC Flow',
+          name: 'OAuth 2 & OIDC Flow',
           activeVersion: 1,
           handle: 'oauth-oidc-flow',
           flowType: 'AUTHENTICATION',
@@ -286,7 +286,7 @@ describe('FlowsListView', () => {
       const autocomplete = screen.getByRole('combobox');
       await user.click(autocomplete);
 
-      expect(screen.getByText('OAuth 2.0 & OIDC Flow')).toBeInTheDocument();
+      expect(screen.getByText('OAuth 2 & OIDC Flow')).toBeInTheDocument();
     });
 
     it('should handle flows with very long names', async () => {

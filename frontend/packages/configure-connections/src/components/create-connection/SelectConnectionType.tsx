@@ -50,9 +50,9 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
     {
       type: ConnectionTypes.OAUTH,
       labelKey: 'wizard.type.oauth.label',
-      labelDefault: 'OAuth 2.0 Provider',
+      labelDefault: 'OAuth 2 Provider',
       descriptionKey: 'wizard.type.oauth.description',
-      descriptionDefault: 'Connect any OAuth 2.0 identity provider.',
+      descriptionDefault: 'Connect any OAuth 2 identity provider.',
       tagKey: 'wizard.type.oauth.tag',
       tagDefault: 'Login provider · Enterprise',
       icon: <KeyRound size={28} />,

@@ -27,8 +27,12 @@ vi.mock('../../components/RoleDeleteDialog', () => ({
 }));
 
 vi.mock('../../components/edit-role/general-settings/EditGeneralSettings', () => ({
+  default: () => <div data-testid="edit-general-settings" />,
+}));
+
+vi.mock('../../components/edit-role/advanced-settings/EditAdvancedSettings', () => ({
   default: ({onDeleteClick}: {onDeleteClick: () => void}) => (
-    <div data-testid="edit-general-settings">
+    <div data-testid="edit-advanced-settings">
       <button type="button" onClick={onDeleteClick}>
         Delete
       </button>
@@ -236,11 +240,11 @@ describe('RoleEditPage', () => {
       expect(screen.getByText('Administrator role')).toBeInTheDocument();
     });
 
-    it('should render three tabs', () => {
+    it('should render four tabs', () => {
       render(<RoleEditPage />);
 
       const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(3);
+      expect(tabs).toHaveLength(4);
     });
 
     it('should show General tab panel by default', () => {
@@ -256,7 +260,7 @@ describe('RoleEditPage', () => {
       render(<RoleEditPage />);
 
       const tabs = await screen.findAllByRole('tab');
-      expect(tabs.map((tab) => tab.textContent)).toEqual(['General', 'Permissions', 'Assignments']);
+      expect(tabs.map((tab) => tab.textContent)).toEqual(['General', 'Permissions', 'Assignments', 'Advanced']);
 
       await user.click(tabs[1]);
       expect(screen.getByTestId('permissions-settings')).toBeInTheDocument();
@@ -357,6 +361,8 @@ describe('RoleEditPage', () => {
     it('should open delete dialog when delete is triggered', async () => {
       const user = userEvent.setup();
       render(<RoleEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
 
       const deleteButton = screen.getByRole('button', {name: 'Delete'});
       await user.click(deleteButton);

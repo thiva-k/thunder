@@ -74,7 +74,7 @@ On the **Token** tab, configure what your application's tokens carry and how lon
 - **User**: the tokens issued when a user signs in. Available when the application supports a user sign-in grant, such as `authorization_code`.
 - **Application**: the access token the application receives for itself through the `client_credentials` grant.
 
-Each sub-tab stays read-only until its grant type is enabled on the Advanced Settings tab.
+Each sub-tab stays read-only until its grant type is enabled on the Advanced tab.
 
 ### User Tokens
 
@@ -128,7 +128,7 @@ The current client secret is immediately invalidated. Any running clients using 
 This section applies to OAuth 2.0 / OIDC applications only.
 :::
 
-The **Advanced Settings** tab shows the OAuth 2.0 settings configured at creation.
+The **Advanced** tab shows the OAuth 2.0 settings configured at creation.
 | Setting | Description |
 |---------|-------------|
 | **Grant Types** | The OAuth 2.0 flows this application can use. Supported values: `authorization_code`, `refresh_token`, `client_credentials`, `urn:ietf:params:oauth:grant-type:token-exchange`, `urn:ietf:params:oauth:grant-type:jwt-bearer`. Whether this application can initiate flows directly via `POST /flow/execute` depends on its [application type](../manage-applications#application-types) and, for Full-stack, Custom, and MCP Client applications, its grant configuration. See [Direct Initiation Restriction](../../key-concepts/authentication/integration-models.mdx#app-native) for the full rule. |

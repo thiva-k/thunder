@@ -204,7 +204,7 @@ export interface TwilioConnectionRequest {
 }
 
 /**
- * Request payload for generic OAuth 2.0 connections — no OpenID Connect discovery and no
+ * Request payload for generic OAuth 2 connections — no OpenID Connect discovery and no
  * id_token, so the user profile is always fetched from userInfoEndpoint (required, unlike OIDC).
  */
 export interface OAuth2ConnectionRequest extends OAuthConnectionRequest {

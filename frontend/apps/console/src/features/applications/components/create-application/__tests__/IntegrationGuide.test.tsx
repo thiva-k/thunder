@@ -111,7 +111,7 @@ describe('IntegrationGuide', () => {
     });
   });
 
-  describe('OAuth Configuration', () => {
+  describe('OAuth 2 Configuration', () => {
     it('should display client ID when hasOAuthConfig is true', () => {
       const props = {
         ...defaultProps,

@@ -132,8 +132,8 @@ test.describe("Application Edit", () => {
       await applicationsPage.screenshot("tc007-edit-page");
     });
 
-    await test.step("Click General tab", async () => {
-      await applicationsPage.clickTab("General");
+    await test.step("Click Advanced tab", async () => {
+      await applicationsPage.clickTab("Advanced");
     });
 
     await test.step("Add a redirect URI", async () => {
@@ -162,8 +162,8 @@ test.describe("Application Edit", () => {
       await applicationsPage.gotoEdit(testAppId);
     });
 
-    await test.step("Click General tab", async () => {
-      await applicationsPage.clickTab("General");
+    await test.step("Click Access tab", async () => {
+      await applicationsPage.clickTab("Access");
     });
 
     await test.step("Type an invalid URL into Application URL field", async () => {
@@ -323,8 +323,8 @@ test.describe("Application Edit", () => {
         await applicationsPage.screenshot("tc012-before-delete");
       });
 
-      await test.step("Click General tab", async () => {
-        await applicationsPage.clickTab("General");
+      await test.step("Click Advanced tab", async () => {
+        await applicationsPage.clickTab("Advanced");
       });
 
       await test.step("Click Delete Application and confirm", async () => {

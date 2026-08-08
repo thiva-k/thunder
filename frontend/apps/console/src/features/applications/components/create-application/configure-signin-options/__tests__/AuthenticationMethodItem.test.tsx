@@ -192,10 +192,10 @@ describe('AuthenticationMethodItem', () => {
 
     it('should handle special characters in method names', () => {
       renderComponent({
-        name: 'OAuth 2.0 & OIDC Provider',
+        name: 'OAuth 2 & OIDC Provider',
       });
 
-      expect(screen.getByText('OAuth 2.0 & OIDC Provider')).toBeInTheDocument();
+      expect(screen.getByText('OAuth 2 & OIDC Provider')).toBeInTheDocument();
     });
 
     it('should handle different ID formats', async () => {

@@ -371,8 +371,11 @@ describe('ViewUserTypePage', () => {
       expect(screen.getByText('Display Attribute')).toBeInTheDocument();
     });
 
-    it('displays danger zone with delete button', () => {
+    it('displays danger zone with delete button', async () => {
+      const user = userEvent.setup();
       render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('tab', {name: /advanced/i}));
 
       expect(screen.getByText('Danger Zone')).toBeInTheDocument();
       expect(screen.getByRole('button', {name: /^delete$/i})).toBeInTheDocument();
@@ -703,6 +706,8 @@ describe('ViewUserTypePage', () => {
       const user = userEvent.setup();
       render(<ViewUserTypePage />);
 
+      await user.click(screen.getByRole('tab', {name: /advanced/i}));
+
       const deleteButton = screen.getByRole('button', {name: /^delete$/i});
       await user.click(deleteButton);
 
@@ -717,6 +722,7 @@ describe('ViewUserTypePage', () => {
       const user = userEvent.setup();
       render(<ViewUserTypePage />);
 
+      await user.click(screen.getByRole('tab', {name: /advanced/i}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       await waitFor(() => {

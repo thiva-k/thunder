@@ -69,7 +69,7 @@ interface EditTokenSettingsProps {
   actorSub?: string;
   /**
    * Name of the tab where the OAuth client certificate is configured, used in the
-   * certificate-required hint. Defaults to "Advanced Settings" (applications); agents pass
+   * certificate-required hint. Defaults to "Advanced" (applications); agents pass
    * "Credentials".
    */
   certificateLocation?: string;
@@ -169,7 +169,7 @@ export default function EditTokenSettings({
   showUserInfoTab = true,
   showActorClaim = false,
   actorSub = '<agent-id>',
-  certificateLocation = 'Advanced Settings',
+  certificateLocation = 'Advanced',
 }: EditTokenSettingsProps) {
   const logger = useLogger('EditTokenSettings');
   const {t} = useTranslation();

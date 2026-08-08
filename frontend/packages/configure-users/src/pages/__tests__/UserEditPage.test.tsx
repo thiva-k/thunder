@@ -457,10 +457,13 @@ describe('UserEditPage', () => {
       expect(screen.getByText('Employee')).toBeInTheDocument();
     });
 
-    it('renders the General and Attributes tabs, and the Delete button', () => {
+    it('renders the General, Attributes, and Advanced tabs, and the Delete button', async () => {
+      const user = userEvent.setup();
       render(<UserEditPage />);
 
-      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['General', 'Attributes']);
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['General', 'Attributes', 'Advanced']);
+
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       expect(screen.getByRole('button', {name: /^delete$/i})).toBeInTheDocument();
     });
 
@@ -791,6 +794,7 @@ describe('UserEditPage', () => {
         'General',
         'Attributes',
         'Credentials',
+        'Advanced',
       ]);
     });
 
@@ -835,6 +839,8 @@ describe('UserEditPage', () => {
       const user = userEvent.setup();
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
+
       const deleteButton = screen.getByRole('button', {name: /^delete$/i});
       await user.click(deleteButton);
 
@@ -851,6 +857,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');
@@ -866,6 +873,7 @@ describe('UserEditPage', () => {
       const user = userEvent.setup();
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');
@@ -882,6 +890,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');
@@ -903,6 +912,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');
@@ -924,6 +934,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');
@@ -941,6 +952,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');
@@ -960,6 +972,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
       const dialog = screen.getByRole('dialog');

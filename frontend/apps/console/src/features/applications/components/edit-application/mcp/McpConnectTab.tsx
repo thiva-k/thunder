@@ -10,13 +10,10 @@ import type {JSX} from 'react';
 import {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import McpAccessSection from './McpAccessSection';
-import resolveApplicationType, {isClientCredentialsOnlyGrantSet} from '../../../utils/resolveApplicationType';
-import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
+import resolveApplicationType from '../../../utils/resolveApplicationType';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';
 import CopyableField from '../../common/CopyableField';
-import RegenerateFlowSecretDialog from '../../RegenerateFlowSecretDialog';
 import RegenerateSecretDialog from '../../RegenerateSecretDialog';
-import DangerZoneSection from '../general-settings/DangerZoneSection';
 
 /**
  * Props for the {@link McpConnectTab} component.
@@ -53,11 +50,6 @@ export interface McpConnectTabProps {
   isReadOnly: boolean;
 
   /**
-   * Callback invoked after the application is successfully deleted
-   */
-  onDeleteSuccess?: () => void;
-
-  /**
    * Callback to report whether the access section currently has validation errors
    * (feeds the Save bar). Only invoked for user-delegated clients — machine-to-machine
    * clients never render the access section.
@@ -68,10 +60,10 @@ export interface McpConnectTabProps {
 /**
  * The Connect tab of the mcp-client template's edit page, replacing the generic
  * General tab. Composed of, top to bottom: an identity card (OAuth profile badge, Application
- * ID, Client ID, and — for confidential clients — a client secret row with a Generate action),
- * an access card (allowed user types, client URI, and authorized redirect URIs) — shown only
- * for user-delegated clients — and the shared danger zone (Delete Application and, for
- * flow-native clients, Flow Secret regeneration).
+ * ID, Client ID, and — for confidential clients — a client secret row with a Generate action)
+ * and an access card (allowed user types, client URI, and authorized redirect URIs) — shown only
+ * for user-delegated clients. The shared danger zone (Delete Application and, for flow-native
+ * clients, Flow Secret regeneration) lives in the Advanced tab.
  *
  * Every edit is routed through `onFieldChange` and, for `inboundAuthConfig`, spreads the
  * existing `oauth2Config` so backend fields not modeled on the frontend survive round-trips.
@@ -81,7 +73,6 @@ export interface McpConnectTabProps {
  * @param props.oauth2Config - OAuth2 configuration for the application
  * @param props.onFieldChange - Callback invoked when a field value changes
  * @param props.isReadOnly - Whether the application is read-only
- * @param props.onDeleteSuccess - Callback invoked after the application is successfully deleted
  * @param props.onValidationChange - Callback invoked with whether the access section has validation errors
  *
  * @returns JSX element displaying the Connect tab
@@ -104,17 +95,12 @@ export default function McpConnectTab({
   onFieldChange,
   sectionResetKey = 0,
   isReadOnly,
-  onDeleteSuccess = undefined,
   onValidationChange = undefined,
 }: McpConnectTabProps): JSX.Element {
   const {t} = useTranslation();
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [secretDialogOpen, setSecretDialogOpen] = useState(false);
   const [newClientSecret, setNewClientSecret] = useState<string>('');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [regenerateFlowSecretDialogOpen, setRegenerateFlowSecretDialogOpen] = useState(false);
-  const [flowSecretDialogOpen, setFlowSecretDialogOpen] = useState(false);
-  const [newFlowSecret, setNewFlowSecret] = useState<string>('');
 
   // The canonical application type (explicit type, falling back to config shape) drives the
   // client-type badge, rather than inferring M2M from grant shape.
@@ -124,18 +110,6 @@ export default function McpConnectTab({
   const isConfidentialClient =
     oauth2Config?.tokenEndpointAuthMethod === TokenEndpointAuthMethods.CLIENT_SECRET_BASIC ||
     oauth2Config?.tokenEndpointAuthMethod === TokenEndpointAuthMethods.CLIENT_SECRET_POST;
-
-  // Only flow-native apps are issued a Flow Secret and can rotate it: full-stack, custom, or mcp
-  // apps using the embedded (non-redirect) sign-in option. Browser (public redirect) and m2m (direct
-  // token, including client_credentials-only mcp configs) apps never hold one, regardless of OAuth
-  // config shape.
-  const grantTypes = oauth2Config?.grantTypes ?? [];
-  const isFlowNativeClient =
-    (resolvedType === 'fullstack' || resolvedType === 'custom' || resolvedType === 'mcp') &&
-    (!oauth2Config ||
-      (!oauth2Config.publicClient &&
-        !grantTypes.includes('authorization_code') &&
-        !isClientCredentialsOnlyGrantSet(grantTypes)));
 
   const handleRegenerateClick = useCallback((): void => {
     setRegenerateDialogOpen(true);
@@ -149,20 +123,6 @@ export default function McpConnectTab({
   const handleSecretDialogClose = useCallback((): void => {
     setSecretDialogOpen(false);
     setNewClientSecret('');
-  }, []);
-
-  const handleRegenerateFlowSecretClick = useCallback((): void => {
-    setRegenerateFlowSecretDialogOpen(true);
-  }, []);
-
-  const handleRegenerateFlowSecretSuccess = useCallback((flowSecret: string): void => {
-    setNewFlowSecret(flowSecret);
-    setFlowSecretDialogOpen(true);
-  }, []);
-
-  const handleFlowSecretDialogClose = useCallback((): void => {
-    setFlowSecretDialogOpen(false);
-    setNewFlowSecret('');
   }, []);
 
   const copyLabel = t('common:actions.copy');
@@ -251,14 +211,6 @@ export default function McpConnectTab({
             onValidationChange={onValidationChange}
           />
         )}
-
-        {!isReadOnly && (
-          <DangerZoneSection
-            showRegenerateFlowSecret={isFlowNativeClient}
-            onRegenerateFlowSecretClick={handleRegenerateFlowSecretClick}
-            onDeleteClick={() => setDeleteDialogOpen(true)}
-          />
-        )}
       </Stack>
 
       <RegenerateSecretDialog
@@ -272,32 +224,6 @@ export default function McpConnectTab({
         open={secretDialogOpen}
         clientSecret={newClientSecret}
         onClose={handleSecretDialogClose}
-      />
-
-      <RegenerateFlowSecretDialog
-        open={regenerateFlowSecretDialogOpen}
-        applicationId={application.id}
-        onClose={() => setRegenerateFlowSecretDialogOpen(false)}
-        onSuccess={handleRegenerateFlowSecretSuccess}
-      />
-
-      <ClientSecretSuccessDialog
-        open={flowSecretDialogOpen}
-        clientSecret={newFlowSecret}
-        title={t('applications:regenerateFlowSecret.success.title')}
-        subtitle={t('applications:regenerateFlowSecret.success.subtitle')}
-        secretLabel={t('applications:regenerateFlowSecret.success.secretLabel')}
-        copySecretLabel={t('applications:regenerateFlowSecret.success.copySecret')}
-        securityReminderTitle={t('applications:regenerateFlowSecret.success.securityReminder.title')}
-        securityReminderDescription={t('applications:regenerateFlowSecret.success.securityReminder.description')}
-        onClose={handleFlowSecretDialogClose}
-      />
-
-      <ApplicationDeleteDialog
-        open={deleteDialogOpen}
-        applicationId={application.id}
-        onClose={() => setDeleteDialogOpen(false)}
-        onSuccess={onDeleteSuccess}
       />
     </>
   );

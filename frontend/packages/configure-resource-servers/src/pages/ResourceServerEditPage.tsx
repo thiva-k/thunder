@@ -370,7 +370,7 @@ export default function ResourceServerEditPage(): JSX.Element {
           sx={{textTransform: 'none'}}
         />
         <Tab
-          label={t('resourceServers:edit.tab.advanced', 'Advanced Settings')}
+          label={t('resourceServers:edit.tab.advanced', 'Advanced')}
           id="resource-server-tab-1"
           aria-controls="resource-server-tabpanel-1"
           sx={{textTransform: 'none'}}
@@ -386,6 +386,15 @@ export default function ResourceServerEditPage(): JSX.Element {
             }}
           />
         </Box>
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={TAB_ADVANCED}>
+        <AdvancedTab
+          key={resourceServer.id}
+          resourceServer={resourceServer}
+          identifier={editedFields.identifier ?? resourceServer.identifier ?? ''}
+          onIdentifierChange={(v) => handleFieldChange('identifier', v)}
+        />
 
         {!resourceServer.isReadOnly && (
           <SettingsCard
@@ -432,15 +441,6 @@ export default function ResourceServerEditPage(): JSX.Element {
               logger.error('Failed to navigate after delete', {error: err});
             });
           }}
-        />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={TAB_ADVANCED}>
-        <AdvancedTab
-          key={resourceServer.id}
-          resourceServer={resourceServer}
-          identifier={editedFields.identifier ?? resourceServer.identifier ?? ''}
-          onIdentifierChange={(v) => handleFieldChange('identifier', v)}
         />
       </TabPanel>
 

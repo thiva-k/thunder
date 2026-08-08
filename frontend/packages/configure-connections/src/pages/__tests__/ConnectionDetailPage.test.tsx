@@ -129,12 +129,17 @@ describe('ConnectionDetailPage', () => {
     updateMutationState.isError = false;
   });
 
-  it('renders the general tab with quick-copy, the credentials form, and a danger-zone delete', () => {
+  it('renders the general tab with quick-copy and the credentials form', () => {
     render(<ConnectionDetailPage />);
     expect(screen.getByTestId('connection-id-copy')).toBeInTheDocument();
     expect(screen.getByDisplayValue('g1')).toBeInTheDocument();
     expect(screen.getByText('Unique identifier for this connection.')).toBeInTheDocument();
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
+  });
+
+  it('renders the danger-zone delete on the advanced tab', () => {
+    render(<ConnectionDetailPage />);
+    fireEvent.click(screen.getByTestId('connection-tab-advanced'));
     expect(screen.getByTestId('connection-delete-button')).toBeInTheDocument();
   });
 
@@ -205,6 +210,7 @@ describe('ConnectionDetailPage', () => {
 
   it('deletes the connection and returns to the list', () => {
     render(<ConnectionDetailPage />);
+    fireEvent.click(screen.getByTestId('connection-tab-advanced'));
     fireEvent.click(screen.getByTestId('connection-delete-button'));
     fireEvent.click(screen.getByTestId('connection-delete-confirm'));
     expect(deleteMock).toHaveBeenCalledWith('g1', expect.anything());

@@ -25,20 +25,12 @@ vi.mock('../OperationModesSection', () => ({
   ),
 }));
 
-vi.mock('../SecuritySection', () => ({
-  default: () => <div data-testid="security-section">Security</div>,
-}));
-
 vi.mock('../OwnerSection', () => ({
   default: () => <div data-testid="owner-section">Owner</div>,
 }));
 
 vi.mock('../AllowedUserTypesSection', () => ({
   default: () => <div data-testid="allowed-user-types-section">Allowed User Types</div>,
-}));
-
-vi.mock('../TokenEndpointAuthMethodSection', () => ({
-  default: () => <div data-testid="token-endpoint-auth-method-section">Token Endpoint Auth Method</div>,
 }));
 
 vi.mock('../DangerZoneSection', () => ({
@@ -89,10 +81,8 @@ describe('EditAdvancedSettings', () => {
     );
 
     expect(screen.getByTestId('operation-modes-section')).toBeInTheDocument();
-    expect(screen.getByTestId('security-section')).toBeInTheDocument();
     expect(screen.getByTestId('owner-section')).toBeInTheDocument();
     expect(screen.getByTestId('allowed-user-types-section')).toBeInTheDocument();
-    expect(screen.getByTestId('token-endpoint-auth-method-section')).toBeInTheDocument();
     expect(screen.getByTestId('danger-zone-section')).toBeInTheDocument();
   });
 
@@ -178,8 +168,8 @@ describe('EditAdvancedSettings', () => {
     expect(mockOnFieldChange).toHaveBeenCalledWith('inboundAuthConfig', []);
   });
 
-  describe('Delegated mode toggle', () => {
-    it('shows the toggle checked when Delegated mode is on', () => {
+  describe('Operating mode selector', () => {
+    it('selects "On behalf of a user" when Delegated mode is on', () => {
       render(
         <EditAdvancedSettings
           agent={mockAgent}
@@ -189,10 +179,11 @@ describe('EditAdvancedSettings', () => {
         />,
       );
 
-      expect(screen.getByRole('switch', {name: 'Delegated mode'})).toBeChecked();
+      expect(screen.getByRole('tab', {name: 'On behalf of a user'})).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('tab', {name: 'On its own behalf'})).toHaveAttribute('aria-selected', 'false');
     });
 
-    it('shows the toggle unchecked when Delegated mode is off', () => {
+    it('selects "On its own behalf" when Delegated mode is off', () => {
       render(
         <EditAdvancedSettings
           agent={mockAgent}
@@ -202,7 +193,8 @@ describe('EditAdvancedSettings', () => {
         />,
       );
 
-      expect(screen.getByRole('switch', {name: 'Delegated mode'})).not.toBeChecked();
+      expect(screen.getByRole('tab', {name: 'On its own behalf'})).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('tab', {name: 'On behalf of a user'})).toHaveAttribute('aria-selected', 'false');
     });
 
     it('turns on Delegated mode by adding authorization_code and requiring PKCE', async () => {
@@ -219,7 +211,7 @@ describe('EditAdvancedSettings', () => {
         />,
       );
 
-      await user.click(screen.getByRole('switch', {name: 'Delegated mode'}));
+      await user.click(screen.getByRole('tab', {name: 'On behalf of a user'}));
 
       expect(mockOnFieldChange).toHaveBeenCalledWith(
         'inboundAuthConfig',
@@ -254,7 +246,7 @@ describe('EditAdvancedSettings', () => {
         />,
       );
 
-      await user.click(screen.getByRole('switch', {name: 'Delegated mode'}));
+      await user.click(screen.getByRole('tab', {name: 'On its own behalf'}));
 
       expect(mockOnFieldChange).toHaveBeenCalledWith(
         'inboundAuthConfig',
@@ -267,7 +259,7 @@ describe('EditAdvancedSettings', () => {
       );
     });
 
-    it('disables the toggle for read-only agents', () => {
+    it('disables the selector for read-only agents', () => {
       render(
         <EditAdvancedSettings
           agent={{...mockAgent, isReadOnly: true}}
@@ -277,7 +269,8 @@ describe('EditAdvancedSettings', () => {
         />,
       );
 
-      expect(screen.getByRole('switch', {name: 'Delegated mode'})).toBeDisabled();
+      expect(screen.getByRole('tab', {name: 'On behalf of a user'})).toBeDisabled();
+      expect(screen.getByRole('tab', {name: 'On its own behalf'})).toBeDisabled();
     });
   });
 

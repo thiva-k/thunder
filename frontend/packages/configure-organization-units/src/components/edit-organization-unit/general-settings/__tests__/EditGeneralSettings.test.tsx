@@ -33,17 +33,6 @@ vi.mock('@/components/edit-organization-unit/general-settings/ParentSettingsSect
   ),
 }));
 
-vi.mock('@/components/edit-organization-unit/general-settings/DangerZoneSection', () => ({
-  default: ({onDeleteClick}: {onDeleteClick: () => void}) => (
-    <div data-testid="danger-zone-section">
-      DangerZoneSection
-      <button type="button" onClick={onDeleteClick}>
-        Delete
-      </button>
-    </div>
-  ),
-}));
-
 describe('EditGeneralSettings', () => {
   const mockOrganizationUnit: OrganizationUnit = {
     id: 'ou-123',
@@ -53,47 +42,27 @@ describe('EditGeneralSettings', () => {
     parent: null,
   };
 
-  const mockOnDeleteClick = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should render all three sections', () => {
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+  it('should render both sections', () => {
+    renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     expect(screen.getByTestId('quick-copy-section')).toBeInTheDocument();
     expect(screen.getByTestId('parent-settings-section')).toBeInTheDocument();
-    expect(screen.getByTestId('danger-zone-section')).toBeInTheDocument();
   });
 
   it('should pass organizationUnit to QuickCopySection', () => {
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+    renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     expect(screen.getByText(/QuickCopySection - engineering/)).toBeInTheDocument();
   });
 
   it('should pass organizationUnit to ParentSettingsSection', () => {
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+    renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     expect(screen.getByText(/ParentSettingsSection - Engineering/)).toBeInTheDocument();
-  });
-
-  it('should pass onDeleteClick to DangerZoneSection', () => {
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
-
-    const deleteButton = screen.getByText('Delete');
-    fireEvent.click(deleteButton);
-
-    expect(mockOnDeleteClick).toHaveBeenCalledTimes(1);
   });
 
   it('should handle clipboard copy and show copied state', async () => {
@@ -104,9 +73,7 @@ describe('EditGeneralSettings', () => {
       configurable: true,
     });
 
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+    renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     const copyButton = screen.getByText('Copy Handle');
     fireEvent.click(copyButton);
@@ -126,9 +93,7 @@ describe('EditGeneralSettings', () => {
       configurable: true,
     });
 
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+    renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     const copyButton = screen.getByText('Copy Handle');
     fireEvent.click(copyButton);
@@ -164,9 +129,7 @@ describe('EditGeneralSettings', () => {
       configurable: true,
     });
 
-    renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+    renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     const copyButton = screen.getByText('Copy Handle');
 
@@ -197,9 +160,7 @@ describe('EditGeneralSettings', () => {
   });
 
   it('should cleanup timeout on unmount', () => {
-    const {unmount} = renderWithProviders(
-      <EditGeneralSettings organizationUnit={mockOrganizationUnit} onDeleteClick={mockOnDeleteClick} />,
-    );
+    const {unmount} = renderWithProviders(<EditGeneralSettings organizationUnit={mockOrganizationUnit} />);
 
     // Should not throw on unmount
     expect(() => unmount()).not.toThrow();

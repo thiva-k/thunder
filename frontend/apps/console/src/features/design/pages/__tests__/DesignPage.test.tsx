@@ -43,6 +43,7 @@ vi.mock('@thunderid/contexts', async () => {
 
 let themesError: Error | null = null;
 let layoutsError: Error | null = null;
+let layoutsList: {id: string; handle: string; displayName: string; layout: unknown}[] = [];
 
 vi.mock('@thunderid/design', () => ({
   useGetThemes: () => ({
@@ -52,7 +53,7 @@ vi.mock('@thunderid/design', () => ({
     refetch: mockRefetchThemes,
   }),
   useGetLayouts: () => ({
-    data: {layouts: []},
+    data: {layouts: layoutsList},
     error: layoutsError,
     refetch: mockRefetchLayouts,
   }),
@@ -66,6 +67,7 @@ describe('DesignPage', () => {
     vi.clearAllMocks();
     themesError = null;
     layoutsError = null;
+    layoutsList = [{id: 'layout-1', handle: 'centered', displayName: 'Centered', layout: {}}];
   });
 
   it('renders the themes and layouts section headers', () => {
@@ -105,12 +107,40 @@ describe('DesignPage', () => {
     expect(screen.queryByText('Centered')).not.toBeInTheDocument();
   });
 
-  it('shows an error toast, resolved rather than raw, when creating a layout preset fails', async () => {
+  it('renders every layout returned by the backend', () => {
+    layoutsList = [
+      {id: 'layout-1', handle: 'centered', displayName: 'Centered', layout: {}},
+      {id: 'layout-2', handle: 'centered2', displayName: 'Centered2', layout: {}},
+    ];
+
+    render(<DesignPage />);
+
+    expect(screen.getByText('Centered')).toBeInTheDocument();
+    expect(screen.getByText('Centered2')).toBeInTheDocument();
+  });
+
+  it('shows an empty state when there are no layouts', () => {
+    layoutsList = [];
+
+    render(<DesignPage />);
+
+    expect(screen.getByText('No layouts yet')).toBeInTheDocument();
+  });
+
+  it('navigates to a layout when its card is clicked', () => {
+    render(<DesignPage />);
+
+    fireEvent.click(screen.getByText('Centered'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/design/layouts/layout-1');
+  });
+
+  it('shows an error toast, resolved rather than raw, when creating a layout fails', async () => {
     mockCreateLayout.mockRejectedValue(new Error('Network error'));
 
     render(<DesignPage />);
 
-    fireEvent.click(screen.getByRole('button', {name: 'Centered'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Add Layout'}));
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith('Failed to create layout. Please try again.', 'error');
@@ -122,7 +152,7 @@ describe('DesignPage', () => {
 
     render(<DesignPage />);
 
-    fireEvent.click(screen.getByRole('button', {name: 'Centered'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Add Layout'}));
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/design/layouts/layout-new');

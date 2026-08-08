@@ -59,7 +59,7 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
   {
     key: 'oauth',
     backendType: ConnectionTypes.OAUTH,
-    displayName: 'OAuth 2.0',
+    displayName: 'OAuth 2',
     descriptionKey: 'connections:vendor.oauth.description',
     logo: (
       <ResourceAvatar
