@@ -470,3 +470,80 @@ describe('FlowComponentRenderer — STACK grid layout (items)', () => {
     expect(stack.className).toContain('custom-stack');
   });
 });
+
+describe('FlowComponentRenderer — standalone RESEND routing', () => {
+  const resendComponent = {
+    id: 'action_resend',
+    type: 'RESEND',
+    category: 'ACTION',
+    eventType: 'SUBMIT',
+    label: 'Resend',
+  } as unknown as EmbeddedFlowComponent;
+
+  const renderResend = (onSubmit: (...args: unknown[]) => void = noop) =>
+    renderWithProviders(
+      <FlowComponentRenderer
+        component={resendComponent}
+        index={0}
+        values={{otp: '123456'}}
+        isLoading={false}
+        resolve={identity}
+        onInputChange={noop}
+        onSubmit={onSubmit}
+      />,
+    );
+
+  it('renders a RESEND component that sits outside a block', () => {
+    renderResend();
+
+    expect(screen.getByText('Resend')).toBeTruthy();
+  });
+
+  it('dispatches its own action when clicked', () => {
+    const onSubmit = vi.fn();
+    renderResend(onSubmit);
+
+    fireEvent.click(screen.getByText('Resend'));
+
+    expect(onSubmit).toHaveBeenCalledWith(resendComponent, {otp: '123456'});
+  });
+
+  it('renders a RESEND component nested in a stack', () => {
+    const stack = {
+      id: 'stack_actions',
+      type: 'STACK',
+      direction: 'col',
+      components: [resendComponent],
+    } as unknown as EmbeddedFlowComponent;
+
+    renderWithProviders(
+      <FlowComponentRenderer
+        component={stack}
+        index={0}
+        values={{}}
+        isLoading={false}
+        resolve={identity}
+        onInputChange={noop}
+        onSubmit={noop}
+      />,
+    );
+
+    expect(screen.getByText('Resend')).toBeTruthy();
+  });
+
+  it('disables the button while the flow is loading', () => {
+    renderWithProviders(
+      <FlowComponentRenderer
+        component={resendComponent}
+        index={0}
+        values={{}}
+        isLoading
+        resolve={identity}
+        onInputChange={noop}
+        onSubmit={noop}
+      />,
+    );
+
+    expect((document.getElementById('action_resend') as HTMLButtonElement).disabled).toBe(true);
+  });
+});

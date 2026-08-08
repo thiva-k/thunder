@@ -3,7 +3,7 @@
 
 import {EmbeddedFlowComponentType, EmbeddedFlowEventType, type ConsentPurpose} from '@thunderid/react';
 import type {JSX} from 'react';
-import BlockAdapter from './adapters/BlockAdapter';
+import BlockAdapter, {ResendButtonAdapter} from './adapters/BlockAdapter';
 import ConsentAdapter from './adapters/ConsentAdapter';
 import CopyableTextAdapter from './adapters/CopyableTextAdapter';
 import DividerAdapter from './adapters/DividerAdapter';
@@ -29,6 +29,7 @@ import type {FlowComponent, FlowComponentRendererProps} from '../../models/flow'
  * - `DIVIDER` → {@link DividerAdapter}
  * - `BLOCK` (form or trigger) → {@link BlockAdapter}
  * - `ACTION / TRIGGER` (standalone) → {@link StandaloneTriggerAdapter}
+ * - `RESEND` (standalone) → {@link ResendButtonAdapter}
  *
  * Consumers must wrap their submit/trigger handlers into the normalised
  * `onSubmit(action, inputs)` callback.  Setting a `key` on the rendered
@@ -166,6 +167,18 @@ export default function FlowComponentRenderer({
   // QR_CODE
   if (comp.type === 'QR_CODE') {
     return <QrCodeAdapter component={comp} additionalData={additionalData} />;
+  }
+
+  // Standalone RESEND (outside of a block, so it dispatches its own action)
+  if (comp.type === 'RESEND') {
+    return (
+      <ResendButtonAdapter
+        component={comp}
+        isLoading={isLoading}
+        resolve={resolve}
+        onClick={() => onSubmit(comp, values)}
+      />
+    );
   }
 
   // Standalone ACTION / TRIGGER (outside of a block)

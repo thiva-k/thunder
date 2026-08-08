@@ -78,7 +78,7 @@ interface ResendButtonAdapterProps {
   onClick: () => void;
 }
 
-function ResendButtonAdapter({component, isLoading, resolve, onClick}: ResendButtonAdapterProps): JSX.Element {
+export function ResendButtonAdapter({component, isLoading, resolve, onClick}: ResendButtonAdapterProps): JSX.Element {
   const {t} = useTranslation();
 
   return (
