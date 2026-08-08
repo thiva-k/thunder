@@ -30,6 +30,8 @@ interface TokenAudienceSelectorProps {
   onChange: (value: string) => void;
   /** Optional note under the list, e.g. that each audience is configured independently. */
   footnote?: string;
+  /** Disables the whole selector (e.g. for a read-only resource). Options stay visible but inert. */
+  disabled?: boolean;
   /** Settings for the selected audience. */
   children: ReactNode;
 }
@@ -55,6 +57,7 @@ export default function TokenAudienceSelector({
   value,
   onChange,
   footnote = undefined,
+  disabled = false,
   children,
 }: TokenAudienceSelectorProps): ReactNode {
   const handleChange = (_event: SyntheticEvent, newValue: string): void => {
@@ -89,6 +92,7 @@ export default function TokenAudienceSelector({
               <Tab
                 key={option.value}
                 value={option.value}
+                disabled={disabled}
                 id={`${TAB_ID_PREFIX}${option.value}`}
                 aria-controls={PANEL_ID}
                 aria-label={option.label}

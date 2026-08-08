@@ -108,8 +108,8 @@ describe('InviteMembersCard', () => {
     });
 
     it('renders an extra count when totalResults exceeds the avatar limit', () => {
-      const manyUsers = Array.from({length: 5}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
-      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 8, users: manyUsers}});
+      const manyUsers = Array.from({length: 7}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
+      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 10, users: manyUsers}});
 
       render(<InviteMembersCard />);
 
@@ -122,6 +122,26 @@ describe('InviteMembersCard', () => {
       render(<InviteMembersCard />);
 
       expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument();
+    });
+
+    it('overlaps avatars with negative margin when there are 5 or fewer members', () => {
+      const fiveUsers = Array.from({length: 5}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
+      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 5, users: fiveUsers}});
+
+      render(<InviteMembersCard />);
+
+      const avatarBoxes = document.querySelectorAll('.member-avatar');
+      expect(avatarBoxes[1]).toHaveStyle({marginLeft: '-10px'});
+    });
+
+    it('overlaps avatars with negative margin when there are more than 5 members', () => {
+      const manyUsers = Array.from({length: 7}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
+      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 7, users: manyUsers}});
+
+      render(<InviteMembersCard />);
+
+      const avatarBoxes = document.querySelectorAll('.member-avatar');
+      expect(avatarBoxes[1]).toHaveStyle({marginLeft: '-10px'});
     });
   });
 

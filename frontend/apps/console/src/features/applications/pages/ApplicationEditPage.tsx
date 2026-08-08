@@ -30,10 +30,11 @@ import RouteConfig from '../../../configs/RouteConfig';
 import useUpdateApplication from '../api/useUpdateApplication';
 import SettingsLockNotice from '../components/common/SettingsLockNotice';
 import ShowClientSecret from '../components/create-application/ShowClientSecret';
+import EditAccessSettings from '../components/edit-application/access/EditAccessSettings';
 import EditAdvancedSettings from '../components/edit-application/advanced-settings/EditAdvancedSettings';
+import EditCredentialsSettings from '../components/edit-application/credentials/EditCredentialsSettings';
 import EditCustomizationSettings from '../components/edit-application/customization-settings/EditCustomizationSettings';
 import EditFlowsSettings from '../components/edit-application/flows-settings/EditFlowsSettings';
-import EditGeneralSettings from '../components/edit-application/general-settings/EditGeneralSettings';
 import IntegrationGuides from '../components/edit-application/integration-guides/IntegrationGuides';
 import McpConnectTab from '../components/edit-application/mcp/McpConnectTab';
 import EditTokenSettings from '../components/edit-application/token-settings/EditTokenSettings';
@@ -119,7 +120,8 @@ export default function ApplicationEditPage() {
   const [mcpAccessInvalid, setMcpAccessInvalid] = useState(false);
   const [advancedSettingsInvalid, setAdvancedSettingsInvalid] = useState(false);
   const [customizationSettingsInvalid, setCustomizationSettingsInvalid] = useState(false);
-  const [generalSettingsInvalid, setGeneralSettingsInvalid] = useState(false);
+  const [accessSettingsInvalid, setAccessSettingsInvalid] = useState(false);
+  const [credentialsSettingsInvalid, setCredentialsSettingsInvalid] = useState(false);
 
   const handleBack = async () => {
     await navigate(RouteConfig.applications.list());
@@ -280,9 +282,6 @@ export default function ApplicationEditPage() {
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
                 isReadOnly={application.isReadOnly === true}
-                onDeleteSuccess={() => {
-                  handleBack().catch(() => null);
-                }}
                 onValidationChange={setMcpAccessInvalid}
                 sectionResetKey={sectionResetKey}
               />
@@ -338,7 +337,13 @@ export default function ApplicationEditPage() {
                 oauth2Constraints={isMcpM2mOnly ? undefined : oauth2Constraints}
                 onFieldChange={handleFieldChange}
                 allowedGrantTypes={[...TemplateConstants.MCP_CLIENT_ALLOWED_GRANT_TYPES]}
+                // MCP clients manage their redirect URIs on their own Connect tab.
+                showRedirectUris={false}
+                sectionResetKey={sectionResetKey}
                 onValidationChange={setAdvancedSettingsInvalid}
+                onDeleteSuccess={() => {
+                  handleBack().catch(() => null);
+                }}
               />
             ),
           },
@@ -569,33 +574,39 @@ export default function ApplicationEditPage() {
               sx={{textTransform: 'none'}}
             />
             <Tab
-              label={t('applications:edit.page.tabs.general')}
+              label={t('applications:edit.page.tabs.access', 'Access')}
               id="edit-tab-1"
               aria-controls="edit-tabpanel-1"
               sx={{textTransform: 'none'}}
             />
             <Tab
-              label={t('applications:edit.page.tabs.flows')}
+              label={t('applications:edit.page.tabs.credentials', 'Credentials')}
               id="edit-tab-2"
               aria-controls="edit-tabpanel-2"
               sx={{textTransform: 'none'}}
             />
             <Tab
-              label={t('applications:edit.page.tabs.customization')}
+              label={t('applications:edit.page.tabs.flows')}
               id="edit-tab-3"
               aria-controls="edit-tabpanel-3"
               sx={{textTransform: 'none'}}
             />
             <Tab
-              label={t('applications:edit.page.tabs.token')}
+              label={t('applications:edit.page.tabs.customization')}
               id="edit-tab-4"
               aria-controls="edit-tabpanel-4"
               sx={{textTransform: 'none'}}
             />
             <Tab
-              label={t('applications:edit.page.tabs.advanced')}
+              label={t('applications:edit.page.tabs.token')}
               id="edit-tab-5"
               aria-controls="edit-tabpanel-5"
+              sx={{textTransform: 'none'}}
+            />
+            <Tab
+              label={t('applications:edit.page.tabs.advanced')}
+              id="edit-tab-6"
+              aria-controls="edit-tabpanel-6"
               sx={{textTransform: 'none'}}
             />
           </Tabs>
@@ -607,29 +618,37 @@ export default function ApplicationEditPage() {
               <IntegrationGuides
                 application={application}
                 oauth2Config={oauth2Config}
-                onGoToFlows={() => setActiveTab(2)}
-                onGoToCustomization={() => setActiveTab(3)}
+                onGoToFlows={() => setActiveTab(3)}
+                onGoToCustomization={() => setActiveTab(4)}
               />
             </TabPanel>
 
-            {/* General Tab */}
+            {/* Access Tab */}
             <TabPanel value={activeTab} index={1}>
-              <EditGeneralSettings
+              <EditAccessSettings
                 application={application}
                 editedApp={editedApp}
                 onFieldChange={handleFieldChange}
-                oauth2Config={oauth2Config}
-                onDeleteSuccess={() => {
-                  handleBack().catch(() => null);
-                }}
-                onValidationChange={setGeneralSettingsInvalid}
+                onValidationChange={setAccessSettingsInvalid}
                 showUserAccessConfig={userAccessUnlocked}
                 sectionResetKey={sectionResetKey}
               />
             </TabPanel>
 
-            {/* Flows Tab */}
+            {/* Credentials Tab */}
             <TabPanel value={activeTab} index={2}>
+              <EditCredentialsSettings
+                application={application}
+                editedApp={editedApp}
+                oauth2Config={oauth2Config}
+                onFieldChange={handleFieldChange}
+                showAttestation={supportsAttestation}
+                onValidationChange={setCredentialsSettingsInvalid}
+              />
+            </TabPanel>
+
+            {/* Flows Tab */}
+            <TabPanel value={activeTab} index={3}>
               <SettingsLockNotice isUnlocked={userAccessUnlocked} message={userAccessLockMessage}>
                 <EditFlowsSettings
                   application={userGatedApplication}
@@ -640,7 +659,7 @@ export default function ApplicationEditPage() {
             </TabPanel>
 
             {/* Customization Tab */}
-            <TabPanel value={activeTab} index={3}>
+            <TabPanel value={activeTab} index={4}>
               <SettingsLockNotice isUnlocked={userAccessUnlocked} message={userAccessLockMessage}>
                 <EditCustomizationSettings
                   application={userGatedApplication}
@@ -653,7 +672,7 @@ export default function ApplicationEditPage() {
             </TabPanel>
 
             {/* Token Tab */}
-            <TabPanel value={activeTab} index={4}>
+            <TabPanel value={activeTab} index={5}>
               <EditTokenSettingsTabs
                 sectionResetKey={sectionResetKey}
                 application={application}
@@ -664,16 +683,20 @@ export default function ApplicationEditPage() {
               />
             </TabPanel>
 
-            {/* Advanced Settings Tab */}
-            <TabPanel value={activeTab} index={5}>
+            {/* Advanced Tab */}
+            <TabPanel value={activeTab} index={6}>
               <EditAdvancedSettings
                 application={application}
                 editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 oauth2Constraints={oauth2Constraints}
                 onFieldChange={handleFieldChange}
-                showAttestation={supportsAttestation}
+                showRedirectUris={userAccessUnlocked}
+                sectionResetKey={sectionResetKey}
                 onValidationChange={setAdvancedSettingsInvalid}
+                onDeleteSuccess={() => {
+                  handleBack().catch(() => null);
+                }}
               />
             </TabPanel>
           </>
@@ -693,7 +716,8 @@ export default function ApplicationEditPage() {
             mcpAccessInvalid ||
             customizationSettingsInvalid ||
             advancedSettingsInvalid ||
-            generalSettingsInvalid ||
+            accessSettingsInvalid ||
+            credentialsSettingsInvalid ||
             isMissingRedirectUri ||
             isMissingCertificate ||
             application.isReadOnly === true
@@ -715,7 +739,8 @@ export default function ApplicationEditPage() {
             setMcpAccessInvalid(false);
             setAdvancedSettingsInvalid(false);
             setCustomizationSettingsInvalid(false);
-            setGeneralSettingsInvalid(false);
+            setAccessSettingsInvalid(false);
+            setCredentialsSettingsInvalid(false);
             setSectionResetKey((key) => key + 1);
           }}
           onSave={() => {

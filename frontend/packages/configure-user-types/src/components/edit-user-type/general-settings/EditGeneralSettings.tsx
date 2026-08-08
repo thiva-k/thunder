@@ -4,7 +4,7 @@
 import {SettingsCard} from '@thunderid/components';
 import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
 import {useResolveDisplayName} from '@thunderid/hooks';
-import {Stack, Typography, Button, Select, MenuItem} from '@wso2/oxygen-ui';
+import {Stack, Typography, Select, MenuItem} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useState, useCallback, useRef, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -17,13 +17,12 @@ export interface EditGeneralSettingsProps {
   editedAllowSelfRegistration: boolean | undefined;
   editedDisplayAttribute: string | undefined;
   onFieldChange: (field: string, value: unknown) => void;
-  onDeleteClick?: () => void;
   eligibleDisplayProperties: SchemaPropertyInput[];
 }
 
 /**
  * General settings tab content for the User Type edit page.
- * Displays Organization Unit, Self Registration, Display Attribute, and Danger Zone sections.
+ * Displays Organization Unit, Self Registration, and Display Attribute sections.
  */
 export default function EditGeneralSettings({
   userType,
@@ -31,7 +30,6 @@ export default function EditGeneralSettings({
   editedAllowSelfRegistration,
   editedDisplayAttribute,
   onFieldChange,
-  onDeleteClick = undefined,
   eligibleDisplayProperties,
 }: EditGeneralSettingsProps): JSX.Element {
   const {t} = useTranslation();
@@ -142,27 +140,6 @@ export default function EditGeneralSettings({
           })}
         </Select>
       </SettingsCard>
-
-      {/* Danger Zone */}
-      {onDeleteClick && (
-        <SettingsCard
-          title={t('userTypes:edit.general.dangerZone.title', 'Danger Zone')}
-          description={t('userTypes:edit.general.dangerZone.description', 'Irreversible actions for this user type.')}
-        >
-          <Typography variant="h6" gutterBottom color="error">
-            {t('userTypes:edit.general.dangerZone.deleteUserType', 'Delete User Type')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
-            {t(
-              'userTypes:edit.general.dangerZone.deleteUserTypeDescription',
-              'Permanently delete this user type and all associated schema definitions. This action cannot be undone.',
-            )}
-          </Typography>
-          <Button variant="contained" color="error" onClick={onDeleteClick}>
-            {t('common:actions.delete')}
-          </Button>
-        </SettingsCard>
-      )}
     </Stack>
   );
 }

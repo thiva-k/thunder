@@ -105,12 +105,9 @@ vi.mock('../../components/GroupDeleteDialog', () => ({
 }));
 
 vi.mock('../../components/edit-group/general-settings/EditGeneralSettings', () => ({
-  default: ({group, onDeleteClick}: {group: {id: string; name: string}; onDeleteClick: () => void}) => (
+  default: ({group}: {group: {id: string; name: string}}) => (
     <div data-testid="general-settings">
       <span>{group.name}</span>
-      <button type="button" data-testid="delete-click" onClick={onDeleteClick}>
-        Delete
-      </button>
     </div>
   ),
 }));
@@ -119,6 +116,16 @@ vi.mock('../../components/edit-group/members-settings/EditMembersSettings', () =
   default: ({group}: {group: {id: string; name: string}}) => (
     <div data-testid="members-settings">
       <span>Members of {group.name}</span>
+    </div>
+  ),
+}));
+
+vi.mock('../../components/edit-group/advanced-settings/EditAdvancedSettings', () => ({
+  default: ({onDeleteClick}: {onDeleteClick: () => void}) => (
+    <div data-testid="advanced-settings">
+      <button type="button" data-testid="delete-click" onClick={onDeleteClick}>
+        Delete
+      </button>
     </div>
   ),
 }));
@@ -241,10 +248,11 @@ describe('GroupEditPage', () => {
     expect(screen.getByTestId('members-settings')).toBeInTheDocument();
   });
 
-  it('should open delete dialog from general settings', async () => {
+  it('should open delete dialog from advanced settings', async () => {
     const user = userEvent.setup();
     renderWithProviders(<GroupEditPage />);
 
+    await user.click(screen.getByText('Advanced'));
     await user.click(screen.getByTestId('delete-click'));
 
     await waitFor(() => {
@@ -256,6 +264,7 @@ describe('GroupEditPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<GroupEditPage />);
 
+    await user.click(screen.getByText('Advanced'));
     await user.click(screen.getByTestId('delete-click'));
     await waitFor(() => {
       expect(screen.getByTestId('delete-dialog')).toBeInTheDocument();
@@ -271,6 +280,7 @@ describe('GroupEditPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<GroupEditPage />);
 
+    await user.click(screen.getByText('Advanced'));
     await user.click(screen.getByTestId('delete-click'));
     await waitFor(() => {
       expect(screen.getByTestId('delete-dialog')).toBeInTheDocument();

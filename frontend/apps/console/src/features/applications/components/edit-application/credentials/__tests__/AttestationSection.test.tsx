@@ -209,9 +209,10 @@ describe('AttestationSection', () => {
 
       await user.click(screen.getByText('applications:edit.advanced.attestation.addDigest'));
 
+      // An empty list already shows one placeholder row; clicking Add appends a second real row.
       expect(
-        screen.getByPlaceholderText('applications:edit.advanced.attestation.placeholder.certificateSha256Digest'),
-      ).toBeInTheDocument();
+        screen.getAllByPlaceholderText('applications:edit.advanced.attestation.placeholder.certificateSha256Digest'),
+      ).toHaveLength(2);
     });
 
     it('should emit the service account credentials when entered', async () => {

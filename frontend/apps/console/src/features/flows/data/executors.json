@@ -95,7 +95,7 @@
     "display": {
       "header": "OAuth Executor",
       "label": "OAuth",
-      "description": "Authenticate against a generic OAuth 2.0 provider",
+      "description": "Authenticate against a generic OAuth 2 provider",
       "image": "assets/images/icons/link.svg",
       "showOnResourcePanel": true
     },

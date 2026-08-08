@@ -24,6 +24,7 @@ import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
 import useGetGroup from '../api/useGetGroup';
 import useUpdateGroup from '../api/useUpdateGroup';
+import EditAdvancedSettings from '../components/edit-group/advanced-settings/EditAdvancedSettings';
 import EditGeneralSettings from '../components/edit-group/general-settings/EditGeneralSettings';
 import EditMembersSettings from '../components/edit-group/members-settings/EditMembersSettings';
 import GroupDeleteDialog from '../components/GroupDeleteDialog';
@@ -315,19 +316,26 @@ export default function GroupEditPage(): JSX.Element {
           aria-controls="group-tabpanel-1"
           sx={{textTransform: 'none'}}
         />
+        <Tab
+          label={t('edit.page.tabs.advanced', 'Advanced')}
+          id="group-tab-2"
+          aria-controls="group-tabpanel-2"
+          sx={{textTransform: 'none'}}
+        />
       </Tabs>
 
       {/* Tab Panels */}
       <>
         <TabPanel value={activeTab} index={0}>
-          <EditGeneralSettings
-            group={group}
-            onDeleteClick={group.isReadOnly ? undefined : () => setDeleteDialogOpen(true)}
-          />
+          <EditGeneralSettings group={group} />
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
           <EditMembersSettings group={group} />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <EditAdvancedSettings onDeleteClick={group.isReadOnly ? undefined : () => setDeleteDialogOpen(true)} />
         </TabPanel>
       </>
 

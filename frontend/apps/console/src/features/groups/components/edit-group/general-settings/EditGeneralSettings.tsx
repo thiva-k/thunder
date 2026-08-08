@@ -2,17 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
-import {
-  Stack,
-  TextField,
-  Button,
-  IconButton,
-  Typography,
-  InputAdornment,
-  Tooltip,
-  FormControl,
-  FormLabel,
-} from '@wso2/oxygen-ui';
+import {Stack, TextField, IconButton, InputAdornment, Tooltip, FormControl, FormLabel} from '@wso2/oxygen-ui';
 import {Copy, Check} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useRef, useEffect, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -21,14 +11,13 @@ import type {Group} from '../../../models/group';
 
 interface EditGeneralSettingsProps {
   group: Group;
-  onDeleteClick?: () => void;
 }
 
 /**
  * General settings tab content for the Group edit page.
- * Displays Organization Unit and Danger Zone sections.
+ * Displays Organization Unit information.
  */
-export default function EditGeneralSettings({group, onDeleteClick = undefined}: EditGeneralSettingsProps): JSX.Element {
+export default function EditGeneralSettings({group}: EditGeneralSettingsProps): JSX.Element {
   const {t} = useTranslation();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,24 +136,6 @@ export default function EditGeneralSettings({group, onDeleteClick = undefined}: 
           </FormControl>
         </Stack>
       </SettingsCard>
-
-      {/* Danger Zone */}
-      {onDeleteClick && (
-        <SettingsCard
-          title={t('groups:edit.general.sections.dangerZone.title')}
-          description={t('groups:edit.general.sections.dangerZone.description')}
-        >
-          <Typography variant="h6" gutterBottom color="error">
-            {t('groups:edit.general.sections.dangerZone.deleteGroup')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
-            {t('groups:edit.general.sections.dangerZone.deleteGroupDescription')}
-          </Typography>
-          <Button variant="contained" color="error" onClick={onDeleteClick}>
-            {t('common:actions.delete')}
-          </Button>
-        </SettingsCard>
-      )}
     </Stack>
   );
 }

@@ -325,7 +325,7 @@ export interface OAuth2Token {
 }
 
 /**
- * OAuth2 Configuration
+ * OAuth 2 Configuration
  *
  * Complete OAuth2/OIDC configuration for an application's inbound authentication.
  * This includes client credentials, allowed OAuth2 flows, redirect URIs,

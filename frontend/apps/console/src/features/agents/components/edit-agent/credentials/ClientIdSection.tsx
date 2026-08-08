@@ -2,65 +2,41 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
-import {FormControl, FormLabel, IconButton, InputAdornment, TextField, Tooltip} from '@wso2/oxygen-ui';
-import {Check, Copy} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
+import CopyableField from '../../../../applications/components/common/CopyableField';
 import type {OAuthAgentConfig} from '../../../models/agent';
 
 interface ClientIdSectionProps {
   oauth2Config?: OAuthAgentConfig;
-  copiedField: string | null;
-  onCopyToClipboard: (text: string, fieldName: string) => Promise<void>;
 }
 
-export default function ClientIdSection({
-  oauth2Config = undefined,
-  copiedField,
-  onCopyToClipboard,
-}: ClientIdSectionProps): JSX.Element | null {
+export default function ClientIdSection({oauth2Config = undefined}: ClientIdSectionProps): JSX.Element | null {
   const {t} = useTranslation();
 
   if (!oauth2Config?.clientId) return null;
 
+  const clientIdLabel = t('agents:edit.credentials.sections.identifier.clientIdLabel', 'Client ID');
+  const copyLabel = t('common:actions.copy');
+
   return (
     <SettingsCard
-      title={t('agents:edit.credentials.clientId.title', 'Client ID')}
+      title={t('agents:edit.credentials.sections.identifier.title', 'Identifier')}
       description={t(
-        'agents:edit.credentials.clientId.description',
-        'The public identifier this agent uses to authenticate as a client.',
+        'agents:edit.credentials.sections.identifier.description',
+        'Unique identifier used to reference this agent.',
       )}
     >
-      <FormControl fullWidth>
-        <FormLabel htmlFor="agent-client-id-input">
-          {t('agents:edit.credentials.clientSecret.clientIdLabel', 'Client ID')}
-        </FormLabel>
-        <TextField
-          fullWidth
-          id="agent-client-id-input"
-          value={oauth2Config.clientId}
-          InputProps={{
-            readOnly: true,
-            endAdornment: (
-              <InputAdornment position="end">
-                <Tooltip title={copiedField === 'clientId' ? t('common:actions.copied') : t('common:actions.copy')}>
-                  <IconButton
-                    onClick={() => {
-                      if (oauth2Config.clientId) {
-                        onCopyToClipboard(oauth2Config.clientId, 'clientId').catch(() => null);
-                      }
-                    }}
-                    edge="end"
-                  >
-                    {copiedField === 'clientId' ? <Check size={16} /> : <Copy size={16} />}
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
-          }}
-          sx={{'& input': {fontFamily: 'monospace', fontSize: '0.875rem'}}}
-        />
-      </FormControl>
+      <CopyableField
+        id="agent-credentials-client-id"
+        label={clientIdLabel}
+        value={oauth2Config.clientId}
+        copyAriaLabel={`${copyLabel} ${clientIdLabel}`}
+        hint={t(
+          'agents:edit.credentials.sections.identifier.clientIdHint',
+          'The public OAuth2 client identifier this agent uses to authenticate as a client.',
+        )}
+      />
     </SettingsCard>
   );
 }

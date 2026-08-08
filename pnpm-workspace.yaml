@@ -193,6 +193,14 @@ overrides:
   # CVE-2026-35591) — libvips vulnerabilities inherited by sharp. Transitive via next's optional
   # image-optimization dependency, which pins sharp to the vulnerable <0.35.0 range.
   sharp: '>=0.35.3'
+  # JUSTIFICATION: Fixes GHSA-28wg-ghj8-5hjv — nanoid non-secure generators can loop indefinitely
+  # with negative size. Transitive via @scalar packages, which use the nanoid 5.x line. Pinned
+  # exact (not an open range) so the resolver can't dedupe this edge onto an untested major.
+  nanoid@>=4.0.0 <5.1.16: 5.1.16
+  # JUSTIFICATION: Fixes GHSA-2v37-7h3g-55p8 — nanoid custom generators can loop indefinitely when
+  # size is zero. Transitive via postcss, which requires the nanoid 3.x (CJS) line — an open-ended
+  # target here previously let the resolver dedupe postcss onto ESM-only nanoid 5.x and broke it.
+  nanoid@<3.3.17: 3.3.18
 
 packageExtensions:
   '@hookform/resolvers':
@@ -209,10 +217,19 @@ peerDependencyRules:
     '@codecov/vite-plugin>vite': '8'
 
 auditConfig:
-  ignoreCves: []
+  ignoreGhsas:
+    # JUSTIFICATION: image-size ICNS parser infinite-loop DoS, transitive via docusaurus mdx-loader.
+    # No patched release exists on npm yet (advisory lists "Patched: None"); revisit and add an
+    # override once image-size ships a fix.
+    - GHSA-w3rx-r6r6-pgpr
+    # JUSTIFICATION: image-size JXL/HEIF parser infinite-loop DoS, transitive via docusaurus
+    # mdx-loader. No patched release exists on npm yet (advisory lists "Patched: None"); revisit
+    # and add an override once image-size ships a fix.
+    - GHSA-5p2g-fcmc-qvqq
 
 minimumReleaseAgeExclude:
   - '@thunderid/*'
+  - nanoid@3.3.18
 
 patchedDependencies:
   minimatch@3.1.5: patches/minimatch@3.1.5.patch

@@ -1,23 +1,18 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {
-  Application,
-  AttestationConfig,
-  InboundAuthConfig,
-  OAuth2Config,
-  OAuth2Token,
-} from '@thunderid/configure-applications';
+import type {Application, InboundAuthConfig, OAuth2Config, OAuth2Token} from '@thunderid/configure-applications';
+import {useConfig} from '@thunderid/contexts';
 import {Stack} from '@wso2/oxygen-ui';
 import {useEffect, useState} from 'react';
-import AttestationSection from './AttestationSection';
 import AudienceSection from './AudienceSection';
-import CertificateSection from './CertificateSection';
 import IdentityAssertionsSection from './IdentityAssertionsSection';
 import MetadataSection from './MetadataSection';
 import OAuth2ConfigSection from './OAuth2ConfigSection';
 import PasskeysSection from './PasskeysSection';
 import type {ApplicationTemplate} from '../../../models/application-templates';
+import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
+import DangerZoneSection from '../general-settings/DangerZoneSection';
 
 /**
  * Props for the {@link EditAdvancedSettings} component.
@@ -51,25 +46,32 @@ interface EditAdvancedSettingsProps {
    */
   allowedGrantTypes?: string[];
   /**
-   * Whether the platform attestation section is shown. Driven by the template's `attestation`
-   * capability, so it appears only for templates that support it (e.g. mobile).
+   * Whether to show the redirect URI and post-logout redirect URI fields on the OAuth2
+   * Configuration section. Hidden for clients with no user-facing grant, and for MCP clients,
+   * which manage their redirect URIs on their own Connect tab.
    */
-  showAttestation?: boolean;
+  showRedirectUris?: boolean;
   /**
-   * Callback to report whether any child section (identity assertions / ID-JAG, or platform
-   * attestation) currently has validation errors (feeds the page's Save bar).
+   * Bumped by the parent on Save/Reset to force the OAuth 2 Configuration section to remount and
+   * drop its local redirect URI list state.
+   */
+  sectionResetKey?: number;
+  /**
+   * Callback to report whether any child section (identity assertions / ID-JAG) currently has
+   * validation errors (feeds the page's Save bar).
    */
   onValidationChange?: (hasErrors: boolean) => void;
+  /**
+   * Callback invoked after the application is successfully deleted from the Danger Zone.
+   */
+  onDeleteSuccess?: () => void;
 }
-
-type OAuthCertificate = {type: string; value?: string} | null;
 
 /**
  * Container component for advanced application settings.
  *
  * Displays sections for:
  * - OAuth2 configuration (grant types, response types, PKCE, public client)
- * - Certificate configuration (JWKS/JWKS URI)
  * - Application metadata (created/updated timestamps)
  *
  * @param props - Component props
@@ -82,22 +84,27 @@ export default function EditAdvancedSettings({
   oauth2Constraints = undefined,
   onFieldChange,
   allowedGrantTypes = undefined,
-  showAttestation = false,
+  showRedirectUris = true,
+  sectionResetKey = 0,
   onValidationChange = undefined,
+  onDeleteSuccess = undefined,
 }: EditAdvancedSettingsProps) {
-  // Identity assertions and attestation validate independently; each is tracked separately so one
-  // resolving doesn't clobber the other's still-invalid state when both report to the single
-  // upward onValidationChange prop.
-  // Identity assertions, attestation, and passkeys validate independently; each is tracked
+  const {config} = useConfig();
+
+  // Redirect URIs, identity assertions, and passkeys validate independently; each is tracked
   // separately so one resolving doesn't clobber the other's still-invalid state when both report
   // to the single upward onValidationChange prop.
+  const [redirectUrisInvalid, setRedirectUrisInvalid] = useState(false);
   const [identityAssertionsInvalid, setIdentityAssertionsInvalid] = useState(false);
-  const [attestationInvalid, setAttestationInvalid] = useState(false);
   const [passkeysInvalid, setPasskeysInvalid] = useState(false);
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   useEffect(() => {
-    onValidationChange?.(identityAssertionsInvalid || attestationInvalid || passkeysInvalid);
-  }, [identityAssertionsInvalid, attestationInvalid, passkeysInvalid, onValidationChange]);
+    onValidationChange?.(redirectUrisInvalid || identityAssertionsInvalid || passkeysInvalid);
+  }, [redirectUrisInvalid, identityAssertionsInvalid, passkeysInvalid, onValidationChange]);
+
+  const systemConsoleClientId = (config?.client?.client_id ?? 'CONSOLE').toUpperCase();
 
   const handleOAuth2ConfigChange = (updates: Partial<OAuth2Config>) => {
     const currentInboundAuth: InboundAuthConfig[] = editedApp.inboundAuthConfig ?? application.inboundAuthConfig ?? [];
@@ -107,36 +114,11 @@ export default function EditAdvancedSettings({
     onFieldChange('inboundAuthConfig', updatedInboundAuth);
   };
 
-  const handleCertificateChange = (cert: OAuthCertificate) => {
-    handleOAuth2ConfigChange({certificate: cert});
-  };
-
-  // Attestation is a client-level (protocol-agnostic) setting, so it is stored at the top level of
-  // the application rather than nested under the OAuth2 config. This lets any application type —
-  // including embedded apps with no OAuth2 config — enable it.
-  const handleAttestationChange = (attestation: AttestationConfig | null) => {
-    onFieldChange('attestation', attestation);
-  };
-
-  // Prefer the edited value whenever it has been set — including an explicit null, which represents
-  // the user clearing attestation. Only fall back to the stored value when the field is untouched.
-  const currentAttestation = 'attestation' in editedApp ? editedApp.attestation : application.attestation;
-
   const handlePasskeysChange = (origins: string[]): void => {
     onFieldChange('passkeyAllowedOrigins', origins);
   };
 
   const currentPasskeyOrigins = editedApp.passkeyAllowedOrigins ?? application.passkeyAllowedOrigins ?? [];
-
-  // Encrypted ID token / UserInfo formats are encrypted to the client certificate, so removing the
-  // certificate while one is selected would produce an invalid config. Used to block that removal.
-  const idTokenResponseType = oauth2Config?.token?.idToken?.responseType;
-  const userInfoResponseType = oauth2Config?.userInfo?.responseType;
-  const encryptionDependsOnCert =
-    idTokenResponseType === 'JWE' ||
-    idTokenResponseType === 'NESTED_JWT' ||
-    userInfoResponseType === 'JWE' ||
-    userInfoResponseType === 'NESTED_JWT';
 
   const handleTokenConfigChange = (tokenUpdates: Partial<OAuth2Token>, oauth2Updates: Partial<OAuth2Config> = {}) => {
     const currentInboundAuth: InboundAuthConfig[] = editedApp.inboundAuthConfig ?? application.inboundAuthConfig ?? [];
@@ -162,51 +144,52 @@ export default function EditAdvancedSettings({
   };
 
   return (
-    <Stack spacing={3}>
-      <OAuth2ConfigSection
-        oauth2Config={oauth2Config}
-        oauth2Constraints={oauth2Constraints}
-        onOAuth2ConfigChange={handleOAuth2ConfigChange}
-        disabled={application.isReadOnly}
-        allowedGrantTypes={allowedGrantTypes}
-      />
-      {oauth2Config && (
-        <IdentityAssertionsSection
+    <>
+      <Stack spacing={3}>
+        <OAuth2ConfigSection
+          key={sectionResetKey}
           oauth2Config={oauth2Config}
-          onTokenConfigChange={handleTokenConfigChange}
+          oauth2Constraints={oauth2Constraints}
+          onOAuth2ConfigChange={handleOAuth2ConfigChange}
           disabled={application.isReadOnly}
-          onValidationChange={setIdentityAssertionsInvalid}
+          allowedGrantTypes={allowedGrantTypes}
+          showRedirectUris={showRedirectUris}
+          onValidationChange={setRedirectUrisInvalid}
         />
-      )}
-      {oauth2Config && (
-        <AudienceSection
-          audience={oauth2Config.token?.accessToken?.defaultAudience ?? ''}
-          onAudienceChange={handleDefaultAudienceChange}
+        {oauth2Config && (
+          <IdentityAssertionsSection
+            oauth2Config={oauth2Config}
+            onTokenConfigChange={handleTokenConfigChange}
+            disabled={application.isReadOnly}
+            onValidationChange={setIdentityAssertionsInvalid}
+          />
+        )}
+        {oauth2Config && (
+          <AudienceSection
+            audience={oauth2Config.token?.accessToken?.defaultAudience ?? ''}
+            onAudienceChange={handleDefaultAudienceChange}
+            disabled={application.isReadOnly}
+          />
+        )}
+        <PasskeysSection
+          allowedOrigins={currentPasskeyOrigins}
+          onPasskeysChange={application.isReadOnly ? undefined : handlePasskeysChange}
           disabled={application.isReadOnly}
+          onValidationChange={setPasskeysInvalid}
         />
-      )}
-      <CertificateSection
-        certificate={oauth2Config?.certificate}
-        onCertificateChange={handleCertificateChange}
-        required={oauth2Config?.tokenEndpointAuthMethod === 'private_key_jwt'}
-        encryptionDependsOnCert={encryptionDependsOnCert}
-        disabled={application.isReadOnly}
+        <MetadataSection application={application} />
+        {!application.isReadOnly && oauth2Config?.clientId?.toUpperCase() !== systemConsoleClientId && (
+          <DangerZoneSection onDeleteClick={() => setDeleteDialogOpen(true)} />
+        )}
+      </Stack>
+
+      {/* Delete Application Confirmation Dialog */}
+      <ApplicationDeleteDialog
+        open={deleteDialogOpen}
+        applicationId={application.id}
+        onClose={() => setDeleteDialogOpen(false)}
+        onSuccess={onDeleteSuccess}
       />
-      {showAttestation && (
-        <AttestationSection
-          attestation={currentAttestation}
-          onAttestationChange={handleAttestationChange}
-          disabled={application.isReadOnly}
-          onValidationChange={setAttestationInvalid}
-        />
-      )}
-      <PasskeysSection
-        allowedOrigins={currentPasskeyOrigins}
-        onPasskeysChange={application.isReadOnly ? undefined : handlePasskeysChange}
-        disabled={application.isReadOnly}
-        onValidationChange={setPasskeysInvalid}
-      />
-      <MetadataSection application={application} />
-    </Stack>
+    </>
   );
 }

@@ -2,17 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
-import {
-  Stack,
-  TextField,
-  Button,
-  IconButton,
-  Typography,
-  InputAdornment,
-  Tooltip,
-  FormControl,
-  FormLabel,
-} from '@wso2/oxygen-ui';
+import {Stack, TextField, IconButton, InputAdornment, Tooltip, FormControl, FormLabel} from '@wso2/oxygen-ui';
 import {Copy, Check} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useRef, useEffect, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -21,14 +11,13 @@ import type {Role} from '../../../models/role';
 
 interface EditGeneralSettingsProps {
   role: Role;
-  onDeleteClick?: () => void;
 }
 
 /**
  * General settings tab content for the Role edit page.
- * Displays Organization Unit info and Danger Zone sections.
+ * Displays Organization Unit info.
  */
-export default function EditGeneralSettings({role, onDeleteClick = undefined}: EditGeneralSettingsProps): JSX.Element {
+export default function EditGeneralSettings({role}: EditGeneralSettingsProps): JSX.Element {
   const {t} = useTranslation();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,24 +130,6 @@ export default function EditGeneralSettings({role, onDeleteClick = undefined}: E
           </FormControl>
         </Stack>
       </SettingsCard>
-
-      {/* Danger Zone */}
-      {onDeleteClick && (
-        <SettingsCard
-          title={t('roles:edit.general.sections.dangerZone.title')}
-          description={t('roles:edit.general.sections.dangerZone.description')}
-        >
-          <Typography variant="h6" gutterBottom color="error">
-            {t('roles:edit.general.sections.dangerZone.deleteRole')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
-            {t('roles:edit.general.sections.dangerZone.deleteRoleDescription')}
-          </Typography>
-          <Button variant="contained" color="error" onClick={onDeleteClick}>
-            {t('common:actions.delete')}
-          </Button>
-        </SettingsCard>
-      )}
     </Stack>
   );
 }

@@ -379,25 +379,33 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
             <ColorSchemeToggle />
             <Divider orientation="vertical" flexItem sx={{mx: 1, display: {xs: 'none', sm: 'block'}}} />
             <User>
-              {(user) => (
-                <UserMenu>
-                  <UserMenu.Trigger name={String(user?.name ?? '')} showName />
-                  <UserMenu.Header name={String(user?.name ?? '')} email={String(user?.email ?? '')} />
-                  <UserMenu.Divider />
-                  <UserMenu.Item
-                    label={t('common:userMenu.welcome')}
-                    onClick={() => {
-                      void navigate(RouteConfig.welcome.root());
-                    }}
-                  />
-                  <UserMenu.Divider />
-                  <SignOutButton>
-                    {({signOut}) => (
-                      <UserMenu.Logout label={t('common:userMenu.signOut')} onClick={() => handleSignOut(signOut)} />
-                    )}
-                  </SignOutButton>
-                </UserMenu>
-              )}
+              {(user) => {
+                const avatar = typeof user?.picture === 'string' ? user.picture : undefined;
+
+                return (
+                  <UserMenu>
+                    <UserMenu.Trigger name={String(user?.name ?? '')} avatar={avatar} showName />
+                    <UserMenu.Header
+                      name={String(user?.name ?? '')}
+                      email={String(user?.email ?? '')}
+                      avatar={avatar}
+                    />
+                    <UserMenu.Divider />
+                    <UserMenu.Item
+                      label={t('common:userMenu.welcome')}
+                      onClick={() => {
+                        void navigate(RouteConfig.welcome.root());
+                      }}
+                    />
+                    <UserMenu.Divider />
+                    <SignOutButton>
+                      {({signOut}) => (
+                        <UserMenu.Logout label={t('common:userMenu.signOut')} onClick={() => handleSignOut(signOut)} />
+                      )}
+                    </SignOutButton>
+                  </UserMenu>
+                );
+              }}
             </User>
           </Header.Actions>
         </Header>

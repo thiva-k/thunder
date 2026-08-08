@@ -55,7 +55,7 @@ export interface VerifiablePresentationFormProps {
   submitting: boolean;
   submitLabel: string;
   onSubmit: (data: CreateVerifiablePresentationRequest) => void;
-  /** When provided (edit mode), renders a Danger Zone delete action in the General tab. */
+  /** When provided (edit mode), renders a Danger Zone delete action in the Advanced tab. */
   onDelete?: () => void;
   /** Inline error to show above the save/reset actions when the last save attempt failed. */
   error?: string;
@@ -72,7 +72,7 @@ interface TabPanelProps {
 function TabPanel({children, value, index}: TabPanelProps): JSX.Element {
   return (
     <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{pt: 3}}>{children}</Box>}
+      {value === index && <Box sx={{pb: 3}}>{children}</Box>}
     </div>
   );
 }
@@ -252,6 +252,7 @@ export default function VerifiablePresentationForm({
         <Tab label={t('form.tabs.protocolSettings')} />
         <Tab label={t('form.tabs.claims')} />
         <Tab label={t('form.tabs.issuerTrust')} />
+        {definitionId && onDelete && <Tab label={t('form.tabs.advanced', 'Advanced')} />}
       </Tabs>
 
       <TabPanel value={tab} index={0}>
@@ -406,20 +407,6 @@ export default function VerifiablePresentationForm({
               )}
             </Stack>
           </SettingsCard>
-
-          {definitionId && onDelete && (
-            <SettingsCard title={t('form.dangerZone.title')} description={t('form.dangerZone.description')}>
-              <Typography variant="h6" gutterBottom color="error">
-                {t('form.dangerZone.delete')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
-                {t('form.dangerZone.deleteDescription')}
-              </Typography>
-              <Button variant="contained" color="error" onClick={onDelete}>
-                {t('common:actions.delete')}
-              </Button>
-            </SettingsCard>
-          )}
         </Stack>
       </TabPanel>
 
@@ -529,6 +516,22 @@ export default function VerifiablePresentationForm({
           </Stack>
         </SettingsCard>
       </TabPanel>
+
+      {definitionId && onDelete && (
+        <TabPanel value={tab} index={4}>
+          <SettingsCard title={t('form.dangerZone.title')} description={t('form.dangerZone.description')}>
+            <Typography variant="h6" gutterBottom color="error">
+              {t('form.dangerZone.delete')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
+              {t('form.dangerZone.deleteDescription')}
+            </Typography>
+            <Button variant="contained" color="error" onClick={onDelete}>
+              {t('common:actions.delete')}
+            </Button>
+          </SettingsCard>
+        </TabPanel>
+      )}
 
       {dirty && (
         <UnsavedChangesBar

@@ -28,13 +28,6 @@ vi.mock('react-i18next', () => ({
         'roles:edit.general.sections.organizationUnit.handleLabel': 'Handle',
         'roles:edit.general.sections.organizationUnit.copyId': 'Copy Organization Unit ID',
         'roles:edit.general.sections.organizationUnit.copyHandle': 'Copy handle',
-        'roles:edit.general.sections.dangerZone.title': 'Danger Zone',
-        'roles:edit.general.sections.dangerZone.description':
-          'Actions in this section are irreversible. Proceed with caution.',
-        'roles:edit.general.sections.dangerZone.deleteRole': 'Delete this role',
-        'roles:edit.general.sections.dangerZone.deleteRoleDescription':
-          'Deleting this role is permanent and cannot be undone.',
-        'common:actions.delete': 'Delete',
         'common:actions.copied': 'Copied',
       };
       return translations[key] ?? fallback ?? key;
@@ -43,7 +36,6 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('EditGeneralSettings', () => {
-  const mockOnDeleteClick = vi.fn();
   const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
   const mockRole: Role = {
@@ -56,7 +48,6 @@ describe('EditGeneralSettings', () => {
 
   const defaultProps = {
     role: mockRole,
-    onDeleteClick: mockOnDeleteClick,
   };
 
   beforeEach(() => {
@@ -77,26 +68,11 @@ describe('EditGeneralSettings', () => {
     expect(screen.getByRole('heading', {name: 'Organization Unit'})).toBeInTheDocument();
   });
 
-  it('should render Danger Zone section', () => {
-    render(<EditGeneralSettings {...defaultProps} />);
-
-    expect(screen.getByText('Danger Zone')).toBeInTheDocument();
-  });
-
   it('should display role ouId in readonly text field', () => {
     render(<EditGeneralSettings {...defaultProps} />);
 
     const input = screen.getByDisplayValue('ou-test-123');
     expect(input).toBeInTheDocument();
-  });
-
-  it('should call onDeleteClick when delete button is clicked', () => {
-    render(<EditGeneralSettings {...defaultProps} />);
-
-    const deleteButton = screen.getByRole('button', {name: 'Delete'});
-    fireEvent.click(deleteButton);
-
-    expect(mockOnDeleteClick).toHaveBeenCalledTimes(1);
   });
 
   it('should copy ouId to clipboard when copy button is clicked', async () => {
@@ -110,15 +86,9 @@ describe('EditGeneralSettings', () => {
     });
   });
 
-  it('should render delete role description', () => {
-    render(<EditGeneralSettings {...defaultProps} />);
-
-    expect(screen.getByText('Deleting this role is permanent and cannot be undone.')).toBeInTheDocument();
-  });
-
   it('should render Handle field and ID field when role has ouHandle', () => {
     const roleWithHandle: Role = {...mockRole, ouHandle: 'default'};
-    render(<EditGeneralSettings role={roleWithHandle} onDeleteClick={mockOnDeleteClick} />);
+    render(<EditGeneralSettings role={roleWithHandle} />);
 
     expect(screen.getByDisplayValue('default')).toBeInTheDocument();
     expect(screen.getByDisplayValue('ou-test-123')).toBeInTheDocument();
@@ -133,7 +103,7 @@ describe('EditGeneralSettings', () => {
 
   it('should copy ouHandle to clipboard when copy handle button is clicked', async () => {
     const roleWithHandle: Role = {...mockRole, ouHandle: 'default'};
-    render(<EditGeneralSettings role={roleWithHandle} onDeleteClick={mockOnDeleteClick} />);
+    render(<EditGeneralSettings role={roleWithHandle} />);
 
     const copyButton = screen.getByRole('button', {name: 'Copy handle'});
     fireEvent.click(copyButton);
@@ -145,7 +115,7 @@ describe('EditGeneralSettings', () => {
 
   it('should not toggle ID copy icon when handle copy button is clicked', async () => {
     const roleWithHandle: Role = {...mockRole, ouHandle: 'default'};
-    render(<EditGeneralSettings role={roleWithHandle} onDeleteClick={mockOnDeleteClick} />);
+    render(<EditGeneralSettings role={roleWithHandle} />);
 
     const copyHandleButton = screen.getByRole('button', {name: 'Copy handle'});
     fireEvent.click(copyHandleButton);

@@ -48,7 +48,7 @@ describe('fieldsForMode', () => {
     ]);
   });
 
-  it('shows only the required fields for OAuth 2.0 on create, all fields on edit', () => {
+  it('shows only the required fields for OAuth 2 on create, all fields on edit', () => {
     expect(fieldNames(ConnectionTypes.OAUTH, 'create')).toEqual([
       'name',
       'clientId',

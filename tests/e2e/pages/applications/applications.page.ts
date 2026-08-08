@@ -251,7 +251,7 @@ export class ApplicationsPage extends BasePage {
     await tab.click();
   }
 
-  /** Add a redirect / callback URI on the General tab */
+  /** Add a redirect / callback URI on the Advanced tab */
   async addRedirectUri(uri: string): Promise<void> {
     await this.addUriButton.first().waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
     await this.addUriButton.first().click();

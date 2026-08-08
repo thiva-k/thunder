@@ -26,7 +26,6 @@ describe('EditCredentialsSettings', () => {
     inboundAuthConfig: [{type: 'oauth2', config: {grantTypes: [], responseTypes: []} as OAuthAgentConfig}],
   };
   const mockOnFieldChange = vi.fn();
-  const mockOnCopyToClipboard = vi.fn();
 
   it('renders all sections', () => {
     render(
@@ -34,8 +33,6 @@ describe('EditCredentialsSettings', () => {
         agent={mockAgent}
         editedAgent={{}}
         oauth2Config={{grantTypes: [], responseTypes: []}}
-        copiedField={null}
-        onCopyToClipboard={mockOnCopyToClipboard}
         onFieldChange={mockOnFieldChange}
       />,
     );
@@ -52,8 +49,6 @@ describe('EditCredentialsSettings', () => {
         agent={mockAgent}
         editedAgent={{}}
         oauth2Config={{grantTypes: [], responseTypes: []}}
-        copiedField={null}
-        onCopyToClipboard={mockOnCopyToClipboard}
         onFieldChange={mockOnFieldChange}
       />,
     );

@@ -96,7 +96,6 @@ export default function AgentEditPage(): JSX.Element {
   const [activeTab, setActiveTab] = useState(0);
   const [editedAgent, setEditedAgent] = useState<Partial<Agent>>({});
   const [sectionResetKey, setSectionResetKey] = useState(0);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -121,19 +120,6 @@ export default function AgentEditPage(): JSX.Element {
   const handleTabChange = (_event: SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
-
-  const handleCopyToClipboard = useCallback(
-    async (text: string, fieldName: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopiedField(fieldName);
-        setTimeout(() => setCopiedField(null), 2000);
-      } catch {
-        logger.error('Failed to copy to clipboard');
-      }
-    },
-    [logger],
-  );
 
   const handleFieldChange = useCallback(
     (field: keyof Agent, value: unknown) => {
@@ -303,8 +289,6 @@ export default function AgentEditPage(): JSX.Element {
           agent={agent}
           editedAgent={editedAgent}
           oauth2Config={oauth2Config}
-          copiedField={copiedField}
-          onCopyToClipboard={handleCopyToClipboard}
           onFieldChange={handleFieldChange}
         />
       ),

@@ -8,6 +8,7 @@ import {
   useGetLayouts,
   useGetLayout,
   type ThemeListItem,
+  type LayoutListItem,
   type Theme,
   type LayoutConfig,
 } from '@thunderid/design';
@@ -28,13 +29,23 @@ import {
   FormControlLabel,
   ColorSchemeImage,
 } from '@wso2/oxygen-ui';
-import {Palette, ExternalLink, Code, Lightbulb} from '@wso2/oxygen-ui-icons-react';
+import {Palette, ExternalLink, Code, Lightbulb, LayoutTemplate} from '@wso2/oxygen-ui-icons-react';
 import type {JSX, ChangeEvent} from 'react';
 import {useState, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
+import LayoutPresetThumbnail, {
+  type LayoutPresetVariant,
+} from '../../../design/components/layouts/LayoutPresetThumbnail';
+import LayoutThumbnail from '../../../design/components/layouts/LayoutThumbnail';
 import ThemeThumbnail from '../../../design/components/themes/ThemeThumbnail';
 import useApplicationCreateContext from '../../hooks/useApplicationCreateContext';
 import {ApplicationCreateFlowSignInApproach, OrganizationUnitDefaultItem} from '../../models/application-create-flow';
+
+const LAYOUT_PRESET_VARIANTS: readonly LayoutPresetVariant[] = ['centered', 'split', 'fullscreen', 'popup'];
+
+function isLayoutPresetVariant(handle: string): handle is LayoutPresetVariant {
+  return (LAYOUT_PRESET_VARIANTS as readonly string[]).includes(handle);
+}
 
 /**
  * Props for the {@link ConfigureDesign} component.
@@ -122,7 +133,7 @@ export default function ConfigureDesign({
   const {data: layoutsData} = useGetLayouts({limit: 100});
 
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(externallyProvidedThemeId ?? null);
-  const selectedLayoutId = externallyProvidedLayoutId ?? null;
+  const [selectedLayoutId, setSelectedLayoutId] = useState<string | null>(externallyProvidedLayoutId ?? null);
 
   const showTheme = !ouDefaults[OrganizationUnitDefaultItem.THEME];
   const showLayout = !ouDefaults[OrganizationUnitDefaultItem.LAYOUT];
@@ -132,10 +143,16 @@ export default function ConfigureDesign({
   const hasThemes = Boolean(themeList.length);
   const useAutocomplete = themeList.length > THEME_GRID_THRESHOLD;
 
+  const layoutList = layoutsData?.layouts ?? [];
+  // Only worth surfacing a picker when there's an actual choice to make; with 0 or 1 layouts the
+  // fallback below already selects the only option there is.
+  const showLayoutPicker = showLayout && layoutList.length > 1;
+  const useLayoutAutocomplete = layoutList.length > THEME_GRID_THRESHOLD;
+
   // Falls back to the first available theme/layout until the user (or an OU default) makes an
   // explicit choice, so a selection is always in effect once data loads.
   const effectiveThemeId = selectedThemeId ?? (showTheme ? (themeList[0]?.id ?? null) : null);
-  const effectiveLayoutId = selectedLayoutId ?? (showLayout ? (layoutsData?.layouts?.[0]?.id ?? null) : null);
+  const effectiveLayoutId = selectedLayoutId ?? (showLayout ? (layoutList[0]?.id ?? null) : null);
 
   const {data: selectedThemeDetails} = useGetTheme(effectiveThemeId ?? '');
   const {data: selectedLayoutDetails} = useGetLayout(effectiveLayoutId ?? '');
@@ -176,6 +193,10 @@ export default function ConfigureDesign({
 
   const handleThemeSelect = (themeItem: ThemeListItem): void => {
     setSelectedThemeId(themeItem.id);
+  };
+
+  const handleLayoutSelect = (layoutItem: LayoutListItem): void => {
+    setSelectedLayoutId(layoutItem.id);
   };
 
   const handleApproachChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -270,6 +291,72 @@ export default function ConfigureDesign({
                     }}
                   >
                     {themeItem.displayName}
+                  </Typography>
+                </Box>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
+    );
+  }
+
+  let layoutSelectionContent: JSX.Element | null = null;
+
+  if (showLayout && useLayoutAutocomplete) {
+    layoutSelectionContent = (
+      <Autocomplete
+        fullWidth
+        options={layoutList}
+        getOptionLabel={(option) => (typeof option === 'string' ? option : option.displayName)}
+        value={layoutList.find((layoutItem) => layoutItem.id === effectiveLayoutId) ?? null}
+        onChange={(_event, newValue): void => {
+          if (newValue) handleLayoutSelect(newValue);
+        }}
+        renderInput={(params) => (
+          <TextField {...params} placeholder={t('applications:onboarding.configure.design.layout.title')} />
+        )}
+      />
+    );
+  } else if (showLayoutPicker) {
+    layoutSelectionContent = (
+      <Grid container spacing={2}>
+        {layoutList.map((layoutItem: LayoutListItem) => {
+          const isSelected: boolean = effectiveLayoutId === layoutItem.id;
+          return (
+            <Grid key={layoutItem.id} size={{xs: 3, sm: 4, md: 3, lg: 2}}>
+              <Card
+                data-testid={`layout-card-${layoutItem.id}`}
+                onClick={(): void => handleLayoutSelect(layoutItem)}
+                sx={{
+                  cursor: 'pointer',
+                  border: isSelected ? `2px solid ${theme.vars?.palette.primary.main}` : undefined,
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Box sx={{aspectRatio: '4/3', overflow: 'hidden', position: 'relative'}}>
+                  {isLayoutPresetVariant(layoutItem.handle) ? (
+                    <LayoutPresetThumbnail variant={layoutItem.handle} />
+                  ) : (
+                    <LayoutThumbnail layout={layoutItem} />
+                  )}
+                </Box>
+                <Box sx={{px: 1.25, py: 0.75, borderTop: '1px solid', borderColor: 'divider'}}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: isSelected ? 600 : 500,
+                      fontSize: '0.75rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {layoutItem.displayName}
                   </Typography>
                 </Box>
               </Card>
@@ -502,6 +589,18 @@ export default function ConfigureDesign({
           </Stack>
 
           {themeSelectionContent}
+        </Stack>
+      )}
+
+      {/* Layout Selection — only shown when there's an actual choice between multiple layouts */}
+      {layoutSelectionContent && (
+        <Stack direction="column" spacing={3}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <LayoutTemplate size={14} />
+            <Typography variant="h6">{t('applications:onboarding.configure.design.layout.title')}</Typography>
+          </Stack>
+
+          {layoutSelectionContent}
         </Stack>
       )}
     </Stack>

@@ -92,7 +92,7 @@ describe('AgentOverview', () => {
   it('shows own identity as enabled and delegated as disabled when there is no authorization_code grant', () => {
     render(<AgentOverview agent={baseAgent} oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}} />);
 
-    expect(screen.getByText('Own identity')).toBeInTheDocument();
+    expect(screen.getByText('On its own behalf')).toBeInTheDocument();
     expect(screen.getByText('On behalf of a user')).toBeInTheDocument();
     expect(screen.getByText('Disabled')).toBeInTheDocument();
   });

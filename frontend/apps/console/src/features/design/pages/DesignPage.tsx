@@ -5,7 +5,7 @@ import {ExternalLink, QueryErrorNotice} from '@thunderid/components';
 import {useToast} from '@thunderid/contexts';
 import {useGetThemes, useGetLayouts, useCreateLayout} from '@thunderid/design';
 import {getErrorMessage} from '@thunderid/utils';
-import {Box, Button, Card, Grid, PageContent, PageTitle, Skeleton, Typography} from '@wso2/oxygen-ui';
+import {Box, Button, Grid, PageContent, PageTitle, Skeleton, Typography} from '@wso2/oxygen-ui';
 import {ArrowUpRight, LayoutTemplate, Palette, Plus} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -14,25 +14,16 @@ import RouteConfig from '../../../configs/RouteConfig';
 import ItemCard from '../components/common/ItemCard';
 import SectionHeader from '../components/common/SectionHeader';
 import LayoutPresetThumbnail, {type LayoutPresetVariant} from '../components/layouts/LayoutPresetThumbnail';
+import LayoutThumbnail from '../components/layouts/LayoutThumbnail';
 import ThemeDeleteDialog from '../components/themes/ThemeDeleteDialog';
 import ThemeThumbnail from '../components/themes/ThemeThumbnail';
 import DesignUIConstants from '../constants/design-ui-constants';
 
-const LAYOUT_PRESET_IDS: LayoutPresetVariant[] = ['centered', 'split', 'fullscreen', 'popup'];
+const LAYOUT_PRESET_VARIANTS: readonly LayoutPresetVariant[] = ['centered', 'split', 'fullscreen', 'popup'];
 
-const LAYOUT_PRESET_KEY: Record<LayoutPresetVariant, string> = {
-  centered: 'layouts.presets.centered.label',
-  split: 'layouts.presets.split_screen.label',
-  fullscreen: 'layouts.presets.full_screen.label',
-  popup: 'layouts.presets.popup.label',
-};
-
-const LAYOUT_PRESET_DEFAULT: Record<LayoutPresetVariant, string> = {
-  centered: 'Centered',
-  split: 'Split Screen',
-  fullscreen: 'Full Screen',
-  popup: 'Popup',
-};
+function isLayoutPresetVariant(handle: string): handle is LayoutPresetVariant {
+  return (LAYOUT_PRESET_VARIANTS as readonly string[]).includes(handle);
+}
 
 export default function DesignPage(): JSX.Element {
   const {t} = useTranslation('design');
@@ -45,40 +36,30 @@ export default function DesignPage(): JSX.Element {
   const [showAllThemes, setShowAllThemes] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id: string; name: string} | null>(null);
 
-  // Build a map of handle → layoutId for API layouts
-  const layoutIdByHandle = new Map((layoutsData?.layouts ?? []).map((l) => [l.handle, l.id]));
+  const allLayouts = layoutsData?.layouts ?? [];
 
-  const handleLayoutClick = useCallback(
-    async (presetId: LayoutPresetVariant, existingLayoutId?: string) => {
-      if (existingLayoutId) {
-        await navigate(RouteConfig.design.layoutDetail(existingLayoutId));
-        return;
-      }
-
-      // Create a new layout with default config when none exists yet. This is a one-shot click
-      // action on a preset card with no dialog or form to attach an inline error to, so a failure
-      // toasts instead.
-      try {
-        const created = await createLayout({
-          handle: presetId,
-          displayName: LAYOUT_PRESET_DEFAULT[presetId],
-          layout: {},
-        });
-        await navigate(RouteConfig.design.layoutDetail(created.id));
-      } catch (err) {
-        showToast(
-          getErrorMessage(
-            err as Error,
-            t,
-            'layouts.errors.create_failed.message',
-            'Failed to create layout. Please try again.',
-          ),
-          'error',
-        );
-      }
-    },
-    [navigate, createLayout, showToast, t],
-  );
+  const handleCreateLayout = useCallback(async () => {
+    // Create a new layout with default config. This is a one-shot click action on a preset
+    // card with no dialog or form to attach an inline error to, so a failure toasts instead.
+    try {
+      const created = await createLayout({
+        handle: 'centered',
+        displayName: 'Centered',
+        layout: {},
+      });
+      await navigate(RouteConfig.design.layoutDetail(created.id));
+    } catch (err) {
+      showToast(
+        getErrorMessage(
+          err as Error,
+          t,
+          'layouts.errors.create_failed.message',
+          'Failed to create layout. Please try again.',
+        ),
+        'error',
+      );
+    }
+  }, [navigate, createLayout, showToast, t]);
 
   const allThemes = themesData?.themes ?? [];
   const visibleThemes = showAllThemes ? allThemes : allThemes.slice(0, DesignUIConstants.INITIAL_LIMIT);
@@ -202,91 +183,59 @@ export default function DesignPage(): JSX.Element {
         {/* ── Layouts section ────────────────────────────────────────────── */}
         <SectionHeader
           title={t('layouts.section.title', 'Layouts')}
-          count={LAYOUT_PRESET_IDS.length}
+          count={allLayouts.length}
           icon={<LayoutTemplate size={18} />}
+          action={
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Plus size={16} />}
+              onClick={() => {
+                handleCreateLayout().catch(() => {
+                  /* no-op */
+                });
+              }}
+            >
+              {t('layouts.actions.add.label', 'Add Layout')}
+            </Button>
+          }
         />
 
         {layoutsError ? (
           <QueryErrorNotice error={layoutsError} t={t} variant="inline" onRetry={() => void refetchLayouts()} />
         ) : (
-          <Grid container spacing={2}>
-            {LAYOUT_PRESET_IDS.map((id) => {
-              const apiLayoutId = layoutIdByHandle.get(id);
-              const isEnabled = id === 'centered';
-
-              return (
-                <Grid key={id} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
-                  <Card
-                    sx={{
-                      cursor: isEnabled ? 'pointer' : 'default',
-                      opacity: isEnabled ? 1 : 0.72,
-                      pointerEvents: isEnabled ? 'auto' : 'none',
-                      transition: 'box-shadow 0.15s ease',
-                      '&:hover': isEnabled ? {boxShadow: 4} : undefined,
+          <>
+            <Grid container spacing={2}>
+              {allLayouts.map((layout) => (
+                <Grid key={layout.id} size={{xs: 6, sm: 4, md: 3, lg: 2}}>
+                  <ItemCard
+                    thumbnail={
+                      isLayoutPresetVariant(layout.handle) ? (
+                        <LayoutPresetThumbnail variant={layout.handle} />
+                      ) : (
+                        <LayoutThumbnail layout={layout} />
+                      )
+                    }
+                    name={layout.displayName}
+                    onClick={() => {
+                      (async () => {
+                        await navigate(RouteConfig.design.layoutDetail(layout.id));
+                      })().catch(() => {
+                        // Ignore navigation errors
+                      });
                     }}
-                    {...(isEnabled
-                      ? {
-                          role: 'button',
-                          tabIndex: 0,
-                          onClick: () => {
-                            handleLayoutClick(id, apiLayoutId).catch(() => {
-                              /* no-op */
-                            });
-                          },
-                          onKeyDown: (e: React.KeyboardEvent) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleLayoutClick(id, apiLayoutId).catch(() => {
-                                /* no-op */
-                              });
-                            }
-                          },
-                        }
-                      : {})}
-                  >
-                    <Box sx={{aspectRatio: '4/3', overflow: 'hidden', position: 'relative'}}>
-                      <Box sx={{width: '100%', height: '100%', filter: isEnabled ? 'none' : 'grayscale(1)'}}>
-                        <LayoutPresetThumbnail variant={id} />
-                      </Box>
-                      {!isEnabled && (
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            bgcolor: 'warning.main',
-                            color: 'warning.contrastText',
-                            px: 1,
-                            py: 0.4,
-                            borderRadius: 1,
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.03em',
-                          }}
-                        >
-                          {t('layouts.badges.coming_soon.label', 'Coming Soon')}
-                        </Box>
-                      )}
-                    </Box>
-                    <Box sx={{px: 1.5, py: 1, borderTop: '1px solid', borderColor: 'divider'}}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          fontSize: '0.8125rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {t(LAYOUT_PRESET_KEY[id], LAYOUT_PRESET_DEFAULT[id])}
-                      </Typography>
-                    </Box>
-                  </Card>
+                  />
                 </Grid>
-              );
-            })}
-          </Grid>
+              ))}
+            </Grid>
+
+            {allLayouts.length === 0 && (
+              <Box sx={{py: 6, textAlign: 'center', color: 'text.secondary'}}>
+                <LayoutTemplate size={32} style={{opacity: 0.3, marginBottom: 8}} />
+                <Typography variant="body2">{t('layouts.empty_state.message', 'No layouts yet')}</Typography>
+              </Box>
+            )}
+          </>
         )}
       </Box>
 

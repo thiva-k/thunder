@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useCopyToClipboard} from '@thunderid/hooks';
-import {FormControl, FormLabel, IconButton, InputAdornment, TextField} from '@wso2/oxygen-ui';
+import {FormControl, FormLabel, IconButton, InputAdornment, TextField, Typography} from '@wso2/oxygen-ui';
 import {Check, Copy} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 
@@ -31,6 +31,12 @@ export interface CopyableFieldProps {
    * The `aria-label` for the copy button
    */
   copyAriaLabel: string;
+
+  /**
+   * Optional explanation of what this field is and how it's used, shown below the label. Omit to
+   * render the label with no description.
+   */
+  hint?: string;
 }
 
 /**
@@ -53,12 +59,23 @@ export interface CopyableFieldProps {
  *
  * @public
  */
-export default function CopyableField({id, label, value, copyAriaLabel}: CopyableFieldProps): JSX.Element {
+export default function CopyableField({
+  id,
+  label,
+  value,
+  copyAriaLabel,
+  hint = undefined,
+}: CopyableFieldProps): JSX.Element {
   const {copied, copy} = useCopyToClipboard({resetDelay: 2000});
 
   return (
     <FormControl fullWidth>
       <FormLabel htmlFor={id}>{label}</FormLabel>
+      {hint && (
+        <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
+          {hint}
+        </Typography>
+      )}
       <TextField
         fullWidth
         id={id}

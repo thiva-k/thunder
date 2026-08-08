@@ -923,6 +923,8 @@ describe('OrganizationUnitEditPage', () => {
 
     renderWithProviders(<OrganizationUnitEditPage />);
 
+    fireEvent.click(screen.getByRole('tab', {name: t('organizationUnits:edit.page.tabs.advanced')}));
+
     // Open delete dialog
     await waitFor(() => {
       expect(
@@ -957,6 +959,8 @@ describe('OrganizationUnitEditPage', () => {
     });
 
     renderWithProviders(<OrganizationUnitEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: t('organizationUnits:edit.page.tabs.advanced')}));
 
     await waitFor(() => {
       expect(
@@ -1143,6 +1147,8 @@ describe('OrganizationUnitEditPage', () => {
       });
 
       const {rerender} = renderWithProviders(<OrganizationUnitEditPage />);
+
+      fireEvent.click(screen.getByRole('tab', {name: t('organizationUnits:edit.page.tabs.advanced')}));
 
       await waitFor(() => {
         expect(

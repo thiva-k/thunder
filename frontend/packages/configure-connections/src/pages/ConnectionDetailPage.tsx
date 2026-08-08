@@ -268,6 +268,11 @@ export default function ConnectionDetailPage(): JSX.Element | null {
                 data-testid="connection-tab-attributes"
               />
             )}
+            <Tab
+              label={t('detail.tabs.advanced', 'Advanced')}
+              sx={{textTransform: 'none'}}
+              data-testid="connection-tab-advanced"
+            />
           </Tabs>
 
           <TabPanel value={activeTab} index={0}>
@@ -298,7 +303,24 @@ export default function ConnectionDetailPage(): JSX.Element | null {
                   onSecretReplacingChange={setSecretReplacing}
                 />
               </SettingsCard>
+            </Stack>
+          </TabPanel>
 
+          {supportsAttributes && (
+            <TabPanel value={activeTab} index={1}>
+              <AttributeMappingSection
+                key={`attrs-${resolvedId}-${attrsKey}`}
+                initialConfig={baselineAttr}
+                onChange={(config, isValid) => {
+                  setEditedAttr(config);
+                  setAttrValid(isValid);
+                }}
+              />
+            </TabPanel>
+          )}
+
+          <TabPanel value={activeTab} index={supportsAttributes ? 2 : 1}>
+            <Stack direction="column" spacing={4}>
               <SettingsCard title={t('detail.dangerZone.title')} description={t('detail.dangerZone.description')}>
                 <Typography variant="h6" gutterBottom color="error">
                   {t('detail.dangerZone.delete.title')}
@@ -321,19 +343,6 @@ export default function ConnectionDetailPage(): JSX.Element | null {
               </SettingsCard>
             </Stack>
           </TabPanel>
-
-          {supportsAttributes && (
-            <TabPanel value={activeTab} index={1}>
-              <AttributeMappingSection
-                key={`attrs-${resolvedId}-${attrsKey}`}
-                initialConfig={baselineAttr}
-                onChange={(config, isValid) => {
-                  setEditedAttr(config);
-                  setAttrValid(isValid);
-                }}
-              />
-            </TabPanel>
-          )}
 
           {dirty && (
             <UnsavedChangesBar

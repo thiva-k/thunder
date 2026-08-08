@@ -270,7 +270,7 @@ describe('ConfigureDesign', () => {
       expect(mockOnLayoutSelect).toHaveBeenCalledWith('layout-1', mockLayoutDetails.layout);
     });
 
-    it('should never render the layout section, even when layouts are available', () => {
+    it('renders a layout card for each layout when more than one is available', () => {
       vi.mocked(useGetLayouts).mockReturnValue({
         data: {layouts: mockLayoutsList},
         isLoading: false,
@@ -285,9 +285,64 @@ describe('ConfigureDesign', () => {
 
       renderComponent();
 
+      expect(screen.getByText('Layout')).toBeInTheDocument();
+      expect(screen.getByTestId('layout-card-layout-1')).toBeInTheDocument();
+      expect(screen.getByTestId('layout-card-layout-2')).toBeInTheDocument();
+    });
+
+    it('does not render the layout section when only one layout is available', () => {
+      vi.mocked(useGetLayouts).mockReturnValue({
+        data: {layouts: [mockLayoutsList[0]]},
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayouts>);
+
+      vi.mocked(useGetLayout).mockReturnValue({
+        data: mockLayoutDetails,
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayout>);
+
+      renderComponent();
+
       expect(screen.queryByText('Layout')).not.toBeInTheDocument();
-      expect(screen.queryByText('Split Screen')).not.toBeInTheDocument();
       expect(screen.queryByTestId('layout-card-layout-1')).not.toBeInTheDocument();
+    });
+
+    it('does not render the layout section when no layouts are configured', () => {
+      vi.mocked(useGetLayouts).mockReturnValue({
+        data: {layouts: []},
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayouts>);
+
+      renderComponent();
+
+      expect(screen.queryByText('Layout')).not.toBeInTheDocument();
+    });
+
+    it('selects a different layout when clicking its card', async () => {
+      const user = userEvent.setup();
+      const mockOnLayoutSelectLocal = vi.fn();
+
+      vi.mocked(useGetLayouts).mockReturnValue({
+        data: {layouts: mockLayoutsList},
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayouts>);
+
+      vi.mocked(useGetLayout).mockReturnValue({
+        data: mockLayoutDetails,
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayout>);
+
+      renderComponent({onLayoutSelect: mockOnLayoutSelectLocal});
+
+      const secondLayoutCard = screen.getByTestId('layout-card-layout-2');
+      await user.click(secondLayoutCard);
+
+      expect(mockOnLayoutSelectLocal).toHaveBeenCalledWith('layout-1', mockLayoutDetails.layout);
     });
   });
 });

@@ -132,6 +132,11 @@ export default function McpAccessSection({
   const [redirectUris, setRedirectUris] = useState<string[]>(() => oauth2Config?.redirectUris ?? []);
   const [uriErrors, setUriErrors] = useState<Record<number, string>>({});
 
+  // An empty list renders as a bare "Add" button with no field to type into, which reads as
+  // broken rather than "nothing added yet". Show one empty row by default instead; typing into it
+  // (or removing it) operates on the real (currently empty) list via the index above.
+  const displayRedirectUris = redirectUris.length > 0 ? redirectUris : [''];
+
   const updateRedirectUris = (uris: string[]): void => {
     if (!oauth2Config) return;
 
@@ -180,8 +185,11 @@ export default function McpAccessSection({
     }
   };
 
+  // Appends relative to what's on screen (displayRedirectUris), not the possibly-empty backing
+  // `redirectUris` array — otherwise the first click while the list is empty turns [] into [''],
+  // which renders identically to the placeholder row already shown and looks like nothing happened.
   const handleAddUri = (): void => {
-    setRedirectUris((prev) => [...prev, '']);
+    setRedirectUris([...displayRedirectUris, '']);
   };
 
   const handleRemoveUri = (index: number): void => {
@@ -298,7 +306,7 @@ export default function McpAccessSection({
           </Typography>
 
           <Stack spacing={2} id="mcp-redirect-uris-section">
-            {redirectUris.map((uri, index) => (
+            {displayRedirectUris.map((uri, index) => (
               // IMPORTANT: Do not remove the suppression since it affects functionality.
               // eslint-disable-next-line react/no-array-index-key
               <Stack key={index} direction="row" spacing={1} alignItems="flex-start">

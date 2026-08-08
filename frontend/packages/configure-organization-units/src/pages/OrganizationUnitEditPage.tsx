@@ -26,6 +26,7 @@ import useGetOrganizationUnit from '../api/useGetOrganizationUnit';
 import useUpdateOrganizationUnit from '../api/useUpdateOrganizationUnit';
 import EditChildOrganizationUnitSettings from '../components/edit-organization-unit/child-organization-unit-settings/EditChildOrganizationUnitSettings';
 import EditCustomization from '../components/edit-organization-unit/customization-settings/EditCustomizationSettings';
+import DangerZoneSection from '../components/edit-organization-unit/general-settings/DangerZoneSection';
 import EditGeneralSettings from '../components/edit-organization-unit/general-settings/EditGeneralSettings';
 import EditGroups from '../components/edit-organization-unit/group-settings/EditGroupSettings';
 import EditUsers from '../components/edit-organization-unit/user-settings/EditUserSettings';
@@ -440,16 +441,19 @@ export default function OrganizationUnitEditPage({
           aria-controls={renderDefaultFlowsSettings ? 'ou-tabpanel-5' : 'ou-tabpanel-4'}
           sx={{textTransform: 'none'}}
         />
+        <Tab
+          label={t('organizationUnits:edit.page.tabs.advanced')}
+          id={renderDefaultFlowsSettings ? 'ou-tab-6' : 'ou-tab-5'}
+          aria-controls={renderDefaultFlowsSettings ? 'ou-tabpanel-6' : 'ou-tabpanel-5'}
+          sx={{textTransform: 'none'}}
+        />
       </Tabs>
 
       {/* Tab Panels */}
       <>
         {/* General Settings Tab */}
         <TabPanel value={activeTab} index={0}>
-          <EditGeneralSettings
-            organizationUnit={organizationUnit}
-            onDeleteClick={organizationUnit.isReadOnly ? undefined : () => setDeleteDialogOpen(true)}
-          />
+          <EditGeneralSettings organizationUnit={organizationUnit} />
         </TabPanel>
 
         {/* Child OUs Tab */}
@@ -481,6 +485,11 @@ export default function OrganizationUnitEditPage({
             editedOU={editedOU}
             onFieldChange={handleFieldChange}
           />
+        </TabPanel>
+
+        {/* Advanced Tab */}
+        <TabPanel value={activeTab} index={renderDefaultFlowsSettings ? 6 : 5}>
+          {!organizationUnit.isReadOnly && <DangerZoneSection onDeleteClick={() => setDeleteDialogOpen(true)} />}
         </TabPanel>
       </>
 

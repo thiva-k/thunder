@@ -253,7 +253,7 @@ export default function AgentOverview({
           sx={{px: 1.75, py: 1.25}}
         >
           <Typography variant="body2" color="text.secondary">
-            {t('agents:edit.overview.accessMode.own', 'Own identity')}
+            {t('agents:edit.overview.accessMode.own', 'On its own behalf')}
           </Typography>
           <Chip
             label={t('common:status.enabled', 'Enabled')}

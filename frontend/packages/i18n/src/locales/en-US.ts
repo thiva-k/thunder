@@ -660,7 +660,7 @@ const translations = {
   // ============================================================================
   users: {
     // Listing page
-    title: 'User Management',
+    title: 'Users',
     subtitle: 'Manage users, roles, and permissions across your organization',
     addUser: 'Add User',
     inviteUser: 'Invite User',
@@ -832,6 +832,7 @@ const translations = {
     'edit.copyId': 'Copy user type ID',
     'edit.tabs.general': 'General',
     'edit.tabs.schema': 'Schema',
+    'edit.tabs.advanced': 'Advanced',
     'edit.unsavedChanges': 'You have unsaved changes',
     'edit.saveError': 'Failed to save user type',
     'edit.loadError': 'Failed to load user type information',
@@ -1158,7 +1159,7 @@ const translations = {
     'edit.overview.accessMode.title': 'Access mode',
     'edit.overview.accessMode.description': 'How this agent is allowed to authenticate.',
     'edit.overview.accessMode.editAdvanced': 'Edit in Advanced',
-    'edit.overview.accessMode.own': 'Own identity',
+    'edit.overview.accessMode.own': 'On its own behalf',
     'edit.overview.accessMode.delegated': 'On behalf of a user',
     'edit.overview.accessMode.allowedUserTypes': 'Allowed user types',
     'edit.overview.signInPreview.notConfigured': 'Not configured',
@@ -1169,13 +1170,18 @@ const translations = {
 
     // Edit page - Credentials tab
     'edit.credentials.clientId.title': 'Client ID',
-    'edit.credentials.clientId.description': 'The public identifier this agent uses to authenticate as a client.',
-    'edit.credentials.clientSecret.title': 'Client Secret',
-    'edit.credentials.clientSecret.description': 'The secret this agent uses to authenticate as a client.',
-    'edit.credentials.clientSecret.clientIdLabel': 'Client ID',
-    'edit.credentials.clientSecret.regenerateHint':
-      'Client secret was shown once at creation. Regenerate to issue a new one.',
-    'edit.credentials.clientSecret.regenerateButton': 'Regenerate secret',
+    'edit.credentials.sections.identifier.title': 'Identifier',
+    'edit.credentials.sections.identifier.description': 'Unique identifier used to reference this agent.',
+    'edit.credentials.sections.identifier.clientIdLabel': 'Client ID',
+    'edit.credentials.sections.identifier.clientIdHint':
+      'The public OAuth2 client identifier this agent uses to authenticate as a client.',
+    'edit.credentials.sections.secret.title': 'Secret',
+    'edit.credentials.sections.secret.description':
+      'Regenerating the secret immediately invalidates the current one and cannot be undone.',
+    'edit.credentials.sections.secret.clientSecretLabel': 'Client Secret',
+    'edit.credentials.sections.secret.hint':
+      'A confidential credential used with the Client ID to authenticate this agent. Keep it secret.',
+    'edit.credentials.sections.secret.regenerateButton': 'Regenerate Client Secret',
     'edit.credentials.tokenEndpointAuthMethod.title': 'Client Authentication Method',
     'edit.credentials.tokenEndpointAuthMethod.description':
       'Defines how this agent authenticates at protected endpoints.',
@@ -1222,10 +1228,16 @@ const translations = {
     'edit.flows.allowedUserTypes.hint': 'Only these user types can authenticate or register through this agent.',
     'edit.flows.allowedUserTypes.required': 'Select at least one user type that can sign in through this agent.',
     'edit.flows.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
+      'These settings are frozen for this agent. Select "On behalf of a user" in the Advanced tab to unlock and start using them.',
 
     // Edit page - Advanced tab
-    'edit.advanced.delegationToggle.label': 'Delegated mode',
+    'edit.advanced.mode.title': 'Operating Mode',
+    'edit.advanced.mode.onOwnBehalf.label': 'On its own behalf',
+    'edit.advanced.mode.onOwnBehalf.description':
+      'This agent authenticates with its own credentials without user interaction, using Client Credentials.',
+    'edit.advanced.mode.onBehalfOfUser.label': 'On behalf of a user',
+    'edit.advanced.mode.onBehalfOfUser.description':
+      'This agent acts on behalf of a signed-in user, using Authorization Code with PKCE.',
     'edit.advanced.redirectUris.title': 'Authorized redirect URIs',
     'edit.advanced.redirectUris.description': 'For use with requests from a web server',
     'edit.advanced.redirectUris.empty': 'No redirect URIs configured.',
@@ -1233,11 +1245,11 @@ const translations = {
     'edit.advanced.redirectUris.error.empty': 'URI cannot be empty',
     'edit.advanced.redirectUris.error.invalid': 'Enter a valid URL',
     'edit.advanced.redirectUris.required': 'The Authorization Code grant requires at least one valid redirect URI.',
-    'edit.advanced.oauthAccess.title': 'OAuth Configuration',
-    'edit.advanced.oauthAccess.description': 'The grants and redirect URIs this agent is authorized to use.',
+    'edit.advanced.oauthAccess.title': 'OAuth 2 Configuration',
+    'edit.advanced.oauthAccess.description': 'Manage OAuth 2 settings for this agent.',
     'edit.advanced.oauthAccess.grantTypes.label': 'Grant Types',
     'edit.advanced.oauthAccess.grantTypes.hint':
-      'The greyed-out grants unlock once you turn on Delegated mode at the top of this tab.',
+      'The greyed-out grants unlock once you select "On behalf of a user" above.',
     'edit.advanced.security.title': 'Security',
     'edit.advanced.security.description':
       'Controls how this agent protects the authorization code exchange when a user signs in.',
@@ -1261,7 +1273,7 @@ const translations = {
     'edit.tokens.audience.user.description': 'Tokens for the agent acting on behalf of a user',
     'edit.tokens.audience.footnote': 'Attribute sets are configured independently for each audience.',
     'edit.tokens.delegationLock.message':
-      'This agent does not receive tokens on behalf of a user. Turn on Delegated mode in the <advancedLink>Advanced tab</advancedLink> to configure them.',
+      'This agent does not receive tokens on behalf of a user. Select "On behalf of a user" in the <advancedLink>Advanced tab</advancedLink> to configure them.',
     'edit.tokens.agent.attributes.title': 'Access Token Attributes',
     'edit.tokens.agent.attributes.description':
       'Extra attributes to add to the access token this agent receives for itself.',
@@ -1367,7 +1379,7 @@ const translations = {
     'edit.page.tabs.groups': 'Groups',
     'edit.page.tabs.customization': 'Customization',
     'edit.page.tabs.defaultFlows': 'Flows',
-    'edit.page.tabs.advanced': 'Advanced Settings',
+    'edit.page.tabs.advanced': 'Advanced',
     'edit.actions.unsavedChanges.label': 'You have unsaved changes',
     'edit.actions.reset.label': 'Reset',
     'edit.actions.save.label': 'Save Changes',
@@ -1546,6 +1558,7 @@ const translations = {
     'edit.page.header.editDescription': 'Edit description',
     'edit.page.tabs.general': 'General',
     'edit.page.tabs.members': 'Members',
+    'edit.page.tabs.advanced': 'Advanced',
     'edit.page.unsavedChanges': 'You have unsaved changes',
     'edit.page.reset': 'Reset',
     'edit.page.save': 'Save Changes',
@@ -1668,6 +1681,7 @@ const translations = {
     'edit.page.tabs.general': 'General',
     'edit.page.tabs.permissions': 'Permissions',
     'edit.page.tabs.assignments': 'Assignments',
+    'edit.page.tabs.advanced': 'Advanced',
     'edit.page.unsavedChanges': 'You have unsaved changes',
     'edit.page.reset': 'Reset',
     'edit.page.save': 'Save Changes',
@@ -1778,7 +1792,7 @@ const translations = {
     'vendor.google.description': 'Let users sign in with their Google account.',
     'vendor.github.description': 'Let users sign in with their GitHub account.',
     'vendor.oidc.description': 'Connect any OpenID Connect identity provider.',
-    'vendor.oauth.description': 'Connect any OAuth 2.0 identity provider.',
+    'vendor.oauth.description': 'Connect any OAuth 2 identity provider.',
     'vendor.twilio.description': 'Send SMS one-time passcodes via Twilio.',
     'vendor.vonage.description': 'Deliver SMS and email passcodes through Vonage.',
     'vendor.sms-gateway.description': 'Route SMS through your own HTTP gateway.',
@@ -1795,8 +1809,8 @@ const translations = {
     'wizard.type.oidc.label': 'OpenID Connect Provider',
     'wizard.type.oidc.description': 'Connect any OpenID Connect identity provider.',
     'wizard.type.oidc.tag': 'Login provider · Enterprise',
-    'wizard.type.oauth.label': 'OAuth 2.0 Provider',
-    'wizard.type.oauth.description': 'Connect any OAuth 2.0 identity provider.',
+    'wizard.type.oauth.label': 'OAuth 2 Provider',
+    'wizard.type.oauth.description': 'Connect any OAuth 2 identity provider.',
     'wizard.type.oauth.tag': 'Login provider · Enterprise',
     'wizard.type.sms.label': 'SMS gateway',
     'wizard.type.sms.description': 'Route SMS through your own HTTP gateway.',
@@ -1829,6 +1843,7 @@ const translations = {
     'detail.notFound.description': 'This connection may have been deleted or the link is incorrect.',
     'detail.tabs.general': 'General',
     'detail.tabs.attributeMapping': 'Attribute Configuration',
+    'detail.tabs.advanced': 'Advanced',
     'detail.quickCopy.title': 'Quick copy',
     'detail.quickCopy.description': 'Copy connection identifiers for use in your integration.',
     'detail.connectionId': 'Connection ID',
@@ -2586,7 +2601,7 @@ const translations = {
       "Make sure to copy your client secret now. You won't be able to see it again for security reasons.",
     'clientSecret.clientIdLabel': 'Client ID',
     'clientSecret.clientSecretLabel': 'Client Secret',
-    'clientSecret.purpose': 'Used to authenticate your application at the OAuth 2.0 token endpoint.',
+    'clientSecret.purpose': 'Used to authenticate your application at the OAuth 2 token endpoint.',
     'clientSecret.copied': 'Copied to clipboard',
     'clientSecret.copySecret': 'Copy Secret',
     'clientSecret.securityReminder.title': 'Security Reminder',
@@ -2600,7 +2615,7 @@ const translations = {
     'view.sections.basicInformation': 'Basic Information',
     'view.sections.flowConfiguration': 'Flow Configuration',
     'view.sections.userAttributes': 'User Attributes',
-    'view.sections.oauth2Configuration': 'OAuth2 Configuration',
+    'view.sections.oauth2Configuration': 'OAuth 2 Configuration',
     'view.sections.timestamps': 'Timestamps',
     'view.fields.applicationId': 'Application ID',
     'view.fields.description': 'Description',
@@ -2626,12 +2641,12 @@ const translations = {
       "URL to your application's Terms of Service. May be displayed to users during consent or user sign-in, sign-up or recovery flows.",
     'edit.customization.policyUri.hint':
       "URL to your application's Privacy Policy. May be displayed to users during consent or user sign-in, sign-up or recovery flows.",
-    'edit.advanced.oauth2Config.intro': 'Configure OAuth 2.0 settings for this {{entity}}.',
+    'edit.advanced.oauth2Config.intro': 'Manage OAuth 2 settings for this {{entity}}.',
     'edit.advanced.redirectUris.hint':
       'Allowed callback URLs where users will be redirected after authentication. Must be exact matches for security.',
     'edit.advanced.grantTypes.placeholder': 'Select grant types',
     'edit.advanced.grantTypes.hint':
-      'OAuth 2.0 flows this {{entity}} can use (e.g., authorization_code, client_credentials, refresh_token).',
+      'OAuth 2 flows this {{entity}} can use (e.g., authorization_code, client_credentials, refresh_token).',
     'edit.advanced.responseTypes.placeholder': 'Select response types',
     'edit.advanced.publicClient.public':
       'This is a public client (SPA, mobile app) that cannot securely store credentials.',
@@ -2698,10 +2713,13 @@ const translations = {
     'edit.advanced.attestation.devModeConfirmDialog.confirmButton': 'Enable Dev Mode',
 
     /* Passkeys section */
-    'edit.advanced.labels.passkeys': 'Passkey Allowed Origins',
-    'edit.advanced.passkeys.intro': 'Allowed origins for passkey operations initiated through this application.',
+    'edit.advanced.labels.passkeys': 'Passkeys',
+    'edit.advanced.passkeys.intro': 'Passkey settings for this application.',
     'edit.advanced.passkeys.serverFallbackHint':
       'Origins listed here are automatically included in the server CORS allowed origins.',
+    'edit.advanced.passkeys.allowedOrigins.label': 'Allowed Origins',
+    'edit.advanced.passkeys.allowedOrigins.hint':
+      'Allowed origins for passkey operations initiated through this application.',
     'edit.advanced.passkeys.allowedOrigins.placeholder': 'https://app.example.com',
     'edit.advanced.passkeys.allowedOrigins.addOrigin': 'Add Origin',
     'edit.advanced.passkeys.allowedOrigins.error.empty': 'Origin cannot be empty',
@@ -2717,10 +2735,12 @@ const translations = {
     'edit.page.description.placeholder': 'Add a description',
     'edit.page.tabs.overview': 'Overview',
     'edit.page.tabs.general': 'General',
+    'edit.page.tabs.access': 'Access',
+    'edit.page.tabs.credentials': 'Credentials',
     'edit.page.tabs.flows': 'Flows',
     'edit.page.tabs.customization': 'Customization',
     'edit.page.tabs.token': 'Token',
-    'edit.page.tabs.advanced': 'Advanced Settings',
+    'edit.page.tabs.advanced': 'Advanced',
     'edit.page.unsavedChanges': 'Unsaved changes',
     'edit.page.validation.missingRedirectUri': 'A redirect URI is required.',
     'edit.page.validation.missingCertificate': 'A certificate is required.',
@@ -2780,6 +2800,24 @@ const translations = {
     'edit.overview.endpoints.passkeyRegisterStart': 'Passkey registration (start)',
     'edit.overview.endpoints.passkeyRegisterFinish': 'Passkey registration (finish)',
 
+    // Access tab
+    'edit.access.sections.userTypes.title': 'Allowed User Types',
+    'edit.access.sections.userTypes.description': 'Choose which user types can authenticate with this application.',
+    'edit.access.sections.applicationAccess.title': 'Application Access',
+    'edit.access.sections.applicationAccess.description': 'Configure where this application is accessed from.',
+
+    // Credentials tab
+    'edit.credentials.sections.identifier.title': 'Identifier',
+    'edit.credentials.sections.identifier.description': 'Unique identifier used to reference this application.',
+    'edit.credentials.sections.secret.title': 'Secret',
+    'edit.credentials.sections.secret.description':
+      'Regenerating the secret immediately invalidates the current one and cannot be undone.',
+    'edit.credentials.sections.secret.flowSecretLabel': 'Flow Secret',
+    'edit.credentials.sections.secret.hints.clientSecret':
+      'A confidential credential used with the Client ID to authenticate this application. Keep it secret.',
+    'edit.credentials.sections.secret.hints.flowSecret':
+      "A confidential credential used to authenticate this application's embedded sign-in flow. Keep it secret.",
+
     // General section
     'edit.general.sections.access': 'Access',
     'edit.general.sections.access.description': "Configure who can access this application, where it's hosted, etc.",
@@ -2787,6 +2825,10 @@ const translations = {
     'edit.general.sections.contacts.description': 'Contact email addresses for {{entity}} administrators.',
     'edit.general.labels.applicationId': 'Application ID',
     'edit.general.labels.clientId': 'Client ID',
+    'edit.general.hints.applicationId':
+      "ThunderID's internal identifier for this application. Use it when calling the Management API.",
+    'edit.general.hints.clientId':
+      'The public OAuth2 client identifier this application uses to authenticate as a client.',
     'edit.general.labels.allowedUserTypes': 'Allowed User Types',
     'edit.general.labels.applicationUrl': 'Application URL',
     'edit.general.labels.contacts': 'Contacts',
@@ -2981,7 +3023,7 @@ const translations = {
       'Signed with the server key, then encrypted to the client certificate.',
 
     // Advanced section
-    'edit.advanced.labels.oauth2Config': 'OAuth2 Configuration',
+    'edit.advanced.labels.oauth2Config': 'OAuth 2 Configuration',
     'edit.advanced.labels.redirectUris': 'Redirect URIs',
     'edit.advanced.labels.grantTypes': 'Grant Types',
     'edit.advanced.labels.responseTypes': 'Response Types',
@@ -4516,8 +4558,6 @@ const translations = {
     'next_steps.invite_members.title': 'Add Users',
     'next_steps.invite_members.description': 'Add or invite collaborators to help manage your organization.',
     'next_steps.invite_members.actions.primary.label': 'Add User',
-    'next_steps.invite_members.status.count': '{{count}} member',
-    'next_steps.invite_members.status.count_other': '{{count}} members',
     'next_steps.invite_members.status.empty': 'No members yet',
 
     // Login Box card
@@ -4752,7 +4792,7 @@ const translations = {
     'create.submit': 'Create resource server',
     'create.submitMcp': 'Create MCP server',
     'edit.tab.resources': 'Resources',
-    'edit.tab.advanced': 'Advanced Settings',
+    'edit.tab.advanced': 'Advanced',
     'edit.defaultBadge': 'Default resource server',
     'edit.defaultBadgeManaged': 'Managed by server configuration.',
     'edit.back': 'Back to resource servers',
@@ -4872,6 +4912,7 @@ const translations = {
     'form.tabs.protocolSettings': 'Settings',
     'form.tabs.claims': 'Claims',
     'form.tabs.issuerTrust': 'Issuer Trust',
+    'form.tabs.advanced': 'Advanced',
     'form.quickCopy.title': 'Quick Copy',
     'form.quickCopy.description': "Copy the definition's identifiers for use in flows and API calls.",
     'form.quickCopy.idHint': 'Use this ID to reference the presentation definition in API calls.',
@@ -5011,6 +5052,7 @@ const translations = {
     'form.tabs.general': 'General',
     'form.tabs.protocolSettings': 'Settings',
     'form.tabs.claims': 'Claims',
+    'form.tabs.advanced': 'Advanced',
     'form.quickCopy.title': 'Quick Copy',
     'form.quickCopy.description': "Copy the credential template's identifiers for use in flows and API calls.",
     'form.quickCopy.idHint': 'Use this ID to reference the credential template in API calls.',

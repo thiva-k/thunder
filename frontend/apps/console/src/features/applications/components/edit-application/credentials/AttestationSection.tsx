@@ -106,6 +106,10 @@ export default function AttestationSection({
   const [platform, setPlatform] = useState<AttestationPlatform>(propPlatform);
   const [packageName, setPackageName] = useState<string>(android?.packageName ?? '');
   const [digests, setDigests] = useState<string[]>(android?.certificateSha256Digests ?? []);
+  // An empty list renders as a bare "Add Digest" button with no field to type into, which reads
+  // as broken rather than "nothing added yet". Show one empty row by default instead; typing into
+  // it (or removing it) operates on the real (currently empty) `digests` array via the index above.
+  const displayDigests = digests.length > 0 ? digests : [''];
   const [credentials, setCredentials] = useState<string>('');
   const [teamId, setTeamId] = useState<string>(apple?.teamId ?? '');
   const [bundleId, setBundleId] = useState<string>(apple?.bundleId ?? '');
@@ -301,12 +305,21 @@ export default function AttestationSection({
     setIsDevModeConfirmOpen(false);
   };
 
+  // Appends relative to what's on screen (displayDigests), not the possibly-empty backing
+  // `digests` array — otherwise the first click while the list is empty turns [] into [''],
+  // which renders identically to the placeholder row already shown and looks like nothing happened.
   const handleAddDigest = () => {
-    setDigests((prev) => [...prev, '']);
+    setDigests([...displayDigests, '']);
   };
 
   const handleDigestChange = (index: number, value: string) => {
-    setDigests((prev) => prev.map((d, i) => (i === index ? value : d)));
+    setDigests((prev) => {
+      // Typing into the placeholder row shown for an empty list must create the first real
+      // entry rather than mapping over (and no-op'ing on) an empty array.
+      const next = prev.length > 0 ? [...prev] : [''];
+      next[index] = value;
+      return next;
+    });
   };
 
   const handleRemoveDigest = (index: number) => {
@@ -413,7 +426,7 @@ export default function AttestationSection({
                 )}
               </Typography>
               <Stack spacing={2} id="attestation-digests-section">
-                {digests.map((digest, index) => (
+                {displayDigests.map((digest, index) => (
                   // IMPORTANT: Do not remove the suppression since it affects functionality.
                   // eslint-disable-next-line react/no-array-index-key
                   <Stack key={index} direction="row" spacing={1} alignItems="flex-start">
