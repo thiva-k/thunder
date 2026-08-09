@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen, fireEvent} from '@thunderid/test-utils';
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {render, renderHook, screen, fireEvent} from '@thunderid/test-utils';
+import {useTranslation} from 'react-i18next';
+import {describe, expect, it, vi, beforeAll, beforeEach} from 'vitest';
 import TranslationFieldsView from '@/components/edit-translation/TranslationFieldsView';
-
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({t: (key: string) => key}),
-  };
-});
 
 const sampleValues = {
   'actions.save': 'Save',
@@ -30,6 +23,12 @@ const defaultProps = {
 };
 
 describe('TranslationFieldsView', () => {
+  let t: (key: string) => string;
+
+  beforeAll(() => {
+    ({t} = renderHook(() => useTranslation('translations')).result.current);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -53,7 +52,7 @@ describe('TranslationFieldsView', () => {
     it('shows no-keys message when localValues is empty', () => {
       render(<TranslationFieldsView {...defaultProps} localValues={{}} serverValues={{}} />);
 
-      expect(screen.getByText('editor.noKeys')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.noKeys'))).toBeInTheDocument();
     });
   });
 
@@ -82,7 +81,7 @@ describe('TranslationFieldsView', () => {
     it('shows no-results message when search matches nothing', () => {
       render(<TranslationFieldsView {...defaultProps} search="nonexistent" />);
 
-      expect(screen.getByText('editor.noResults')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.noResults'))).toBeInTheDocument();
     });
   });
 
@@ -157,23 +156,23 @@ describe('TranslationFieldsView', () => {
     it('shows the Add Key button when isCustomNamespace is true', () => {
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace />);
 
-      expect(screen.getByText('editor.addKey')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.addKey'))).toBeInTheDocument();
     });
 
     it('does not show the Add Key button when isCustomNamespace is false', () => {
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace={false} />);
 
-      expect(screen.queryByText('editor.addKey')).not.toBeInTheDocument();
+      expect(screen.queryByText(t('editor.addKey'))).not.toBeInTheDocument();
     });
 
     it('shows the add key form when the Add Key button is clicked', async () => {
       const user = userEvent.setup();
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace />);
 
-      await user.click(screen.getByText('editor.addKey'));
+      await user.click(screen.getByText(t('editor.addKey')));
 
-      expect(screen.getByLabelText('editor.addKey.keyLabel')).toBeInTheDocument();
-      expect(screen.getByLabelText('editor.addKey.valueLabel')).toBeInTheDocument();
+      expect(screen.getByLabelText(t('editor.addKey.keyLabel'))).toBeInTheDocument();
+      expect(screen.getByLabelText(t('editor.addKey.valueLabel'))).toBeInTheDocument();
     });
 
     it('calls onChange and closes the form when a new key is submitted', async () => {
@@ -181,58 +180,58 @@ describe('TranslationFieldsView', () => {
       const user = userEvent.setup();
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace onChange={onChange} />);
 
-      await user.click(screen.getByText('editor.addKey'));
+      await user.click(screen.getByText(t('editor.addKey')));
 
-      fireEvent.change(screen.getByPlaceholderText('editor.addKey.keyPlaceholder'), {
+      fireEvent.change(screen.getByPlaceholderText(t('editor.addKey.keyPlaceholder')), {
         target: {value: 'new.key'},
       });
-      fireEvent.change(screen.getByPlaceholderText('editor.addKey.valuePlaceholder'), {
+      fireEvent.change(screen.getByPlaceholderText(t('editor.addKey.valuePlaceholder')), {
         target: {value: 'New Value'},
       });
 
-      await user.click(screen.getByText('editor.addKey.submit'));
+      await user.click(screen.getByText(t('editor.addKey.submit')));
 
       expect(onChange).toHaveBeenCalledWith('new.key', 'New Value');
       // Form should be closed, Add Key button visible again
-      expect(screen.getByText('editor.addKey')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.addKey'))).toBeInTheDocument();
     });
 
     it('closes the form and clears inputs when Cancel is clicked', async () => {
       const user = userEvent.setup();
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace />);
 
-      await user.click(screen.getByText('editor.addKey'));
+      await user.click(screen.getByText(t('editor.addKey')));
 
-      fireEvent.change(screen.getByPlaceholderText('editor.addKey.keyPlaceholder'), {
+      fireEvent.change(screen.getByPlaceholderText(t('editor.addKey.keyPlaceholder')), {
         target: {value: 'some.key'},
       });
 
-      await user.click(screen.getByText('editor.addKey.cancel'));
+      await user.click(screen.getByText(t('editor.addKey.cancel')));
 
       // Form should be closed, Add Key button visible again
-      expect(screen.getByText('editor.addKey')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.addKey'))).toBeInTheDocument();
     });
 
     it('shows a duplicate key error when the entered key already exists', async () => {
       const user = userEvent.setup();
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace />);
 
-      await user.click(screen.getByText('editor.addKey'));
+      await user.click(screen.getByText(t('editor.addKey')));
 
-      fireEvent.change(screen.getByPlaceholderText('editor.addKey.keyPlaceholder'), {
+      fireEvent.change(screen.getByPlaceholderText(t('editor.addKey.keyPlaceholder')), {
         target: {value: 'actions.save'},
       });
 
-      expect(screen.getByText('editor.addKey.duplicateKey')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.addKey.duplicateKey'))).toBeInTheDocument();
     });
 
     it('disables the submit button when the key is empty', async () => {
       const user = userEvent.setup();
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace />);
 
-      await user.click(screen.getByText('editor.addKey'));
+      await user.click(screen.getByText(t('editor.addKey')));
 
-      const submitButton = screen.getByText('editor.addKey.submit').closest('button');
+      const submitButton = screen.getByText(t('editor.addKey.submit')).closest('button');
       expect(submitButton).toBeDisabled();
     });
 
@@ -240,13 +239,13 @@ describe('TranslationFieldsView', () => {
       const user = userEvent.setup();
       render(<TranslationFieldsView {...defaultProps} isCustomNamespace />);
 
-      await user.click(screen.getByText('editor.addKey'));
+      await user.click(screen.getByText(t('editor.addKey')));
 
-      fireEvent.change(screen.getByPlaceholderText('editor.addKey.keyPlaceholder'), {
+      fireEvent.change(screen.getByPlaceholderText(t('editor.addKey.keyPlaceholder')), {
         target: {value: 'actions.save'},
       });
 
-      const submitButton = screen.getByText('editor.addKey.submit').closest('button');
+      const submitButton = screen.getByText(t('editor.addKey.submit')).closest('button');
       expect(submitButton).toBeDisabled();
     });
   });

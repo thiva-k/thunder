@@ -112,7 +112,7 @@ const FlowBuilderPage = lazy(() => import('./features/flows/pages/FlowBuilderPag
 const CreateRolePage = lazy(() => import('./features/roles/pages/CreateRolePage'));
 const RoleEditPage = lazy(() => import('./features/roles/pages/RoleEditPage'));
 const RolesListPage = lazy(() => import('./features/roles/pages/RolesListPage'));
-const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage'));
+const SettingsPage = lazy(() => import('@thunderid/configure-settings').then((m) => ({default: m.SettingsPage})));
 const TrustedIssuerDetailPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.TrustedIssuerDetailPage})),
 );

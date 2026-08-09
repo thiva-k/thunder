@@ -6,10 +6,6 @@ import userEvent from '@testing-library/user-event';
 import {renderWithProviders} from '@thunderid/test-utils';
 import {describe, it, expect, vi} from 'vitest';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({t: (key: string) => key}),
-}));
-
 vi.mock('../../components/cors/CorsSection', () => ({
   default: () => <div data-testid="cors-section" />,
 }));
@@ -20,16 +16,16 @@ describe('SettingsPage', () => {
   it('renders the title, subtitle, the CORS tab, and the CORS panel', () => {
     renderWithProviders(<SettingsPage />);
 
-    expect(screen.getByText('settings:page.title')).toBeInTheDocument();
-    expect(screen.getByText('settings:page.subtitle')).toBeInTheDocument();
-    expect(screen.getByRole('tab', {name: 'settings:tabs.cors'})).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByText('Settings that apply across your entire ThunderID deployment.')).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: 'CORS'})).toBeInTheDocument();
     expect(screen.getByTestId('cors-section')).toBeInTheDocument();
   });
 
   it('keeps the CORS panel active when its tab is clicked', async () => {
     const user = userEvent.setup();
     renderWithProviders(<SettingsPage />);
-    await user.click(screen.getByRole('tab', {name: 'settings:tabs.cors'}));
+    await user.click(screen.getByRole('tab', {name: 'CORS'}));
     expect(screen.getByTestId('cors-section')).toBeInTheDocument();
   });
 });

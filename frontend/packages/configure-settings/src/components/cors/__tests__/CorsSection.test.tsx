@@ -7,10 +7,6 @@ import {renderWithProviders} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import type {CorsConfigResponse} from '../../../models/responses';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({t: (key: string) => key}),
-}));
-
 const mockUseGetCorsConfig =
   vi.fn<() => {data: CorsConfigResponse | undefined; isLoading: boolean; error: Error | null}>();
 vi.mock('../../../api/useGetCorsConfig', () => ({
@@ -46,7 +42,7 @@ describe('CorsSection', () => {
   it('does not render the editor while loading', () => {
     mockUseGetCorsConfig.mockReturnValue({data: undefined, isLoading: true, error: null});
     renderWithProviders(<CorsSection />);
-    expect(screen.queryByRole('button', {name: 'settings:cors.addOrigin'})).toBeNull();
+    expect(screen.queryByRole('button', {name: 'Add origin'})).toBeNull();
   });
 
   it('shows an alert on load error', () => {
@@ -66,9 +62,9 @@ describe('CorsSection', () => {
     expect(screen.getByDisplayValue('https://console.example.com')).toHaveAttribute('readonly');
     expect(screen.getByDisplayValue('^https://x$')).toHaveAttribute('readonly');
     expect(screen.getByDisplayValue('https://app.acme.com')).not.toHaveAttribute('readonly');
-    expect(screen.getByRole('button', {name: 'settings:cors.addOrigin'})).toBeInTheDocument();
-    expect(screen.getByText('settings:cors.readOnlyHint')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'settings:cors.removeOrigin'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Add origin'})).toBeInTheDocument();
+    expect(screen.getByText("Some origins are read-only because they're managed declaratively.")).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Remove origin'})).toBeInTheDocument();
   });
 
   it('removes an editable origin when its delete button is clicked', async () => {
@@ -81,7 +77,7 @@ describe('CorsSection', () => {
     renderWithProviders(<CorsSection />);
 
     expect(screen.getByDisplayValue('https://remove.example.com')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', {name: 'settings:cors.removeOrigin'}));
+    await user.click(screen.getByRole('button', {name: 'Remove origin'}));
     expect(screen.queryByDisplayValue('https://remove.example.com')).toBeNull();
   });
 
@@ -94,9 +90,9 @@ describe('CorsSection', () => {
     });
     renderWithProviders(<CorsSection />);
 
-    expect(screen.queryByPlaceholderText('settings:cors.originPlaceholder')).toBeNull();
-    await user.click(screen.getByRole('button', {name: 'settings:cors.addOrigin'}));
-    expect(screen.getByPlaceholderText('settings:cors.originPlaceholder')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('https://app.example.com')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Add origin'}));
+    expect(screen.getByPlaceholderText('https://app.example.com')).toBeInTheDocument();
   });
 
   it('saves the edited origins via the update mutation and clears the unsaved bar on success', async () => {
@@ -112,10 +108,10 @@ describe('CorsSection', () => {
     });
     renderWithProviders(<CorsSection />);
 
-    await user.click(screen.getByRole('button', {name: 'settings:cors.addOrigin'}));
-    await user.type(screen.getByPlaceholderText('settings:cors.originPlaceholder'), 'https://new.example.com');
+    await user.click(screen.getByRole('button', {name: 'Add origin'}));
+    await user.type(screen.getByPlaceholderText('https://app.example.com'), 'https://new.example.com');
 
-    const saveButton = await screen.findByRole('button', {name: 'settings:cors.save'});
+    const saveButton = await screen.findByRole('button', {name: 'Save changes'});
     await user.click(saveButton);
 
     expect(mockMutate).toHaveBeenCalledWith(
@@ -124,7 +120,7 @@ describe('CorsSection', () => {
     );
     // onSuccess → reset() clears the overlay, so the unsaved bar disappears.
     await waitFor(() => {
-      expect(screen.queryByRole('button', {name: 'settings:cors.save'})).toBeNull();
+      expect(screen.queryByRole('button', {name: 'Save changes'})).toBeNull();
     });
   });
 
@@ -137,11 +133,11 @@ describe('CorsSection', () => {
     });
     renderWithProviders(<CorsSection />);
 
-    await user.click(screen.getByRole('button', {name: 'settings:cors.addOrigin'}));
+    await user.click(screen.getByRole('button', {name: 'Add origin'}));
     // Change without blurring (fireEvent), so the row-level error isn't shown yet and Save is enabled.
     // '(bad' is neither a valid origin nor a compilable regex, so the submit-time guard must block it.
-    fireEvent.change(screen.getByPlaceholderText('settings:cors.originPlaceholder'), {target: {value: '(bad'}});
-    fireEvent.click(screen.getByRole('button', {name: 'settings:cors.save'}));
+    fireEvent.change(screen.getByPlaceholderText('https://app.example.com'), {target: {value: '(bad'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save changes'}));
 
     expect(mockMutate).not.toHaveBeenCalled();
   });
@@ -155,13 +151,13 @@ describe('CorsSection', () => {
     });
     renderWithProviders(<CorsSection />);
 
-    await user.click(screen.getByRole('button', {name: 'settings:cors.addOrigin'}));
-    await user.click(screen.getByRole('button', {name: 'settings:cors.addOrigin'}));
-    const inputs = screen.getAllByPlaceholderText('settings:cors.originPlaceholder');
+    await user.click(screen.getByRole('button', {name: 'Add origin'}));
+    await user.click(screen.getByRole('button', {name: 'Add origin'}));
+    const inputs = screen.getAllByPlaceholderText('https://app.example.com');
     await user.type(inputs[0], 'https://dup.example.com');
     await user.type(inputs[1], 'https://dup.example.com');
 
-    const saveButton = await screen.findByRole('button', {name: 'settings:cors.save'});
+    const saveButton = await screen.findByRole('button', {name: 'Save changes'});
     expect(saveButton).toBeDisabled();
     expect(mockMutate).not.toHaveBeenCalled();
   });

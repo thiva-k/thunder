@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen} from '@thunderid/test-utils';
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {render, renderHook, screen} from '@thunderid/test-utils';
+import {useTranslation} from 'react-i18next';
+import {describe, expect, it, vi, beforeAll, beforeEach} from 'vitest';
 import NamespaceSelector from '@/components/edit-translation/NamespaceSelector';
-
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({t: (key: string) => key}),
-  };
-});
 
 const defaultProps = {
   namespaces: ['commonNamespace', 'loginFlow', 'userProfile'],
@@ -22,6 +15,12 @@ const defaultProps = {
 };
 
 describe('NamespaceSelector', () => {
+  let t: (key: string) => string;
+
+  beforeAll(() => {
+    ({t} = renderHook(() => useTranslation('translations')).result.current);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -30,13 +29,13 @@ describe('NamespaceSelector', () => {
     it('renders the namespace label', () => {
       render(<NamespaceSelector {...defaultProps} />);
 
-      expect(screen.getByText('editor.namespace')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.namespace'))).toBeInTheDocument();
     });
 
     it('renders the helper text', () => {
       render(<NamespaceSelector {...defaultProps} />);
 
-      expect(screen.getByText('editor.namespace.helperText')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.namespace.helperText'))).toBeInTheDocument();
     });
 
     it('renders with the current value displayed in the input', () => {
