@@ -1231,12 +1231,11 @@ const translations = {
 
     // Edit page - Flows tab
     'edit.flows.allowedUserTypes.title': 'Allowed User Types',
-    'edit.flows.allowedUserTypes.description':
-      'Restrict which user types can authenticate or register through this agent.',
+    'edit.flows.allowedUserTypes.description': 'Restrict which user types can sign up through this agent.',
     'edit.flows.allowedUserTypes.label': 'User Types',
     'edit.flows.allowedUserTypes.placeholder': 'Select or add user types',
-    'edit.flows.allowedUserTypes.hint': 'Only these user types can authenticate or register through this agent.',
-    'edit.flows.allowedUserTypes.required': 'Select at least one user type that can sign in through this agent.',
+    'edit.flows.allowedUserTypes.hint': 'Users of these types can sign up through this agent.',
+    'edit.flows.allowedUserTypes.required': 'Select at least one user type that can sign up through this agent.',
     'edit.flows.delegationLock.message':
       'These settings are frozen for this agent. Select "On behalf of a user" in the Advanced tab to unlock and start using them.',
 
@@ -2287,8 +2286,8 @@ const translations = {
     'onboarding.configure.applicationDetails.ouDefaults.design.title': 'Design',
     'onboarding.configure.applicationDetails.ouDefaults.design.description':
       'Use the same theme & layout as {{ouName}}',
-    'onboarding.configure.applicationDetails.userAccess.title': 'Allow all user types to access this application',
-    'onboarding.configure.applicationDetails.userAccess.subtitle': 'Every user type can sign in to this application',
+    'onboarding.configure.applicationDetails.userAccess.title': 'Allow all user types to sign up for this application',
+    'onboarding.configure.applicationDetails.userAccess.subtitle': 'Users can sign up as any user type',
     'onboarding.configure.applicationDetails.userAccess.placeholder': 'Select user types',
     'onboarding.mcp.clientType.title': 'Client Type',
     'onboarding.mcp.clientType.subtitle': 'How will this client obtain tokens?',
@@ -2812,7 +2811,7 @@ const translations = {
 
     // Access tab
     'edit.access.sections.userTypes.title': 'Allowed User Types',
-    'edit.access.sections.userTypes.description': 'Choose which user types can authenticate with this application.',
+    'edit.access.sections.userTypes.description': 'Choose which user types can sign up through this application.',
     'edit.access.sections.applicationAccess.title': 'Application Access',
     'edit.access.sections.applicationAccess.description': 'Configure where this application is accessed from.',
 
@@ -2871,7 +2870,7 @@ const translations = {
     'onboarding.configure.details.corsOrigins.addOrigin': 'Add Origin',
     'onboarding.configure.details.corsOrigins.error.invalid': 'Enter a valid origin, e.g. https://app.example.com.',
     'edit.general.allowedUserTypes.placeholder': 'Select user types',
-    'edit.general.allowedUserTypes.hint': 'Users of these types can authenticate with this application',
+    'edit.general.allowedUserTypes.hint': 'Users of these types can sign up through this application',
     'edit.general.applicationUrl.hint': 'The homepage URL of your application',
     'edit.general.sections.dangerZone.title': 'Danger Zone',
     'edit.general.sections.dangerZone.description': 'Actions in this section are irreversible. Proceed with caution.',

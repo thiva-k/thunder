@@ -15992,7 +15992,7 @@ components:
           type: array
           items:
             type: string
-          description: User types allowed to authenticate against this agent.
+          description: User types that can sign up through this agent.
           example:
             - employee
             - contractor
@@ -17251,7 +17251,7 @@ components:
           type: array
           items:
             type: string
-          description: Array of allowed user types for this application.
+          description: User types allowed to sign up through this application.
           example:
             - employee
             - customer
@@ -17428,7 +17428,7 @@ components:
           type: array
           items:
             type: string
-          description: Array of allowed user types for this application.
+          description: User types allowed to sign up through this application.
           example:
             - employee
             - customer
@@ -17583,7 +17583,7 @@ components:
           type: array
           items:
             type: string
-          description: Array of allowed user types for this application.
+          description: User types allowed to sign up through this application.
           example:
             - employee
             - customer
