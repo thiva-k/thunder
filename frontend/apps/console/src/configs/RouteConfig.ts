@@ -8,6 +8,7 @@ import type {GroupRoutePaths} from '@thunderid/configure-groups';
 import type {ImportExportRoutePaths} from '@thunderid/configure-import-export';
 import type {OrganizationUnitRoutePaths} from '@thunderid/configure-organization-units';
 import type {ResourceServerRoutePaths} from '@thunderid/configure-resource-servers';
+import type {RoleRoutePaths} from '@thunderid/configure-roles';
 import type {TranslationRoutePaths} from '@thunderid/configure-translations';
 import type {UserTypeRoutePaths} from '@thunderid/configure-user-types';
 import type {UserRoutePaths} from '@thunderid/configure-users';
@@ -33,11 +34,6 @@ export interface ConsoleRoutePaths {
     create: () => string;
   };
   agents: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  roles: {
     list: () => string;
     detail: (id: string) => string;
     create: () => string;
@@ -88,6 +84,7 @@ export type RouteConfig = OrganizationUnitRoutePaths &
   ImportExportRoutePaths &
   DesignRoutePaths &
   GroupRoutePaths &
+  RoleRoutePaths &
   ConsoleRoutePaths;
 
 /**

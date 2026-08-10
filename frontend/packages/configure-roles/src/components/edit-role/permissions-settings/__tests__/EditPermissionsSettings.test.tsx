@@ -39,10 +39,6 @@ vi.mock('@thunderid/configure-resource-servers', async (importOriginal) => {
   };
 });
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({t: (key: string) => key}),
-}));
-
 const permissions: ResourcePermissions[] = [{resourceServerId: 'rs-1', permissions: ['bookings', 'bookings:create']}];
 
 describe('EditPermissionsSettings', () => {
@@ -52,14 +48,16 @@ describe('EditPermissionsSettings', () => {
 
   it('renders the Permissions SettingsCard title and description', () => {
     render(<EditPermissionsSettings permissions={permissions} onPermissionsChange={vi.fn()} />);
-    expect(screen.getByText('roles:edit.permissions.title')).toBeInTheDocument();
-    expect(screen.getByText('roles:edit.permissions.description')).toBeInTheDocument();
+    expect(screen.getByText('Permissions')).toBeInTheDocument();
+    expect(screen.getByText('Select the permissions this role grants, grouped by resource server')).toBeInTheDocument();
   });
 
   it('renders the Selected scopes SettingsCard title and description', () => {
     render(<EditPermissionsSettings permissions={permissions} onPermissionsChange={vi.fn()} />);
-    expect(screen.getByText('roles:edit.permissions.scopes.title')).toBeInTheDocument();
-    expect(screen.getByText('roles:edit.permissions.scopes.description')).toBeInTheDocument();
+    expect(screen.getByText('Selected scopes')).toBeInTheDocument();
+    expect(
+      screen.getByText('The OAuth scopes granted by these permissions. Copy them for use in your application.'),
+    ).toBeInTheDocument();
   });
 
   it('passes permissions through to PermissionCatalog as selected', () => {

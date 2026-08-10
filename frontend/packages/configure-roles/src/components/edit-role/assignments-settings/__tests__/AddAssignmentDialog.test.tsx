@@ -13,30 +13,13 @@ vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
   useGetApplications: vi.fn(),
 }));
 vi.mock('../../../../api/useGetRoleAssignments');
-vi.mock('@thunderid/hooks', () => ({
-  useDataGridLocaleText: vi.fn(),
-}));
-
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        'roles:assignments.dialog.title': 'Add Assignments',
-        'roles:assignments.dialog.tabs.users': 'Users',
-        'roles:assignments.dialog.tabs.groups': 'Groups',
-        'roles:assignments.dialog.tabs.apps': 'Apps',
-        'roles:assignments.dialog.columns.displayName': 'Display Name',
-        'roles:assignments.dialog.columns.userType': 'User Type',
-        'roles:assignments.dialog.columns.name': 'Name',
-        'roles:assignments.dialog.columns.description': 'Description',
-        'roles:assignments.dialog.add': 'Add',
-        'roles:assignments.dialog.fetchError': 'Failed to fetch data',
-        'common:actions.cancel': 'Cancel',
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
+vi.mock('@thunderid/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thunderid/hooks')>();
+  return {
+    ...actual,
+    useDataGridLocaleText: vi.fn(),
+  };
+});
 
 vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@wso2/oxygen-ui')>();
@@ -203,7 +186,7 @@ describe('AddAssignmentDialog', () => {
       renderComponent();
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText('Add Assignments')).toBeInTheDocument();
+      expect(screen.getByText('Add Assignment')).toBeInTheDocument();
     });
 
     it('should not render dialog when open is false', () => {
@@ -333,7 +316,7 @@ describe('AddAssignmentDialog', () => {
 
       renderComponent();
 
-      expect(screen.getByText('Failed to fetch data')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load data. Please try again.')).toBeInTheDocument();
     });
 
     it('should show error alert when groups fetch fails', async () => {
@@ -347,7 +330,7 @@ describe('AddAssignmentDialog', () => {
       renderComponent();
       await user.click(screen.getByText('Groups'));
 
-      expect(screen.getByText('Failed to fetch data')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load data. Please try again.')).toBeInTheDocument();
     });
 
     it('should show error alert when apps fetch fails', async () => {
@@ -361,7 +344,7 @@ describe('AddAssignmentDialog', () => {
       renderComponent();
       await user.click(screen.getByText('Apps'));
 
-      expect(screen.getByText('Failed to fetch data')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load data. Please try again.')).toBeInTheDocument();
     });
 
     it('should not show error alert while loading', () => {

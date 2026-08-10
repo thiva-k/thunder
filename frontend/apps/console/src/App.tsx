@@ -5,6 +5,7 @@ import {PageLoader} from '@thunderid/components';
 import {LayoutBuilderProvider, ThemeBuilderProvider} from '@thunderid/configure-design';
 import {GroupCreateProvider} from '@thunderid/configure-groups';
 import {OrganizationUnitProvider} from '@thunderid/configure-organization-units';
+import {RoleCreateProvider} from '@thunderid/configure-roles';
 import {TranslationCreateProvider} from '@thunderid/configure-translations';
 import {UserTypeCreateProvider} from '@thunderid/configure-user-types';
 import {RoutesProvider, ToastProvider} from '@thunderid/contexts';
@@ -15,7 +16,6 @@ import RouteConfig, {ROUTE_SEGMENTS} from './configs/RouteConfig';
 import AgentCreateProvider from './features/agents/contexts/AgentCreate/AgentCreateProvider';
 import ApplicationCreateProvider from './features/applications/contexts/ApplicationCreate/ApplicationCreateProvider';
 import OrganizationUnitDefaultFlowsSettings from './features/organization-units/OrganizationUnitDefaultFlowsSettings';
-import RoleCreateProvider from './features/roles/contexts/RoleCreate/RoleCreateProvider';
 import WelcomeRedirect from './features/welcome/components/WelcomeRedirect';
 import GetStartedPage from './features/welcome/pages/GetStartedPage';
 import TryoutSecuringAIAgentsPage from './features/welcome/pages/TryoutSecuringAIAgentsPage';
@@ -116,9 +116,9 @@ const ConnectionCreateWizardPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.ConnectionCreateWizardPage})),
 );
 const FlowBuilderPage = lazy(() => import('./features/flows/pages/FlowBuilderPage'));
-const CreateRolePage = lazy(() => import('./features/roles/pages/CreateRolePage'));
-const RoleEditPage = lazy(() => import('./features/roles/pages/RoleEditPage'));
-const RolesListPage = lazy(() => import('./features/roles/pages/RolesListPage'));
+const CreateRolePage = lazy(() => import('@thunderid/configure-roles').then((m) => ({default: m.CreateRolePage})));
+const RoleEditPage = lazy(() => import('@thunderid/configure-roles').then((m) => ({default: m.RoleEditPage})));
+const RolesListPage = lazy(() => import('@thunderid/configure-roles').then((m) => ({default: m.RolesListPage})));
 const SettingsPage = lazy(() => import('@thunderid/configure-settings').then((m) => ({default: m.SettingsPage})));
 const TrustedIssuerDetailPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.TrustedIssuerDetailPage})),

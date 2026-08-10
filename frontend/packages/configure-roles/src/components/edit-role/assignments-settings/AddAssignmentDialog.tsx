@@ -28,9 +28,9 @@ import {
 import {AppWindow, Bot, User as UserIcon, Users} from '@wso2/oxygen-ui-icons-react';
 import {useState, useMemo, useCallback, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
-import useGetAgents from '../../../../agents/api/useGetAgents';
-import type {BasicAgent} from '../../../../agents/models/agent';
 import useGetRoleAssignments from '../../../api/useGetRoleAssignments';
+import type {BasicAgent} from '../../../internal/agent';
+import useGetAgents from '../../../internal/useGetAgents';
 import type {RoleAssignment} from '../../../models/role';
 
 interface AddAssignmentDialogProps {
