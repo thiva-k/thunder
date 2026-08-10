@@ -8,42 +8,34 @@ value:
       directives:
         style-src-elem:
           - "'self'"
-          - "https://fonts.googleapis.com"
           - "'unsafe-inline'" # Needed for the embedded Monaco editor, which has no CSP nonce support.
-        # Governs inline style="" attributes; these can't carry a nonce at all per spec.
-        style-src-attr:
-          - "'self'"
-          - "'unsafe-inline'"
-        img-src:
-          - "'self'"
-          - "data:" # Inline library images.
-          - "https:" # TEMPORARY: arbitrary tenant-supplied images. Tighten to a proxy or operator allowlist later.
-        font-src:
-          - "'self'"
-          - "data:" # Bundled library font self-hosted as a base64 URI.
-          - "https://fonts.gstatic.com" # Font files referenced by the fonts.googleapis.com stylesheet.
-        connect-src:
-          - "'self'"
-          - "https://thunderid.dev" # Console welcome page's release metadata fetch.
-          - "https://fonts.googleapis.com" # GatePreview iframe preconnect.
-          - "https://fonts.gstatic.com" # GatePreview iframe preconnect.
-        worker-src:
-          - "'self'"
-          - "blob:" # Monaco instantiates web workers, which the build may emit as blob URLs.
-    - location: "/gate/"
-      directives:
-        style-src-elem:
-          - "'self'"
-          - "https://fonts.googleapis.com"
-        # Governs inline style="" attributes; these can't carry a nonce at all per spec.
+        # Governs inline style="" attributes that can't carry a nonce.
         style-src-attr:
           - "'self'"
           - "'unsafe-inline'"
         img-src:
           - "'self'"
           - "data:"
-          - "https:" # TEMPORARY: arbitrary tenant-supplied images. Tighten to a proxy or operator allowlist later.
         font-src:
           - "'self'"
-          - "data:" # Bundled library font self-hosted as a base64 URI.
-          - "https://fonts.gstatic.com" # Font files referenced by the fonts.googleapis.com stylesheet.
+          - "data:"
+        connect-src:
+          - "'self'"
+          - "https://thunderid.dev"
+        worker-src:
+          - "'self'"
+          - "blob:" # Monaco instantiated web workers.
+    - location: "/gate/"
+      directives:
+        style-src-elem:
+          - "'self'"
+        # Governs inline style="" attributes that can't carry a nonce.
+        style-src-attr:
+          - "'self'"
+          - "'unsafe-inline'"
+        img-src:
+          - "'self'"
+          - "data:"
+        font-src:
+          - "'self'"
+          - "data:"
