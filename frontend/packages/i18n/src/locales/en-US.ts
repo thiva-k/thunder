@@ -2613,13 +2613,22 @@ const translations = {
     'clientSecret.clientSecretLabel': 'Client Secret',
     'clientSecret.purpose': 'Used to authenticate your application at the OAuth 2 token endpoint.',
     'clientSecret.copied': 'Copied to clipboard',
-    'clientSecret.copySecret': 'Copy Secret',
+    'clientSecret.copySecret': 'Copy Client Secret',
     'clientSecret.securityReminder.title': 'Security Reminder',
     'clientSecret.securityReminder.description':
       'Your client secret is a confidential key used to authenticate your application. It should be treated with the same level of security as a password. Never expose it in browser console, version control, or logs.',
     'flowSecret.label': 'Flow Secret',
     'flowSecret.purpose':
       'Used to authenticate your server when it starts a sign-in flow directly via the Flow Execution API.',
+    'flowSecret.saveTitle': 'Save Your Flow Secret',
+    'flowSecret.saveSubtitle': "This is the only time you'll see this secret. Store it somewhere safe.",
+    'flowSecret.copySecret': 'Copy Flow Secret',
+    'flowSecret.securityReminder.description':
+      'Your Flow Secret is a confidential key used to authenticate your application when it starts a sign-in flow. It should be treated with the same level of security as a password. Never expose it in browser console, version control, or logs.',
+    'secrets.saveTitle': 'Save Your Secrets',
+    'secrets.saveSubtitle': "This is the only time you'll see these secrets. Store them somewhere safe.",
+    'secrets.securityReminder.description':
+      'These secrets are confidential keys used to authenticate your application. They should be treated with the same level of security as passwords. Never expose them in browser console, version control, or logs.',
     'view.title': 'Application Details',
     'view.subtitle': 'View application details and configuration',
     'view.sections.basicInformation': 'Basic Information',
