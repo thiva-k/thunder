@@ -180,6 +180,7 @@ describe('generateFlowGraph', () => {
       const sendNode = request.nodes.find((n) => n.id === 'mfa_send_otp');
       expect(sendNode?.executor?.name).toBe('SMSExecutor');
       expect(sendNode?.properties?.senderId).toBe('sender-123');
+      expect(sendNode?.properties?.smsTemplate).toBe('OTP');
     });
 
     it('should branch into an independent channel-choice chain when both Email and SMS OTP MFA are enabled', () => {
@@ -203,6 +204,10 @@ describe('generateFlowGraph', () => {
       expect(emailPrompt?.prompts?.find((p) => p.action?.nextNode === 'mfa_generate_otp_email')).toBeDefined();
       const smsPrompt = request.nodes.find((n) => n.id === 'mfa_verify_prompt_sms');
       expect(smsPrompt?.prompts?.find((p) => p.action?.nextNode === 'mfa_generate_otp_sms')).toBeDefined();
+
+      const smsSendNode = request.nodes.find((n) => n.id === 'mfa_send_otp_sms');
+      expect(smsSendNode?.properties?.senderId).toBe('sender-123');
+      expect(smsSendNode?.properties?.smsTemplate).toBe('OTP');
 
       expect(request.nodes.find((n) => n.id === 'mfa_verify_otp_email')?.onSuccess).toBe('auth_assert');
       expect(request.nodes.find((n) => n.id === 'mfa_verify_otp_sms')?.onSuccess).toBe('auth_assert');
