@@ -26,7 +26,7 @@ dotenv.config({
 });
 
 // Local-dev TLS bypass: Thunder ships with a self-signed cert on localhost,
-// so fetch() and the Asgardeo JS SDK would otherwise refuse to talk to it.
+// so fetch() and the SDK would otherwise refuse to talk to it.
 // We disable Node's TLS verification ONLY when the configured base URL points
 // at localhost / 127.0.0.1 to keep production builds safe.
 const __thunderBaseUrl = process.env.THUNDER_BASE_URL || "";
@@ -882,7 +882,7 @@ async function createAgent() {
     "##      This is an Agent Authentication Flow sample application for authenticating AI agents            ##",
   );
   console.log(
-    "##                         using Asgardeo and LangChain framework                                       ##",
+    "##                         using ThunderID and LangChain framework                                      ##",
   );
   console.log(
     "##########################################################################################################",
