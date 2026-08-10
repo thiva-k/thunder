@@ -70,7 +70,12 @@ const PROMPT_FIELD: ConnectionFieldDef = {
   visibility: 'edit',
 };
 
-const oauthFields = (namePlaceholder: string, clientIdPlaceholder: string): ConnectionFieldDef[] => [
+const oauthFields = (
+  namePlaceholder: string,
+  clientIdPlaceholder: string,
+  scopesHintKey = 'connections:form.fields.scopes.hint',
+  scopesPlaceholder = 'openid email profile',
+): ConnectionFieldDef[] => [
   NAME_FIELD(namePlaceholder),
   {
     name: 'clientId',
@@ -96,9 +101,9 @@ const oauthFields = (namePlaceholder: string, clientIdPlaceholder: string): Conn
   {
     name: 'scopes',
     labelKey: 'connections:form.fields.scopes.label',
-    hintKey: 'connections:form.fields.scopes.hint',
+    hintKey: scopesHintKey,
     kind: 'scopes',
-    placeholder: 'openid email profile',
+    placeholder: scopesPlaceholder,
     visibility: 'edit',
   },
   PROMPT_FIELD,
@@ -129,7 +134,12 @@ const TRUSTED_TOKEN_AUDIENCE_FIELD: ConnectionFieldDef = {
  */
 export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]> = {
   [ConnectionTypes.GOOGLE]: oauthFields('Google Workspace', '1234567890-abc.apps.googleusercontent.com'),
-  [ConnectionTypes.GITHUB]: oauthFields('GitHub OAuth', 'Iv1.0123456789abcdef'),
+  [ConnectionTypes.GITHUB]: oauthFields(
+    'GitHub OAuth',
+    'Iv1.0123456789abcdef',
+    'connections:form.fields.scopes.githubHint',
+    'user:email',
+  ),
   [ConnectionTypes.OIDC]: [
     NAME_FIELD('Acme Workforce OIDC'),
     {

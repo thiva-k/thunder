@@ -1892,6 +1892,8 @@ const translations = {
     'form.fields.scopes.label': 'Scopes',
     'form.fields.scopes.hint':
       'Space-separated scopes to request during sign-in. Defaults to <code>openid email profile</code> if not set.',
+    'form.fields.scopes.githubHint':
+      'Space-separated scopes to request during sign-in. Defaults to <code>user:email</code> if not set.',
     'form.fields.scopes.placeholder': 'openid email profile',
     'form.fields.authorizationEndpoint.label': 'Authorization endpoint',
     'form.fields.authorizationEndpoint.hint': 'Authorization endpoint used to start the OAuth2 sign-in flow.',
