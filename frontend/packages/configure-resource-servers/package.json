@@ -11,9 +11,9 @@
     "react",
     "feature"
   ],
-  "homepage": "https://github.com/asgardeo/thunder/tree/main/frontend/packages/configure-resource-servers#readme",
+  "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/configure-resource-servers#readme",
   "bugs": {
-    "url": "https://github.com/asgardeo/thunder/issues"
+    "url": "https://github.com/thunder-id/thunderid/issues"
   },
   "author": "The ThunderID Authors",
   "license": "Apache-2.0",
@@ -36,7 +36,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/asgardeo/thunder",
+    "url": "https://github.com/thunder-id/thunderid",
     "directory": "frontend/packages/configure-resource-servers"
   },
   "scripts": {
