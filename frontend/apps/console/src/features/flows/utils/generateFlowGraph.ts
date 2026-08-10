@@ -83,7 +83,7 @@ function buildMfaChannelChain(
       : {
           id: sendId,
           type: FlowNodeType.TASK_EXECUTION,
-          properties: {senderId: smsOtpSenderId},
+          properties: {senderId: smsOtpSenderId, smsTemplate: 'OTP'},
           executor: {name: 'SMSExecutor'},
           onSuccess: promptId,
         },
