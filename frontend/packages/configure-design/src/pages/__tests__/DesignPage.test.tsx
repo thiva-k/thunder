@@ -5,10 +5,9 @@ import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import DesignPage from '../DesignPage';
 
-const {mockNavigate, mockShowToast, mockCreateLayout, mockRefetchThemes, mockRefetchLayouts} = vi.hoisted(() => ({
+const {mockNavigate, mockShowToast, mockRefetchThemes, mockRefetchLayouts} = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockShowToast: vi.fn(),
-  mockCreateLayout: vi.fn(),
   mockRefetchThemes: vi.fn(),
   mockRefetchLayouts: vi.fn(),
 }));
@@ -53,7 +52,6 @@ vi.mock('@thunderid/design', () => ({
     error: layoutsError,
     refetch: mockRefetchLayouts,
   }),
-  useCreateLayout: () => ({mutateAsync: mockCreateLayout}),
   useDeleteTheme: () => ({mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false}),
   useGetThemeUsages: () => ({data: undefined, isLoading: false}),
 }));
@@ -133,29 +131,10 @@ describe('DesignPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/design/layouts/layout-1');
   });
 
-  it('shows an error toast, resolved rather than raw, when creating a layout fails', async () => {
-    mockCreateLayout.mockRejectedValue(new Error('Network error'));
-
+  it('does not offer a create action for layouts, which are bootstrapped rather than user-created', () => {
     render(<DesignPage />);
 
-    fireEvent.click(screen.getByRole('button', {name: 'Add Layout'}));
-
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Failed to create layout. Please try again.', 'error');
-    });
-  });
-
-  it('navigates to the created layout on success', async () => {
-    mockCreateLayout.mockResolvedValue({id: 'layout-new'});
-
-    render(<DesignPage />);
-
-    fireEvent.click(screen.getByRole('button', {name: 'Add Layout'}));
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/design/layouts/layout-new');
-    });
-    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', {name: 'Add Layout'})).not.toBeInTheDocument();
   });
 
   it('navigates to the themes create page when Add Theme is clicked', async () => {
