@@ -276,6 +276,7 @@ To change the policy without a restart, update the same section with `PUT /serve
 
 - Listing a directive replaces its baseline value, so include `'self'` when you still need same-origin resources.
 - When you add an external logo, font, or stylesheet URL in the Console, allow its origin in the matching directive. The Console shows the directive to update next to each field.
+- User profile pictures set through the `picture` attribute also load as images, including in the Console user list and profile views. Add picture host to the `img-src` directive.
 - Keep the policy as narrow as your applications allow. Avoid broad sources such as `https:` or `'unsafe-inline'` once you know the exact origins you need.
 
 See [Content Security Policy](../configuration#content-security-policy) for the full field reference and the deny-first baseline.
