@@ -68,24 +68,6 @@ vi.mock('../AddAssignmentDialog', () => ({
     ) : null,
 }));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallbackOrOptions?: string | {defaultValue?: string}) => {
-      const translations: Record<string, string> = {
-        'edit.assignments.sections.manage.addAssignment': 'Add Assignment',
-        'assignments.add.error': 'Failed to add assignment. Please try again.',
-        'assignments.remove.error': 'Failed to remove assignment. Please try again.',
-        'errors.ROL-1007': 'One or more selected assignees no longer exist. Refresh and try again.',
-        'errors.ROL-1003': 'This role no longer exists. It may have already been deleted.',
-      };
-      if (translations[key] !== undefined) return translations[key];
-      if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
-      if (fallbackOrOptions && 'defaultValue' in fallbackOrOptions) return fallbackOrOptions.defaultValue ?? key;
-      return key;
-    },
-  }),
-}));
-
 describe('EditAssignmentsSettings', () => {
   const mockAddMutate = vi.fn();
   const mockRemoveMutate = vi.fn();
@@ -136,7 +118,7 @@ describe('EditAssignmentsSettings', () => {
     it('should render Add Assignment button in headerAction', () => {
       renderComponent();
 
-      expect(screen.getByRole('button', {name: 'Add Assignment'})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Add'})).toBeInTheDocument();
     });
 
     it('should not render AddAssignmentDialog initially', () => {
@@ -157,7 +139,7 @@ describe('EditAssignmentsSettings', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
 
       expect(screen.getByTestId('add-dialog')).toBeInTheDocument();
     });
@@ -167,7 +149,7 @@ describe('EditAssignmentsSettings', () => {
       renderComponent();
 
       await user.click(screen.getByTestId('switch-tab-btn'));
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
 
       expect(screen.getByTestId('initial-tab')).toHaveTextContent('1');
     });
@@ -176,7 +158,7 @@ describe('EditAssignmentsSettings', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       expect(mockAddMutate).toHaveBeenCalledTimes(1);
@@ -196,7 +178,7 @@ describe('EditAssignmentsSettings', () => {
 
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
@@ -214,7 +196,7 @@ describe('EditAssignmentsSettings', () => {
 
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
@@ -234,7 +216,7 @@ describe('EditAssignmentsSettings', () => {
 
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
@@ -248,7 +230,7 @@ describe('EditAssignmentsSettings', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       expect(screen.getByTestId('add-dialog')).toBeInTheDocument();
 
       await user.click(screen.getByTestId('close-dialog'));
@@ -319,7 +301,7 @@ describe('EditAssignmentsSettings', () => {
 
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
@@ -410,7 +392,7 @@ describe('EditAssignmentsSettings', () => {
 
       renderComponent();
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
@@ -452,7 +434,7 @@ describe('EditAssignmentsSettings', () => {
         expect(screen.getByText('Failed to remove assignment. Please try again.')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByRole('button', {name: 'Add'}));
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {

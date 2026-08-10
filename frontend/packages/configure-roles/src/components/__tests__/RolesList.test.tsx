@@ -21,9 +21,13 @@ vi.mock('react-router', async () => {
     useNavigate: vi.fn(),
   };
 });
-vi.mock('@thunderid/hooks', () => ({
-  useDataGridLocaleText: vi.fn(),
-}));
+vi.mock('@thunderid/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thunderid/hooks')>();
+  return {
+    ...actual,
+    useDataGridLocaleText: vi.fn(),
+  };
+});
 
 // Mock @wso2/oxygen-ui to avoid cssstyle issues with CSS variables
 vi.mock('@wso2/oxygen-ui', async (importOriginal) => {

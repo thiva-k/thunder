@@ -33,10 +33,6 @@ vi.mock('@thunderid/configure-resource-servers', async (importOriginal) => {
   };
 });
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({t: (key: string, fallback?: string) => fallback ?? key}),
-}));
-
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -45,8 +41,10 @@ describe('ConfigurePermissions', () => {
   it('should render the heading and subtitle', () => {
     render(<ConfigurePermissions permissions={[]} onPermissionsChange={vi.fn()} />);
 
-    expect(screen.getByText('roles:createWizard.permissions.title')).toBeInTheDocument();
-    expect(screen.getByText('roles:createWizard.permissions.subtitle')).toBeInTheDocument();
+    expect(screen.getByText('Assign permissions (optional)')).toBeInTheDocument();
+    expect(
+      screen.getByText('Choose what this role grants. You can skip this step and add permissions later.'),
+    ).toBeInTheDocument();
   });
 
   it('should render the PermissionCatalog stub', () => {
@@ -64,7 +62,7 @@ describe('ConfigurePermissions', () => {
   it('should render the scopes section label', () => {
     render(<ConfigurePermissions permissions={[]} onPermissionsChange={vi.fn()} />);
 
-    expect(screen.getByText('roles:createWizard.permissions.scopes.label')).toBeInTheDocument();
+    expect(screen.getByText('Selected scopes')).toBeInTheDocument();
   });
 
   it('should pass the permissions prop as selected to PermissionCatalog', () => {

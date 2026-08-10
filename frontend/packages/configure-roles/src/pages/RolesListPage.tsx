@@ -8,13 +8,14 @@ import {Plus} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
-import RouteConfig from '../../../configs/RouteConfig';
 import RolesList from '../components/RolesList';
+import useRoleRoutes from '../hooks/useRoleRoutes';
 
 export default function RolesListPage(): JSX.Element {
   const navigate = useNavigate();
   const {t} = useTranslation();
   const logger = useLogger('RolesListPage');
+  const routes = useRoleRoutes();
 
   return (
     <PageContent>
@@ -30,7 +31,7 @@ export default function RolesListPage(): JSX.Element {
               startIcon={<Plus size={18} />}
               onClick={() => {
                 (async () => {
-                  await navigate(RouteConfig.roles.create());
+                  await navigate(routes.roles.create());
                 })().catch((error: unknown) => {
                   logger.error('Failed to navigate to create role page', {error});
                 });

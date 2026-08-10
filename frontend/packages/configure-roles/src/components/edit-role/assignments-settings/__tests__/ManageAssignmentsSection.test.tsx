@@ -32,24 +32,6 @@ vi.mock('@thunderid/components', () => ({
   ),
 }));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        'roles:edit.assignments.sections.manage.title': 'Manage Assignments',
-        'roles:edit.assignments.sections.manage.description': 'Manage users, groups, and apps assigned to this role.',
-        'roles:edit.assignments.sections.manage.listing.columns.name': 'Name',
-        'roles:edit.assignments.sections.manage.listing.columns.id': 'ID',
-        'roles:edit.assignments.sections.manage.tabs.users': 'Users',
-        'roles:edit.assignments.sections.manage.tabs.groups': 'Groups',
-        'roles:edit.assignments.sections.manage.tabs.apps': 'Apps',
-        'common:actions.remove': 'Remove',
-      };
-      return translations[key] || key;
-    },
-  }),
-}));
-
 vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@wso2/oxygen-ui')>();
   return {
@@ -152,8 +134,8 @@ describe('ManageAssignmentsSection', () => {
     it('should render SettingsCard with title and description', () => {
       renderComponent();
 
-      expect(screen.getByRole('heading', {name: 'Manage Assignments'})).toBeInTheDocument();
-      expect(screen.getByText('Manage users, groups, and apps assigned to this role.')).toBeInTheDocument();
+      expect(screen.getByRole('heading', {name: 'Assigned Users, Groups, Apps & Agents'})).toBeInTheDocument();
+      expect(screen.getByText('Manage users, groups, apps, and agents assigned to this role')).toBeInTheDocument();
     });
 
     it('should render Users tab showing user assignments', () => {
