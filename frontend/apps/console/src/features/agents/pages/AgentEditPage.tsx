@@ -121,14 +121,18 @@ export default function AgentEditPage(): JSX.Element {
     setActiveTab(newValue);
   };
 
+  // useMutation returns a fresh object every render, so depending on the mutation itself gave
+  // this callback a new identity every render, which looped consumers that stage from an effect.
+  const {isError: isUpdateAgentError, reset: resetUpdateAgent} = updateAgent;
+
   const handleFieldChange = useCallback(
     (field: keyof Agent, value: unknown) => {
-      if (updateAgent.isError) {
-        updateAgent.reset(); // a save error is stale once the form changes
+      if (isUpdateAgentError) {
+        resetUpdateAgent(); // a save error is stale once the form changes
       }
       setEditedAgent((prev) => ({...prev, [field]: value}));
     },
-    [updateAgent],
+    [isUpdateAgentError, resetUpdateAgent],
   );
 
   const handleSave = useCallback(async () => {

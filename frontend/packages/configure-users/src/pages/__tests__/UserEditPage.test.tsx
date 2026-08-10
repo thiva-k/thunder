@@ -8,8 +8,10 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {ApiUserType, UserTypeListResponse} from '../../models/users';
 import UserEditPage from '../UserEditPage';
 
-const {mockLoggerError} = vi.hoisted(() => ({
+const {mockLoggerError, stagingCallbackIdentities} = vi.hoisted(() => ({
   mockLoggerError: vi.fn(),
+  // Every distinct onFieldChange the Attributes tab is handed.
+  stagingCallbackIdentities: new Set<unknown>(),
 }));
 
 vi.mock('@thunderid/components', async (importOriginal) => {
@@ -141,22 +143,25 @@ vi.mock('@/components/edit-user/AttributesSummarySection', () => ({
 }));
 
 vi.mock('@/components/edit-user/EditUserAttributes', () => ({
-  default: ({onFieldChange}: {onFieldChange: (field: string, value: unknown) => void}) => (
-    <div data-testid="edit-user-attributes">
-      <button type="button" onClick={() => onFieldChange('attributes', {department: 'sales'})}>
-        Edit an attribute
-      </button>
-      {/* Emits the original saved attributes, so the page treats it as no change. */}
-      <button
-        type="button"
-        onClick={() =>
-          onFieldChange('attributes', {username: 'john_doe', email: 'john@example.com', age: 30, active: true})
-        }
-      >
-        Revert attributes
-      </button>
-    </div>
-  ),
+  default: ({onFieldChange}: {onFieldChange: (field: string, value: unknown) => void}) => {
+    stagingCallbackIdentities.add(onFieldChange);
+    return (
+      <div data-testid="edit-user-attributes">
+        <button type="button" onClick={() => onFieldChange('attributes', {department: 'sales'})}>
+          Edit an attribute
+        </button>
+        {/* Emits the original saved attributes, so the page treats it as no change. */}
+        <button
+          type="button"
+          onClick={() =>
+            onFieldChange('attributes', {username: 'john_doe', email: 'john@example.com', age: 30, active: true})
+          }
+        >
+          Revert attributes
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/components/edit-user/CredentialsTabPanel', () => ({
@@ -222,6 +227,7 @@ describe('UserEditPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    stagingCallbackIdentities.clear();
     mockNavigate.mockResolvedValue(undefined);
     mockUpdateMutateAsync.mockResolvedValue(mockUserData);
     mockRefetch.mockResolvedValue({});
@@ -245,7 +251,8 @@ describe('UserEditPage', () => {
       isLoading: false,
       error: null,
     });
-    mockUseUpdateUser.mockReturnValue({...defaultUpdateReturn});
+    // A fresh object per call, like useMutation. A stable stand-in hides identity churn.
+    mockUseUpdateUser.mockImplementation(() => ({...defaultUpdateReturn}));
     mockUseDeleteUser.mockReturnValue({...defaultDeleteReturn});
   });
 
@@ -699,6 +706,36 @@ describe('UserEditPage', () => {
         const callArgs = mockUpdateMutateAsync.mock.calls[0][0] as {data: {ouId: string}};
         expect(callArgs.data.ouId).toBe('test-ou');
       });
+    });
+
+    it('hands the Attributes tab one stable onFieldChange across re-renders', async () => {
+      // A new callback per render refired the tab's staging effect until React stopped
+      // committing renders at all, which is what broke navigation.
+      const user = userEvent.setup();
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+
+      expect(stagingCallbackIdentities.size).toBe(1);
+    });
+
+    it('resets a failed save mutation as soon as another field changes', async () => {
+      const user = userEvent.setup();
+      const mockReset = vi.fn();
+      mockUseUpdateUser.mockImplementation(() => ({
+        ...defaultUpdateReturn,
+        error: new Error('Boom'),
+        isError: true,
+        reset: mockReset,
+      }));
+
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+
+      expect(mockReset).toHaveBeenCalled();
     });
 
     it('hides the unsaved-changes bar after a successful save', async () => {

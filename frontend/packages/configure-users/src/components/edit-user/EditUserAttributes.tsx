@@ -5,7 +5,7 @@ import {SettingsCard} from '@thunderid/components';
 import {useResolveDisplayName} from '@thunderid/hooks';
 import type {User} from '@thunderid/types';
 import {Box, CircularProgress, Typography} from '@wso2/oxygen-ui';
-import {useEffect, type JSX} from 'react';
+import {useEffect, useRef, type JSX} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import AttributesSummarySection from './AttributesSummarySection';
@@ -50,9 +50,16 @@ export default function EditUserAttributes({user, editedUser, onFieldChange}: Ed
 
   const watchedValues = useWatch({control});
 
+  // Staging re-renders the page, which can recreate onFieldChange. Keying the effect on the
+  // callback would restage and loop, so keep it keyed on the watched values only.
+  const onFieldChangeRef = useRef(onFieldChange);
   useEffect(() => {
-    onFieldChange('attributes', filterAttributes(watchedValues));
-  }, [watchedValues, onFieldChange]);
+    onFieldChangeRef.current = onFieldChange;
+  }, [onFieldChange]);
+
+  useEffect(() => {
+    onFieldChangeRef.current('attributes', filterAttributes(watchedValues));
+  }, [watchedValues]);
 
   if (isLoading) {
     return (

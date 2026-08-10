@@ -74,14 +74,21 @@ export default function EditAgentAttributes({
   // baseline every subsequent watched value is compared against to detect a real edit.
   const baselineRef = useRef(filterAttributes(attributes));
 
+  // Staging re-renders the page, which can recreate onFieldChange. Keying the effect on the
+  // callback would restage and loop, so keep it keyed on the watched values only.
+  const onFieldChangeRef = useRef(onFieldChange);
+  useEffect(() => {
+    onFieldChangeRef.current = onFieldChange;
+  }, [onFieldChange]);
+
   useEffect(() => {
     const filtered = filterAttributes(watchedValues);
     // react-hook-form's useWatch fires again shortly after mount as each dynamically-rendered
     // field registers, even without any user interaction — only propagate once the values
     // actually diverge from the baseline, or the Save/Reset bar would show up unprompted.
     if (areAttributesEqual(filtered, baselineRef.current)) return;
-    onFieldChange('attributes', filtered);
-  }, [watchedValues, onFieldChange]);
+    onFieldChangeRef.current('attributes', filtered);
+  }, [watchedValues]);
 
   if (isLoading) {
     return (
