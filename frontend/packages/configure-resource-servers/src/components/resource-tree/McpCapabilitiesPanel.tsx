@@ -60,6 +60,7 @@ export default function McpCapabilitiesPanel({resourceServer, onRefresh}: McpCap
 
   const isLoading = loadingActions;
   const isEmpty = serverActions.length === 0;
+  const readOnly = Boolean(resourceServer.isReadOnly);
 
   const effectiveSelectedNode = useMemo<SelectedNode | null>(() => {
     if (selectedNode) return selectedNode;
@@ -112,7 +113,7 @@ export default function McpCapabilitiesPanel({resourceServer, onRefresh}: McpCap
           >
             {t('resourceServers:mcp.panel.title', 'Capabilities')}
           </Typography>
-          {(!isEmpty || isLoading) && (
+          {!readOnly && (!isEmpty || isLoading) && (
             <>
               <IconButton
                 size="small"
@@ -226,34 +227,38 @@ export default function McpCapabilitiesPanel({resourceServer, onRefresh}: McpCap
               }}
             >
               <Typography variant="body2" color="text.disabled" sx={{mb: 3, textAlign: 'center', maxWidth: 360}}>
-                {t(
-                  'resourceServers:mcp.empty',
-                  'No capabilities have been added to this MCP server yet. Add tool permissions to control which tools can be invoked, or resource permissions to control access to data sources.',
-                )}
+                {readOnly
+                  ? t('resourceServers:mcp.emptyReadOnly', 'No capabilities are defined for this MCP server.')
+                  : t(
+                      'resourceServers:mcp.empty',
+                      'No capabilities have been added to this MCP server yet. Add tool permissions to control which tools can be invoked, or resource permissions to control access to data sources.',
+                    )}
               </Typography>
-              <Stack spacing={1.5} alignItems="center" sx={{width: '100%', maxWidth: 280}}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  startIcon={<Wrench size={16} />}
-                  onClick={() => openAdd('mcp-server-tool')}
-                >
-                  {t('resourceServers:mcp.addTool', 'Add tool permission')}
-                </Button>
-                <Divider sx={{width: '100%'}}>
-                  <Typography variant="caption" color="text.disabled">
-                    {t('common:or', 'or')}
-                  </Typography>
-                </Divider>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  startIcon={<Database size={16} />}
-                  onClick={() => openAdd('mcp-server-resource')}
-                >
-                  {t('resourceServers:mcp.addResource', 'Add resource permission')}
-                </Button>
-              </Stack>
+              {!readOnly && (
+                <Stack spacing={1.5} alignItems="center" sx={{width: '100%', maxWidth: 280}}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<Wrench size={16} />}
+                    onClick={() => openAdd('mcp-server-tool')}
+                  >
+                    {t('resourceServers:mcp.addTool', 'Add tool permission')}
+                  </Button>
+                  <Divider sx={{width: '100%'}}>
+                    <Typography variant="caption" color="text.disabled">
+                      {t('common:or', 'or')}
+                    </Typography>
+                  </Divider>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<Database size={16} />}
+                    onClick={() => openAdd('mcp-server-resource')}
+                  >
+                    {t('resourceServers:mcp.addResource', 'Add resource permission')}
+                  </Button>
+                </Stack>
+              )}
             </Box>
           ) : (
             filteredServerActions.map((action) => (
@@ -264,6 +269,7 @@ export default function McpCapabilitiesPanel({resourceServer, onRefresh}: McpCap
                 depth={0}
                 selectedNodeId={effectiveSelectedNode?.id ?? null}
                 onSelect={setSelectedNode}
+                readOnly={readOnly}
               />
             ))
           )}

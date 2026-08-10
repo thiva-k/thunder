@@ -46,6 +46,7 @@ interface ResourceTreeNodeProps {
   selectedNodeId: string | null;
   onSelect: (node: SelectedNode) => void;
   onAddChild: (mode: AddNodeMode, parentResourceId: string, parentPermission: string) => void;
+  readOnly?: boolean;
 }
 
 export function ResourceNode({
@@ -56,6 +57,7 @@ export function ResourceNode({
   selectedNodeId,
   onSelect,
   onAddChild,
+  readOnly = false,
 }: ResourceTreeNodeProps): JSX.Element {
   const {t} = useTranslation();
   const {showToast} = useToast();
@@ -166,7 +168,7 @@ export function ResourceNode({
           )}
         </Box>
 
-        {(isSelected || hovered || Boolean(addMenuAnchor)) && (
+        {!readOnly && (isSelected || hovered || Boolean(addMenuAnchor)) && (
           <Box sx={{display: 'flex', gap: 0.25, flexShrink: 0}} onClick={(e) => e.stopPropagation()}>
             <Tooltip title={t('resourceServers:tree.add', 'Add')}>
               <IconButton
@@ -237,6 +239,7 @@ export function ResourceNode({
             parentResourceId={node.id}
             selectedNodeId={selectedNodeId}
             onSelect={onSelect}
+            readOnly={readOnly}
           />
         ))}
         {children.map((child) => (
@@ -249,6 +252,7 @@ export function ResourceNode({
             selectedNodeId={selectedNodeId}
             onSelect={onSelect}
             onAddChild={onAddChild}
+            readOnly={readOnly}
           />
         ))}
       </Collapse>
@@ -264,6 +268,7 @@ interface ActionNodeProps {
   selectedNodeId: string | null;
   onSelect: (node: SelectedNode) => void;
   breadcrumb?: string[];
+  readOnly?: boolean;
 }
 
 export function ActionNode({
@@ -274,6 +279,7 @@ export function ActionNode({
   selectedNodeId,
   onSelect,
   breadcrumb = [],
+  readOnly = false,
 }: ActionNodeProps): JSX.Element {
   const {t} = useTranslation();
   const {showToast} = useToast();
@@ -368,7 +374,7 @@ export function ActionNode({
         )}
       </Box>
 
-      {(isSelected || hovered) && (
+      {!readOnly && (isSelected || hovered) && (
         <Box sx={{display: 'flex', flexShrink: 0}} onClick={(e) => e.stopPropagation()}>
           <Tooltip title={t('common:delete', 'Delete')}>
             <IconButton
