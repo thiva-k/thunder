@@ -4,6 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import userEvent from '@testing-library/user-event';
 import {render, screen, waitFor} from '@thunderid/test-utils';
+import {useCallback, useState, type JSX} from 'react';
 import {Controller, type Control} from 'react-hook-form';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {Agent} from '../../../../models/agent';
@@ -40,6 +41,12 @@ vi.mock('@thunderid/configure-users', () => ({
 vi.mock('@thunderid/hooks', () => ({
   useResolveDisplayName: () => ({resolveDisplayName: (v: string) => v}),
 }));
+
+// Mirrors useMutation: a fresh object every render, so a callback memoized on it churns.
+const freshMutationResult = (): {isError: boolean; reset: () => void} => ({
+  isError: false,
+  reset: () => undefined,
+});
 
 describe('EditAgentAttributes', () => {
   const mockOnFieldChange = vi.fn();
@@ -150,6 +157,44 @@ describe('EditAgentAttributes', () => {
         expect.objectContaining({email: 'new@b.com', count: 5}),
       );
     });
+  });
+
+  it('stages a bounded number of times after an edit when the parent recreates onFieldChange', async () => {
+    // The baseline guard above only covers mount, so past the first real edit staging re-rendered
+    // the page, produced a new onFieldChange, and refired this effect. Capped so a regression
+    // fails instead of hanging the test runner.
+    const CALL_CAP = 25;
+    const staged = vi.fn();
+    const identities = new Set<unknown>();
+
+    function Harness(): JSX.Element {
+      const [editedAgent, setEditedAgent] = useState<Partial<Agent>>({});
+      const mutation = freshMutationResult();
+      const onFieldChange = useCallback(
+        (field: keyof Agent, value: unknown) => {
+          if (mutation.isError) mutation.reset();
+          staged(field, value);
+          if (staged.mock.calls.length > CALL_CAP) return;
+          setEditedAgent((prev) => ({...prev, [field]: value}));
+        },
+        [mutation],
+      );
+
+      identities.add(onFieldChange);
+      return <EditAgentAttributes agent={baseAgent} editedAgent={editedAgent} onFieldChange={onFieldChange} />;
+    }
+
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(await screen.findByLabelText('email-input'), 'x');
+
+    await waitFor(() => {
+      expect(staged).toHaveBeenCalled();
+    });
+    // Guards the harness: without churn this test would pass vacuously.
+    expect(identities.size).toBeGreaterThan(1);
+    expect(staged.mock.calls.length).toBeLessThanOrEqual(3);
   });
 
   it('uses editedAgent.attributes over agent.attributes as the starting values', () => {

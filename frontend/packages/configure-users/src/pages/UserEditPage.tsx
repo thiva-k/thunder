@@ -157,18 +157,19 @@ export default function UserEditPage() {
     setActiveTab(newValue);
   };
 
+  // useMutation returns a fresh object every render, so depending on the mutation itself gave
+  // this callback a new identity every render, which looped consumers that stage from an effect.
+  const {isError: isUpdateUserError, reset: resetUpdateUser} = updateUserMutation;
+
   const handleFieldChange = useCallback(
     (field: keyof User, value: unknown) => {
-      // A save error is stale once the form changes. Only reset when there's actually an error to
-      // clear: unconditionally calling reset() churns the mutation object's identity on every
-      // field change, which recreates this callback and can retrigger consumers that depend on it
-      // (e.g. a child's useEffect), looping indefinitely.
-      if (updateUserMutation.isError) {
-        updateUserMutation.reset();
+      // A save error is stale once the form changes.
+      if (isUpdateUserError) {
+        resetUpdateUser();
       }
       setEditedUser((prev) => ({...prev, [field]: value}));
     },
-    [updateUserMutation],
+    [isUpdateUserError, resetUpdateUser],
   );
 
   const handleSave = useCallback(async () => {
