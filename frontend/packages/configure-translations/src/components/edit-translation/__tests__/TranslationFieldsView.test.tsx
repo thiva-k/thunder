@@ -206,7 +206,7 @@ describe('TranslationFieldsView', () => {
         target: {value: 'some.key'},
       });
 
-      await user.click(screen.getByText(t('editor.addKey.cancel')));
+      await user.click(screen.getByRole('button', {name: t('editor.addKey.cancel')}));
 
       // Form should be closed, Add Key button visible again
       expect(screen.getByText(t('editor.addKey'))).toBeInTheDocument();

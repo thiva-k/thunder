@@ -51,7 +51,7 @@ describe('AddNodeDialog', () => {
   it('renders the Add Resource title when mode is resource', () => {
     renderWithProviders(<AddNodeDialog {...defaultProps} />);
 
-    expect(screen.getByText('Add Resource')).toBeInTheDocument();
+    expect(screen.getByText('Add resource')).toBeInTheDocument();
   });
 
   it('renders the Name label when the dialog is open', () => {
@@ -129,7 +129,7 @@ describe('AddNodeDialog', () => {
   it('does not render when open is false', () => {
     renderWithProviders(<AddNodeDialog {...defaultProps} open={false} />);
 
-    expect(screen.queryByText('Add Resource')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add resource')).not.toBeInTheDocument();
   });
 
   it('shows an error and disables the Add button when the handle contains the delimiter character', async () => {
@@ -144,7 +144,7 @@ describe('AddNodeDialog', () => {
       expect(handleInput).toHaveValue('foo/bar');
     });
 
-    expect(screen.getByText('Handle cannot contain the delimiter character "/".')).toBeInTheDocument();
+    expect(screen.getByText('Handle cannot contain the delimiter character /.')).toBeInTheDocument();
 
     const addButton = screen.getByRole('button', {name: /^add$/i});
     expect(addButton).toBeDisabled();

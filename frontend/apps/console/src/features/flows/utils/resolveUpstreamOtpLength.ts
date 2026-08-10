@@ -38,7 +38,7 @@ const isOtpGenerateNode = (node: Node): boolean => {
  * @returns The configured length, or undefined.
  */
 const readOtpLength = (node: Node): number | undefined => {
-  const length = Number((node.data as StepData | undefined)?.properties?.['otpLength']);
+  const length = Number((node.data as StepData | undefined)?.properties?.otpLength);
 
   if (!Number.isInteger(length) || length < MIN_OTP_LENGTH || length > MAX_OTP_LENGTH) {
     return undefined;

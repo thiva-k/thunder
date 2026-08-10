@@ -69,28 +69,17 @@ vi.mock('@thunderid/design', () => ({
   useGetDesignResolve: ({id}: {id: string}) => (id ? mockDesignResolve : {data: undefined, isError: false}),
 }));
 
-vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
-  useGetApplications: () => ({
-    data: {applications: mockApplications},
-  }),
-  useGetApplication: (applicationId: string) => ({
-    data: applicationId
-      ? {id: applicationId, name: 'My App', themeId: 'theme-1', logoUrl: 'https://myapp.example/logo.png'}
-      : undefined,
-  }),
-}));
-
-vi.mock('@/components/GatePreview/GatePreview', () => ({
-  default: ({
-    mock,
-    onSubmit,
-    onComponentHover,
-    toolbarStart,
-    toolbarEnd,
-    colorScheme,
-    theme,
-    additionalData,
+vi.mock('@thunderid/configure-design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-design')>()),
+  GatePreview: ({
+    mock = undefined,
+    onSubmit = undefined,
+    onComponentHover = undefined,
+    toolbarStart = undefined,
+    toolbarEnd = undefined,
+    colorScheme = undefined,
+    theme = undefined,
+    additionalData = undefined,
   }: {
     mock?: {id?: string}[];
     onSubmit?: (component: {id?: string; components?: {id?: string}[]}) => void;
@@ -128,6 +117,18 @@ vi.mock('@/components/GatePreview/GatePreview', () => ({
       </button>
     </div>
   ),
+}));
+
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: () => ({
+    data: {applications: mockApplications},
+  }),
+  useGetApplication: (applicationId: string) => ({
+    data: applicationId
+      ? {id: applicationId, name: 'My App', themeId: 'theme-1', logoUrl: 'https://myapp.example/logo.png'}
+      : undefined,
+  }),
 }));
 
 const createSimulation = (overrides: Partial<FlowSimulation> = {}): FlowSimulation => ({

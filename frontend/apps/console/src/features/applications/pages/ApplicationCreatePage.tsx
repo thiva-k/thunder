@@ -5,6 +5,7 @@ import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplications} from '@thunderid/configure-applications';
 import type {Application, ApplicationType, OAuth2Config} from '@thunderid/configure-applications';
 import {AuthenticatorTypes, IdentityProviderTypes, useIdentityProviders} from '@thunderid/configure-connections';
+import {GatePreview, VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@thunderid/configure-design';
 import {
   OrganizationUnitPickerScreen,
   useGetOrganizationUnit,
@@ -54,8 +55,6 @@ import isRedirectCapableTemplate from '../utils/isRedirectCapableTemplate';
 import mergeCorsOrigins from '../utils/mergeCorsOrigins';
 import resolveApplicationType from '../utils/resolveApplicationType';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
-import GatePreview from '@/components/GatePreview/GatePreview';
-import {VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@/features/design/components/viewportConstants';
 
 export default function ApplicationCreatePage(): JSX.Element {
   const {t} = useTranslation();

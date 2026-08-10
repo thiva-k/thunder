@@ -47,8 +47,9 @@ vi.mock('../../../../../flows/api/useGetFlowById', () => ({
   default: () => ({data: undefined, isLoading: false}),
 }));
 
-vi.mock('../../../../../../components/GatePreview/GatePreview', () => ({
-  default: () => <div data-testid="gate-preview" />,
+vi.mock('@thunderid/configure-design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-design')>()),
+  GatePreview: () => <div data-testid="gate-preview" />,
 }));
 
 const mockWriteText = vi.fn();
