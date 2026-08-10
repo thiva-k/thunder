@@ -21,11 +21,12 @@ import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress, IconButton, Typography} from '@wso2/oxygen-ui';
 import {ChevronLeft, ChevronRight, Home} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
-import {useState, useCallback, useEffect, useMemo} from 'react';
+import {useState, useCallback, useEffect, useMemo, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useLocation, useNavigate} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
 import useCreateFlow from '../../flows/api/useCreateFlow';
+import useDeleteFlow from '../../flows/api/useDeleteFlow';
 import useGetFlowById from '../../flows/api/useGetFlowById';
 import type {BasicFlowDefinition} from '../../flows/models/responses';
 import {resolveApplicationMeta, resolveTemplatesDeep} from '../../flows/utils/gatePreviewTransforms';
@@ -187,7 +188,17 @@ export default function ApplicationCreatePage(): JSX.Element {
   );
 
   const createFlow = useCreateFlow();
+  const deleteFlow = useDeleteFlow();
   const {data: idpData} = useIdentityProviders();
+
+  // Tracks the generated flow for the current inputs so failed creates can roll it back
+  // and unchanged retries can reuse it without creating a duplicate.
+  const generatedFlowRef = useRef<{inputsKey: string; flowId: string} | null>(null);
+
+  // The generated flow that was pushed into selectedAuthFlow. Setting selectedAuthFlow back to null
+  // on rollback would clear the create error the user has to act on (the provider clears it whenever
+  // the form fingerprint changes), so the dead id is filtered out at submit time instead.
+  const generatedSelectionIdRef = useRef<string | null>(null);
 
   const hasEnabledIntegrations = useMemo((): boolean => Object.values(integrations).some(Boolean), [integrations]);
 
@@ -507,6 +518,28 @@ export default function ApplicationCreatePage(): JSX.Element {
     setWalletClientId(clientId);
   };
 
+  // Best-effort removal of a flow this wizard generated but never bound to an application. A failure
+  // is logged only: the application error is what the user has to act on, so it must stay on screen.
+  const rollbackGeneratedFlow = (generated: {inputsKey: string; flowId: string}): void => {
+    // Dropped up front, not on success: while the delete is in flight the flow must not be reused,
+    // or a fast retry would bind the application to a flow that is about to disappear.
+    if (generatedFlowRef.current?.flowId === generated.flowId) {
+      generatedFlowRef.current = null;
+    }
+
+    deleteFlow.mutate(generated.flowId, {
+      onError: (err: Error) => {
+        logger.error('Failed to roll back the generated sign-in flow', {error: err, flowId: generated.flowId});
+        generatedFlowRef.current ??= generated;
+      },
+    });
+  };
+
+  // True while a generated flow that selectedAuthFlow still points at is rolled back or being rolled
+  // back: the memo drops it when the delete fires and restores it only if that delete fails.
+  const isRolledBackGeneratedFlow = (flowId: string | undefined): boolean =>
+    Boolean(flowId) && generatedSelectionIdRef.current === flowId && generatedFlowRef.current?.flowId !== flowId;
+
   const handleCreateApplication = (skipOAuthConfig = false, overrideFlowId?: string): void => {
     setError(null);
 
@@ -518,7 +551,7 @@ export default function ApplicationCreatePage(): JSX.Element {
     // in the wizard.
     const finalAuthFlowId: string | undefined = ouDefaults[OrganizationUnitDefaultItem.SIGN_IN]
       ? (resolvedOrganizationUnit?.authFlowId ?? undefined)
-      : (overrideFlowId ?? selectedAuthFlow?.id);
+      : (overrideFlowId ?? (isRolledBackGeneratedFlow(selectedAuthFlow?.id) ? undefined : selectedAuthFlow?.id));
     const finalRegistrationFlowId: string | undefined = ouDefaults[OrganizationUnitDefaultItem.SIGN_UP]
       ? (resolvedOrganizationUnit?.registrationFlowId ?? undefined)
       : (registrationFlowId ?? undefined);
@@ -690,6 +723,12 @@ export default function ApplicationCreatePage(): JSX.Element {
             'Failed to create application. Please try again.',
           ),
         );
+
+        // The flow was persisted before the application, so a failure here leaves it orphaned.
+        const generated = generatedFlowRef.current;
+        if (generated) {
+          rollbackGeneratedFlow(generated);
+        }
       },
     });
   };
@@ -700,7 +739,7 @@ export default function ApplicationCreatePage(): JSX.Element {
     // A selected flow only short-circuits generation when it's a genuine manual pick (no
     // integrations enabled). Otherwise it's an auto-match riding along with active toggles, and
     // must still be regenerated below so MFA settings aren't silently dropped.
-    if (selectedAuthFlow && !hasEnabledIntegrations) {
+    if (selectedAuthFlow && !hasEnabledIntegrations && !isRolledBackGeneratedFlow(selectedAuthFlow.id)) {
       handleCreateApplication(skipOAuthConfig);
       return;
     }
@@ -710,7 +749,7 @@ export default function ApplicationCreatePage(): JSX.Element {
       const googleProvider = availableIntegrations.find((idp) => idp.type === IdentityProviderTypes.GOOGLE);
       const githubProvider = availableIntegrations.find((idp) => idp.type === IdentityProviderTypes.GITHUB);
 
-      const generatedFlowRequest = generateFlowGraph({
+      const flowInputs = {
         appName,
         hasCredentialsAuth: integrations[AuthenticatorTypes.CREDENTIALS_AUTH] ?? false,
         hasPasskey: integrations[AuthenticatorTypes.PASSKEY] ?? false,
@@ -723,10 +762,32 @@ export default function ApplicationCreatePage(): JSX.Element {
         hasEmailOtpMfa: isEmailOtpMfaEnabled,
         hasSmsOtpMfa: isSmsOtpMfaEnabled,
         smsOtpSenderId,
-      });
+      };
+
+      // Generation randomizes the flow handle so retries never collide, which also means a retry
+      // always mints a duplicate. Keying the generated flow on its inputs is what makes the retry
+      // reuse it: same inputs, same flow.
+      const inputsKey = JSON.stringify(flowInputs);
+      const memoizedFlow = generatedFlowRef.current;
+
+      if (memoizedFlow?.inputsKey === inputsKey) {
+        handleCreateApplication(skipOAuthConfig, memoizedFlow.flowId);
+        return;
+      }
+
+      // The inputs changed since the last attempt (an edited application name, a toggled
+      // integration), so the flow generated then is stale and unreferenced.
+      if (memoizedFlow) {
+        rollbackGeneratedFlow(memoizedFlow);
+      }
+
+      const generatedFlowRequest = generateFlowGraph(flowInputs);
 
       createFlow.mutate(generatedFlowRequest, {
         onSuccess: (savedFlow) => {
+          generatedFlowRef.current = {inputsKey, flowId: savedFlow.id};
+          generatedSelectionIdRef.current = savedFlow.id;
+
           // We cast because BasicFlowDefinition is a subset of FlowDefinitionResponse
           setSelectedAuthFlow(savedFlow as unknown as BasicFlowDefinition);
 
@@ -1073,11 +1134,11 @@ export default function ApplicationCreatePage(): JSX.Element {
           )}
 
           <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-            {createFlow.isPending && <CircularProgress size={20} />}
+            {(createFlow.isPending || createApplication.isPending) && <CircularProgress size={20} />}
             <Button
               data-testid="application-wizard-next-button"
               variant="contained"
-              disabled={!stepReady[currentStep] || createFlow.isPending}
+              disabled={!stepReady[currentStep] || createFlow.isPending || createApplication.isPending}
               sx={{minWidth: 100}}
               onClick={handleNextStep}
             >
