@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {ExternalLink, QueryErrorNotice} from '@thunderid/components';
-import {useToast} from '@thunderid/contexts';
-import {useGetThemes, useGetLayouts, useCreateLayout} from '@thunderid/design';
-import {getErrorMessage} from '@thunderid/utils';
+import {useGetThemes, useGetLayouts} from '@thunderid/design';
 import {Box, Button, Grid, PageContent, PageTitle, Skeleton, Typography} from '@wso2/oxygen-ui';
 import {ArrowUpRight, LayoutTemplate, Palette, Plus} from '@wso2/oxygen-ui-icons-react';
-import {useState, useCallback, type JSX} from 'react';
+import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import ItemCard from '../components/common/ItemCard';
@@ -29,38 +27,13 @@ export default function DesignPage(): JSX.Element {
   const {t} = useTranslation('design');
   const navigate = useNavigate();
   const routes = useDesignRoutes();
-  const {showToast} = useToast();
   const {data: themesData, isLoading: themesLoading, error: themesError, refetch: refetchThemes} = useGetThemes();
   const {data: layoutsData, error: layoutsError, refetch: refetchLayouts} = useGetLayouts();
-  const {mutateAsync: createLayout} = useCreateLayout();
 
   const [showAllThemes, setShowAllThemes] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id: string; name: string} | null>(null);
 
   const allLayouts = layoutsData?.layouts ?? [];
-
-  const handleCreateLayout = useCallback(async () => {
-    // Create a new layout with default config. This is a one-shot click action on a preset
-    // card with no dialog or form to attach an inline error to, so a failure toasts instead.
-    try {
-      const created = await createLayout({
-        handle: 'centered',
-        displayName: 'Centered',
-        layout: {},
-      });
-      await navigate(routes.design.layoutDetail(created.id));
-    } catch (err) {
-      showToast(
-        getErrorMessage(
-          err as Error,
-          t,
-          'layouts.errors.create_failed.message',
-          'Failed to create layout. Please try again.',
-        ),
-        'error',
-      );
-    }
-  }, [navigate, createLayout, showToast, t, routes.design]);
 
   const allThemes = themesData?.themes ?? [];
   const visibleThemes = showAllThemes ? allThemes : allThemes.slice(0, DesignUIConstants.INITIAL_LIMIT);
@@ -186,20 +159,6 @@ export default function DesignPage(): JSX.Element {
           title={t('layouts.section.title', 'Layouts')}
           count={allLayouts.length}
           icon={<LayoutTemplate size={18} />}
-          action={
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Plus size={16} />}
-              onClick={() => {
-                handleCreateLayout().catch(() => {
-                  /* no-op */
-                });
-              }}
-            >
-              {t('layouts.actions.add.label', 'Add Layout')}
-            </Button>
-          }
         />
 
         {layoutsError ? (
