@@ -1,9 +1,13 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {AllowedOrigin, CorsValue} from '../../settings/models/responses';
-import {isValidOrigin, normalizeOrigin} from '../../settings/utils/origin';
-import originValueText from '../../settings/utils/originValueText';
+import {
+  isValidOrigin,
+  normalizeOrigin,
+  originValueText,
+  type AllowedOrigin,
+  type CorsValue,
+} from '@thunderid/configure-settings';
 
 /**
  * Builds the CORS PUT payload for adding the Configuration step's origins to the deployment's

@@ -350,8 +350,15 @@ vi.mock('../../components/create-application/ConfigureDetails', () => ({
   default: vi.fn(DefaultConfigureDetailsImpl),
 }));
 
-vi.mock('../../../../components/GatePreview/GatePreview', () => ({
-  default: ({showToolbar, viewport}: {showToolbar?: boolean; viewport?: {width: string; height: string}}) => (
+vi.mock('@thunderid/configure-design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-design')>()),
+  GatePreview: ({
+    showToolbar = undefined,
+    viewport = undefined,
+  }: {
+    showToolbar?: boolean;
+    viewport?: {width: string; height: string};
+  }) => (
     <div data-testid="preview" data-show-toolbar={String(showToolbar)} data-viewport-width={viewport?.width ?? ''} />
   ),
 }));

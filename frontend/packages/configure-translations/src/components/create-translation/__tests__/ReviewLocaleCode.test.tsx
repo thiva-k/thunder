@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen} from '@thunderid/test-utils';
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {render, renderHook, screen} from '@thunderid/test-utils';
+import {useTranslation} from 'react-i18next';
+import {describe, expect, it, vi, beforeAll, beforeEach} from 'vitest';
 import ReviewLocaleCode from '@/components/create-translation/ReviewLocaleCode';
-
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({t: (key: string) => key}),
-  };
-});
 
 vi.mock('@thunderid/i18n', () => ({
   getDisplayNameForCode: (code: string) => (code ? `Name(${code})` : null),
@@ -29,6 +22,12 @@ const defaultProps = {
 };
 
 describe('ReviewLocaleCode', () => {
+  let t: (key: string) => string;
+
+  beforeAll(() => {
+    ({t} = renderHook(() => useTranslation('translations')).result.current);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -37,8 +36,8 @@ describe('ReviewLocaleCode', () => {
     it('renders the step title and subtitle', () => {
       render(<ReviewLocaleCode {...defaultProps} />);
 
-      expect(screen.getByText('language.create.localeCode.title')).toBeInTheDocument();
-      expect(screen.getByText('language.create.localeCode.subtitle')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.localeCode.title'))).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.localeCode.subtitle'))).toBeInTheDocument();
     });
 
     it('renders the locale code input with the derived locale as placeholder', () => {
@@ -50,7 +49,7 @@ describe('ReviewLocaleCode', () => {
     it('renders the BCP 47 helper tip', () => {
       render(<ReviewLocaleCode {...defaultProps} />);
 
-      expect(screen.getByText('language.add.code.helperText')).toBeInTheDocument();
+      expect(screen.getByText(t('language.add.code.helperText'))).toBeInTheDocument();
     });
   });
 

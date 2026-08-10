@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {isValidOrigin} from '@thunderid/configure-settings';
 import {
   Alert,
   Box,
@@ -19,7 +20,6 @@ import type {JSX} from 'react';
 import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import DevServerLogo from './DevServerLogo';
-import {isValidOrigin} from '../../../settings/utils/origin';
 import useApplicationCreate from '../../contexts/ApplicationCreate/useApplicationCreate';
 
 /** Pure URI-format check, permissive of path/host wildcards (the backend enforces wildcard rules). */

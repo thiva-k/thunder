@@ -7,7 +7,7 @@ import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import AddAssignmentDialog from '../AddAssignmentDialog';
 
 vi.mock('@thunderid/configure-users');
-vi.mock('../../../../../groups/api/useGetGroups');
+vi.mock('@thunderid/configure-groups');
 vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
   useGetApplications: vi.fn(),
@@ -93,7 +93,7 @@ vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
 });
 
 const {useGetUsers} = await import('@thunderid/configure-users');
-const {default: useGetGroups} = await import('../../../../../groups/api/useGetGroups');
+const {useGetGroups} = await import('@thunderid/configure-groups');
 const {useGetApplications} = await import('@thunderid/configure-applications');
 const {default: useGetRoleAssignments} = await import('../../../../api/useGetRoleAssignments');
 const {useDataGridLocaleText} = await import('@thunderid/hooks');

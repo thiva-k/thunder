@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen} from '@thunderid/test-utils';
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {render, renderHook, screen} from '@thunderid/test-utils';
+import {useTranslation} from 'react-i18next';
+import {describe, expect, it, vi, beforeAll, beforeEach} from 'vitest';
 import SelectCountry from '@/components/create-translation/SelectCountry';
-
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({t: (key: string) => key}),
-  };
-});
 
 const mockCountries = [
   {name: 'France', regionCode: 'FR', flag: '🇫🇷'},
@@ -31,6 +24,12 @@ const defaultProps = {
 };
 
 describe('SelectCountry', () => {
+  let t: (key: string) => string;
+
+  beforeAll(() => {
+    ({t} = renderHook(() => useTranslation('translations')).result.current);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -39,20 +38,20 @@ describe('SelectCountry', () => {
     it('renders the step title and subtitle', () => {
       render(<SelectCountry {...defaultProps} />);
 
-      expect(screen.getByText('language.create.country.title')).toBeInTheDocument();
-      expect(screen.getByText('language.create.country.subtitle')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.country.title'))).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.country.subtitle'))).toBeInTheDocument();
     });
 
     it('renders the country autocomplete label', () => {
       render(<SelectCountry {...defaultProps} />);
 
-      expect(screen.getByText('language.create.countryLabel')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.countryLabel'))).toBeInTheDocument();
     });
 
     it('renders the helper tip', () => {
       render(<SelectCountry {...defaultProps} />);
 
-      expect(screen.getByText('language.create.country.helperText')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.country.helperText'))).toBeInTheDocument();
     });
 
     it('renders the autocomplete combobox', () => {

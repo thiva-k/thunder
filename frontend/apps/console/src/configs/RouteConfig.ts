@@ -3,11 +3,15 @@
 
 import type {AgentTypeRoutePaths} from '@thunderid/configure-agent-types';
 import type {ConnectionRoutePaths} from '@thunderid/configure-connections';
+import type {DesignRoutePaths} from '@thunderid/configure-design';
+import type {GroupRoutePaths} from '@thunderid/configure-groups';
+import type {ImportExportRoutePaths} from '@thunderid/configure-import-export';
 import type {OrganizationUnitRoutePaths} from '@thunderid/configure-organization-units';
 import type {ResourceServerRoutePaths} from '@thunderid/configure-resource-servers';
 import type {TranslationRoutePaths} from '@thunderid/configure-translations';
 import type {UserTypeRoutePaths} from '@thunderid/configure-user-types';
 import type {UserRoutePaths} from '@thunderid/configure-users';
+import type {VerifiableCredentialRoutePaths} from '@thunderid/configure-verifiable-credentials';
 
 /**
  * Route paths for the domains Console implements itself, rather than through a
@@ -33,22 +37,7 @@ export interface ConsoleRoutePaths {
     detail: (id: string) => string;
     create: () => string;
   };
-  groups: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
   roles: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  verifiableCredentials: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  verifiablePresentations: {
     list: () => string;
     detail: (id: string) => string;
     create: () => string;
@@ -57,23 +46,6 @@ export interface ConsoleRoutePaths {
     list: () => string;
     create: () => string;
     detail: (flowId: string) => string;
-  };
-  design: {
-    list: () => string;
-    themesCreate: () => string;
-    themeDetail: (themeId: string) => string;
-    layoutDetail: (layoutId: string) => string;
-  };
-  importExport: {
-    list: () => string;
-  };
-  export: {
-    page: () => string;
-  };
-  importConfiguration: {
-    upload: () => string;
-    validate: () => string;
-    summary: () => string;
   };
   welcome: {
     root: () => string;
@@ -112,6 +84,10 @@ export type RouteConfig = OrganizationUnitRoutePaths &
   ConnectionRoutePaths &
   ResourceServerRoutePaths &
   TranslationRoutePaths &
+  VerifiableCredentialRoutePaths &
+  ImportExportRoutePaths &
+  DesignRoutePaths &
+  GroupRoutePaths &
   ConsoleRoutePaths;
 
 /**

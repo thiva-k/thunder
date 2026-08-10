@@ -1,6 +1,12 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {
+  LayoutPresetThumbnail,
+  LayoutThumbnail,
+  ThemeThumbnail,
+  type LayoutPresetVariant,
+} from '@thunderid/configure-design';
 import {useConfig} from '@thunderid/contexts';
 import {
   useGetThemes,
@@ -33,11 +39,6 @@ import {Palette, ExternalLink, Code, Lightbulb, LayoutTemplate} from '@wso2/oxyg
 import type {JSX, ChangeEvent} from 'react';
 import {useState, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
-import LayoutPresetThumbnail, {
-  type LayoutPresetVariant,
-} from '../../../design/components/layouts/LayoutPresetThumbnail';
-import LayoutThumbnail from '../../../design/components/layouts/LayoutThumbnail';
-import ThemeThumbnail from '../../../design/components/themes/ThemeThumbnail';
 import useApplicationCreateContext from '../../hooks/useApplicationCreateContext';
 import {ApplicationCreateFlowSignInApproach, OrganizationUnitDefaultItem} from '../../models/application-create-flow';
 

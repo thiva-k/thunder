@@ -27,8 +27,9 @@ const {mockUseImportConfiguration, mockMutateAsync, mockUseGetSampleBundle} = vi
   mockUseGetSampleBundle: vi.fn(),
 }));
 
-vi.mock('../../../import-export/api/useImportConfiguration', () => ({
-  default: mockUseImportConfiguration,
+vi.mock('@thunderid/configure-import-export', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-import-export')>()),
+  useImportConfiguration: mockUseImportConfiguration,
 }));
 
 vi.mock('../../api/useGetSampleBundles', () => ({

@@ -5,11 +5,13 @@ import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplications} from '@thunderid/configure-applications';
 import type {Application, ApplicationType, OAuth2Config} from '@thunderid/configure-applications';
 import {AuthenticatorTypes, IdentityProviderTypes, useIdentityProviders} from '@thunderid/configure-connections';
+import {GatePreview, VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@thunderid/configure-design';
 import {
   OrganizationUnitPickerScreen,
   useGetOrganizationUnit,
   useHasMultipleOUs,
 } from '@thunderid/configure-organization-units';
+import {useGetCorsConfig, useUpdateCorsConfig} from '@thunderid/configure-settings';
 import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {DefaultTheme, useGetTheme, type Theme} from '@thunderid/design';
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
@@ -29,8 +31,6 @@ import type {BasicFlowDefinition} from '../../flows/models/responses';
 import {resolveApplicationMeta, resolveTemplatesDeep} from '../../flows/utils/gatePreviewTransforms';
 import generateFlowGraph from '../../flows/utils/generateFlowGraph';
 import getFlowPromptComponentsSequence from '../../flows/utils/getFlowPromptComponentsSequence';
-import useGetCorsConfig from '../../settings/api/useGetCorsConfig';
-import useUpdateCorsConfig from '../../settings/api/useUpdateCorsConfig';
 import useCreateApplication from '../api/useCreateApplication';
 import ConfigureSecuritySettings from '../components/create-application/configure-security-settings/ConfigureSecuritySettings';
 import ConfigureApplicationDetails from '../components/create-application/ConfigureApplicationDetails';
@@ -55,8 +55,6 @@ import isRedirectCapableTemplate from '../utils/isRedirectCapableTemplate';
 import mergeCorsOrigins from '../utils/mergeCorsOrigins';
 import resolveApplicationType from '../utils/resolveApplicationType';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
-import GatePreview from '@/components/GatePreview/GatePreview';
-import {VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@/features/design/components/viewportConstants';
 
 export default function ApplicationCreatePage(): JSX.Element {
   const {t} = useTranslation();

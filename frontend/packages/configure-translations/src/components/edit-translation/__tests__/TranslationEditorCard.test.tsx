@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen} from '@thunderid/test-utils';
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {render, renderHook, screen} from '@thunderid/test-utils';
+import {useTranslation} from 'react-i18next';
+import {describe, expect, it, vi, beforeAll, beforeEach} from 'vitest';
 import TranslationEditorCard from '@/components/edit-translation/TranslationEditorCard';
-
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({t: (key: string) => key}),
-  };
-});
 
 vi.mock('@/components/edit-translation/TranslationFieldsView', () => ({
   default: () => <div data-testid="fields-view" />,
@@ -39,6 +32,12 @@ const defaultProps = {
 };
 
 describe('TranslationEditorCard', () => {
+  let t: (key: string) => string;
+
+  beforeAll(() => {
+    ({t} = renderHook(() => useTranslation('translations')).result.current);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -48,7 +47,7 @@ describe('TranslationEditorCard', () => {
       render(<TranslationEditorCard {...defaultProps} isLoading />);
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
-      expect(screen.getByText('editor.loading')).toBeInTheDocument();
+      expect(screen.getByText(t('editor.loading'))).toBeInTheDocument();
     });
 
     it('hides the spinner once loading is complete', () => {
@@ -62,7 +61,7 @@ describe('TranslationEditorCard', () => {
     it('renders the Fields and Raw JSON tabs', () => {
       render(<TranslationEditorCard {...defaultProps} />);
 
-      expect(screen.getByRole('tab', {name: 'editor.textFields'})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: t('editor.textFields')})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'JSON'})).toBeInTheDocument();
     });
 
@@ -88,7 +87,7 @@ describe('TranslationEditorCard', () => {
     it('renders the search input in fields view', () => {
       render(<TranslationEditorCard {...defaultProps} editView="fields" />);
 
-      expect(screen.getByPlaceholderText('editor.searchPlaceholder')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(t('editor.searchPlaceholder'))).toBeInTheDocument();
     });
 
     it('calls onSearchChange when text is typed in the search input', async () => {
@@ -99,7 +98,7 @@ describe('TranslationEditorCard', () => {
 
       // The search input is controlled (value={search} prop stays ''), so
       // each keystroke fires onSearchChange with just that character.
-      await user.type(screen.getByPlaceholderText('editor.searchPlaceholder'), 's');
+      await user.type(screen.getByPlaceholderText(t('editor.searchPlaceholder')), 's');
 
       expect(onSearchChange).toHaveBeenCalledWith('s');
     });
@@ -127,7 +126,7 @@ describe('TranslationEditorCard', () => {
     it('does not render the search input in JSON view', () => {
       render(<TranslationEditorCard {...defaultProps} editView="json" />);
 
-      expect(screen.queryByPlaceholderText('editor.searchPlaceholder')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(t('editor.searchPlaceholder'))).not.toBeInTheDocument();
     });
   });
 
