@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render, screen, waitFor, userEvent, within} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor, userEvent, within} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type useCreateUserTypeHook from '../../api/useCreateUserType';
@@ -354,7 +354,9 @@ describe('CreateUserTypePage', () => {
     renderPage();
 
     await pickOrganizationUnit(user);
-    await user.type(screen.getByLabelText(/User Type Name/i), 'a'.repeat(UserTypeConstraints.NAME_MAX_LENGTH + 1));
+    fireEvent.change(screen.getByLabelText(/User Type Name/i), {
+      target: {value: 'a'.repeat(UserTypeConstraints.NAME_MAX_LENGTH + 1)},
+    });
 
     expect(screen.getByText('User type name cannot exceed 100 characters')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: /Continue/i})).toBeDisabled();
