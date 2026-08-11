@@ -78,8 +78,10 @@ Select the sign-in methods users will use to authenticate with this application 
 **Browser App** applications (SPAs) support only the **Redirect** approach. Because they run entirely in the browser as public clients, they cannot drive embedded (app-native) flow execution securely, so the embedded option is not offered for them. Other application types, such as **Mobile App** and **Full-stack App**, continue to support the embedded approach.
 :::
 
-**User Access** controls which user types can register with this application. Select one or more of the allowed user types (for example, **Customer** or **Person**).
+**User Access** controls which user types can register with this application. Select one or more of the allowed user types (for example, **Customer** or **Person**). The selection appears as **Allowed User Types** once the application exists.
 Learn more about user types in [User Types](../../users/user-types).
+
+When first-time users sign in with a social identity provider, ensure exactly one selected user type has **Allow Self Registration** enabled. See [Control Who Can Register](../application-settings#control-who-can-register).
 
 ### Step 6: Configure Application
 
