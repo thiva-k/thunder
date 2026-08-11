@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import {render, screen, waitFor} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
+import AgentConstants from '../../constants/agent-constants';
 import AgentEditPage from '../AgentEditPage';
 
 const {
@@ -362,6 +363,16 @@ describe('AgentEditPage', () => {
       await waitFor(() => {
         expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
       });
+    });
+
+    it('discards a rename that exceeds the maximum length', async () => {
+      const user = userEvent.setup();
+      render(<AgentEditPage />);
+
+      await editName(user, 'Test Agent', 'a'.repeat(AgentConstants.NAME_MAX_LENGTH + 1));
+
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+      expect(screen.getByText('Test Agent')).toBeInTheDocument();
     });
 
     it('keeps the bar visible when only one of two edited fields is reverted', async () => {

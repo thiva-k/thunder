@@ -65,8 +65,8 @@ type OrganizationUnit struct {
 // in import/declarative paths where preserving IDs is required.
 type OrganizationUnitRequestWithID struct {
 	ID                        string  `json:"id"                           yaml:"id"                           native:"required"`
-	Handle                    string  `json:"handle"                       yaml:"handle"                       native:"required,min=3,max=50"`
-	Name                      string  `json:"name"                         yaml:"name"                         native:"required,min=2,max=100"`
+	Handle                    string  `json:"handle"                       yaml:"handle"                       native:"required,min=1,max=100"`
+	Name                      string  `json:"name"                         yaml:"name"                         native:"required,min=1,max=100"`
 	Description               string  `json:"description,omitempty"        yaml:"description,omitempty"`
 	Parent                    *string `json:"parent"                       yaml:"parent"`
 	ThemeID                   string  `json:"themeId,omitempty"            yaml:"themeId,omitempty"`

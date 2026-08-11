@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import {renderWithProviders} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
+import GroupConstraints from '../../constants/group-constraints';
 import GroupEditPage from '../GroupEditPage';
 
 vi.mock('@thunderid/components', async (importOriginal) => {
@@ -381,6 +382,27 @@ describe('GroupEditPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
     });
+  });
+
+  it('should discard a rename that exceeds the maximum length', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<GroupEditPage />);
+
+    const editName = async (to: string): Promise<void> => {
+      const h3 = screen.getAllByText('Test Group').find((el) => el.tagName === 'H3');
+      await user.click(h3!.parentElement!.querySelector('button')!);
+      const input = screen.getByRole('textbox');
+      await user.clear(input);
+      await user.type(input, to);
+      await user.keyboard('{Enter}');
+    };
+
+    await editName('a'.repeat(GroupConstraints.NAME_MAX_LENGTH + 1));
+    await waitFor(() => {
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText('Test Group').some((el) => el.tagName === 'H3')).toBe(true);
   });
 
   it('should cancel name editing on Escape', async () => {

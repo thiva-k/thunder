@@ -5,6 +5,7 @@
 import {render, screen, waitFor, within, userEvent} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
+import UserTypeConstraints from '../../constants/user-type-constraints';
 import type {ApiUserType, ApiError, LibraryAttribute} from '../../types/user-types';
 import ViewUserTypePage from '../ViewUserTypePage';
 
@@ -322,6 +323,21 @@ describe('ViewUserTypePage', () => {
       await waitFor(() => {
         expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
       });
+    });
+
+    it('discards a rename that exceeds the maximum length', async () => {
+      const user = userEvent.setup();
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit user type name/i}));
+      const nameInput = screen.getByRole('textbox', {name: /user type name/i});
+      await user.clear(nameInput);
+      await user.type(nameInput, `${'a'.repeat(UserTypeConstraints.NAME_MAX_LENGTH + 1)}{Enter}`);
+
+      await waitFor(() => {
+        expect(screen.getByText('Employee Schema')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
     });
   });
 
