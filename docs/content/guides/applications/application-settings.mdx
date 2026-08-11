@@ -27,6 +27,10 @@ Under **Access** on the General tab, you can configure which users can register 
 | **Application URL** | The homepage URL of your application. |
 | **Authorized Redirect URIs** | The URLs <ProductName /> sends users back to after authentication. Register every URI your application uses.
 
+:::note
+When first-time users sign in with a social identity provider, your application must allow exactly one user type with **Allow Self Registration** enabled. Sign-in fails if none or more than one of the allowed user types has this setting enabled. Existing users are unaffected. See [Connect an IdP to an Application](../../identity-providers/connect-idp-to-application).
+:::
+
 ## Use Wildcard Redirect URIs
 
 <ProductName /> supports wildcard patterns in redirect URIs, so you can register a single pattern that covers a range of valid callback URLs instead of listing every exact URI.
