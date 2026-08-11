@@ -56,6 +56,7 @@ func (ds *discoveryService) GetOAuth2AuthorizationServerMetadata(
 		ResponseTypesSupported:                     ds.getSupportedResponseTypes(),
 		GrantTypesSupported:                        ds.getSupportedGrantTypes(),
 		TokenEndpointAuthMethodsSupported:          ds.getSupportedTokenEndpointAuthMethods(),
+		TokenEndpointAuthSigningAlgValuesSupported: ds.getSupportedTokenEndpointAuthSigningAlgs(),
 		CodeChallengeMethodsSupported:              ds.getSupportedCodeChallengeMethods(),
 		AuthorizationResponseIssParameterSupported: true,
 		DPoPSigningAlgValuesSupported:              ds.getSupportedDPoPSigningAlgs(),
@@ -183,6 +184,10 @@ func (ds *discoveryService) isGlobalPARRequired() bool {
 }
 
 func (ds *discoveryService) getSupportedDPoPSigningAlgs() []string {
+	return ds.cryptoProvider.GetSupportedSigningAlgorithms()
+}
+
+func (ds *discoveryService) getSupportedTokenEndpointAuthSigningAlgs() []string {
 	return ds.cryptoProvider.GetSupportedSigningAlgorithms()
 }
 
