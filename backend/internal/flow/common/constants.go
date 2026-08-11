@@ -89,6 +89,9 @@ const (
 	// DataOTPLength is the character length of the OTP minted by the OTP executor in generate mode,
 	// surfaced so the client renders the matching number of input boxes.
 	DataOTPLength = "otpLength"
+	// DataOTPNumericOnly reports whether the OTP minted by the OTP executor in generate mode contains
+	// digits only, surfaced so the client restricts input to the characters the user has to type.
+	DataOTPNumericOnly = "otpNumericOnly"
 )
 
 // Error assertion claims.
