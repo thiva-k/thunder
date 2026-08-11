@@ -4673,7 +4673,7 @@
               }
             ]
           },
-          "onSuccess": "generate_otp",
+          "onSuccess": "attribute_collect",
           "onIncomplete": "choose_auth"
         },
         {
@@ -4742,7 +4742,7 @@
           "executor": {
             "name": "ProvisioningExecutor"
           },
-          "onSuccess": "generate_otp",
+          "onSuccess": "attribute_collect",
           "layout": {
             "size": {
               "width": 200,
@@ -4805,6 +4805,115 @@
               "y": -14
             }
           }
+        },
+        {
+          "id": "attribute_collect",
+          "type": "TASK_EXECUTION",
+          "layout": {
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1275,
+              "y": 546
+            }
+          },
+          "executor": {
+            "name": "AttributeCollector",
+            "inputs": [
+              {
+                "ref": "input_mobile",
+                "type": "PHONE_INPUT",
+                "identifier": "mobile_number",
+                "required": true
+              }
+            ]
+          },
+          "onSuccess": "generate_otp",
+          "onIncomplete": "prompt_mobile"
+        },
+        {
+          "id": "prompt_mobile",
+          "type": "PROMPT",
+          "layout": {
+            "size": {
+              "width": 350,
+              "height": 603
+            },
+            "position": {
+              "x": 1275,
+              "y": 750
+            }
+          },
+          "meta": {
+            "components": [
+              {
+                "alt": "{{ t(signin:images.app_logo.alt) }}",
+                "category": "DISPLAY",
+                "height": "60",
+                "id": "image_logo_phone_signin",
+                "resourceType": "ELEMENT",
+                "src": "{{ meta(application.logoUrl) }}",
+                "type": "IMAGE",
+                "width": ""
+              },
+              {
+                "align": "center",
+                "category": "DISPLAY",
+                "id": "display_phone_heading_signin",
+                "label": "{{ t(signin:forms.phone.title) }}",
+                "resourceType": "ELEMENT",
+                "type": "TEXT",
+                "variant": "HEADING_1"
+              },
+              {
+                "category": "BLOCK",
+                "components": [
+                  {
+                    "category": "FIELD",
+                    "hint": "",
+                    "id": "input_phone_signin",
+                    "inputType": "tel",
+                    "label": "{{ t(signin:forms.phone.fields.phone.label) }}",
+                    "placeholder": "{{ t(signin:forms.phone.fields.phone.placeholder) }}",
+                    "ref": "mobile_number",
+                    "required": true,
+                    "resourceType": "ELEMENT",
+                    "type": "TEXT_INPUT"
+                  },
+                  {
+                    "category": "ACTION",
+                    "eventType": "SUBMIT",
+                    "id": "action_phone_signin",
+                    "label": "{{ t(signin:forms.phone.actions.submit.label) }}",
+                    "resourceType": "ELEMENT",
+                    "type": "ACTION",
+                    "variant": "PRIMARY"
+                  }
+                ],
+                "id": "block_phone_signin",
+                "resourceType": "ELEMENT",
+                "type": "BLOCK"
+              }
+            ]
+          },
+          "prompts": [
+            {
+              "inputs": [
+                {
+                  "ref": "input_phone_signin",
+                  "type": "PHONE_INPUT",
+                  "identifier": "mobile_number",
+                  "required": true
+                }
+              ],
+              "action": {
+                "ref": "action_phone_signin",
+                "nextNode": "attribute_collect"
+              }
+            }
+          ]
         },
         {
           "id": "generate_otp",
@@ -9948,7 +10057,7 @@
           "executor": {
             "name": "CredentialsAuthExecutor"
           },
-          "onSuccess": "generate_otp",
+          "onSuccess": "prompt_mobile",
           "onFailure": "choose_auth",
           "onIncomplete": "choose_auth"
         },
@@ -14745,6 +14854,10 @@
               "type": "ID"
             },
             {
+              "key": "MOBILE_PROMPT_STEP_ID",
+              "type": "ID"
+            },
+            {
               "key": "SMS_SEND_EXECUTOR_ID",
               "type": "ID"
             },
@@ -14856,6 +14969,37 @@
                 "executor": {
                   "name": "CredentialsAuthExecutor"
                 },
+                "onSuccess": "{{MOBILE_PROMPT_STEP_ID}}",
+                "onFailure": "",
+                "onIncomplete": ""
+              }
+            }
+          },
+          {
+            "id": "{{MOBILE_PROMPT_STEP_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1010,
+              "y": 291
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AttributeCollector",
+                  "inputs": [
+                    {
+                      "ref": "mobile_number",
+                      "type": "PHONE_INPUT",
+                      "identifier": "mobile_number",
+                      "required": true
+                    }
+                  ]
+                },
                 "onSuccess": "{{SMS_SEND_EXECUTOR_ID}}",
                 "onFailure": "",
                 "onIncomplete": ""
@@ -14878,7 +15022,15 @@
                 "type": "EXECUTOR",
                 "executor": {
                   "name": "OTPExecutor",
-                  "mode": "generate"
+                  "mode": "generate",
+                  "inputs": [
+                    {
+                      "ref": "mobile_number",
+                      "type": "PHONE_INPUT",
+                      "identifier": "mobile_number",
+                      "required": true
+                    }
+                  ]
                 },
                 "onSuccess": "{{SMS_EXECUTOR_ID}}",
                 "onFailure": "",
