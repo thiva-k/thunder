@@ -598,12 +598,7 @@ func (ts *CIBATestSuite) TestCIBAAuthReqIDNotTransferableAcrossClients() {
 // TestCIBABindingMessageDeliveredToUser verifies that a client-supplied binding_message reaches the
 // user's notification verbatim, and that an omitted one falls back to defaultBindingMessage's
 // generated, request-specific "Code: XXXX-XXXX" text.
-// Skipped pending https://github.com/thunder-id/thunderid/issues/4835: smsExecutor does not merge
-// ctx.RuntimeData into its template data, so bindingMessage is never substituted into the SMS body.
 func (ts *CIBATestSuite) TestCIBABindingMessageDeliveredToUser() {
-	ts.T().Skip("https://github.com/thunder-id/thunderid/issues/4835: smsExecutor does not merge " +
-		"ctx.RuntimeData, so bindingMessage never reaches the SMS template. Unskip when the issue is fixed.")
-
 	customMessage := "Approve sign-in to Acme Console"
 	form := url.Values{}
 	form.Set("login_hint", cibaTestUsername)
@@ -1307,20 +1302,23 @@ func buildFakeIDTokenHint(claims map[string]interface{}) string {
 		base64.RawURLEncoding.EncodeToString(payloadJSON) + ".fakesignature"
 }
 
-// tamperJWTSignature flips the last character of a real JWT's signature segment, invalidating it
-// while keeping the token well-formed (three base64url segments).
+// tamperJWTSignature flips a bit in the first byte of a real JWT's decoded signature, invalidating
+// it while keeping the token well-formed (three base64url segments). The mutation must operate on
+// the decoded bytes rather than the base64url characters: a character-level edit can land on the
+// trailing padding bits of the encoding (e.g. the last character of a 64- or 256-byte signature
+// carries only 2 significant bits, with the rest unused padding), in which case the "tampered"
+// token decodes to byte-identical signature bytes, still verifies successfully, and the test
+// flakes. Flipping a bit in the first byte guarantees the decoded signature actually changes.
 func tamperJWTSignature(token string) string {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 || len(parts[2]) == 0 {
 		return token
 	}
-	sig := []byte(parts[2])
-	last := sig[len(sig)-1]
-	if last == 'A' {
-		sig[len(sig)-1] = 'B'
-	} else {
-		sig[len(sig)-1] = 'A'
+	raw, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil || len(raw) == 0 {
+		return token
 	}
-	parts[2] = string(sig)
+	raw[0] ^= 0x01
+	parts[2] = base64.RawURLEncoding.EncodeToString(raw)
 	return strings.Join(parts, ".")
 }
