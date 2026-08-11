@@ -21,7 +21,6 @@ type oauthConnectionRequest struct {
 	AuthorizationEndpoint string   `json:"authorizationEndpoint"`
 	TokenEndpoint         string   `json:"tokenEndpoint"`
 	UserInfoEndpoint      string   `json:"userInfoEndpoint"`
-	LogoutEndpoint        string   `json:"logoutEndpoint,omitempty"`
 	Scopes                []string `json:"scopes,omitempty"`
 	Prompt                string   `json:"prompt,omitempty"`
 
@@ -40,7 +39,6 @@ type oauthConnectionResponse struct {
 	AuthorizationEndpoint string   `json:"authorizationEndpoint,omitempty"`
 	TokenEndpoint         string   `json:"tokenEndpoint,omitempty"`
 	UserInfoEndpoint      string   `json:"userInfoEndpoint,omitempty"`
-	LogoutEndpoint        string   `json:"logoutEndpoint,omitempty"`
 	Scopes                []string `json:"scopes,omitempty"`
 	Prompt                string   `json:"prompt,omitempty"`
 
@@ -61,7 +59,6 @@ func oauthToIDPDTO(req oauthConnectionRequest) (*providers.IDPDTO, error) {
 		{idp.PropAuthorizationEndpoint, req.AuthorizationEndpoint, false},
 		{idp.PropTokenEndpoint, req.TokenEndpoint, false},
 		{idp.PropUserInfoEndpoint, req.UserInfoEndpoint, false},
-		{idp.PropLogoutEndpoint, req.LogoutEndpoint, false},
 		{idp.PropScopes, joinScopes(req.Scopes), false},
 		{idp.PropPrompt, req.Prompt, false},
 	}
@@ -95,7 +92,6 @@ func oauthFromIDPDTO(dto providers.IDPDTO) (oauthConnectionResponse, error) {
 		AuthorizationEndpoint: values[idp.PropAuthorizationEndpoint],
 		TokenEndpoint:         values[idp.PropTokenEndpoint],
 		UserInfoEndpoint:      values[idp.PropUserInfoEndpoint],
-		LogoutEndpoint:        values[idp.PropLogoutEndpoint],
 		Scopes:                splitScopes(values[idp.PropScopes]),
 		Prompt:                values[idp.PropPrompt],
 	}

@@ -183,7 +183,6 @@ export interface OIDCConnectionRequest extends OAuthConnectionRequest {
   tokenEndpoint: string;
   userInfoEndpoint?: string;
   jwksEndpoint?: string;
-  logoutEndpoint?: string;
   issuer?: string;
   tokenExchangeEnabled?: boolean;
   trustedTokenAudience?: string;
@@ -211,7 +210,6 @@ export interface OAuth2ConnectionRequest extends OAuthConnectionRequest {
   authorizationEndpoint: string;
   tokenEndpoint: string;
   userInfoEndpoint: string;
-  logoutEndpoint?: string;
 }
 
 /**

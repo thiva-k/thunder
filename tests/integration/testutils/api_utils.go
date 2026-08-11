@@ -653,7 +653,6 @@ var idpPropertyToConnectionField = map[string]string{
 	"token_endpoint":         "tokenEndpoint",
 	"userinfo_endpoint":      "userInfoEndpoint",
 	"jwks_endpoint":          "jwksEndpoint",
-	"logout_endpoint":        "logoutEndpoint",
 	"issuer":                 "issuer",
 	"trusted_token_audience": "trustedTokenAudience",
 }

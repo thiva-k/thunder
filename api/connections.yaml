@@ -1096,7 +1096,6 @@ components:
         tokenEndpoint: { type: string }
         userInfoEndpoint: { type: string }
         jwksEndpoint: { type: string }
-        logoutEndpoint: { type: string }
         issuer: { type: string }
         scopes: { type: array, items: { type: string } }
         prompt: { type: string }
@@ -1123,7 +1122,6 @@ components:
         tokenEndpoint: { type: string }
         userInfoEndpoint: { type: string }
         jwksEndpoint: { type: string }
-        logoutEndpoint: { type: string }
         issuer: { type: string }
         scopes: { type: array, items: { type: string } }
         prompt: { type: string }
@@ -1147,7 +1145,6 @@ components:
         authorizationEndpoint: { type: string }
         tokenEndpoint: { type: string }
         userInfoEndpoint: { type: string }
-        logoutEndpoint: { type: string }
         scopes: { type: array, items: { type: string } }
         prompt: { type: string }
         attributeConfiguration: { $ref: '#/components/schemas/AttributeConfiguration' }
@@ -1169,7 +1166,6 @@ components:
         authorizationEndpoint: { type: string }
         tokenEndpoint: { type: string }
         userInfoEndpoint: { type: string }
-        logoutEndpoint: { type: string }
         scopes: { type: array, items: { type: string } }
         prompt: { type: string }
         attributeConfiguration: { $ref: '#/components/schemas/AttributeConfiguration' }

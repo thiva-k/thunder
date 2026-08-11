@@ -70,15 +70,6 @@ const PROMPT_FIELD: ConnectionFieldDef = {
   visibility: 'edit',
 };
 
-const LOGOUT_ENDPOINT_FIELD: ConnectionFieldDef = {
-  name: 'logoutEndpoint',
-  labelKey: 'connections:form.fields.logoutEndpoint.label',
-  hintKey: 'connections:form.fields.logoutEndpoint.hint',
-  kind: 'url',
-  placeholder: 'https://idp.example.com/logout',
-  visibility: 'edit',
-};
-
 const oauthFields = (namePlaceholder: string, clientIdPlaceholder: string): ConnectionFieldDef[] => [
   NAME_FIELD(namePlaceholder),
   {
@@ -198,7 +189,6 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       requiredWhen: 'tokenExchangeEnabled',
       visibility: 'edit',
     },
-    LOGOUT_ENDPOINT_FIELD,
     {
       name: 'redirectUri',
       labelKey: 'connections:form.fields.redirectUri.label',
@@ -258,7 +248,6 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       required: true,
       placeholder: 'https://idp.example.com/userinfo',
     },
-    LOGOUT_ENDPOINT_FIELD,
     {
       name: 'redirectUri',
       labelKey: 'connections:form.fields.redirectUri.label',
