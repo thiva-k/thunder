@@ -1381,6 +1381,71 @@ func DeleteResourceServer(rsID string) error {
 	return nil
 }
 
+// CreateAction creates an action on a resource server and returns the action ID.
+func CreateAction(resourceServerID string, action Action) (string, error) {
+	return createAction(resourceServerID, action)
+}
+
+// GetActionsByResourceServer returns the IDs of the actions defined on a resource server.
+func GetActionsByResourceServer(resourceServerID string) ([]string, error) {
+	client := GetHTTPClient()
+
+	url := fmt.Sprintf("%s/resource-servers/%s/actions", TestServerURL, resourceServerID)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create list-actions request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list actions: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("expected status 200, got %d. Response: %s", resp.StatusCode, string(body))
+	}
+
+	var listResp struct {
+		Actions []struct {
+			ID string `json:"id"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal(body, &listResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal actions response: %w", err)
+	}
+
+	actionIDs := make([]string, 0, len(listResp.Actions))
+	for _, action := range listResp.Actions {
+		actionIDs = append(actionIDs, action.ID)
+	}
+	return actionIDs, nil
+}
+
+// DeleteAction deletes an action from a resource server.
+func DeleteAction(resourceServerID, actionID string) error {
+	client := GetHTTPClient()
+
+	url := fmt.Sprintf("%s/resource-servers/%s/actions/%s", TestServerURL, resourceServerID, actionID)
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete action: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+	return nil
+}
+
 func PutDefaultResourceServer(resourceServerID string) error {
 	client := GetHTTPClient()
 
