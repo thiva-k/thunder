@@ -392,9 +392,8 @@ describe('GroupEditPage', () => {
       const h3 = screen.getAllByText('Test Group').find((el) => el.tagName === 'H3');
       await user.click(h3!.parentElement!.querySelector('button')!);
       const input = screen.getByRole('textbox');
-      await user.clear(input);
-      await user.type(input, to);
-      await user.keyboard('{Enter}');
+      fireEvent.change(input, {target: {value: to}});
+      fireEvent.keyDown(input, {key: 'Enter'});
     };
 
     await editName('a'.repeat(GroupConstraints.NAME_MAX_LENGTH + 1));

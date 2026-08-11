@@ -942,7 +942,11 @@ describe('ApplicationEditPage', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await editInlineField(user, 'Test Application', 'a'.repeat(ApplicationConstants.NAME_MAX_LENGTH + 1));
+      const section = screen.getByText('Test Application').closest('div');
+      await user.click(section!.querySelector('button')!);
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, {target: {value: 'a'.repeat(ApplicationConstants.NAME_MAX_LENGTH + 1)}});
+      fireEvent.keyDown(input, {key: 'Enter'});
 
       await waitFor(() => {
         expect(screen.getByText('Test Application')).toBeInTheDocument();

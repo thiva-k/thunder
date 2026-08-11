@@ -3,7 +3,7 @@
 
 import userEvent from '@testing-library/user-event';
 import type {ResourcePermissions} from '@thunderid/configure-resource-servers';
-import {render, screen, waitFor} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
 import type {NavigateFunction} from 'react-router';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import type {UpdateRoleRequest} from '../../models/requests';
@@ -420,8 +420,7 @@ describe('RoleEditPage', () => {
       const editName = async (to: string): Promise<void> => {
         await user.click(screen.getByRole('button', {name: 'Edit role name'}));
         const nameInput = screen.getByRole('textbox');
-        await user.clear(nameInput);
-        await user.type(nameInput, to);
+        fireEvent.change(nameInput, {target: {value: to}});
         await user.tab();
       };
 
