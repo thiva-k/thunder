@@ -446,6 +446,15 @@ export default function App(): JSX.Element {
                   <Route path="get-started/applications/types" element={<ApplicationTemplateSelectPage />} />
                   <Route path="get-started/applications/create" element={<ApplicationCreatePage />} />
                 </Route>
+                <Route
+                  element={
+                    <AgentCreateProvider>
+                      <Outlet />
+                    </AgentCreateProvider>
+                  }
+                >
+                  <Route path="get-started/agents/create" element={<AgentCreatePage />} />
+                </Route>
                 <Route path="tryout/securing-application" element={<TryoutSecuringApplicationPage />} />
                 <Route path="tryout/ai-agents" element={<TryoutSecuringAIAgentsPage />} />
                 <Route path="tryout/mcp" element={<TryoutSecuringMCPPage />} />

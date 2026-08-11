@@ -243,9 +243,11 @@ const translations = {
     'welcome.getStarted.options.secureAiAgent.title': 'Secure an AI Agent',
     'welcome.getStarted.options.secureAiAgent.description':
       'Protect your AI agents with token-based access control and scope enforcement.',
-    'welcome.getStarted.options.secureMcp.title': 'Secure MCP Server / Client',
+    'welcome.getStarted.options.secureAiAgent.action': 'Add Agent',
+    'welcome.getStarted.options.secureMcp.title': 'Secure an MCP Client',
     'welcome.getStarted.options.secureMcp.description':
-      'Authorize MCP clients to access your MCP server with fine-grained permissions.',
+      'Register your MCP client and authorize it with fine-grained, scoped permissions.',
+    'welcome.getStarted.options.secureMcp.action': 'Add MCP Client',
     'welcome.getStarted.options.comingSoon': 'Coming Soon',
     'welcome.getStarted.options.skip.title': 'Skip for now',
     'welcome.getStarted.options.skip.description':
