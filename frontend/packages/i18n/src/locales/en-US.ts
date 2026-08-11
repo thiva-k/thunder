@@ -298,9 +298,9 @@ const translations = {
     'welcome.applicationTryout.scenarios.signup.sampleFields.familyName': 'Last name',
     'welcome.applicationTryout.scenarios.signup.sampleFields.mobileNumber': 'Mobile number',
     'welcome.applicationTryout.scenarios.signup.step4':
-      'Fill in the registration form using these sample details and click Submit.',
+      'Fill in the registration form using these sample details and click Continue.',
     'welcome.applicationTryout.scenarios.signup.step5':
-      '{{productName}} will create a Customer user and assign the Traveler role. The browser shows a confirmation screen with a link to redirect back to the Wayfinder app.',
+      '{{productName}} will create a Customer user and assign the Traveler role. The browser returns to the Wayfinder app signed in as the new user.',
     'welcome.applicationTryout.scenarios.profile.description':
       'Explore the self-service profile page - view account details, edit attributes, and change your password.',
     'welcome.applicationTryout.scenarios.profile.step1': 'Sign in as John at <a>http://localhost:5173</a>.',
