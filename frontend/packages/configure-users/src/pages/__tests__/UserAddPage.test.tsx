@@ -236,6 +236,26 @@ const ouSelect = (ref: string, label: string, opts?: {required?: boolean; id?: s
     id: opts?.id ?? `ou-${ref}`,
   }) as unknown as EmbeddedFlowComponent;
 
+/** Build a numeric input component */
+const numberInput = (ref: string, label: string, opts?: {required?: boolean; id?: string}): EmbeddedFlowComponent =>
+  ({
+    type: 'NUMBER_INPUT',
+    ref,
+    label,
+    required: opts?.required ?? false,
+    id: opts?.id ?? `number-${ref}`,
+  }) as unknown as EmbeddedFlowComponent;
+
+/** Build a boolean (checkbox) component */
+const booleanInput = (ref: string, label: string, opts?: {required?: boolean; id?: string}): EmbeddedFlowComponent =>
+  ({
+    type: 'BOOLEAN_INPUT',
+    ref,
+    label,
+    required: opts?.required ?? false,
+    id: opts?.id ?? `boolean-${ref}`,
+  }) as unknown as EmbeddedFlowComponent;
+
 /** Build a submit action component */
 const submitAction = (label: string, opts?: {variant?: string; id?: string}): EmbeddedFlowComponent =>
   ({
@@ -498,6 +518,56 @@ describe('UserAddPage', () => {
       expect(headings.length).toBeGreaterThanOrEqual(1);
       // The text input should NOT render because the block has no submit action
       expect(screen.queryByLabelText(/name/i)).not.toBeInTheDocument();
+    });
+
+    it('should render a NUMBER_INPUT field as a numeric input', () => {
+      mockInviteUserRenderProps.components = [
+        heading('Number Step'),
+        block([numberInput('age', 'Age', {required: true}), submitAction('Next')]),
+      ];
+
+      render(<UserAddPage />);
+
+      const input = screen.getByLabelText(/age/i);
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveAttribute('type', 'number');
+    });
+
+    it('should render a BOOLEAN_INPUT field as a checkbox', () => {
+      mockInviteUserRenderProps.components = [
+        heading('Boolean Step'),
+        block([booleanInput('active', 'Active', {required: true}), submitAction('Next')]),
+      ];
+
+      render(<UserAddPage />);
+
+      expect(screen.getByRole('checkbox', {name: 'Active'})).toBeInTheDocument();
+    });
+
+    it('should seed a BOOLEAN_INPUT field with its unchecked value', async () => {
+      mockInviteUserRenderProps.components = [
+        heading('Boolean Step'),
+        block([booleanInput('active', 'Active', {required: true}), submitAction('Next')]),
+      ];
+
+      render(<UserAddPage />);
+
+      await waitFor(() => {
+        expect(mockHandleInputChange).toHaveBeenCalledWith('active', 'false');
+      });
+    });
+
+    it('should report a checked BOOLEAN_INPUT field as true', async () => {
+      mockInviteUserRenderProps.components = [
+        heading('Boolean Step'),
+        block([booleanInput('active', 'Active', {required: true}), submitAction('Next')]),
+      ];
+
+      render(<UserAddPage />);
+
+      await userEvent.click(screen.getByRole('checkbox', {name: 'Active'}));
+
+      expect(mockHandleInputChange).toHaveBeenCalledWith('active', 'true');
     });
   });
 
