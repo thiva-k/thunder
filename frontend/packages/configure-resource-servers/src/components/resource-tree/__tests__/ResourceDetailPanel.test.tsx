@@ -245,6 +245,48 @@ describe('ResourceDetailPanel', () => {
     expect(screen.queryByText(/This is a system resource server and cannot be modified/i)).not.toBeInTheDocument();
   });
 
+  it('disables the fields and hides the Save bar for a resource node of a read-only server', async () => {
+    const selectedNode: SelectedNode = {
+      type: 'resource',
+      id: 'r-1',
+      data: {id: 'r-1', name: 'Documents', handle: 'documents', permission: 'dark-dodos/documents'},
+    };
+
+    renderWithProviders(
+      <ResourceDetailPanel selectedNode={selectedNode} resourceServer={readOnlyResourceServer} onRefresh={vi.fn()} />,
+    );
+
+    const nameField = screen.getByDisplayValue('Documents');
+    expect(nameField).toBeDisabled();
+
+    fireEvent.change(nameField, {target: {value: 'Renamed'}});
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', {name: /Save/i})).not.toBeInTheDocument();
+    });
+  });
+
+  it('disables the fields and hides the Save bar for an action node of a read-only server', async () => {
+    const selectedNode: SelectedNode = {
+      type: 'server-action',
+      id: 'a-1',
+      data: {id: 'a-1', name: 'Read All', handle: 'read-all', permission: 'dark-dodos:read-all'},
+    };
+
+    renderWithProviders(
+      <ResourceDetailPanel selectedNode={selectedNode} resourceServer={readOnlyResourceServer} onRefresh={vi.fn()} />,
+    );
+
+    const nameField = screen.getByDisplayValue('Read All');
+    expect(nameField).toBeDisabled();
+
+    fireEvent.change(nameField, {target: {value: 'Renamed'}});
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', {name: /Save/i})).not.toBeInTheDocument();
+    });
+  });
+
   it('hides the Save/Reset bar when the name is typed away and back to original', async () => {
     const selectedNode: SelectedNode = {
       type: 'resource',
