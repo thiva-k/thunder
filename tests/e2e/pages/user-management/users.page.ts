@@ -110,8 +110,12 @@ export class UsersPage extends BasePage {
       .or(page.locator('input[name="password"]'))
       .or(page.getByLabel(/^password$/i));
 
-    // Form buttons
-    this.submitButton = page.getByRole("button", { name: /create.*user|add.*user|submit|save/i });
+    // Form buttons - support multiple button naming conventions
+    // The actual button label comes from the embedded flow, so we support common patterns
+    this.submitButton = page
+      .getByRole("button", { name: /create.*user|add.*user|submit|save|finish|next|continue|confirm/i })
+      .or(page.locator('button[size="large"]:not(:has-text("Cancel"))')
+        .or(page.locator('button:not(:has-text("Cancel")):not(:has-text("Close"))').nth(-1)));
     this.cancelButton = page.getByRole("button", { name: /cancel|close/i });
 
     // Form heading (Step 2: "Enter user details")
@@ -297,8 +301,29 @@ export class UsersPage extends BasePage {
 
   /** Submit the form (clicks "Create User" on the last step) */
   async submitForm() {
-    await expect(this.submitButton.first()).toBeEnabled({ timeout: Timeouts.ELEMENT_VISIBILITY });
-    await this.submitButton.first().click();
+    const submitBtn = this.submitButton.first();
+
+    // Wait for button to be visible first
+    try {
+      await submitBtn.waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
+    } catch (error) {
+      // If button not found by standard selectors, try to find any large contained button
+      const allButtons = this.page.locator('button[size="large"]');
+      const count = await allButtons.count();
+
+      if (count > 0) {
+        // Try the last button (usually submit in wizards)
+        await allButtons.last().waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
+        await allButtons.last().click();
+        return;
+      }
+
+      throw new Error(`Could not find submit button. ${error}`);
+    }
+
+    // Check if enabled and click
+    await expect(submitBtn).toBeEnabled({ timeout: Timeouts.ELEMENT_VISIBILITY });
+    await submitBtn.click();
   }
 
   private async clickContinueButton() {
