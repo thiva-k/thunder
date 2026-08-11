@@ -550,17 +550,15 @@ func (suite *OAuthUtilsTestSuite) TestGetStringUserClaimValueWithMissingOrInvali
 	}
 }
 
-func (suite *OAuthUtilsTestSuite) TestParseIDPConfigWithLogoutAndJwks() {
+func (suite *OAuthUtilsTestSuite) TestParseIDPConfigWithJwks() {
 	clientIDProp, _ := cmodels.NewProperty("client_id", "test_client", false)
 	scopesProp, _ := cmodels.NewProperty("scopes", "openid,profile", false)
-	logoutProp, _ := cmodels.NewProperty("logout_endpoint", "https://localhost:8090/logout", false)
 	jwksProp, _ := cmodels.NewProperty("jwks_endpoint", "https://localhost:8090/jwks", false)
 
 	idpDTO := &providers.IDPDTO{
 		Properties: []cmodels.Property{
 			*clientIDProp,
 			*scopesProp,
-			*logoutProp,
 			*jwksProp,
 		},
 	}
@@ -568,7 +566,6 @@ func (suite *OAuthUtilsTestSuite) TestParseIDPConfigWithLogoutAndJwks() {
 	cfg, err := parseIDPConfig(idpDTO)
 	suite.Nil(err)
 	suite.NotNil(cfg)
-	suite.Equal("https://localhost:8090/logout", cfg.OAuthEndpoints.LogoutEndpoint)
 	suite.Equal("https://localhost:8090/jwks", cfg.OAuthEndpoints.JwksEndpoint)
 }
 

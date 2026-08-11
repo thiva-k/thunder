@@ -1896,8 +1896,6 @@ const translations = {
     'form.fields.userInfoEndpoint.hint': 'Endpoint used to fetch additional profile claims for the signed-in user.',
     'form.fields.jwksEndpoint.label': 'JWKS endpoint',
     'form.fields.jwksEndpoint.hint': 'Endpoint that exposes signing keys for verifying identity tokens.',
-    'form.fields.logoutEndpoint.label': 'Logout endpoint',
-    'form.fields.logoutEndpoint.hint': 'Endpoint the provider uses to end the user session on logout.',
     'form.fields.prompt.label': 'Prompt',
     'form.fields.prompt.hint':
       "Optional prompt value forwarded to the provider's authorization request, e.g. select_account or consent.",

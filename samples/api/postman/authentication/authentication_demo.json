@@ -594,7 +594,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"ThunderID OAuth\",\n    \"description\": \"Login with ThunderID\",\n    \"clientId\": \"{{THUNDERID_CLIENT_ID}}\",\n    \"clientSecret\": \"{{THUNDERID_CLIENT_SECRET}}\",\n    \"redirectUri\": \"{{FED_IDP_REDIRECT_URI}}\",\n    \"scopes\": [\"openid\", \"custom\", \"email\", \"groups\", \"profile\"],\n    \"authorizationEndpoint\": \"{{THUNDERID_BASE_URI}}/oauth2/authorize\",\n    \"tokenEndpoint\": \"{{THUNDERID_BASE_URI}}/oauth2/token\",\n    \"userInfoEndpoint\": \"{{THUNDERID_BASE_URI}}/oauth2/userinfo\",\n    \"logoutEndpoint\": \"{{THUNDERID_BASE_URI}}/oidc/logout\"\n}",
+              "raw": "{\n    \"name\": \"ThunderID OAuth\",\n    \"description\": \"Login with ThunderID\",\n    \"clientId\": \"{{THUNDERID_CLIENT_ID}}\",\n    \"clientSecret\": \"{{THUNDERID_CLIENT_SECRET}}\",\n    \"redirectUri\": \"{{FED_IDP_REDIRECT_URI}}\",\n    \"scopes\": [\"openid\", \"custom\", \"email\", \"groups\", \"profile\"],\n    \"authorizationEndpoint\": \"{{THUNDERID_BASE_URI}}/oauth2/authorize\",\n    \"tokenEndpoint\": \"{{THUNDERID_BASE_URI}}/oauth2/token\",\n    \"userInfoEndpoint\": \"{{THUNDERID_BASE_URI}}/oauth2/userinfo\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

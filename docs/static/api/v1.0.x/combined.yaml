@@ -18994,8 +18994,6 @@ components:
           type: string
         jwksEndpoint:
           type: string
-        logoutEndpoint:
-          type: string
         issuer:
           type: string
         scopes:
@@ -19050,8 +19048,6 @@ components:
           type: string
         jwksEndpoint:
           type: string
-        logoutEndpoint:
-          type: string
         issuer:
           type: string
         scopes:
@@ -19105,8 +19101,6 @@ components:
           type: string
         userInfoEndpoint:
           type: string
-        logoutEndpoint:
-          type: string
         scopes:
           type: array
           items:
@@ -19146,8 +19140,6 @@ components:
         tokenEndpoint:
           type: string
         userInfoEndpoint:
-          type: string
-        logoutEndpoint:
           type: string
         scopes:
           type: array
