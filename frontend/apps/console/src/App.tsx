@@ -62,7 +62,9 @@ const CreateResourceServerPage = lazy(() =>
 );
 
 const AgentCreatePage = lazy(() => import('./features/agents/pages/AgentCreatePage'));
-const AgentEditPage = lazy(() => import('./features/agents/pages/AgentEditPage'));
+const AgentEditPage = lazy(() =>
+  import('./lib/monaco-setup').then(() => import('./features/agents/pages/AgentEditPage')),
+);
 const AgentsListPage = lazy(() => import('./features/agents/pages/AgentsListPage'));
 const ApplicationCreatePage = lazy(() => import('./features/applications/pages/ApplicationCreatePage'));
 const ApplicationEditPage = lazy(() =>
