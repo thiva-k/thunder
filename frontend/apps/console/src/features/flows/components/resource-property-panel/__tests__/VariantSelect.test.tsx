@@ -5,8 +5,8 @@ import {render, screen, fireEvent} from '@testing-library/react';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi} from 'vitest';
 import {ValidationContext, type ValidationContextProps} from '../../../context/ValidationContext';
-import Notification from '../../../models/notification';
 import type {Element} from '../../../models/elements';
+import Notification from '../../../models/notification';
 import type {Resource} from '../../../models/resources';
 import VariantSelect from '../VariantSelect';
 
