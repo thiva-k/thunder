@@ -381,7 +381,7 @@ jobs:
         # both of which are noisy inside containers and add ~15-20s.
         run: |
           corepack enable
-          corepack prepare pnpm@11.13.1 --activate
+          corepack prepare pnpm@11.21.0 --activate
           pnpm --version
 
       - name: 📦 Install Frontend Dependencies
@@ -901,7 +901,7 @@ jobs:
         # both of which are noisy inside containers and add ~15-20s.
         run: |
           corepack enable
-          corepack prepare pnpm@11.13.1 --activate
+          corepack prepare pnpm@11.21.0 --activate
           pnpm --version
 
       - name: 📥 Download Built Distribution
