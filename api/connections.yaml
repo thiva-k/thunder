@@ -1133,9 +1133,11 @@ components:
     OAuthConnectionUpdateRequest:
       type: object
       description: |
-        Generic OAuth 2.0 connection (no OpenID Connect discovery, no id_token). The user
-        profile is always fetched from userInfoEndpoint, so it is required here — unlike OIDC.
-      required: [name, clientId, redirectUri, authorizationEndpoint, tokenEndpoint, userInfoEndpoint]
+        Generic OAuth 2.0 connection (no OpenID Connect discovery, no id_token). User attributes
+        come from the provider's own profile API, given as userInfoEndpoint. That endpoint is
+        provider-specific rather than an OpenID Connect UserInfo endpoint, and is optional: when it
+        is omitted, the subject is read from the access token if the provider issues a JWT.
+      required: [name, clientId, redirectUri, authorizationEndpoint, tokenEndpoint]
       properties:
         name: { type: string }
         description: { type: string }
@@ -1144,7 +1146,7 @@ components:
         redirectUri: { type: string }
         authorizationEndpoint: { type: string }
         tokenEndpoint: { type: string }
-        userInfoEndpoint: { type: string }
+        userInfoEndpoint: { type: string, description: "The provider's user profile API, called with the access token. Provider-specific, for example https://api.github.com/user. Omit it when the provider exposes no profile API and issues a JWT access token." }
         scopes: { type: array, items: { type: string } }
         prompt: { type: string }
         attributeConfiguration: { $ref: '#/components/schemas/AttributeConfiguration' }

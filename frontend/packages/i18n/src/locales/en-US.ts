@@ -1901,6 +1901,9 @@ const translations = {
     'form.fields.tokenEndpoint.hint': 'Token endpoint used to exchange the authorization code for tokens.',
     'form.fields.userInfoEndpoint.label': 'UserInfo endpoint',
     'form.fields.userInfoEndpoint.hint': 'Endpoint used to fetch additional profile claims for the signed-in user.',
+    'form.fields.userProfileEndpoint.label': 'User profile endpoint',
+    'form.fields.userProfileEndpoint.hint':
+      "The provider's own profile API, called with the access token, for example https://api.github.com/user. Leave it empty only if the provider issues a JWT access token carrying a sub claim, which then supplies the subject and no other attributes. For an OpenID Connect provider, create an OIDC connection instead.",
     'form.fields.jwksEndpoint.label': 'JWKS endpoint',
     'form.fields.jwksEndpoint.hint': 'Endpoint that exposes signing keys for verifying identity tokens.',
     'form.fields.prompt.label': 'Prompt',

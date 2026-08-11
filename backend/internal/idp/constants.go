@@ -77,10 +77,10 @@ var idpPropertyConfigs = map[providers.IDPType]idpPropertyConfig{
 			PropRedirectURI,
 			PropAuthorizationEndpoint,
 			PropTokenEndpoint,
-			PropUserInfoEndpoint,
 		},
 		Optional: []string{
 			PropScopes,
+			PropUserInfoEndpoint,
 			PropPrompt,
 		},
 		Defaults: map[string]string{},

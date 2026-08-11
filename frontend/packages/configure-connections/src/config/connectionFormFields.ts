@@ -242,11 +242,10 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
     },
     {
       name: 'userInfoEndpoint',
-      labelKey: 'connections:form.fields.userInfoEndpoint.label',
-      hintKey: 'connections:form.fields.userInfoEndpoint.hint',
+      labelKey: 'connections:form.fields.userProfileEndpoint.label',
+      hintKey: 'connections:form.fields.userProfileEndpoint.hint',
       kind: 'url',
-      required: true,
-      placeholder: 'https://idp.example.com/userinfo',
+      placeholder: 'https://api.example.com/user',
     },
     {
       name: 'redirectUri',

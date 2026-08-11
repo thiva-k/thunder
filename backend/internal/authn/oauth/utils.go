@@ -166,7 +166,7 @@ func sendUserInfoRequest(httpReq *http.Request, httpClient httpservice.HTTPClien
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		logger.Error(ctx, "Userinfo endpoint returned an error response",
 			log.Int("statusCode", resp.StatusCode), log.String("response", string(body)))
-		return nil, &tidcommon.InternalServerError
+		return nil, &ErrorUserProfileRetrievalFailed
 	}
 
 	body, err := io.ReadAll(resp.Body)

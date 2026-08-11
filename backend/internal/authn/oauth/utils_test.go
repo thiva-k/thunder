@@ -359,7 +359,8 @@ func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestNonOKStatus() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(tidcommon.InternalServerError.Code, err.Code)
+	suite.Equal(ErrorUserProfileRetrievalFailed.Code, err.Code)
+	suite.Equal(tidcommon.ClientErrorType, err.Type)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestInvalidJSON() {
