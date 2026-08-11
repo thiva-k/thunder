@@ -3265,25 +3265,25 @@ const translations = {
     'summary.importTest.running': 'Running pre-flight dry-run...',
     'summary.importTest.runningShort': 'Running...',
     'summary.importTest.test': 'Test',
-    'summary.importTest.retry': 'Retry Import Test',
+    'summary.importTest.retry': 'Retry',
     'summary.importTest.passed': 'Import test passed. {{imported}} of {{totalDocuments}} resources validated.',
-    'summary.importTest.failedCount': 'Import test failed for {{count}} resource',
-    'summary.importTest.failedCount_plural': 'Import test failed for {{count}} resources',
+    'summary.importTest.failedCount_one': 'Import test failed for {{count}} resource',
+    'summary.importTest.failedCount_other': 'Import test failed for {{count}} resources',
     'summary.importTest.failedWithMessage': 'Import test failed: {{message}}',
     'summary.importTest.failures': 'Import Test failures',
-    'summary.import.tooltip.missingVariables':
+    'summary.import.tooltip.missingVariables_one':
       'Cannot import: {{count}} environment variable is missing. Edit the environment variables above to fix.',
-    'summary.import.tooltip.missingVariables_plural':
+    'summary.import.tooltip.missingVariables_other':
       'Cannot import: {{count}} environment variables are missing. Edit the environment variables above to fix.',
     'summary.import.tooltip.configUnavailable':
       'Cannot import: configuration content is unavailable. Re-upload the configuration file.',
     'summary.import.tooltip.runTestFirst': 'Cannot import: run pre-flight dry-run and ensure it passes.',
     'summary.import.action': 'Import Configuration',
     'summary.import.importing': 'Importing...',
-    'summary.import.completedWithFailures': 'Import completed with {{count}} failed resource.',
-    'summary.import.completedWithFailures_plural': 'Import completed with {{count}} failed resources.',
-    'summary.import.completedSuccessfully': 'Import completed successfully. {{count}} resource imported.',
-    'summary.import.completedSuccessfully_plural': 'Import completed successfully. {{count}} resources imported.',
+    'summary.import.completedWithFailures_one': 'Import completed with {{count}} failed resource.',
+    'summary.import.completedWithFailures_other': 'Import completed with {{count}} failed resources.',
+    'summary.import.completedSuccessfully_one': 'Import completed successfully. {{count}} resource imported.',
+    'summary.import.completedSuccessfully_other': 'Import completed successfully. {{count}} resources imported.',
     'summary.import.failedRetry': 'Import failed. Please try again.',
     'summary.importTest.itemFailedGeneric': 'This resource failed to import.',
 
