@@ -168,8 +168,8 @@ func (e *otpExecutor) executeGenerate(ctx *providers.NodeContext,
 	// property is clamped and may fall back to the server default.
 	execResp.AdditionalData[common.DataOTPLength] = strconv.Itoa(len(otpValue))
 	execResp.ForwardedData[common.ForwardedDataKeyTemplateData] = map[string]interface{}{
-		common.ForwardedDataKeyOTPCode:       otpValue,
-		common.ForwardedDataKeyExpiryMinutes: systemutils.SecondsToMinutes(expirySeconds),
+		common.ForwardedDataKeyOTPCode:    otpValue,
+		common.ForwardedDataKeyExpiryTime: systemutils.FormatExpiryDuration(expirySeconds),
 	}
 	execResp.Status = providers.ExecComplete
 

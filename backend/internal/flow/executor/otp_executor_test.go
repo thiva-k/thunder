@@ -154,6 +154,7 @@ func (suite *OTPExecutorTestSuite) TestExecuteGenerate_Success_UserIdentifiedAnd
 	fwdData, ok := resp.ForwardedData[common.ForwardedDataKeyTemplateData].(map[string]interface{})
 	assert.True(suite.T(), ok)
 	assert.Equal(suite.T(), "654321", fwdData[common.ForwardedDataKeyOTPCode])
+	assert.Equal(suite.T(), "5 minutes", fwdData[common.ForwardedDataKeyExpiryTime])
 }
 
 func (suite *OTPExecutorTestSuite) TestExecuteGenerate_PublishesConfiguredOTPLength() {
@@ -317,6 +318,7 @@ func (suite *OTPExecutorTestSuite) TestExecuteGenerate_Registration_UserNotFound
 	fwdData, ok := resp.ForwardedData[common.ForwardedDataKeyTemplateData].(map[string]interface{})
 	assert.True(suite.T(), ok)
 	assert.Equal(suite.T(), "777888", fwdData[common.ForwardedDataKeyOTPCode])
+	assert.Equal(suite.T(), "5 minutes", fwdData[common.ForwardedDataKeyExpiryTime])
 }
 
 func (suite *OTPExecutorTestSuite) TestExecuteGenerate_Registration_UserNotFound_NoPhoneValue_ReturnsInputRequired() {

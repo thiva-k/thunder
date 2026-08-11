@@ -320,9 +320,9 @@ const (
 	// ForwardedDataKeyOTPCode is the key for the plaintext OTP value inside the
 	// ForwardedData[ForwardedDataKeyTemplateData] map forwarded by OTPExecutor to sender executors.
 	ForwardedDataKeyOTPCode = "otpCode"
-	// ForwardedDataKeyExpiryMinutes is the key for the OTP expiry duration (in minutes) inside the
+	// ForwardedDataKeyExpiryTime is the key for the human readable OTP expiry duration inside the
 	// ForwardedData[ForwardedDataKeyTemplateData] map forwarded by OTPExecutor to sender executors.
-	ForwardedDataKeyExpiryMinutes = "expiryMinutes"
+	ForwardedDataKeyExpiryTime = "expiryTime"
 	// ForwardedDataKeySSOSession holds the SSO session the SSO-Check node resolved, forwarded to the
 	// paired Session node so it restores the checkpoint without reading the same row again.
 	ForwardedDataKeySSOSession = "ssoSession"
