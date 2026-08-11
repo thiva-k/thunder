@@ -10845,7 +10845,7 @@
               }
             ]
           },
-          "onSuccess": "invite_verify",
+          "onSuccess": "invite_sent",
           "layout": {
             "size": {
               "width": 200,
@@ -10856,6 +10856,37 @@
               "y": 835
             }
           }
+        },
+        {
+          "id": "invite_sent",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "invite_sent_icon",
+                "label": "✅",
+                "variant": "HEADING_1"
+              },
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "invite_sent_heading",
+                "label": "{{ t(onboarding:forms.invite_email_sent.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "invite_sent_message",
+                "label": "{{ t(onboarding:forms.invite_email_sent.message) }}",
+                "variant": "HEADING_6"
+              }
+            ]
+          },
+          "message": "Invitation sent",
+          "next": "invite_verify"
         },
         {
           "id": "invite_verify",
@@ -11055,7 +11086,7 @@
           "executor": {
             "name": "ProvisioningExecutor"
           },
-          "onSuccess": "end",
+          "onSuccess": "registration_complete",
           "layout": {
             "size": {
               "width": 200,
@@ -11067,6 +11098,36 @@
             }
           },
           "onIncomplete": "prompt_schema_attrs"
+        },
+        {
+          "id": "registration_complete",
+          "type": "PROMPT",
+          "meta": {
+            "components": [
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "registration_complete_icon",
+                "label": "✅",
+                "variant": "HEADING_1"
+              },
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "registration_complete_heading",
+                "label": "{{ t(invite:complete.title) }}",
+                "variant": "HEADING_1"
+              },
+              {
+                "align": "center",
+                "type": "TEXT",
+                "id": "registration_complete_message",
+                "label": "{{ t(invite:complete.description) }}"
+              }
+            ]
+          },
+          "message": "Registration complete",
+          "next": "end"
         },
         {
           "id": "prompt_schema_attrs",
