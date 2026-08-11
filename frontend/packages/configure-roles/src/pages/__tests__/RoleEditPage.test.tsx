@@ -412,6 +412,24 @@ describe('RoleEditPage', () => {
 
       expect(screen.queryByRole('button', {name: 'Save Changes'})).not.toBeInTheDocument();
     });
+
+    it('discards a rename that exceeds the maximum length', async () => {
+      const user = userEvent.setup();
+      render(<RoleEditPage />);
+
+      const editName = async (to: string): Promise<void> => {
+        await user.click(screen.getByRole('button', {name: 'Edit role name'}));
+        const nameInput = screen.getByRole('textbox');
+        await user.clear(nameInput);
+        await user.type(nameInput, to);
+        await user.tab();
+      };
+
+      await editName('a'.repeat(101));
+      expect(screen.queryByRole('button', {name: 'Save Changes'})).not.toBeInTheDocument();
+
+      expect(screen.getByText('Admin Role')).toBeInTheDocument();
+    });
   });
 
   describe('Permissions staged save', () => {
