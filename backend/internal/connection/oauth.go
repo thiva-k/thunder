@@ -10,8 +10,8 @@ import (
 )
 
 // oauthConnectionRequest is the create/update payload for a generic OAuth 2.0 connection.
-// Unlike OIDC, there is no id_token: the user profile is always fetched from
-// userInfoEndpoint, so that field is required here.
+// Unlike OIDC, there is no id_token: user attributes come from the provider's own profile API
+// (userInfoEndpoint), which is optional since some providers carry the subject in a JWT access token.
 type oauthConnectionRequest struct {
 	Name                  string   `json:"name"`
 	Description           string   `json:"description,omitempty"`
@@ -20,7 +20,7 @@ type oauthConnectionRequest struct {
 	RedirectURI           string   `json:"redirectUri"`
 	AuthorizationEndpoint string   `json:"authorizationEndpoint"`
 	TokenEndpoint         string   `json:"tokenEndpoint"`
-	UserInfoEndpoint      string   `json:"userInfoEndpoint"`
+	UserInfoEndpoint      string   `json:"userInfoEndpoint,omitempty"`
 	Scopes                []string `json:"scopes,omitempty"`
 	Prompt                string   `json:"prompt,omitempty"`
 
