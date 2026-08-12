@@ -4,7 +4,7 @@
 import userEvent from '@testing-library/user-event';
 import type {Application} from '@thunderid/configure-applications';
 import type {Theme} from '@thunderid/design';
-import {render, screen, waitFor, within} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor, within} from '@thunderid/test-utils';
 import type {JSX} from 'react';
 import {useEffect} from 'react';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
@@ -52,13 +52,37 @@ vi.mock('@thunderid/design', () => ({
   DefaultTheme: {},
 }));
 
-// Mock application API
-vi.mock('../../api/useCreateApplication', () => ({
-  default: () => ({
-    mutate: mockCreateApplication,
-    isPending: false,
-  }),
-}));
+// Mock application API. isPending is backed by real state, as in the actual hook, so the wizard can
+// keep the submit button disabled until the create settles.
+vi.mock('../../api/useCreateApplication', async () => {
+  const {useState} = await vi.importActual<typeof import('react')>('react');
+
+  const useMockCreateApplication = () => {
+    const [isPending, setIsPending] = useState(false);
+
+    return {
+      isPending,
+      mutate: (
+        data: unknown,
+        options?: {onError?: (err: Error) => void; onSuccess?: (app: Application) => void},
+      ): void => {
+        setIsPending(true);
+        mockCreateApplication(data, {
+          onError: (err: Error) => {
+            setIsPending(false);
+            options?.onError?.(err);
+          },
+          onSuccess: (app: Application) => {
+            setIsPending(false);
+            options?.onSuccess?.(app);
+          },
+        });
+      },
+    };
+  };
+
+  return {default: useMockCreateApplication};
+});
 
 // Mock user types API
 vi.mock('@thunderid/configure-user-types', () => ({
@@ -88,14 +112,22 @@ vi.mock('@thunderid/configure-connections', async (importOriginal) => ({
 }));
 
 // Mock flows API
-const {mockCreateFlow, mockGenerateFlowGraph} = vi.hoisted(() => ({
+const {mockCreateFlow, mockGenerateFlowGraph, mockDeleteFlow} = vi.hoisted(() => ({
   mockCreateFlow: vi.fn(),
   mockGenerateFlowGraph: vi.fn(),
+  mockDeleteFlow: vi.fn(),
 }));
 
 vi.mock('../../../flows/api/useCreateFlow', () => ({
   default: () => ({
     mutate: mockCreateFlow,
+    isPending: false,
+  }),
+}));
+
+vi.mock('../../../flows/api/useDeleteFlow', () => ({
+  default: () => ({
+    mutate: mockDeleteFlow,
     isPending: false,
   }),
 }));
@@ -350,8 +382,15 @@ vi.mock('../../components/create-application/ConfigureDetails', () => ({
   default: vi.fn(DefaultConfigureDetailsImpl),
 }));
 
-vi.mock('../../../../components/GatePreview/GatePreview', () => ({
-  default: ({showToolbar, viewport}: {showToolbar?: boolean; viewport?: {width: string; height: string}}) => (
+vi.mock('@thunderid/configure-design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-design')>()),
+  GatePreview: ({
+    showToolbar = undefined,
+    viewport = undefined,
+  }: {
+    showToolbar?: boolean;
+    viewport?: {width: string; height: string};
+  }) => (
     <div data-testid="preview" data-show-toolbar={String(showToolbar)} data-viewport-width={viewport?.width ?? ''} />
   ),
 }));
@@ -630,6 +669,11 @@ describe('ApplicationCreatePage', () => {
 
     vi.clearAllMocks();
     mockNavigate.mockResolvedValue(undefined);
+
+    // Flow cleanup succeeds unless a test says otherwise.
+    mockDeleteFlow.mockImplementation((_flowId: string, options?: {onSuccess?: () => void}) => {
+      options?.onSuccess?.();
+    });
 
     const getConfigurationTypeFromTemplate = await import('../../utils/getConfigurationTypeFromTemplate');
     vi.mocked(getConfigurationTypeFromTemplate.default).mockReturnValue('URL');
@@ -2083,6 +2127,292 @@ describe('ApplicationCreatePage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Failed to generate the authentication flow. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    describe('Rollback and reuse of the generated flow', () => {
+      const CREATE_ERROR = /failed to create application/i;
+
+      // Puts the wizard in the flow-generation state: no pre-selected flow, one integration on.
+      const setupFlowGeneration = async (): Promise<void> => {
+        const ConfigureSignInOptionsModule = await import(
+          '../../components/create-application/configure-signin-options/ConfigureSignInOptions'
+        );
+        const useApplicationCreateContextModule = await import('../../hooks/useApplicationCreateContext');
+
+        vi.mocked(ConfigureSignInOptionsModule.default).mockImplementation(
+          ({onReadyChange}: {onReadyChange?: (ready: boolean) => void}) => {
+            const {setSelectedAuthFlow, setIntegrations} = useApplicationCreateContextModule.default();
+
+            const handleSetup = () => {
+              setSelectedAuthFlow(null);
+              setIntegrations({basic_auth: true});
+              onReadyChange?.(true);
+            };
+
+            return (
+              <div data-testid="application-configure-sign-in">
+                <button type="button" data-testid="setup-flow-rollback" onClick={handleSetup}>
+                  Setup Flow Generation
+                </button>
+                <button
+                  type="button"
+                  data-testid="clear-integrations"
+                  onClick={() => {
+                    // Leaves selectedAuthFlow alone, so the generated flow stays selected with no
+                    // integrations on: the flow-only short-circuit.
+                    setIntegrations({});
+                    onReadyChange?.(true);
+                  }}
+                >
+                  Clear Integrations
+                </button>
+              </div>
+            );
+          },
+        );
+      };
+
+      // SECURITY → DESIGN → CONFIGURE → Create.
+      const submitWizard = async (): Promise<void> => {
+        await waitFor(() => {
+          expect(screen.getByRole('button', {name: /continue/i})).toBeEnabled();
+        });
+        await user.click(screen.getByRole('button', {name: /continue/i}));
+        await waitFor(() => {
+          expect(screen.getByTestId('application-configure-design')).toBeInTheDocument();
+        });
+        await user.click(screen.getByRole('button', {name: /continue/i}));
+        await waitFor(() => {
+          expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+        });
+        // The step reports readiness a tick after it mounts, and the button is disabled until then.
+        await waitFor(() => {
+          expect(screen.getByTestId('application-wizard-next-button')).toBeEnabled();
+        });
+        await user.click(screen.getByTestId('application-wizard-next-button'));
+      };
+
+      const generateFlowAndSubmit = async (appName = 'My App'): Promise<void> => {
+        await setupFlowGeneration();
+        renderWithProviders();
+
+        await user.type(screen.getByTestId('app-name-input'), appName);
+        // DETAILS → SECURITY
+        await user.click(screen.getByRole('button', {name: /continue/i}));
+        await waitFor(() => {
+          expect(screen.getByTestId('application-configure-sign-in')).toBeInTheDocument();
+        });
+        await user.click(screen.getByTestId('setup-flow-rollback'));
+
+        await submitWizard();
+      };
+
+      const mockFlowCreateSuccess = (): void => {
+        let created = 0;
+        mockCreateFlow.mockImplementation((_data: unknown, {onSuccess}: {onSuccess: (flow: unknown) => void}) => {
+          created += 1;
+          onSuccess({
+            id: created === 1 ? 'generated-flow-id' : `generated-flow-id-${created}`,
+            name: 'My App Sign-in Flow',
+            handle: created === 1 ? 'my-app-sign-in-a1b2c3' : `my-app-sign-in-a1b2c3-${created}`,
+          });
+        });
+      };
+
+      // The failure is delivered on a later tick, as a real request would: the flow create that
+      // precedes it commits its own render (which clears any stale error via the provider's form
+      // fingerprint) before the create error is set, so the error stays on screen.
+      const mockApplicationCreateFailure = (code?: string): void => {
+        mockCreateApplication.mockImplementation((_data: unknown, {onError}: {onError: (err: Error) => void}) => {
+          const err = new Error('Failed to create application');
+          if (code) {
+            (err as {response?: {data?: {code?: string}}}).response = {data: {code}};
+          }
+          setTimeout(() => onError(err), 0);
+        });
+      };
+
+      it('should not start a second application create while the first one is in flight', async () => {
+        mockFlowCreateSuccess();
+        // Never settles, so the create stays in flight the way a slow request does.
+        mockCreateApplication.mockImplementation(() => undefined);
+
+        await generateFlowAndSubmit();
+
+        await waitFor(() => {
+          expect(mockCreateApplication).toHaveBeenCalledTimes(1);
+        });
+
+        // A second submit would reuse the memoized flow and send the same name again. Whichever
+        // request then lost on the duplicate name would roll back the flow the winner is bound to,
+        // leaving a created application pointing at a deleted flow.
+        expect(screen.getByTestId('application-wizard-next-button')).toBeDisabled();
+        fireEvent.click(screen.getByTestId('application-wizard-next-button'));
+
+        expect(mockCreateApplication).toHaveBeenCalledTimes(1);
+        expect(mockCreateFlow).toHaveBeenCalledTimes(1);
+        expect(mockDeleteFlow).not.toHaveBeenCalled();
+      });
+
+      it('should delete the generated flow and keep the application error when the application create fails', async () => {
+        mockFlowCreateSuccess();
+        mockApplicationCreateFailure();
+
+        await generateFlowAndSubmit();
+
+        await waitFor(() => {
+          expect(mockDeleteFlow).toHaveBeenCalledWith('generated-flow-id', expect.anything());
+        });
+        expect(screen.getByText(CREATE_ERROR)).toBeInTheDocument();
+      });
+
+      it('should reuse the generated flow on retry when the rollback failed', async () => {
+        mockFlowCreateSuccess();
+        mockApplicationCreateFailure();
+        mockDeleteFlow.mockImplementation((_flowId: string, options?: {onError?: (err: Error) => void}) => {
+          options?.onError?.(new Error('Failed to delete flow'));
+        });
+
+        await generateFlowAndSubmit();
+
+        await waitFor(() => {
+          expect(mockCreateApplication).toHaveBeenCalledTimes(1);
+        });
+
+        // Retry from the same step with the same inputs.
+        await user.click(screen.getByTestId('application-wizard-next-button'));
+
+        await waitFor(() => {
+          expect(mockCreateApplication).toHaveBeenCalledTimes(2);
+        });
+        expect(mockCreateFlow).toHaveBeenCalledTimes(1);
+        expect((mockCreateApplication.mock.calls[1][0] as Application).authFlowId).toBe('generated-flow-id');
+      });
+
+      it('should not reuse the flow while its rollback is still in flight', async () => {
+        mockFlowCreateSuccess();
+        mockApplicationCreateFailure();
+        // The delete never settles, so a retry must not bind the application to a flow that is on
+        // its way out.
+        mockDeleteFlow.mockImplementation(() => undefined);
+
+        await generateFlowAndSubmit();
+
+        await waitFor(() => {
+          expect(mockDeleteFlow).toHaveBeenCalledWith('generated-flow-id', expect.anything());
+        });
+
+        await user.click(screen.getByTestId('application-wizard-next-button'));
+
+        await waitFor(() => {
+          expect(mockCreateFlow).toHaveBeenCalledTimes(2);
+        });
+        expect((mockCreateApplication.mock.calls[1][0] as Application).authFlowId).toBe('generated-flow-id-2');
+      });
+
+      it('should generate a new flow on retry when the rollback succeeded', async () => {
+        mockFlowCreateSuccess();
+        mockApplicationCreateFailure();
+
+        await generateFlowAndSubmit();
+
+        await waitFor(() => {
+          expect(mockDeleteFlow).toHaveBeenCalledWith('generated-flow-id', expect.anything());
+        });
+
+        await user.click(screen.getByTestId('application-wizard-next-button'));
+
+        await waitFor(() => {
+          expect(mockCreateFlow).toHaveBeenCalledTimes(2);
+        });
+        expect((mockCreateApplication.mock.calls[1][0] as Application).authFlowId).toBe('generated-flow-id-2');
+      });
+
+      it('should not submit a rolled back generated flow when the integrations are turned off', async () => {
+        mockFlowCreateSuccess();
+        mockApplicationCreateFailure('APP-1020');
+
+        await generateFlowAndSubmit();
+
+        await waitFor(() => {
+          expect(mockDeleteFlow).toHaveBeenCalledWith('generated-flow-id', expect.anything());
+        });
+
+        // The duplicate-name failure sends the wizard back to the details step.
+        await waitFor(() => {
+          expect(screen.getByTestId('app-name-input')).toBeInTheDocument();
+        });
+        // The name error blocks Continue until the field is edited.
+        await user.type(screen.getByTestId('app-name-input'), ' Renamed');
+        await user.click(screen.getByRole('button', {name: /continue/i}));
+        await waitFor(() => {
+          expect(screen.getByTestId('application-configure-sign-in')).toBeInTheDocument();
+        });
+        // selectedAuthFlow still points at the deleted flow; with no integrations left, the
+        // flow-only short-circuit would otherwise submit that dead id.
+        await user.click(screen.getByTestId('clear-integrations'));
+
+        await submitWizard();
+
+        // The dead id is filtered out, so the create is blocked by the missing-flow guard instead of
+        // being submitted with a flow that no longer exists.
+        await waitFor(() => {
+          expect(screen.getByText('onboarding.configure.SignInOptions.noFlowFound')).toBeInTheDocument();
+        });
+        expect(mockCreateApplication).toHaveBeenCalledTimes(1);
+        expect(mockCreateFlow).toHaveBeenCalledTimes(1);
+      });
+
+      it('should not delete a flow the wizard did not generate', async () => {
+        mockApplicationCreateFailure();
+
+        renderWithProviders();
+
+        // The default sign-in step mock picks a pre-configured flow and clears integrations.
+        await goToDesignStep();
+        await user.click(screen.getByRole('button', {name: /continue/i}));
+        await waitFor(() => {
+          expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+        });
+        await user.click(screen.getByTestId('application-wizard-next-button'));
+
+        await waitFor(() => {
+          expect(mockCreateApplication).toHaveBeenCalled();
+        });
+        expect(mockDeleteFlow).not.toHaveBeenCalled();
+      });
+
+      it('should delete the stale flow and generate a new one when an input changed between attempts', async () => {
+        mockFlowCreateSuccess();
+        mockApplicationCreateFailure('APP-1020');
+        // The rollback fails, so the flow survives and the memo is kept. Editing an input then makes
+        // that flow stale, and it must not be left behind when the next one is generated.
+        mockDeleteFlow.mockImplementation((_flowId: string, options?: {onError?: (err: Error) => void}) => {
+          options?.onError?.(new Error('Failed to delete flow'));
+        });
+
+        await generateFlowAndSubmit();
+
+        // The duplicate-name failure sends the wizard back to the details step.
+        await waitFor(() => {
+          expect(screen.getByTestId('app-name-input')).toBeInTheDocument();
+        });
+
+        await user.type(screen.getByTestId('app-name-input'), ' Renamed');
+        // DETAILS → SECURITY
+        await user.click(screen.getByRole('button', {name: /continue/i}));
+        await waitFor(() => {
+          expect(screen.getByTestId('application-configure-sign-in')).toBeInTheDocument();
+        });
+        await user.click(screen.getByTestId('setup-flow-rollback'));
+
+        await submitWizard();
+
+        await waitFor(() => {
+          expect(mockCreateFlow).toHaveBeenCalledTimes(2);
+        });
+        expect(mockDeleteFlow).toHaveBeenCalledWith('generated-flow-id', expect.anything());
       });
     });
   });

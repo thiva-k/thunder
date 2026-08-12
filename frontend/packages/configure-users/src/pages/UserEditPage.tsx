@@ -157,18 +157,19 @@ export default function UserEditPage() {
     setActiveTab(newValue);
   };
 
+  // useMutation returns a fresh object every render, so depending on the mutation itself gave
+  // this callback a new identity every render, which looped consumers that stage from an effect.
+  const {isError: isUpdateUserError, reset: resetUpdateUser} = updateUserMutation;
+
   const handleFieldChange = useCallback(
     (field: keyof User, value: unknown) => {
-      // A save error is stale once the form changes. Only reset when there's actually an error to
-      // clear: unconditionally calling reset() churns the mutation object's identity on every
-      // field change, which recreates this callback and can retrigger consumers that depend on it
-      // (e.g. a child's useEffect), looping indefinitely.
-      if (updateUserMutation.isError) {
-        updateUserMutation.reset();
+      // A save error is stale once the form changes.
+      if (isUpdateUserError) {
+        resetUpdateUser();
       }
       setEditedUser((prev) => ({...prev, [field]: value}));
     },
-    [updateUserMutation],
+    [isUpdateUserError, resetUpdateUser],
   );
 
   const handleSave = useCallback(async () => {
@@ -378,30 +379,6 @@ export default function UserEditPage() {
               </FormControl>
             </Stack>
           </SettingsCard>
-
-          {/* Danger Zone */}
-          {!user.isReadOnly && (
-            <SettingsCard
-              title={t('users:manageUser.sections.dangerZone.title', 'Danger Zone')}
-              description={t(
-                'users:manageUser.sections.dangerZone.description',
-                'Irreversible and destructive actions.',
-              )}
-            >
-              <Typography variant="h6" gutterBottom color="error">
-                {t('users:manageUser.sections.dangerZone.deleteUser', 'Delete User')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
-                {t(
-                  'users:manageUser.sections.dangerZone.deleteUserDescription',
-                  'Once deleted, this user cannot be recovered. All associated data will be permanently removed.',
-                )}
-              </Typography>
-              <Button variant="contained" color="error" onClick={() => setDeleteDialogOpen(true)}>
-                {t('common:actions.delete', 'Delete')}
-              </Button>
-            </SettingsCard>
-          )}
         </Stack>
       ),
     },
@@ -424,6 +401,34 @@ export default function UserEditPage() {
       key: 'credentials',
       label: t('users:manageUser.tabs.credentials', 'Credentials'),
       render: () => <CredentialsTabPanel userId={userId!} credentialFields={credentialFields} />,
+    });
+  }
+
+  if (!user.isReadOnly) {
+    tabs.push({
+      key: 'advanced',
+      label: t('users:manageUser.tabs.advanced', 'Advanced'),
+      render: () => (
+        <Stack spacing={3}>
+          <SettingsCard
+            title={t('users:manageUser.sections.dangerZone.title', 'Danger Zone')}
+            description={t('users:manageUser.sections.dangerZone.description', 'Irreversible and destructive actions.')}
+          >
+            <Typography variant="h6" gutterBottom color="error">
+              {t('users:manageUser.sections.dangerZone.deleteUser', 'Delete User')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mb: 3}}>
+              {t(
+                'users:manageUser.sections.dangerZone.deleteUserDescription',
+                'Once deleted, this user cannot be recovered. All associated data will be permanently removed.',
+              )}
+            </Typography>
+            <Button variant="contained" color="error" onClick={() => setDeleteDialogOpen(true)}>
+              {t('common:actions.delete', 'Delete')}
+            </Button>
+          </SettingsCard>
+        </Stack>
+      ),
     });
   }
 

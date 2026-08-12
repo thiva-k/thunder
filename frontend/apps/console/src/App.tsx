@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {PageLoader} from '@thunderid/components';
+import {LayoutBuilderProvider, ThemeBuilderProvider} from '@thunderid/configure-design';
+import {GroupCreateProvider} from '@thunderid/configure-groups';
 import {OrganizationUnitProvider} from '@thunderid/configure-organization-units';
+import {RoleCreateProvider} from '@thunderid/configure-roles';
 import {TranslationCreateProvider} from '@thunderid/configure-translations';
 import {UserTypeCreateProvider} from '@thunderid/configure-user-types';
 import {RoutesProvider, ToastProvider} from '@thunderid/contexts';
@@ -12,11 +15,7 @@ import {BrowserRouter, Navigate, Outlet, Route, Routes} from 'react-router';
 import RouteConfig, {ROUTE_SEGMENTS} from './configs/RouteConfig';
 import AgentCreateProvider from './features/agents/contexts/AgentCreate/AgentCreateProvider';
 import ApplicationCreateProvider from './features/applications/contexts/ApplicationCreate/ApplicationCreateProvider';
-import LayoutBuilderProvider from './features/design/contexts/LayoutBuilder/LayoutBuilderProvider';
-import ThemeBuilderProvider from './features/design/contexts/ThemeBuilder/ThemeBuilderProvider';
-import GroupCreateProvider from './features/groups/contexts/GroupCreate/GroupCreateProvider';
 import OrganizationUnitDefaultFlowsSettings from './features/organization-units/OrganizationUnitDefaultFlowsSettings';
-import RoleCreateProvider from './features/roles/contexts/RoleCreate/RoleCreateProvider';
 import WelcomeRedirect from './features/welcome/components/WelcomeRedirect';
 import GetStartedPage from './features/welcome/pages/GetStartedPage';
 import TryoutSecuringAIAgentsPage from './features/welcome/pages/TryoutSecuringAIAgentsPage';
@@ -63,7 +62,9 @@ const CreateResourceServerPage = lazy(() =>
 );
 
 const AgentCreatePage = lazy(() => import('./features/agents/pages/AgentCreatePage'));
-const AgentEditPage = lazy(() => import('./features/agents/pages/AgentEditPage'));
+const AgentEditPage = lazy(() =>
+  import('./lib/monaco-setup').then(() => import('./features/agents/pages/AgentEditPage')),
+);
 const AgentsListPage = lazy(() => import('./features/agents/pages/AgentsListPage'));
 const ApplicationCreatePage = lazy(() => import('./features/applications/pages/ApplicationCreatePage'));
 const ApplicationEditPage = lazy(() =>
@@ -71,31 +72,39 @@ const ApplicationEditPage = lazy(() =>
 );
 const ApplicationsListPage = lazy(() => import('./features/applications/pages/ApplicationsListPage'));
 const ApplicationTemplateSelectPage = lazy(() => import('./features/applications/pages/ApplicationTemplateSelectPage'));
-const DesignPage = lazy(() => import('./features/design/pages/DesignPage'));
+const DesignPage = lazy(() => import('@thunderid/configure-design').then((m) => ({default: m.DesignPage})));
 const LayoutBuilderPage = lazy(() =>
-  import('./lib/monaco-setup').then(() => import('./features/design/pages/LayoutBuilderPage')),
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-design').then((m) => ({default: m.LayoutBuilderPage})),
+  ),
 );
-const ThemeBuilderPage = lazy(() => import('./features/design/pages/ThemeBuilderPage'));
-const ThemeCreatePage = lazy(() => import('./features/design/pages/ThemeCreatePage'));
+const ThemeBuilderPage = lazy(() => import('@thunderid/configure-design').then((m) => ({default: m.ThemeBuilderPage})));
+const ThemeCreatePage = lazy(() => import('@thunderid/configure-design').then((m) => ({default: m.ThemeCreatePage})));
 const FlowCreatePage = lazy(() => import('./features/flows/pages/FlowCreatePage'));
 const FlowsListPage = lazy(() => import('./features/flows/pages/FlowsListPage'));
-const CreateGroupPage = lazy(() => import('./features/groups/pages/CreateGroupPage'));
-const GroupEditPage = lazy(() => import('./features/groups/pages/GroupEditPage'));
-const GroupsListPage = lazy(() => import('./features/groups/pages/GroupsListPage'));
+const CreateGroupPage = lazy(() => import('@thunderid/configure-groups').then((m) => ({default: m.CreateGroupPage})));
+const GroupEditPage = lazy(() => import('@thunderid/configure-groups').then((m) => ({default: m.GroupEditPage})));
+const GroupsListPage = lazy(() => import('@thunderid/configure-groups').then((m) => ({default: m.GroupsListPage})));
 const HomePage = lazy(() => import('./features/home/pages/HomePage'));
 const ExportPage = lazy(() =>
-  import('./lib/monaco-setup').then(() => import('./features/import-export/pages/ExportPage')),
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-import-export').then((m) => ({default: m.ExportPage})),
+  ),
 );
 const ImportConfigurationSummaryPage = lazy(() =>
-  import('./lib/monaco-setup').then(() => import('./features/import-export/pages/ImportConfigurationSummaryPage')),
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-import-export').then((m) => ({default: m.ImportConfigurationSummaryPage})),
+  ),
 );
-const ImportConfigurationUploadPage = lazy(
-  () => import('./features/import-export/pages/ImportConfigurationUploadPage'),
+const ImportConfigurationUploadPage = lazy(() =>
+  import('@thunderid/configure-import-export').then((m) => ({default: m.ImportConfigurationUploadPage})),
 );
-const ImportConfigurationValidatePage = lazy(
-  () => import('./features/import-export/pages/ImportConfigurationValidatePage'),
+const ImportConfigurationValidatePage = lazy(() =>
+  import('@thunderid/configure-import-export').then((m) => ({default: m.ImportConfigurationValidatePage})),
 );
-const ImportExportPage = lazy(() => import('./features/import-export/pages/ImportExportPage'));
+const ImportExportPage = lazy(() =>
+  import('@thunderid/configure-import-export').then((m) => ({default: m.ImportExportPage})),
+);
 const ConnectionsListPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.ConnectionsListPage})),
 );
@@ -109,30 +118,30 @@ const ConnectionCreateWizardPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.ConnectionCreateWizardPage})),
 );
 const FlowBuilderPage = lazy(() => import('./features/flows/pages/FlowBuilderPage'));
-const CreateRolePage = lazy(() => import('./features/roles/pages/CreateRolePage'));
-const RoleEditPage = lazy(() => import('./features/roles/pages/RoleEditPage'));
-const RolesListPage = lazy(() => import('./features/roles/pages/RolesListPage'));
-const SettingsPage = lazy(() => import('./features/settings/pages/SettingsPage'));
+const CreateRolePage = lazy(() => import('@thunderid/configure-roles').then((m) => ({default: m.CreateRolePage})));
+const RoleEditPage = lazy(() => import('@thunderid/configure-roles').then((m) => ({default: m.RoleEditPage})));
+const RolesListPage = lazy(() => import('@thunderid/configure-roles').then((m) => ({default: m.RolesListPage})));
+const SettingsPage = lazy(() => import('@thunderid/configure-settings').then((m) => ({default: m.SettingsPage})));
 const TrustedIssuerDetailPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.TrustedIssuerDetailPage})),
 );
-const VerifiablePresentationsListPage = lazy(
-  () => import('./features/verifiable-presentations/pages/VerifiablePresentationsListPage'),
+const VerifiablePresentationsListPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiablePresentationsListPage})),
 );
-const VerifiablePresentationCreatePage = lazy(
-  () => import('./features/verifiable-presentations/pages/VerifiablePresentationCreatePage'),
+const VerifiablePresentationCreatePage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiablePresentationCreatePage})),
 );
-const VerifiablePresentationEditPage = lazy(
-  () => import('./features/verifiable-presentations/pages/VerifiablePresentationEditPage'),
+const VerifiablePresentationEditPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiablePresentationEditPage})),
 );
-const VerifiableCredentialsListPage = lazy(
-  () => import('./features/verifiable-credentials/pages/VerifiableCredentialsListPage'),
+const VerifiableCredentialsListPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiableCredentialsListPage})),
 );
-const VerifiableCredentialCreatePage = lazy(
-  () => import('./features/verifiable-credentials/pages/VerifiableCredentialCreatePage'),
+const VerifiableCredentialCreatePage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiableCredentialCreatePage})),
 );
-const VerifiableCredentialEditPage = lazy(
-  () => import('./features/verifiable-credentials/pages/VerifiableCredentialEditPage'),
+const VerifiableCredentialEditPage = lazy(() =>
+  import('@thunderid/configure-verifiable-credentials').then((m) => ({default: m.VerifiableCredentialEditPage})),
 );
 const CreateUserTypePage = lazy(() =>
   import('@thunderid/configure-user-types').then((m) => ({default: m.CreateUserTypePage})),
@@ -436,6 +445,15 @@ export default function App(): JSX.Element {
                 >
                   <Route path="get-started/applications/types" element={<ApplicationTemplateSelectPage />} />
                   <Route path="get-started/applications/create" element={<ApplicationCreatePage />} />
+                </Route>
+                <Route
+                  element={
+                    <AgentCreateProvider>
+                      <Outlet />
+                    </AgentCreateProvider>
+                  }
+                >
+                  <Route path="get-started/agents/create" element={<AgentCreatePage />} />
                 </Route>
                 <Route path="tryout/securing-application" element={<TryoutSecuringApplicationPage />} />
                 <Route path="tryout/ai-agents" element={<TryoutSecuringAIAgentsPage />} />

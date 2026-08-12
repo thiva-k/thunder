@@ -72,7 +72,7 @@ The **Flows** tab is available when the agent has an OAuth 2.0 configuration. It
 - **Authentication flow**: the flow used when the agent initiates a user-facing authentication.
 - **Registration flow**: the flow used for self-service registration.
 - **Recovery flow**: the flow used when a user needs to recover access through this agent.
-- **Allowed user types**: the user types that can authenticate through this agent.
+- **Allowed user types**: the user types that can sign up through this agent.
 
 ### Token
 
@@ -81,9 +81,9 @@ The **Token** tab configures token contents and validity across two sub-tabs:
 - **User**: applies to tokens whose subject is a user the agent acts on behalf of, through the authorization code and on-behalf-of flows. Select the user attributes carried in the access token and ID token, map scopes to claims, select the ID token response format, and set the access token and ID token validity periods. These settings stay frozen until you turn on Delegated mode on the **Flows** tab.
 - **Agent**: applies to the agent's own access token, issued through the `client_credentials` grant. Select the claims it carries, its schema attributes, its system attributes (`name`, `owner`), OU claims (`ouId`, `ouName`, `ouHandle`), and its `groups` and `roles`, and set the token validity period.
 
-### Advanced Settings
+### Advanced
 
-The **Advanced Settings** tab configures the OAuth 2.0 protocol settings:
+The **Advanced** tab configures the OAuth 2.0 protocol settings:
 
 - **Grant types**: the OAuth 2.0 flows the agent can use (for example, `client_credentials`, `authorization_code`, `urn:ietf:params:oauth:grant-type:token-exchange`).
 - **Response types**: applies to the authorization code flow.

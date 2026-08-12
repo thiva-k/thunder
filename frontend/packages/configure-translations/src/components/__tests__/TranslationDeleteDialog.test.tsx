@@ -21,7 +21,7 @@ const defaultProps = {
 };
 
 describe('TranslationDeleteDialog', () => {
-  let t: (key: string) => string;
+  let t: (key: string, options?: Record<string, unknown>) => string;
 
   beforeAll(() => {
     ({t} = renderHook(() => useTranslation()).result.current);
@@ -35,19 +35,19 @@ describe('TranslationDeleteDialog', () => {
     it('renders the dialog title', () => {
       render(<TranslationDeleteDialog {...defaultProps} />);
 
-      expect(screen.getByText('delete.title')).toBeInTheDocument();
+      expect(screen.getByText(t('translations:delete.title'))).toBeInTheDocument();
     });
 
     it('renders the confirmation message', () => {
       render(<TranslationDeleteDialog {...defaultProps} />);
 
-      expect(screen.getByText('delete.message')).toBeInTheDocument();
+      expect(screen.getByText(t('translations:delete.message', {language: 'DisplayName(fr-FR)'}))).toBeInTheDocument();
     });
 
     it('renders the warning disclaimer', () => {
       render(<TranslationDeleteDialog {...defaultProps} />);
 
-      expect(screen.getByText('delete.disclaimer')).toBeInTheDocument();
+      expect(screen.getByText(t('translations:delete.disclaimer'))).toBeInTheDocument();
     });
 
     it('renders cancel and delete buttons', () => {

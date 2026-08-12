@@ -6,6 +6,7 @@ import {cn} from '@thunderid/utils';
 import {Box, Button} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
+import CheckboxAdapter from './CheckboxAdapter';
 import DividerAdapter from './DividerAdapter';
 import OtpInputAdapter from './OtpInputAdapter';
 import PasswordInputAdapter from './PasswordInputAdapter';
@@ -27,6 +28,8 @@ interface BlockContext {
   onSubmit: (action: EmbeddedFlowComponent, inputs: Record<string, string>) => void;
   onValidate?: (components: EmbeddedFlowComponent[]) => boolean;
   passwordAutoComplete?: 'current-password' | 'new-password';
+  /** Additional step data from the flow response */
+  additionalData?: Record<string, unknown>;
   blockComponents?: EmbeddedFlowComponent[];
   /** When true, non-primary submit buttons use onClick instead of form submit */
   hasMultipleSubmits?: boolean;
@@ -78,7 +81,7 @@ interface ResendButtonAdapterProps {
   onClick: () => void;
 }
 
-function ResendButtonAdapter({component, isLoading, resolve, onClick}: ResendButtonAdapterProps): JSX.Element {
+export function ResendButtonAdapter({component, isLoading, resolve, onClick}: ResendButtonAdapterProps): JSX.Element {
   const {t} = useTranslation();
 
   return (
@@ -185,13 +188,15 @@ function renderFormSubComponent(
     resolve: ctx.resolve,
     onInputChange: ctx.onInputChange,
     onBlur: ctx.onBlur,
+    additionalData: ctx.additionalData,
   };
 
   if (
     (sub.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.TextInput ||
     sub.type === 'TEXT_INPUT' ||
     sub.type === 'EMAIL_INPUT' ||
-    sub.type === 'PHONE_INPUT'
+    sub.type === 'PHONE_INPUT' ||
+    sub.type === 'NUMBER_INPUT'
   ) {
     return <TextInputAdapter key={sub.id ?? compIndex} {...fieldProps} />;
   }
@@ -215,6 +220,10 @@ function renderFormSubComponent(
 
   if (sub.type === 'SELECT') {
     return <SelectAdapter key={sub.id ?? compIndex} {...fieldProps} />;
+  }
+
+  if (sub.type === 'BOOLEAN_INPUT') {
+    return <CheckboxAdapter key={sub.id ?? compIndex} {...fieldProps} />;
   }
 
   if (sub.type === 'RICH_TEXT') {

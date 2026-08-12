@@ -62,13 +62,17 @@ describe('InviteMembersCard', () => {
     });
   });
 
-  describe('Empty state (admin only)', () => {
-    it('renders empty state message when only the admin exists (totalResults = 1)', () => {
-      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 1, users: []}});
+  describe('Empty state', () => {
+    it('renders the admin avatar when the seeded admin is the only user', () => {
+      mockUseGetUsers.mockReturnValue({
+        isLoading: false,
+        data: {totalResults: 1, users: [{id: 'admin', display: 'Administrator'}]},
+      });
 
       render(<InviteMembersCard />);
 
-      expect(screen.getByText('No members yet')).toBeInTheDocument();
+      expect(getRenderedInitials(screen.getByRole<HTMLImageElement>('img'))).toBe('AD');
+      expect(screen.queryByText('No members yet')).not.toBeInTheDocument();
     });
 
     it('renders empty state message when totalResults is 0', () => {
@@ -108,8 +112,8 @@ describe('InviteMembersCard', () => {
     });
 
     it('renders an extra count when totalResults exceeds the avatar limit', () => {
-      const manyUsers = Array.from({length: 5}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
-      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 8, users: manyUsers}});
+      const manyUsers = Array.from({length: 7}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
+      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 10, users: manyUsers}});
 
       render(<InviteMembersCard />);
 
@@ -123,11 +127,41 @@ describe('InviteMembersCard', () => {
 
       expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument();
     });
+
+    it('overlaps avatars with negative margin when there are 5 or fewer members', () => {
+      const fiveUsers = Array.from({length: 5}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
+      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 5, users: fiveUsers}});
+
+      render(<InviteMembersCard />);
+
+      const avatarBoxes = document.querySelectorAll('.member-avatar');
+      expect(avatarBoxes[1]).toHaveStyle({marginLeft: '-10px'});
+    });
+
+    it('overlaps avatars with negative margin when there are more than 5 members', () => {
+      const manyUsers = Array.from({length: 7}, (_, i) => ({id: `u${i}`, display: `User ${i}`}));
+      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 7, users: manyUsers}});
+
+      render(<InviteMembersCard />);
+
+      const avatarBoxes = document.querySelectorAll('.member-avatar');
+      expect(avatarBoxes[1]).toHaveStyle({marginLeft: '-10px'});
+    });
   });
 
   describe('Action buttons', () => {
     beforeEach(() => {
-      mockUseGetUsers.mockReturnValue({isLoading: false, data: {totalResults: 3, users: []}});
+      mockUseGetUsers.mockReturnValue({
+        isLoading: false,
+        data: {
+          totalResults: 3,
+          users: [
+            {id: 'u1', display: 'Alice Smith'},
+            {id: 'u2', display: 'Bob Jones'},
+            {id: 'u3', display: 'Carol Doe'},
+          ],
+        },
+      });
     });
 
     it('renders the "Add User" button', () => {

@@ -47,8 +47,15 @@ vi.mock('../../../../../flows/api/useGetFlowById', () => ({
   default: () => ({data: undefined, isLoading: false}),
 }));
 
-vi.mock('../../../../../../components/GatePreview/GatePreview', () => ({
-  default: () => <div data-testid="gate-preview" />,
+vi.mock('@thunderid/configure-design', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-design')>()),
+  GatePreview: () => <div data-testid="gate-preview" />,
+}));
+
+const mockUseGetOrganizationUnit = vi.fn(() => ({data: undefined}) as unknown);
+
+vi.mock('@thunderid/configure-organization-units', () => ({
+  useGetOrganizationUnit: (...args: unknown[]): unknown => mockUseGetOrganizationUnit(...(args as [])),
 }));
 
 const mockWriteText = vi.fn();
@@ -86,6 +93,7 @@ describe('IntegrationGuides', () => {
 
   beforeEach(() => {
     vi.useFakeTimers({shouldAdvanceTime: true});
+    mockUseGetOrganizationUnit.mockReset().mockReturnValue({data: undefined});
     mockWriteText.mockReset().mockResolvedValue(undefined);
     mockGetDocumentationLink.mockImplementation((key: string) => documentationLinks[key]);
     mockFetch.mockReset().mockImplementation((url: string) =>
@@ -116,6 +124,31 @@ describe('IntegrationGuides', () => {
     expect(screen.getByText('Application details')).toBeInTheDocument();
     expect(screen.getByText('app-123')).toBeInTheDocument();
     expect(screen.queryByRole('link', {name: /Open on StackBlitz/i})).not.toBeInTheDocument();
+  });
+
+  it('shows the organization unit ID and handle in the application details card', () => {
+    mockUseGetOrganizationUnit.mockReturnValue({data: {id: 'ou-1', handle: 'engineering'}});
+
+    renderWithProviders(<IntegrationGuides application={{...reactApplication, ouId: 'ou-1'}} />);
+
+    expect(screen.getByText('Organization Unit ID')).toBeInTheDocument();
+    expect(screen.getByText('ou-1')).toBeInTheDocument();
+    expect(screen.getByText('Organization Unit Handle')).toBeInTheDocument();
+    expect(screen.getByText('engineering')).toBeInTheDocument();
+  });
+
+  it('hides the organization unit rows when the application has no ouId', () => {
+    renderWithProviders(<IntegrationGuides application={reactApplication} />);
+
+    expect(screen.queryByText('Organization Unit ID')).not.toBeInTheDocument();
+    expect(screen.queryByText('Organization Unit Handle')).not.toBeInTheDocument();
+  });
+
+  it('shows the organization unit ID alone when the handle has not resolved yet', () => {
+    renderWithProviders(<IntegrationGuides application={{...reactApplication, ouId: 'ou-1'}} />);
+
+    expect(screen.getByText('Organization Unit ID')).toBeInTheDocument();
+    expect(screen.queryByText('Organization Unit Handle')).not.toBeInTheDocument();
   });
 
   it('shows the OIDC endpoints and sign-in preview from the canonical type before the OAuth2 config resolves', () => {

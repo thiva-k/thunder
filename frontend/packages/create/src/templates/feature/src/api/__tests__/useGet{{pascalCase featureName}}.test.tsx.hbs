@@ -9,8 +9,8 @@ import useGet{{pascalCase featureName}} from '../useGet{{pascalCase featureName}
 import type {{pascalCase featureName}} from '../../models/{{camelCase featureName}}';
 
 // Mock dependencies
-vi.mock('@asgardeo/react', () => ({
-  useAsgardeo: () => ({
+vi.mock('@thunderid/react', () => ({
+  useThunderID: () => ({
     http: {
       request: vi.fn(),
     },
@@ -54,8 +54,8 @@ describe('useGet{{pascalCase featureName}}', () => {
   });
 
   it('should fetch {{camelCase featureName}} successfully', async () => {
-    const {useAsgardeo} = await import('@asgardeo/react');
-    const mockHttp = useAsgardeo().http;
+    const {useThunderID} = await import('@thunderid/react');
+    const mockHttp = useThunderID().http;
 
     (mockHttp.request as jest.Mock).mockResolvedValue({
       data: mock{{pascalCase featureName}},
@@ -80,8 +80,8 @@ describe('useGet{{pascalCase featureName}}', () => {
   });
 
   it('should handle request failure', async () => {
-    const {useAsgardeo} = await import('@asgardeo/react');
-    const mockHttp = useAsgardeo().http;
+    const {useThunderID} = await import('@thunderid/react');
+    const mockHttp = useThunderID().http;
 
     (mockHttp.request as jest.Mock).mockRejectedValue(new Error('Network error'));
 

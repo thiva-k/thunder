@@ -163,7 +163,7 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
     }
   };
 
-  const isReadOnly = selectedNode.type === 'server' && selectedNode.data.isReadOnly;
+  const isReadOnly = Boolean(resourceServer.isReadOnly);
   const isPending =
     updateRs.isPending || updateResource.isPending || updateServerAction.isPending || updateResourceAction.isPending;
 
@@ -224,7 +224,7 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
         </Typography>
       )}
 
-      {isReadOnly && (
+      {isReadOnly && selectedNode.type === 'server' && (
         <Alert severity="info">
           {t('resourceServers:detail.readOnlyWarning', 'This is a system resource server and cannot be modified.')}
         </Alert>

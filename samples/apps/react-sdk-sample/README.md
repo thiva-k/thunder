@@ -43,7 +43,7 @@ This creates the `Customer` user type and the `React SDK Sample` application und
 
 ### 2. Configure the Application
 
-Open `dist/runtime.json` and set the `clientId` to the value you used in `thunderid-config/thunderid.env`:
+Open `public/runtime.json` and set the `clientId` to the value you used in `thunderid-config/thunderid.env`:
 
 ```json
 {
@@ -171,7 +171,7 @@ Before running the app, ensure your application is configured with:
 
 ### Authentication Flow
 
-1. **SDK Provider Setup**: The app wraps components with `AsgardeoProvider` configured with base URL and client ID
+1. **SDK Provider Setup**: The app wraps components with `ThunderIDProvider` configured with base URL and client ID
 2. **Conditional Rendering**: Uses `SignedIn`/`SignedOut` components to show appropriate content based on auth state
 3. **Token Management**: Retrieves and decodes JWT tokens to display user information
 
@@ -179,13 +179,13 @@ Before running the app, ensure your application is configured with:
 
 **Provider Configuration:**
 ```tsx
-<AsgardeoProvider
+<ThunderIDProvider
   baseUrl={config.baseUrl}
   clientId={config.clientId}
-  platform="AsgardeoV2"
+  platform="ThunderID"
 >
   <App />
-</AsgardeoProvider>
+</ThunderIDProvider>
 ```
 
 **Using Authentication Hooks:**

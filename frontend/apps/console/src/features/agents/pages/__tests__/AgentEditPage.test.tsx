@@ -3,9 +3,10 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import userEvent from '@testing-library/user-event';
-import {render, screen, waitFor} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
+import AgentConstants from '../../constants/agent-constants';
 import AgentEditPage from '../AgentEditPage';
 
 const {
@@ -17,7 +18,10 @@ const {
   mockUseGetAgentTypes,
   mockUseGetAgentType,
   mockUseLocation,
+  stagingCallbackIdentities,
 } = vi.hoisted(() => ({
+  // Every distinct onFieldChange the Attributes tab is handed.
+  stagingCallbackIdentities: new Set<unknown>(),
   mockNavigate: vi.fn(),
   mockRefetch: vi.fn(),
   mockUseGetAgent: vi.fn(),
@@ -73,13 +77,16 @@ vi.mock('../../components/edit-agent/overview/AgentOverview', () => ({
 }));
 
 vi.mock('../../components/edit-agent/attributes/EditAgentAttributes', () => ({
-  default: ({onFieldChange}: {onFieldChange: (field: string, value: unknown) => void}) => (
-    <div data-testid="edit-attributes">
-      <button type="button" onClick={() => onFieldChange('attributes', {department: 'sales'})}>
-        Edit an attribute
-      </button>
-    </div>
-  ),
+  default: ({onFieldChange}: {onFieldChange: (field: string, value: unknown) => void}) => {
+    stagingCallbackIdentities.add(onFieldChange);
+    return (
+      <div data-testid="edit-attributes">
+        <button type="button" onClick={() => onFieldChange('attributes', {department: 'sales'})}>
+          Edit an attribute
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('../../components/edit-agent/credentials/EditCredentialsSettings', () => ({
@@ -146,6 +153,7 @@ describe('AgentEditPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    stagingCallbackIdentities.clear();
     mockUseGetAgent.mockReturnValue({
       data: baseAgent,
       isLoading: false,
@@ -153,10 +161,11 @@ describe('AgentEditPage', () => {
       isError: false,
       refetch: mockRefetch,
     });
-    mockUseUpdateAgent.mockReturnValue({
+    // A fresh object per call, like useMutation. A stable stand-in hides identity churn.
+    mockUseUpdateAgent.mockImplementation(() => ({
       mutateAsync: mockMutateAsync,
       isPending: false,
-    });
+    }));
     mockMutateAsync.mockResolvedValue(undefined);
     mockRefetch.mockResolvedValue({});
     mockUseGetAgentTypes.mockReturnValue({
@@ -356,6 +365,22 @@ describe('AgentEditPage', () => {
       });
     });
 
+    it('discards a rename that exceeds the maximum length', async () => {
+      const user = userEvent.setup();
+      render(<AgentEditPage />);
+
+      const editIcons = screen.getAllByRole('button').filter((button) => button.querySelector('svg'));
+      const nameEditButton = editIcons.find((button) => button.parentElement?.textContent?.includes('Test Agent'));
+      if (!nameEditButton) throw new Error('name edit button for "Test Agent" not found');
+      await user.click(nameEditButton);
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, {target: {value: 'a'.repeat(AgentConstants.NAME_MAX_LENGTH + 1)}});
+      fireEvent.keyDown(input, {key: 'Enter'});
+
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+      expect(screen.getByText('Test Agent')).toBeInTheDocument();
+    });
+
     it('keeps the bar visible when only one of two edited fields is reverted', async () => {
       const user = userEvent.setup();
       render(<AgentEditPage />);
@@ -439,6 +464,18 @@ describe('AgentEditPage', () => {
       });
       expect(mockRefetch).not.toHaveBeenCalled();
       expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    });
+
+    it('hands the Attributes tab one stable onFieldChange across re-renders', async () => {
+      // A new callback per render refired the tab's staging effect after any real edit, until
+      // React stopped committing renders at all.
+      const user = userEvent.setup();
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+
+      expect(stagingCallbackIdentities.size).toBe(1);
     });
 
     it('surfaces the resolved save error inline on the unsaved-changes bar', async () => {

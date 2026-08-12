@@ -3,7 +3,7 @@
 
 import {SettingsCard} from '@thunderid/components';
 import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
-import {Button, Typography} from '@wso2/oxygen-ui';
+import {Button, FormControl, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
 import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {OAuthAgentConfig} from '../../../models/agent';
@@ -34,21 +34,42 @@ export default function ClientSecretSection({
 
   return (
     <SettingsCard
-      title={t('agents:edit.credentials.clientSecret.title', 'Client Secret')}
+      title={t('agents:edit.credentials.sections.secret.title', 'Secret')}
       description={t(
-        'agents:edit.credentials.clientSecret.description',
-        'The secret this agent uses to authenticate as a client.',
+        'agents:edit.credentials.sections.secret.description',
+        'Regenerating the secret immediately invalidates the current one and cannot be undone.',
       )}
     >
-      <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
-        {t(
-          'agents:edit.credentials.clientSecret.regenerateHint',
-          'Client secret was shown once at creation. Regenerate to issue a new one.',
-        )}
-      </Typography>
-      <Button variant="contained" color="error" onClick={() => setRegenerateDialogOpen(true)} disabled={disabled}>
-        {t('agents:edit.credentials.clientSecret.regenerateButton', 'Regenerate secret')}
-      </Button>
+      <FormControl fullWidth>
+        <FormLabel htmlFor="agent-credentials-secret">
+          {t('agents:edit.credentials.sections.secret.clientSecretLabel', 'Client Secret')}
+        </FormLabel>
+        <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
+          {t(
+            'agents:edit.credentials.sections.secret.hint',
+            'A confidential credential used with the Client ID to authenticate this agent. Keep it secret.',
+          )}
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          <TextField
+            fullWidth
+            id="agent-credentials-secret"
+            value="••••••••••••••••"
+            InputProps={{readOnly: true}}
+            disabled
+            sx={{flex: '0 0 80%', '& input': {fontFamily: 'monospace', fontSize: '0.875rem'}}}
+          />
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => setRegenerateDialogOpen(true)}
+            disabled={disabled}
+            sx={{flex: '0 0 20%'}}
+          >
+            {t('agents:edit.credentials.sections.secret.regenerateButton', 'Regenerate Client Secret')}
+          </Button>
+        </Stack>
+      </FormControl>
 
       <RegenerateSecretDialog
         open={regenerateDialogOpen}

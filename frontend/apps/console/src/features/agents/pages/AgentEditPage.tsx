@@ -96,7 +96,6 @@ export default function AgentEditPage(): JSX.Element {
   const [activeTab, setActiveTab] = useState(0);
   const [editedAgent, setEditedAgent] = useState<Partial<Agent>>({});
   const [sectionResetKey, setSectionResetKey] = useState(0);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -122,27 +121,30 @@ export default function AgentEditPage(): JSX.Element {
     setActiveTab(newValue);
   };
 
-  const handleCopyToClipboard = useCallback(
-    async (text: string, fieldName: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopiedField(fieldName);
-        setTimeout(() => setCopiedField(null), 2000);
-      } catch {
-        logger.error('Failed to copy to clipboard');
-      }
-    },
-    [logger],
-  );
+  // useMutation returns a fresh object every render, so depending on the mutation itself gave
+  // this callback a new identity every render, which looped consumers that stage from an effect.
+  const {isError: isUpdateAgentError, reset: resetUpdateAgent} = updateAgent;
 
   const handleFieldChange = useCallback(
     (field: keyof Agent, value: unknown) => {
-      if (updateAgent.isError) {
-        updateAgent.reset(); // a save error is stale once the form changes
+      if (isUpdateAgentError) {
+        resetUpdateAgent(); // a save error is stale once the form changes
       }
       setEditedAgent((prev) => ({...prev, [field]: value}));
     },
-    [updateAgent],
+    [isUpdateAgentError, resetUpdateAgent],
+  );
+
+  const commitName = useCallback(
+    (value: string): void => {
+      const trimmedName = value.trim();
+      // The API rejects names outside these bounds, so an out of range rename is discarded here.
+      if (trimmedName.length < AgentConstants.NAME_MIN_LENGTH || trimmedName.length > AgentConstants.NAME_MAX_LENGTH) {
+        return;
+      }
+      handleFieldChange('name', trimmedName);
+    },
+    [handleFieldChange],
   );
 
   const handleSave = useCallback(async () => {
@@ -303,8 +305,6 @@ export default function AgentEditPage(): JSX.Element {
           agent={agent}
           editedAgent={editedAgent}
           oauth2Config={oauth2Config}
-          copiedField={copiedField}
-          onCopyToClipboard={handleCopyToClipboard}
           onFieldChange={handleFieldChange}
         />
       ),
@@ -399,12 +399,12 @@ export default function AgentEditPage(): JSX.Element {
                 value={tempName}
                 onChange={(e) => setTempName(e.target.value)}
                 onBlur={() => {
-                  if (tempName.trim()) handleFieldChange('name', tempName.trim());
+                  commitName(tempName);
                   setIsEditingName(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    if (tempName.trim()) handleFieldChange('name', tempName.trim());
+                    commitName(tempName);
                     setIsEditingName(false);
                   } else if (e.key === 'Escape') {
                     setIsEditingName(false);

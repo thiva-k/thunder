@@ -167,6 +167,7 @@ const INPUT_ELEMENT_TYPES = new Set<string>([
   ElementTypes.OtpInput,
   ElementTypes.Checkbox,
   ElementTypes.Dropdown,
+  ElementTypes.Select,
 ]);
 
 /**

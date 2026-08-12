@@ -18,7 +18,7 @@ export interface RegenerateAgentSecretResult {
 }
 
 /**
- * Generates a cryptographically secure OAuth 2.0 client secret matching the backend's
+ * Generates a cryptographically secure OAuth 2 client secret matching the backend's
  * `GenerateOAuth2ClientSecret()` (32 random bytes encoded as base64url, no padding).
  */
 function generateClientSecret(): string {

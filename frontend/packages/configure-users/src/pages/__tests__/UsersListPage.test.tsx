@@ -41,7 +41,7 @@ describe('UsersListPage', () => {
   it('renders page title', () => {
     render(<UsersListPage />);
 
-    expect(screen.getByText('User Management')).toBeInTheDocument();
+    expect(screen.getByText('Users')).toBeInTheDocument();
   });
 
   it('renders page description', () => {
@@ -86,7 +86,7 @@ describe('UsersListPage', () => {
   it('has correct heading level', () => {
     render(<UsersListPage />);
 
-    const heading = screen.getByRole('heading', {level: 1, name: /user management/i});
+    const heading = screen.getByRole('heading', {level: 1, name: /^users$/i});
     expect(heading).toBeInTheDocument();
   });
 

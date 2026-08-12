@@ -19,6 +19,8 @@ import {
   VueIcon,
 } from '@thunderid/components';
 import type {Application, OAuth2Config} from '@thunderid/configure-applications';
+import {GatePreview} from '@thunderid/configure-design';
+import {useGetOrganizationUnit} from '@thunderid/configure-organization-units';
 import {useConfig} from '@thunderid/contexts';
 import {DefaultTheme, type Theme, useGetTheme} from '@thunderid/design';
 import {useLogger} from '@thunderid/logger/react';
@@ -26,7 +28,6 @@ import {Box, Button, Chip, Link, Paper, Stack, Typography, useColorScheme} from 
 import {ArrowRight, ArrowUpRight, Check, Copy, Sparkles} from '@wso2/oxygen-ui-icons-react';
 import {useState, type JSX, type ReactNode} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
-import GatePreview from '../../../../../components/GatePreview/GatePreview';
 import useGetFlowById from '../../../../flows/api/useGetFlowById';
 import {getIntegrationGuideForTemplate} from '../../../utils/getIntegrationGuidesForTemplate';
 import getPlaygroundsForTemplate from '../../../utils/getPlaygroundsForTemplate';
@@ -197,6 +198,7 @@ export default function IntegrationGuides({
     Boolean(application.isRecoveryFlowEnabled && application.recoveryFlowId),
   );
   const {data: signOutFlowDetails} = useGetFlowById(application.signOutFlowId);
+  const {data: organizationUnit} = useGetOrganizationUnit(application.ouId);
   const {mode, systemMode} = useColorScheme();
   const productName = config.brand.product_name;
   const [promptCopied, setPromptCopied] = useState(false);
@@ -406,6 +408,18 @@ export default function IntegrationGuides({
         <CopyableField label={t('applications:edit.general.labels.applicationId')} value={application.id} />
         {oauth2Config?.clientId && (
           <CopyableField label={t('applications:edit.general.labels.clientId')} value={oauth2Config.clientId} />
+        )}
+        {application.ouId && (
+          <CopyableField
+            label={t('applications:edit.overview.appDetails.organizationUnitId', 'Organization Unit ID')}
+            value={application.ouId}
+          />
+        )}
+        {organizationUnit?.handle && (
+          <CopyableField
+            label={t('applications:edit.overview.appDetails.organizationUnitHandle', 'Organization Unit Handle')}
+            value={organizationUnit.handle}
+          />
         )}
       </Box>
     </OverviewCard>

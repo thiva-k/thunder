@@ -9,8 +9,8 @@ import useGet{{pascalCase featureName}}s, {{pascalCase featureName}}sListRespons
 import type Basic{{pascalCase featureName}} from '../../models/{{camelCase featureName}}';
 
 // Mock dependencies
-vi.mock('@asgardeo/react', () => ({
-  useAsgardeo: () => ({
+vi.mock('@thunderid/react', () => ({
+  useThunderID: () => ({
     http: {
       request: vi.fn(),
     },
@@ -69,8 +69,8 @@ describe('useGet{{pascalCase featureName}}s', () => {
   });
 
   it('should fetch {{camelCase featureName}}s successfully', async () => {
-    const {useAsgardeo} = await import('@asgardeo/react');
-    const mockHttp = useAsgardeo().http;
+    const {useThunderID} = await import('@thunderid/react');
+    const mockHttp = useThunderID().http;
 
     (mockHttp.request as jest.Mock).mockResolvedValue({
       data: mockResponse,
@@ -95,8 +95,8 @@ describe('useGet{{pascalCase featureName}}s', () => {
   });
 
   it('should fetch {{camelCase featureName}}s with custom parameters', async () => {
-    const {useAsgardeo} = await import('@asgardeo/react');
-    const mockHttp = useAsgardeo().http;
+    const {useThunderID} = await import('@thunderid/react');
+    const mockHttp = useThunderID().http;
 
     (mockHttp.request as jest.Mock).mockResolvedValue({
       data: mockResponse,
@@ -125,8 +125,8 @@ describe('useGet{{pascalCase featureName}}s', () => {
   });
 
   it('should handle empty search parameter', async () => {
-    const {useAsgardeo} = await import('@asgardeo/react');
-    const mockHttp = useAsgardeo().http;
+    const {useThunderID} = await import('@thunderid/react');
+    const mockHttp = useThunderID().http;
 
     (mockHttp.request as jest.Mock).mockResolvedValue({
       data: mockResponse,
@@ -152,8 +152,8 @@ describe('useGet{{pascalCase featureName}}s', () => {
   });
 
   it('should handle request failure', async () => {
-    const {useAsgardeo} = await import('@asgardeo/react');
-    const mockHttp = useAsgardeo().http;
+    const {useThunderID} = await import('@thunderid/react');
+    const mockHttp = useThunderID().http;
 
     (mockHttp.request as jest.Mock).mockRejectedValue(new Error('Network error'));
 

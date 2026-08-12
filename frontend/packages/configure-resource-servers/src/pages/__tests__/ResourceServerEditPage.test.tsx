@@ -289,10 +289,10 @@ describe('ResourceServerEditPage', () => {
     expect(screen.getByTestId('resource-tree')).toBeInTheDocument();
   });
 
-  it('shows the AdvancedTab when the Advanced Settings tab is clicked', async () => {
+  it('shows the AdvancedTab when the Advanced tab is clicked', async () => {
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -302,11 +302,15 @@ describe('ResourceServerEditPage', () => {
   it('renders the Danger Zone card for a non-read-only server', () => {
     renderWithProviders(<ResourceServerEditPage />);
 
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
+
     expect(screen.getByText('Danger Zone')).toBeInTheDocument();
   });
 
   it('renders the delete button inside the Danger Zone', () => {
     renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     expect(screen.getByRole('button', {name: /Delete resource server/i})).toBeInTheDocument();
   });
@@ -320,6 +324,8 @@ describe('ResourceServerEditPage', () => {
     });
 
     renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     expect(screen.queryByText('Danger Zone')).not.toBeInTheDocument();
   });
@@ -340,7 +346,7 @@ describe('ResourceServerEditPage', () => {
   it('shows the unsaved changes bar when the identifier is edited in the Advanced tab', async () => {
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -356,7 +362,7 @@ describe('ResourceServerEditPage', () => {
   it('includes the edited identifier when Save is clicked from the unsaved changes bar', async () => {
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -387,7 +393,7 @@ describe('ResourceServerEditPage', () => {
   it('does not save when the identifier is cleared', async () => {
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -414,6 +420,8 @@ describe('ResourceServerEditPage', () => {
 
     renderWithProviders(<ResourceServerEditPage />);
 
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
+
     expect(screen.getByRole('heading', {name: 'Delete MCP server'})).toBeInTheDocument();
   });
 
@@ -426,6 +434,8 @@ describe('ResourceServerEditPage', () => {
     });
 
     renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     expect(
       screen.getByText('Permanently delete this MCP server and all associated data. This action cannot be undone.'),
@@ -441,6 +451,8 @@ describe('ResourceServerEditPage', () => {
     });
 
     renderWithProviders(<ResourceServerEditPage />);
+
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     expect(screen.getByRole('button', {name: 'Delete MCP server'})).toBeInTheDocument();
   });
@@ -494,6 +506,37 @@ describe('ResourceServerEditPage', () => {
     expect(screen.queryByRole('button', {name: 'Set as default'})).not.toBeInTheDocument();
   });
 
+  it('does not offer Set as default for an MCP server, which is not an eligible type', () => {
+    mockUseGetResourceServer.mockReturnValue({
+      data: mockMcpResourceServer,
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    expect(screen.queryByRole('button', {name: 'Set as default'})).not.toBeInTheDocument();
+  });
+
+  // The backend accepts an MCP default, so this state is reachable through the API or declarative
+  // config. The console must report it rather than hide it.
+  it('still shows the badge for an MCP server that is already the default', () => {
+    mockUseGetResourceServer.mockReturnValue({
+      data: mockMcpResourceServer,
+      isLoading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+    mockUseGetDefaultResourceServer.mockReturnValue({
+      data: {readOnly: {}, writable: {}, merged: {resourceServerId: 'rs-1'}},
+    });
+
+    renderWithProviders(<ResourceServerEditPage />);
+
+    expect(screen.getByText('Default resource server')).toBeInTheDocument();
+  });
+
   it('shows the name text field when the edit icon button is clicked', async () => {
     renderWithProviders(<ResourceServerEditPage />);
 
@@ -521,7 +564,7 @@ describe('ResourceServerEditPage', () => {
 
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -546,7 +589,7 @@ describe('ResourceServerEditPage', () => {
 
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -568,7 +611,7 @@ describe('ResourceServerEditPage', () => {
 
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();
@@ -590,7 +633,7 @@ describe('ResourceServerEditPage', () => {
 
     renderWithProviders(<ResourceServerEditPage />);
 
-    fireEvent.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+    fireEvent.click(screen.getByRole('tab', {name: 'Advanced'}));
 
     await waitFor(() => {
       expect(screen.getByTestId('advanced-tab')).toBeInTheDocument();

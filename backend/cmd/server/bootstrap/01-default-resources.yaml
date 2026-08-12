@@ -4999,6 +4999,13 @@ theme:
       - linear-gradient(rgba(255 255 255 / 0.163), rgba(255 255 255 / 0.163))
       - linear-gradient(rgba(255 255 255 / 0.165), rgba(255 255 255 / 0.165))
 ---
+resource_type: layout
+id: 01900000-0000-7000-8000-000000000078
+handle: centered
+displayName: Centered
+description: A centered card layout for authentication screens.
+layout: {}
+---
 resource_type: application
 id: 01900000-0000-7000-8000-000000000060
 name: Console

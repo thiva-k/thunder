@@ -1057,6 +1057,30 @@ describe('DecoratedVisualFlow', () => {
       });
     });
 
+    it('should handle a SELECT drop on canvas as an input-on-canvas scenario', async () => {
+      renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+
+      triggerCapturedDragEnd({
+        operation: {
+          source: {
+            data: {
+              dragged: {category: 'FIELD', type: 'SELECT'},
+            },
+          },
+          target: {
+            id: 'flow-builder-canvas_test',
+            data: {},
+          },
+        },
+        canceled: false,
+      });
+
+      await waitFor(() => {
+        const dialog = screen.getByTestId('form-requires-view-dialog');
+        expect(dialog).toHaveAttribute('data-scenario', 'input-on-canvas');
+      });
+    });
+
     it('should handle input-on-view drop scenario', async () => {
       renderComponent(<DecoratedVisualFlow {...defaultProps} />);
 

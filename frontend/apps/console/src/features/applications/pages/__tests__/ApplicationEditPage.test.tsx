@@ -9,12 +9,13 @@ import {render, screen, waitFor, fireEvent, within} from '@thunderid/test-utils'
 import {useState} from 'react';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import useUpdateApplication from '../../api/useUpdateApplication';
+import EditAccessSettings from '../../components/edit-application/access/EditAccessSettings';
 import EditAdvancedSettings from '../../components/edit-application/advanced-settings/EditAdvancedSettings';
 import EditCustomizationSettings from '../../components/edit-application/customization-settings/EditCustomizationSettings';
-import EditGeneralSettings from '../../components/edit-application/general-settings/EditGeneralSettings';
 import McpConnectTab from '../../components/edit-application/mcp/McpConnectTab';
 import EditTokenSettings from '../../components/edit-application/token-settings/EditTokenSettings';
 import EditTokenSettingsTabs from '../../components/edit-application/token-settings/EditTokenSettingsTabs';
+import ApplicationConstants from '../../constants/application-constants';
 import {getIntegrationGuideForTemplate} from '../../utils/getIntegrationGuidesForTemplate';
 import getTemplateMetadata from '../../utils/getTemplateMetadata';
 import ApplicationEditPage from '../ApplicationEditPage';
@@ -43,7 +44,7 @@ const APPLICATIONS_TRANSLATIONS: Record<string, string> = {
   'applications:edit.page.tabs.flows': 'Flows',
   'applications:edit.page.tabs.customization': 'Customization',
   'applications:edit.page.tabs.token': 'Token',
-  'applications:edit.page.tabs.advanced': 'Advanced Settings',
+  'applications:edit.page.tabs.advanced': 'Advanced',
   'applications:edit.page.unsavedChanges': 'You have unsaved changes',
   'applications:edit.page.reset': 'Reset',
   'applications:edit.page.save': 'Save Changes',
@@ -82,8 +83,12 @@ vi.mock('../../utils/getIntegrationGuidesForTemplate', () => ({
 }));
 
 // Mock child components
-vi.mock('../../components/edit-application/general-settings/EditGeneralSettings', () => ({
-  default: vi.fn(() => <div data-testid="edit-general-settings">General Settings</div>),
+vi.mock('../../components/edit-application/access/EditAccessSettings', () => ({
+  default: vi.fn(() => <div data-testid="edit-access-settings">Access Settings</div>),
+}));
+
+vi.mock('../../components/edit-application/credentials/EditCredentialsSettings', () => ({
+  default: vi.fn(() => <div data-testid="edit-credentials-settings">Credentials Settings</div>),
 }));
 
 vi.mock('../../components/edit-application/flows-settings/EditFlowsSettings', () => ({
@@ -114,7 +119,7 @@ vi.mock('../../components/edit-application/token-settings/EditTokenSettingsTabs'
 }));
 
 vi.mock('../../components/edit-application/advanced-settings/EditAdvancedSettings', () => ({
-  default: vi.fn(() => <div data-testid="edit-advanced-settings">Advanced Settings</div>),
+  default: vi.fn(() => <div data-testid="edit-advanced-settings">Advanced</div>),
 }));
 
 vi.mock('../../components/edit-application/integration-guides/IntegrationGuides', () => ({
@@ -439,7 +444,8 @@ describe('ApplicationEditPage', () => {
     it('should render all tabs without integration guides', () => {
       renderComponent();
 
-      expect(screen.getByRole('tab', {name: /general/i})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /access/i})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /credentials/i})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: /flows/i})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: /customization/i})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: /token/i})).toBeInTheDocument();
@@ -470,6 +476,30 @@ describe('ApplicationEditPage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('integration-guides')).toBeInTheDocument();
+      });
+    });
+
+    it('should switch to access tab when clicked', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const accessTab = screen.getByRole('tab', {name: /access/i});
+      await user.click(accessTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-access-settings')).toBeInTheDocument();
+      });
+    });
+
+    it('should switch to credentials tab when clicked', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const credentialsTab = screen.getByRole('tab', {name: /credentials/i});
+      await user.click(credentialsTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-credentials-settings')).toBeInTheDocument();
       });
     });
 
@@ -908,6 +938,22 @@ describe('ApplicationEditPage', () => {
       });
     });
 
+    it('should discard a rename that exceeds the maximum length', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const section = screen.getByText('Test Application').closest('div');
+      await user.click(section!.querySelector('button')!);
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, {target: {value: 'a'.repeat(ApplicationConstants.NAME_MAX_LENGTH + 1)}});
+      fireEvent.keyDown(input, {key: 'Enter'});
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Application')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+    });
+
     it('should keep the action bar visible if only one of two edited fields is reverted', async () => {
       const user = userEvent.setup();
       renderComponent();
@@ -957,16 +1003,16 @@ describe('ApplicationEditPage', () => {
       });
     });
 
-    it('should bump sectionResetKey passed to EditGeneralSettings when reset is clicked', async () => {
+    it('should bump sectionResetKey passed to EditAccessSettings when reset is clicked', async () => {
       const user = userEvent.setup();
       renderComponent();
 
-      // EditGeneralSettings only mounts once its TabPanel is active
-      await mountSectionTab(user, 'General', 'edit-general-settings');
+      // EditAccessSettings only mounts once its TabPanel is active
+      await mountSectionTab(user, 'Access', 'edit-access-settings');
 
       const {initialKey, keyAfterReset} = await editFieldAndResetSection(
         user,
-        EditGeneralSettings,
+        EditAccessSettings,
         'Test Application',
         'Updated Application',
       );
@@ -1046,7 +1092,7 @@ describe('ApplicationEditPage', () => {
       });
     });
 
-    it('should bump sectionResetKey passed to EditGeneralSettings when save succeeds', async () => {
+    it('should bump sectionResetKey passed to EditAccessSettings when save succeeds', async () => {
       const user = userEvent.setup();
       mockUseUpdateApplication.mockReturnValue({
         mutate: mockUpdateApplicationMutate,
@@ -1068,10 +1114,10 @@ describe('ApplicationEditPage', () => {
 
       renderComponent();
 
-      // EditGeneralSettings only mounts once its TabPanel is active
-      await mountSectionTab(user, 'General', 'edit-general-settings');
+      // EditAccessSettings only mounts once its TabPanel is active
+      await mountSectionTab(user, 'Access', 'edit-access-settings');
 
-      const initialKey = vi.mocked(EditGeneralSettings).mock.calls.at(-1)?.[0].sectionResetKey;
+      const initialKey = vi.mocked(EditAccessSettings).mock.calls.at(-1)?.[0].sectionResetKey;
 
       await editInlineField(user, 'Test Application', 'Updated Application');
 
@@ -1082,7 +1128,7 @@ describe('ApplicationEditPage', () => {
       await user.click(screen.getByRole('button', {name: /save changes/i}));
 
       await waitFor(() => {
-        const keyAfterSave = vi.mocked(EditGeneralSettings).mock.calls.at(-1)?.[0].sectionResetKey;
+        const keyAfterSave = vi.mocked(EditAccessSettings).mock.calls.at(-1)?.[0].sectionResetKey;
         expect(keyAfterSave).toBe((initialKey ?? 0) + 1);
       });
     });
@@ -1162,9 +1208,9 @@ describe('ApplicationEditPage', () => {
     it('should have proper ARIA labels for tabs', () => {
       renderComponent();
 
-      const generalTab = screen.getByRole('tab', {name: /general/i});
-      expect(generalTab).toHaveAttribute('id');
-      expect(generalTab).toHaveAttribute('aria-controls');
+      const accessTab = screen.getByRole('tab', {name: /access/i});
+      expect(accessTab).toHaveAttribute('id');
+      expect(accessTab).toHaveAttribute('aria-controls');
     });
 
     it('should show editable input during inline editing', async () => {
@@ -1706,18 +1752,18 @@ describe('ApplicationEditPage', () => {
   });
 
   describe('Tab Navigation with Integration Guides', () => {
-    it('should switch to general tab when overview is first tab', async () => {
+    it('should switch to access tab when overview is first tab', async () => {
       const user = userEvent.setup();
       mockGetIntegrationGuidesForTemplate.mockReturnValue(['react-vite']);
 
       renderComponent();
 
-      // Click General tab (second tab when integration guides are present)
-      const generalTab = screen.getByRole('tab', {name: /general/i});
-      await user.click(generalTab);
+      // Click Access tab (second tab when integration guides are present)
+      const accessTab = screen.getByRole('tab', {name: /access/i});
+      await user.click(accessTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId('edit-general-settings')).toBeInTheDocument();
+        expect(screen.getByTestId('edit-access-settings')).toBeInTheDocument();
       });
     });
 
@@ -1857,7 +1903,7 @@ describe('ApplicationEditPage', () => {
       expect(screen.getByRole('tab', {name: 'Flows'})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'Customization'})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'Token'})).toBeInTheDocument();
-      expect(screen.getByRole('tab', {name: 'Advanced Settings'})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: 'Advanced'})).toBeInTheDocument();
     });
 
     it('renders the Overview tab panel by default, and the General tab panel once selected', async () => {
@@ -1891,7 +1937,7 @@ describe('ApplicationEditPage', () => {
 
       expect(screen.getByRole('tab', {name: 'General'})).toBeInTheDocument();
       expect(screen.getByRole('tab', {name: 'Token'})).toBeInTheDocument();
-      expect(screen.getByRole('tab', {name: 'Advanced Settings'})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: 'Advanced'})).toBeInTheDocument();
       expect(screen.queryByRole('tab', {name: 'Flows'})).not.toBeInTheDocument();
       expect(screen.queryByRole('tab', {name: 'Customization'})).not.toBeInTheDocument();
     });
@@ -1907,7 +1953,7 @@ describe('ApplicationEditPage', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-advanced-settings')).toBeInTheDocument();
@@ -2005,7 +2051,7 @@ describe('ApplicationEditPage', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-advanced-settings')).toBeInTheDocument();
@@ -2026,7 +2072,7 @@ describe('ApplicationEditPage', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      await user.click(screen.getByRole('tab', {name: 'Advanced Settings'}));
+      await user.click(screen.getByRole('tab', {name: 'Advanced'}));
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-advanced-settings')).toBeInTheDocument();
@@ -2040,7 +2086,7 @@ describe('ApplicationEditPage', () => {
       // mockApplication (template: 'react') is the default mock from the outer describe block.
       renderComponent();
 
-      expect(screen.getByRole('tab', {name: /general/i})).toBeInTheDocument();
+      expect(screen.getByRole('tab', {name: /access/i})).toBeInTheDocument();
       expect(screen.queryByTestId('mcp-connect-tab')).not.toBeInTheDocument();
     });
 

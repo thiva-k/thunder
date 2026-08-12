@@ -3,11 +3,16 @@
 
 import type {AgentTypeRoutePaths} from '@thunderid/configure-agent-types';
 import type {ConnectionRoutePaths} from '@thunderid/configure-connections';
+import type {DesignRoutePaths} from '@thunderid/configure-design';
+import type {GroupRoutePaths} from '@thunderid/configure-groups';
+import type {ImportExportRoutePaths} from '@thunderid/configure-import-export';
 import type {OrganizationUnitRoutePaths} from '@thunderid/configure-organization-units';
 import type {ResourceServerRoutePaths} from '@thunderid/configure-resource-servers';
+import type {RoleRoutePaths} from '@thunderid/configure-roles';
 import type {TranslationRoutePaths} from '@thunderid/configure-translations';
 import type {UserTypeRoutePaths} from '@thunderid/configure-user-types';
 import type {UserRoutePaths} from '@thunderid/configure-users';
+import type {VerifiableCredentialRoutePaths} from '@thunderid/configure-verifiable-credentials';
 
 /**
  * Route paths for the domains Console implements itself, rather than through a
@@ -33,47 +38,10 @@ export interface ConsoleRoutePaths {
     detail: (id: string) => string;
     create: () => string;
   };
-  groups: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  roles: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  verifiableCredentials: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
-  verifiablePresentations: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
-  };
   flows: {
     list: () => string;
     create: () => string;
     detail: (flowId: string) => string;
-  };
-  design: {
-    list: () => string;
-    themesCreate: () => string;
-    themeDetail: (themeId: string) => string;
-    layoutDetail: (layoutId: string) => string;
-  };
-  importExport: {
-    list: () => string;
-  };
-  export: {
-    page: () => string;
-  };
-  importConfiguration: {
-    upload: () => string;
-    validate: () => string;
-    summary: () => string;
   };
   welcome: {
     root: () => string;
@@ -81,6 +49,7 @@ export interface ConsoleRoutePaths {
     getStarted: () => string;
     getStartedApplicationsTypes: () => string;
     getStartedApplicationsCreate: () => string;
+    getStartedAgentsCreate: () => string;
     tryoutSecuringApplication: () => string;
     tryoutAiAgents: () => string;
     tryoutMcp: () => string;
@@ -112,6 +81,11 @@ export type RouteConfig = OrganizationUnitRoutePaths &
   ConnectionRoutePaths &
   ResourceServerRoutePaths &
   TranslationRoutePaths &
+  VerifiableCredentialRoutePaths &
+  ImportExportRoutePaths &
+  DesignRoutePaths &
+  GroupRoutePaths &
+  RoleRoutePaths &
   ConsoleRoutePaths;
 
 /**
@@ -250,6 +224,7 @@ const RouteConfig: RouteConfig = {
     getStarted: () => `/${ROUTE_SEGMENTS.welcome}/get-started`,
     getStartedApplicationsTypes: () => `/${ROUTE_SEGMENTS.welcome}/get-started/applications/types`,
     getStartedApplicationsCreate: () => `/${ROUTE_SEGMENTS.welcome}/get-started/applications/create`,
+    getStartedAgentsCreate: () => `/${ROUTE_SEGMENTS.welcome}/get-started/agents/create`,
     tryoutSecuringApplication: () => `/${ROUTE_SEGMENTS.welcome}/tryout/securing-application`,
     tryoutAiAgents: () => `/${ROUTE_SEGMENTS.welcome}/tryout/ai-agents`,
     tryoutMcp: () => `/${ROUTE_SEGMENTS.welcome}/tryout/mcp`,

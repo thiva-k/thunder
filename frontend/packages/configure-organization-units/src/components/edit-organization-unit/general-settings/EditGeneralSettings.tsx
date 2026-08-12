@@ -4,7 +4,6 @@
 import {Stack} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useState, useCallback, useRef, useEffect} from 'react';
-import DangerZoneSection from './DangerZoneSection';
 import ParentSettingsSection from './ParentSettingsSection';
 import QuickCopySection from './QuickCopySection';
 import type {OrganizationUnit} from '../../../models/organization-unit';
@@ -17,10 +16,6 @@ interface EditGeneralSettingsProps {
    * The organization unit being displayed
    */
   organizationUnit: OrganizationUnit;
-  /**
-   * Callback function to open the delete confirmation dialog
-   */
-  onDeleteClick?: () => void;
 }
 
 /**
@@ -29,15 +24,11 @@ interface EditGeneralSettingsProps {
  * Displays sections for:
  * - Quick copy of organization unit identifiers (Handle, ID)
  * - Parent Organization Unit information
- * - Danger zone (delete organization unit)
  *
  * @param props - Component props
  * @returns General settings sections wrapped in a Stack
  */
-export default function EditGeneralSettings({
-  organizationUnit,
-  onDeleteClick = undefined,
-}: EditGeneralSettingsProps): JSX.Element {
+export default function EditGeneralSettings({organizationUnit}: EditGeneralSettingsProps): JSX.Element {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,7 +60,6 @@ export default function EditGeneralSettings({
         onCopyToClipboard={handleCopyToClipboard}
       />
       <ParentSettingsSection organizationUnit={organizationUnit} />
-      {onDeleteClick && <DangerZoneSection onDeleteClick={onDeleteClick} />}
     </Stack>
   );
 }

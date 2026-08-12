@@ -16,7 +16,7 @@ const ConnectionConstants = {
   OIDC_AVATAR_FALLBACK: 'avatar:shape=rounded,variant=anonymous_entity,content=triangle_stack,colors=0',
 
   /**
-   * Fallback avatar rendered for the OAuth 2.0 vendor.
+   * Fallback avatar rendered for the OAuth 2 vendor.
    */
   OAUTH_AVATAR_FALLBACK: 'avatar:shape=rounded,variant=anonymous_entity,content=parallelogram,colors=0',
 

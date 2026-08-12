@@ -44,7 +44,7 @@ describe('ClientSecretSection', () => {
     } as OAuthAgentConfig;
     render(<ClientSecretSection agentId="agent-1" oauth2Config={oauth2Config} />);
 
-    expect(screen.getByRole('button', {name: /regenerate secret/i})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /regenerate client secret/i})).toBeInTheDocument();
   });
 
   it('renders nothing for public clients', () => {
@@ -62,7 +62,7 @@ describe('ClientSecretSection', () => {
     } as OAuthAgentConfig;
     render(<ClientSecretSection agentId="agent-1" oauth2Config={oauth2Config} />);
 
-    await user.click(screen.getByRole('button', {name: /regenerate secret/i}));
+    await user.click(screen.getByRole('button', {name: /regenerate client secret/i}));
 
     expect(screen.getByTestId('regenerate-dialog')).toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe('ClientSecretSection', () => {
     } as OAuthAgentConfig;
     render(<ClientSecretSection agentId="agent-1" oauth2Config={oauth2Config} />);
 
-    await user.click(screen.getByRole('button', {name: /regenerate secret/i}));
+    await user.click(screen.getByRole('button', {name: /regenerate client secret/i}));
     await user.click(screen.getByRole('button', {name: /confirm regenerate/i}));
 
     expect(screen.getByTestId('secret-success-dialog')).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('ClientSecretSection', () => {
     } as OAuthAgentConfig;
     render(<ClientSecretSection agentId="agent-1" oauth2Config={oauth2Config} />);
 
-    await user.click(screen.getByRole('button', {name: /regenerate secret/i}));
+    await user.click(screen.getByRole('button', {name: /regenerate client secret/i}));
     await user.click(screen.getByRole('button', {name: /confirm regenerate/i}));
     await user.click(screen.getByRole('button', {name: /close/i}));
 
@@ -104,6 +104,6 @@ describe('ClientSecretSection', () => {
     } as OAuthAgentConfig;
     render(<ClientSecretSection agentId="agent-1" oauth2Config={oauth2Config} disabled />);
 
-    expect(screen.getByRole('button', {name: /regenerate secret/i})).toBeDisabled();
+    expect(screen.getByRole('button', {name: /regenerate client secret/i})).toBeDisabled();
   });
 });

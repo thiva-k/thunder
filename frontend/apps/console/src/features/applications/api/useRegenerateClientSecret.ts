@@ -38,7 +38,7 @@ export interface RegenerateSecretResult {
 }
 
 /**
- * Generates a cryptographically secure OAuth 2.0 client secret.
+ * Generates a cryptographically secure OAuth 2 client secret.
  *
  * @remarks
  * Matches the backend implementation in `GenerateOAuth2ClientSecret()`:

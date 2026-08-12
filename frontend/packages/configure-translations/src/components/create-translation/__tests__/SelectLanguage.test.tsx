@@ -2,17 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import {render, screen} from '@thunderid/test-utils';
-import {describe, expect, it, vi, beforeEach} from 'vitest';
+import {render, renderHook, screen} from '@thunderid/test-utils';
+import {useTranslation} from 'react-i18next';
+import {describe, expect, it, vi, beforeAll, beforeEach} from 'vitest';
 import SelectLanguage from '@/components/create-translation/SelectLanguage';
-
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({t: (key: string, opts?: Record<string, unknown>) => (opts ? `${key}` : key)}),
-  };
-});
 
 const mockLocales = [
   {code: 'fr-FR', displayName: 'French (France)', flag: '🇫🇷'},
@@ -34,6 +27,12 @@ const defaultProps = {
 };
 
 describe('SelectLanguage', () => {
+  let t: (key: string, options?: Record<string, unknown>) => string;
+
+  beforeAll(() => {
+    ({t} = renderHook(() => useTranslation('translations')).result.current);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -42,20 +41,22 @@ describe('SelectLanguage', () => {
     it('renders the step title and subtitle', () => {
       render(<SelectLanguage {...defaultProps} />);
 
-      expect(screen.getByText('language.create.language.title')).toBeInTheDocument();
-      expect(screen.getByText('language.create.language.subtitle')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.language.title'))).toBeInTheDocument();
+      expect(
+        screen.getByText(t('language.create.language.subtitle', {country: selectedCountry.name})),
+      ).toBeInTheDocument();
     });
 
     it('renders the language autocomplete label', () => {
       render(<SelectLanguage {...defaultProps} />);
 
-      expect(screen.getByText('language.create.language.label')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.language.label'))).toBeInTheDocument();
     });
 
     it('renders the helper tip', () => {
       render(<SelectLanguage {...defaultProps} />);
 
-      expect(screen.getByText('language.create.language.helperText')).toBeInTheDocument();
+      expect(screen.getByText(t('language.create.language.helperText'))).toBeInTheDocument();
     });
 
     it('renders the autocomplete combobox', () => {

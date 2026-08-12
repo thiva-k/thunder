@@ -28,9 +28,11 @@ import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
 import useGetUserType from '../api/useGetUserType';
 import useUpdateUserType from '../api/useUpdateUserType';
+import EditAdvancedSettings from '../components/edit-user-type/advanced-settings/EditAdvancedSettings';
 import EditGeneralSettings from '../components/edit-user-type/general-settings/EditGeneralSettings';
 import EditSchemaSettings from '../components/edit-user-type/schema-settings/EditSchemaSettings';
 import UserTypeDeleteDialog from '../components/edit-user-type/UserTypeDeleteDialog';
+import UserTypeConstraints from '../constants/user-type-constraints';
 import useUserTypeRoutes from '../hooks/useUserTypeRoutes';
 import type {PropertyDefinition, UserTypeDefinition, PropertyType, SchemaPropertyInput} from '../types/user-types';
 import getBreakingSchemaChanges from '../utils/getBreakingSchemaChanges';
@@ -237,6 +239,22 @@ export default function ViewUserTypePage(): JSX.Element {
     [updateUserTypeMutation],
   );
 
+  const commitName = useCallback(
+    (value: string, currentName: string): void => {
+      const trimmedName = value.trim();
+      // The API rejects names outside these bounds, so an out of range rename is discarded here.
+      if (
+        trimmedName === currentName ||
+        trimmedName.length < UserTypeConstraints.NAME_MIN_LENGTH ||
+        trimmedName.length > UserTypeConstraints.NAME_MAX_LENGTH
+      ) {
+        return;
+      }
+      handleFieldChange('name', trimmedName);
+    },
+    [handleFieldChange],
+  );
+
   const handlePropertiesChange = useCallback(
     (newProperties: SchemaPropertyInput[]): void => {
       updateUserTypeMutation.reset(); // a save error is stale once the form changes
@@ -401,18 +419,12 @@ export default function ViewUserTypePage(): JSX.Element {
                 value={tempName}
                 onChange={(e) => setTempName(e.target.value)}
                 onBlur={() => {
-                  const trimmedName = tempName.trim();
-                  if (trimmedName && trimmedName !== effectiveName) {
-                    handleFieldChange('name', trimmedName);
-                  }
+                  commitName(tempName, effectiveName);
                   setIsEditingName(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    const trimmedName = tempName.trim();
-                    if (trimmedName && trimmedName !== effectiveName) {
-                      handleFieldChange('name', trimmedName);
-                    }
+                    commitName(tempName, effectiveName);
                     setIsEditingName(false);
                   } else if (e.key === 'Escape') {
                     setTempName(effectiveName);
@@ -461,6 +473,12 @@ export default function ViewUserTypePage(): JSX.Element {
           aria-controls="usertype-tabpanel-1"
           sx={{textTransform: 'none'}}
         />
+        <Tab
+          label={t('userTypes:edit.tabs.advanced', 'Advanced')}
+          id="usertype-tab-2"
+          aria-controls="usertype-tabpanel-2"
+          sx={{textTransform: 'none'}}
+        />
       </Tabs>
 
       {/* Tab Panels */}
@@ -472,7 +490,6 @@ export default function ViewUserTypePage(): JSX.Element {
             editedAllowSelfRegistration={editedUserType.allowSelfRegistration}
             editedDisplayAttribute={editedUserType.displayAttribute}
             onFieldChange={handleFieldChange}
-            onDeleteClick={userType.isReadOnly ? undefined : () => setDeleteDialogOpen(true)}
             eligibleDisplayProperties={eligibleDisplayProperties}
           />
         </TabPanel>
@@ -484,6 +501,10 @@ export default function ViewUserTypePage(): JSX.Element {
             userTypeName={effectiveName}
             disabled={userType.isReadOnly}
           />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <EditAdvancedSettings onDeleteClick={userType.isReadOnly ? undefined : () => setDeleteDialogOpen(true)} />
         </TabPanel>
       </>
 

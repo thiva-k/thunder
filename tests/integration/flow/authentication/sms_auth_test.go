@@ -51,6 +51,9 @@ var (
 			{
 				"id":   "generate_otp",
 				"type": "TASK_EXECUTION",
+				"properties": map[string]interface{}{
+					"otpLength": 8,
+				},
 				"executor": map[string]interface{}{
 					"name": "OTPExecutor",
 					"mode": "generate",
@@ -492,6 +495,16 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithMobileNumber() {
 	ts.Require().True(common.HasInput(otpFlowStep.Data.Inputs, "otp"),
 		"OTP input should be required")
 
+	// The generate node is configured with an otpLength of 8, which the OTP step must report so
+	// the client can render a matching number of input boxes.
+	ts.Require().Equal("8", otpFlowStep.Data.AdditionalData["otpLength"],
+		"OTP step should report the configured OTP length")
+
+	// The generate node leaves otpUseNumericOnly at the numeric-only server default, so the OTP step
+	// must report that the client should restrict input to digits.
+	ts.Require().Equal("true", otpFlowStep.Data.AdditionalData["otpNumericOnly"],
+		"OTP step should report the OTP character set")
+
 	// Wait for SMS to be sent
 	time.Sleep(500 * time.Millisecond)
 
@@ -499,6 +512,7 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithMobileNumber() {
 	lastMessage := ts.mockServer.GetLastMessage()
 	ts.Require().NotNil(lastMessage, "Last message should not be nil")
 	ts.Require().NotEmpty(lastMessage.OTP, "OTP should be extracted from message")
+	ts.Require().Len(lastMessage.OTP, 8, "Generated OTP should match the configured length")
 
 	// Step 3: Complete authentication with OTP
 	otpInputs := map[string]string{

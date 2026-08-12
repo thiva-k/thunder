@@ -108,13 +108,13 @@ describe('TranslationsListPage', () => {
     it('renders the page title', () => {
       render(<TranslationsListPage />);
 
-      expect(screen.getByText('page.title')).toBeInTheDocument();
+      expect(screen.getByText(t('translations:page.title'))).toBeInTheDocument();
     });
 
     it('renders the page subtitle', () => {
       render(<TranslationsListPage />);
 
-      expect(screen.getByText('page.subtitle')).toBeInTheDocument();
+      expect(screen.getByText(t('translations:page.subtitle'))).toBeInTheDocument();
     });
 
     it('renders the Add Language button', () => {

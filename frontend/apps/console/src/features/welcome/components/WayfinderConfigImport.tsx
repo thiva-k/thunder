@@ -1,14 +1,13 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {useImportConfiguration, type ImportResponse} from '@thunderid/configure-import-export';
 import {useConfig} from '@thunderid/contexts';
 import {Box, Button, CircularProgress, Stack, Typography} from '@wso2/oxygen-ui';
 import {CheckCircle, Database, RefreshCw, XCircle} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import useImportConfiguration from '../../import-export/api/useImportConfiguration';
-import type {ImportResponse} from '../../import-export/models/import-configuration';
 import {useGetSampleBundle} from '../api/useGetSampleBundles';
 import getWayfinderConfiguredStorageKey from '../utils/getWayfinderConfiguredStorageKey';
 

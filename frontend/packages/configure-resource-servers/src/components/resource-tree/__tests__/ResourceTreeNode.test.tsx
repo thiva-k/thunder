@@ -171,6 +171,20 @@ describe('ResourceNode', () => {
       expect(screen.getByRole('button', {name: 'Copy permission string'})).toBeInTheDocument();
     });
   });
+
+  it('does not show the add or delete controls on hover when read-only', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ResourceNode {...defaultProps} readOnly />);
+
+    const nameEl = screen.getByText('Documents');
+    await user.hover(nameEl);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', {name: 'Copy permission string'})).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', {name: 'Add'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Delete'})).not.toBeInTheDocument();
+  });
 });
 
 describe('ActionNode', () => {
@@ -248,5 +262,18 @@ describe('ActionNode', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', {name: 'Copy permission string'})).toBeInTheDocument();
     });
+  });
+
+  it('does not show the delete control on hover when read-only', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ActionNode {...defaultProps} readOnly />);
+
+    const nameEl = screen.getByText('Read All');
+    await user.hover(nameEl);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', {name: 'Copy permission string'})).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', {name: 'Delete'})).not.toBeInTheDocument();
   });
 });

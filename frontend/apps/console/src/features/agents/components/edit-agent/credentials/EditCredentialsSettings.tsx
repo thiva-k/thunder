@@ -12,8 +12,6 @@ interface EditCredentialsSettingsProps {
   agent: Agent;
   editedAgent: Partial<Agent>;
   oauth2Config?: OAuthAgentConfig;
-  copiedField: string | null;
-  onCopyToClipboard: (text: string, fieldName: string) => Promise<void>;
   onFieldChange: (field: keyof Agent, value: unknown) => void;
 }
 
@@ -21,8 +19,6 @@ export default function EditCredentialsSettings({
   agent,
   editedAgent,
   oauth2Config = undefined,
-  copiedField,
-  onCopyToClipboard,
   onFieldChange,
 }: EditCredentialsSettingsProps): JSX.Element {
   const handleOAuth2ConfigChange = (updates: Partial<OAuthAgentConfig>) => {
@@ -40,7 +36,7 @@ export default function EditCredentialsSettings({
 
   return (
     <Stack spacing={3}>
-      <ClientIdSection oauth2Config={oauth2Config} copiedField={copiedField} onCopyToClipboard={onCopyToClipboard} />
+      <ClientIdSection oauth2Config={oauth2Config} />
       <ClientSecretSection agentId={agent.id} oauth2Config={oauth2Config} disabled={agent.isReadOnly} />
       <CertificateSection
         certificate={oauth2Config?.certificate}

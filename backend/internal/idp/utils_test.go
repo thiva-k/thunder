@@ -67,6 +67,22 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_OAuth_WithOptional() {
 	s.Len(result, 7)
 }
 
+func (s *IDPUtilsTestSuite) TestValidateIDPProperties_OAuth_WithoutUserInfoEndpoint() {
+	prop1, _ := cmodels.NewProperty(PropClientID, "test-client", false)
+	prop2, _ := cmodels.NewProperty(PropClientSecret, "test-secret", false)
+	prop3, _ := cmodels.NewProperty(PropRedirectURI, "http://localhost/callback", false)
+	prop4, _ := cmodels.NewProperty(PropAuthorizationEndpoint, "http://idp/auth", false)
+	prop5, _ := cmodels.NewProperty(PropTokenEndpoint, "http://idp/token", false)
+
+	properties := []cmodels.Property{*prop1, *prop2, *prop3, *prop4, *prop5}
+
+	result, err := validateIDPProperties(context.Background(), providers.IDPTypeOAuth, properties, s.logger)
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Len(result, 5)
+}
+
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_OAuth_MissingRequired() {
 	prop1, _ := cmodels.NewProperty(PropClientID, "test-client", false)
 	prop2, _ := cmodels.NewProperty(PropClientSecret, "test-secret", false)
@@ -729,8 +745,8 @@ func (s *IDPUtilsTestSuite) TestEnsureOpenIDScope_WithEmptyStringInScopes() {
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeOnly_OIDC_Succeeds() {
 	// OIDC IDP with only the token-exchange required props and token_exchange_enabled=true should succeed.
 	// client_id is no longer required for token exchange; issuer and jwks_endpoint are sufficient.
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop3, _ := cmodels.NewProperty(PropTokenExchangeEnabled, "true", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3}
@@ -759,7 +775,7 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeAudience_OIDC
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeEnabled_MissingIssuer_Fails() {
 	// OIDC IDP with token_exchange_enabled=true but missing issuer should fail.
 	prop1, _ := cmodels.NewProperty(PropClientID, "your_client_id", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop3, _ := cmodels.NewProperty(PropTokenExchangeEnabled, "true", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3}
@@ -776,7 +792,7 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeEnabled_Missi
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeEnabled_MissingJWKS_Fails() {
 	// OIDC IDP with token_exchange_enabled=true but missing jwks_endpoint should fail.
 	prop1, _ := cmodels.NewProperty(PropClientID, "your_client_id", false)
-	prop2, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
 	prop3, _ := cmodels.NewProperty(PropTokenExchangeEnabled, "true", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3}
@@ -793,8 +809,8 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeEnabled_Missi
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_OIDCWithoutTokenExchange_StillRequiresRedirectProps() {
 	// OIDC IDP without token_exchange_enabled must still require all 5 redirect-flow props.
 	prop1, _ := cmodels.NewProperty(PropClientID, "your_client_id", false)
-	prop2, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop3, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop2, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop3, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3}
 
@@ -810,9 +826,9 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_OIDCWithoutTokenExchange_M
 	// OIDC IDP without token_exchange_enabled must fail when client_secret is missing.
 	prop1, _ := cmodels.NewProperty(PropClientID, "your_client_id", false)
 	prop2, _ := cmodels.NewProperty(PropRedirectURI, "https://thunder.example.com/callback", false)
-	prop3, _ := cmodels.NewProperty(PropAuthorizationEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/authorize",
+	prop3, _ := cmodels.NewProperty(PropAuthorizationEndpoint, "https://idp.example.com/oauth2/authorize",
 		false)
-	prop4, _ := cmodels.NewProperty(PropTokenEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
+	prop4, _ := cmodels.NewProperty(PropTokenEndpoint, "https://idp.example.com/oauth2/token", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3, *prop4}
 
@@ -828,8 +844,8 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_OIDCWithoutTokenExchange_M
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabledTrue_OIDC_Succeeds() {
 	// OIDC IDP with id_jag_enabled=true and no client credentials should succeed;
 	// issuer and jwks_endpoint alone are sufficient for trust-only connections.
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop3, _ := cmodels.NewProperty(PropIDJagEnabled, "true", false)
 	prop4, _ := cmodels.NewProperty(PropTokenExchangeEnabled, "false", false)
 
@@ -844,8 +860,8 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabledTrue_OIDC_Succ
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabledFalse_OIDC_Succeeds() {
 	// OIDC IDP with id_jag_enabled=false (still present) should succeed without client credentials,
 	// since the mere presence of id_jag_enabled identifies a trust-only connection.
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop3, _ := cmodels.NewProperty(PropIDJagEnabled, "false", false)
 	prop4, _ := cmodels.NewProperty(PropTokenExchangeEnabled, "false", false)
 
@@ -859,7 +875,7 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabledFalse_OIDC_Suc
 
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabled_MissingIssuer_Fails() {
 	// OIDC IDP with id_jag_enabled present but missing issuer should fail.
-	prop1, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop2, _ := cmodels.NewProperty(PropIDJagEnabled, "true", false)
 
 	properties := []cmodels.Property{*prop1, *prop2}
@@ -875,7 +891,7 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabled_MissingIssuer
 
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabled_MissingJWKS_Fails() {
 	// OIDC IDP with id_jag_enabled present but missing jwks_endpoint should fail.
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
 	prop2, _ := cmodels.NewProperty(PropIDJagEnabled, "true", false)
 
 	properties := []cmodels.Property{*prop1, *prop2}
@@ -891,8 +907,8 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabled_MissingJWKS_F
 
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabled_NonBooleanValue_Fails() {
 	// OIDC IDP with id_jag_enabled set to a non-boolean value should fail validation.
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop3, _ := cmodels.NewProperty(PropIDJagEnabled, "x", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3}
@@ -907,8 +923,8 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_IDJagEnabled_NonBooleanVal
 
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeEnabled_NonBooleanValue_Fails() {
 	// OIDC IDP with token_exchange_enabled set to a non-boolean value should fail validation.
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 	prop3, _ := cmodels.NewProperty(PropTokenExchangeEnabled, "yes", false)
 
 	properties := []cmodels.Property{*prop1, *prop2, *prop3}
@@ -924,8 +940,8 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_TokenExchangeEnabled_NonBo
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_PlainOIDCWithoutIDJagOrTokenExchange_StillFails() {
 	// Plain OIDC IDP without id_jag_enabled or token_exchange_enabled and without client
 	// credentials must still fail (regression guard for the full required set).
-	prop1, _ := cmodels.NewProperty(PropIssuer, "https://api.asgardeo.io/t/myorg/oauth2/token", false)
-	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://api.asgardeo.io/t/myorg/oauth2/jwks", false)
+	prop1, _ := cmodels.NewProperty(PropIssuer, "https://idp.example.com/oauth2/token", false)
+	prop2, _ := cmodels.NewProperty(PropJwksEndpoint, "https://idp.example.com/oauth2/jwks", false)
 
 	properties := []cmodels.Property{*prop1, *prop2}
 

@@ -18,6 +18,7 @@ import LissiIcon from '../LissiIcon';
 import NextjsIcon from '../NextjsIcon';
 import NodeIcon from '../NodeIcon';
 import NuxtIcon from '../NuxtIcon';
+import OAuth2Logo from '../OAuth2Logo';
 import PythonLogo from '../PythonLogo';
 import ReactIcon from '../ReactIcon';
 import StackblitzIcon from '../StackblitzIcon';
@@ -55,6 +56,7 @@ const SQUARE_ICONS: SquareIconCase[] = [
   {Component: LangChainLogo, defaultSize: 64, name: 'LangChainLogo'},
   {Component: NextjsIcon, defaultSize: 20, name: 'NextjsIcon'},
   {Component: NuxtIcon, defaultSize: 20, name: 'NuxtIcon'},
+  {Component: OAuth2Logo, defaultSize: 36, name: 'OAuth2Logo'},
   {Component: ReactIcon, defaultSize: 20, name: 'ReactIcon'},
 ];
 

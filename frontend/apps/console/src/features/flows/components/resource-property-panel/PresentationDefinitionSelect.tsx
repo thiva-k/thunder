@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {useGetVerifiablePresentations} from '@thunderid/configure-verifiable-presentations';
+import {useGetVerifiablePresentations} from '@thunderid/configure-verifiable-credentials';
 import {FormControl, FormLabel, MenuItem, TextField} from '@wso2/oxygen-ui';
 import type {ChangeEvent, ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';

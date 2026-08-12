@@ -10,7 +10,7 @@
  * @public
  */
 export const IdentityProviderTypes = {
-  /** Generic OAuth 2.0 provider */
+  /** Generic OAuth 2 provider */
   OAUTH: 'OAUTH',
   /** OpenID Connect provider */
   OIDC: 'OIDC',

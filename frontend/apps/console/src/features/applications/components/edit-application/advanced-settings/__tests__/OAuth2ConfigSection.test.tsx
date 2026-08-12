@@ -652,4 +652,229 @@ describe('OAuth2ConfigSection', () => {
       );
     });
   });
+
+  describe('Redirect URIs', () => {
+    const baseConfig: OAuth2Config = {
+      grantTypes: ['authorization_code'],
+      responseTypes: ['code'],
+      pkceRequired: false,
+      publicClient: false,
+    };
+
+    it('should display existing redirect URIs', () => {
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{
+            ...baseConfig,
+            redirectUris: ['https://example.com/callback1', 'https://example.com/callback2'],
+          }}
+          onOAuth2ConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByDisplayValue('https://example.com/callback1')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://example.com/callback2')).toBeInTheDocument();
+    });
+
+    it('should show one empty row by default when there are no redirect URIs', () => {
+      render(<OAuth2ConfigSection oauth2Config={baseConfig} onOAuth2ConfigChange={vi.fn()} />);
+
+      expect(screen.getByPlaceholderText('https://example.com/callback')).toBeInTheDocument();
+    });
+
+    it('should append a second row (not replace the placeholder) when Add is clicked on an empty list', async () => {
+      const user = userEvent.setup();
+      render(<OAuth2ConfigSection oauth2Config={baseConfig} onOAuth2ConfigChange={vi.fn()} />);
+
+      const addButtons = screen.getAllByRole('button', {name: /applications:edit.general.redirectUris.addUri/i});
+      await user.click(addButtons[0]);
+
+      expect(screen.getAllByPlaceholderText('https://example.com/callback')).toHaveLength(2);
+    });
+
+    it('should remove a redirect URI when its delete button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{
+            ...baseConfig,
+            redirectUris: ['https://example.com/callback1', 'https://example.com/callback2'],
+          }}
+          onOAuth2ConfigChange={vi.fn()}
+        />,
+      );
+
+      const deleteButtons = screen.getAllByRole('button', {name: /delete/i});
+      await user.click(deleteButtons[0]);
+
+      expect(screen.queryByDisplayValue('https://example.com/callback1')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://example.com/callback2')).toBeInTheDocument();
+    });
+
+    it('should commit a valid redirect URI on blur', async () => {
+      const user = userEvent.setup();
+      const onOAuth2ConfigChange = vi.fn();
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['https://example.com/callback']}}
+          onOAuth2ConfigChange={onOAuth2ConfigChange}
+        />,
+      );
+
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+      await user.click(uriInput);
+      await user.tab();
+
+      expect(onOAuth2ConfigChange).toHaveBeenCalledWith({redirectUris: ['https://example.com/callback']});
+    });
+
+    it('should not commit and should show an error when an invalid redirect URI is blurred', async () => {
+      const user = userEvent.setup();
+      const onOAuth2ConfigChange = vi.fn();
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['https://example.com/callback']}}
+          onOAuth2ConfigChange={onOAuth2ConfigChange}
+        />,
+      );
+
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+      await user.clear(uriInput);
+      await user.type(uriInput, 'not-a-valid-url');
+      await user.tab();
+
+      expect(onOAuth2ConfigChange).not.toHaveBeenCalledWith(
+        expect.objectContaining({redirectUris: expect.anything() as unknown}),
+      );
+    });
+
+    it('should not render redirect URI fields when showRedirectUris is false', () => {
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['https://example.com/callback']}}
+          onOAuth2ConfigChange={vi.fn()}
+          showRedirectUris={false}
+        />,
+      );
+
+      expect(screen.queryByDisplayValue('https://example.com/callback')).not.toBeInTheDocument();
+    });
+
+    it('should disable redirect URI inputs and buttons when disabled', () => {
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['https://example.com/callback']}}
+          onOAuth2ConfigChange={vi.fn()}
+          disabled
+        />,
+      );
+
+      expect(screen.getByDisplayValue('https://example.com/callback')).toBeDisabled();
+      expect(screen.getByRole('button', {name: /applications:edit.general.redirectUris.addUri/i})).toBeDisabled();
+    });
+
+    it('should report validation errors via onValidationChange', async () => {
+      const user = userEvent.setup();
+      const onValidationChange = vi.fn();
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['https://example.com/callback']}}
+          onOAuth2ConfigChange={vi.fn()}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+      await user.clear(uriInput);
+      await user.type(uriInput, 'not-a-valid-url');
+      await user.tab();
+
+      expect(onValidationChange).toHaveBeenLastCalledWith(true);
+    });
+
+    it('should not report validation errors once showRedirectUris is false', () => {
+      const onValidationChange = vi.fn();
+      const {rerender} = render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['not-a-valid-url']}}
+          onOAuth2ConfigChange={vi.fn()}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      rerender(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['not-a-valid-url']}}
+          onOAuth2ConfigChange={vi.fn()}
+          onValidationChange={onValidationChange}
+          showRedirectUris={false}
+        />,
+      );
+
+      expect(onValidationChange).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  describe('Post-Logout Redirect URIs', () => {
+    const baseConfig: OAuth2Config = {
+      grantTypes: ['authorization_code'],
+      responseTypes: ['code'],
+      pkceRequired: false,
+      publicClient: false,
+    };
+
+    it('should render existing post-logout redirect URIs', () => {
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, postLogoutRedirectUris: ['https://example.com/after-signout']}}
+          onOAuth2ConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByDisplayValue('https://example.com/after-signout')).toBeInTheDocument();
+    });
+
+    it('should show one empty row by default when there are no post-logout redirect URIs', () => {
+      render(<OAuth2ConfigSection oauth2Config={baseConfig} onOAuth2ConfigChange={vi.fn()} />);
+
+      expect(screen.getByPlaceholderText('https://example.com/logged-out')).toBeInTheDocument();
+    });
+
+    it('should commit postLogoutRedirectUris independently of redirectUris on blur', async () => {
+      const user = userEvent.setup();
+      const onOAuth2ConfigChange = vi.fn();
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={{...baseConfig, redirectUris: ['https://example.com/callback']}}
+          onOAuth2ConfigChange={onOAuth2ConfigChange}
+        />,
+      );
+
+      const input = screen.getByPlaceholderText('https://example.com/logged-out');
+      await user.type(input, 'https://example.com/after-signout');
+      await user.tab();
+
+      expect(onOAuth2ConfigChange).toHaveBeenCalledWith({
+        postLogoutRedirectUris: ['https://example.com/after-signout'],
+      });
+    });
+
+    it('does not error on an empty post-logout URI (it is optional)', async () => {
+      const user = userEvent.setup();
+      const onValidationChange = vi.fn();
+      render(
+        <OAuth2ConfigSection
+          oauth2Config={baseConfig}
+          onOAuth2ConfigChange={vi.fn()}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      const input = screen.getByPlaceholderText('https://example.com/logged-out');
+      await user.click(input);
+      await user.tab();
+
+      expect(onValidationChange).toHaveBeenLastCalledWith(false);
+    });
+  });
 });

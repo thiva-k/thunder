@@ -39,7 +39,6 @@ describe('fieldsForMode', () => {
       'issuer',
       'userInfoEndpoint',
       'jwksEndpoint',
-      'logoutEndpoint',
       'redirectUri',
       'scopes',
       'prompt',
@@ -48,7 +47,7 @@ describe('fieldsForMode', () => {
     ]);
   });
 
-  it('shows only the required fields for OAuth 2.0 on create, all fields on edit', () => {
+  it('shows only the required fields for OAuth 2 on create, all fields on edit', () => {
     expect(fieldNames(ConnectionTypes.OAUTH, 'create')).toEqual([
       'name',
       'clientId',
@@ -64,7 +63,6 @@ describe('fieldsForMode', () => {
       'authorizationEndpoint',
       'tokenEndpoint',
       'userInfoEndpoint',
-      'logoutEndpoint',
       'redirectUri',
       'scopes',
       'prompt',

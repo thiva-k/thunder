@@ -102,7 +102,7 @@ vi.mock('@/contexts/TranslationCreate/useTranslationCreate', () => ({
 }));
 
 describe('TranslationCreatePage', () => {
-  let t: (key: string) => string;
+  let t: (key: string, options?: Record<string, unknown>) => string;
 
   beforeAll(() => {
     ({t} = renderHook(() => useTranslation()).result.current);
@@ -123,7 +123,7 @@ describe('TranslationCreatePage', () => {
     it('renders the current step breadcrumb label', () => {
       render(<TranslationCreatePage />);
 
-      expect(screen.getByText('language.create.steps.country')).toBeInTheDocument();
+      expect(screen.getByText(t('translations:language.create.steps.country'))).toBeInTheDocument();
     });
 
     it('renders the SelectCountry step on mount', () => {
@@ -152,7 +152,9 @@ describe('TranslationCreatePage', () => {
 
       render(<TranslationCreatePage />);
 
-      expect(screen.getByText('Create')).toBeInTheDocument();
+      expect(
+        screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})),
+      ).toBeInTheDocument();
     });
 
     it('renders the SelectLanguage step when currentStep is LANGUAGE', () => {
@@ -292,7 +294,9 @@ describe('TranslationCreatePage', () => {
 
       mockReviewLocaleCode.mock.calls[0][0].onReadyChange(true);
 
-      expect(screen.getByText('Create').closest('button')).not.toBeDisabled();
+      expect(
+        screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})).closest('button'),
+      ).not.toBeDisabled();
     });
   });
 
@@ -467,7 +471,7 @@ describe('TranslationCreatePage', () => {
       const user = userEvent.setup();
       render(<TranslationCreatePage />);
 
-      await user.click(screen.getByText('Create'));
+      await user.click(screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})));
 
       expect(setIsCreating).toHaveBeenCalledWith(true);
       expect(mockRefetch).toHaveBeenCalled();
@@ -503,7 +507,7 @@ describe('TranslationCreatePage', () => {
       const user = userEvent.setup();
       render(<TranslationCreatePage />);
 
-      await user.click(screen.getByText('Create'));
+      await user.click(screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})));
 
       await vi.waitFor(() => {
         expect(setError).toHaveBeenCalledWith('Failed to add language. Please try again.');
@@ -536,7 +540,7 @@ describe('TranslationCreatePage', () => {
       const user = userEvent.setup();
       render(<TranslationCreatePage />);
 
-      await user.click(screen.getByText('Create'));
+      await user.click(screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})));
 
       await vi.waitFor(() => {
         expect(setError).toHaveBeenCalledWith('Failed to add language. Please try again.');
@@ -563,7 +567,7 @@ describe('TranslationCreatePage', () => {
       const user = userEvent.setup();
       render(<TranslationCreatePage />);
 
-      await user.click(screen.getByText('Create'));
+      await user.click(screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})));
 
       await vi.waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/translations/fr-FR');
@@ -586,7 +590,7 @@ describe('TranslationCreatePage', () => {
       const user = userEvent.setup();
       render(<TranslationCreatePage />);
 
-      await user.click(screen.getByText('Create'));
+      await user.click(screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})));
 
       await vi.waitFor(() => {
         expect(mockRefetch).toHaveBeenCalled();
@@ -606,7 +610,7 @@ describe('TranslationCreatePage', () => {
       const user = userEvent.setup();
       render(<TranslationCreatePage />);
 
-      await user.click(screen.getByText('Create'));
+      await user.click(screen.getByText(t('translations:language.create.createButton', {defaultValue: 'Create'})));
 
       expect(mockRefetch).not.toHaveBeenCalled();
     });
@@ -626,7 +630,7 @@ describe('TranslationCreatePage', () => {
       render(<TranslationCreatePage />);
 
       // Click on the first breadcrumb (COUNTRY)
-      await user.click(screen.getByText('language.create.steps.country'));
+      await user.click(screen.getByText(t('translations:language.create.steps.country')));
 
       expect(setCurrentStep).toHaveBeenCalledWith(TranslationCreateFlowStep.COUNTRY);
     });

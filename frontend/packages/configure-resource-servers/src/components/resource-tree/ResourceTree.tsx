@@ -66,6 +66,7 @@ function GenericResourceTree({resourceServer, onRefresh}: ResourceTreeProps): JS
 
   const isLoading = loadingResources || loadingActions;
   const isEmpty = resources.length === 0 && serverActions.length === 0;
+  const readOnly = Boolean(resourceServer.isReadOnly);
 
   const effectiveSelectedNode = useMemo<SelectedNode | null>(() => {
     if (selectedNode) return selectedNode;
@@ -106,37 +107,41 @@ function GenericResourceTree({resourceServer, onRefresh}: ResourceTreeProps): JS
           >
             {t('resourceServers:tree.title', 'Resource Hierarchy')}
           </Typography>
-          <IconButton
-            size="small"
-            onClick={(e) => setAddMenuAnchor(e.currentTarget)}
-            aria-label={t('resourceServers:tree.add', 'Add')}
-          >
-            <Plus size={16} />
-          </IconButton>
-          <Menu anchorEl={addMenuAnchor} open={Boolean(addMenuAnchor)} onClose={() => setAddMenuAnchor(null)}>
-            <MenuItem
-              onClick={() => {
-                openAdd('resource');
-                setAddMenuAnchor(null);
-              }}
-            >
-              <ListItemIcon>
-                <Layers size={16} />
-              </ListItemIcon>
-              <ListItemText>{t('resourceServers:tree.addResource', 'Add resource')}</ListItemText>
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                openAdd('server-action');
-                setAddMenuAnchor(null);
-              }}
-            >
-              <ListItemIcon>
-                <Zap size={16} />
-              </ListItemIcon>
-              <ListItemText>{t('resourceServers:tree.addAction', 'Add action')}</ListItemText>
-            </MenuItem>
-          </Menu>
+          {!readOnly && (
+            <>
+              <IconButton
+                size="small"
+                onClick={(e) => setAddMenuAnchor(e.currentTarget)}
+                aria-label={t('resourceServers:tree.add', 'Add')}
+              >
+                <Plus size={16} />
+              </IconButton>
+              <Menu anchorEl={addMenuAnchor} open={Boolean(addMenuAnchor)} onClose={() => setAddMenuAnchor(null)}>
+                <MenuItem
+                  onClick={() => {
+                    openAdd('resource');
+                    setAddMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Layers size={16} />
+                  </ListItemIcon>
+                  <ListItemText>{t('resourceServers:tree.addResource', 'Add resource')}</ListItemText>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    openAdd('server-action');
+                    setAddMenuAnchor(null);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Zap size={16} />
+                  </ListItemIcon>
+                  <ListItemText>{t('resourceServers:tree.addAction', 'Add action')}</ListItemText>
+                </MenuItem>
+              </Menu>
+            </>
+          )}
         </Box>
 
         <Box sx={{flex: 1, overflowY: 'auto', p: 0.5, height: '100%'}}>
@@ -155,6 +160,7 @@ function GenericResourceTree({resourceServer, onRefresh}: ResourceTreeProps): JS
                   depth={0}
                   selectedNodeId={effectiveSelectedNode?.id ?? null}
                   onSelect={setSelectedNode}
+                  readOnly={readOnly}
                 />
               ))}
 
@@ -171,6 +177,7 @@ function GenericResourceTree({resourceServer, onRefresh}: ResourceTreeProps): JS
                   onAddChild={(mode, parentResourceId, parentPermission) =>
                     openAdd(mode, parentResourceId, parentPermission)
                   }
+                  readOnly={readOnly}
                 />
               ))}
 
@@ -186,7 +193,9 @@ function GenericResourceTree({resourceServer, onRefresh}: ResourceTreeProps): JS
                   }}
                 >
                   <Typography variant="body2" color="text.disabled">
-                    {t('resourceServers:tree.empty', 'No resources yet — add a resource or action to get started.')}
+                    {readOnly
+                      ? t('resourceServers:tree.emptyReadOnly', 'No resources are defined for this resource server.')
+                      : t('resourceServers:tree.empty', 'No resources yet. Add a resource or action to get started.')}
                   </Typography>
                 </Box>
               )}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
-import {Box, Button, FormControl, IconButton, Stack, TextField, Tooltip} from '@wso2/oxygen-ui';
+import {Box, Button, FormControl, FormLabel, IconButton, Stack, TextField, Tooltip, Typography} from '@wso2/oxygen-ui';
 import {Plus, Trash} from '@wso2/oxygen-ui-icons-react';
 import {useEffect, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -47,6 +47,11 @@ export default function PasskeysSection({
   const origins = allowedOrigins ?? [];
   const isEditable = Boolean(onPasskeysChange) && !disabled;
 
+  // An empty list renders as a bare "Add Origin" button with no field to type into, which reads as
+  // broken rather than "nothing added yet". Show one empty row by default instead; typing into it
+  // (or removing it) operates on the real (currently empty) `origins` array via the index above.
+  const displayOrigins = origins.length > 0 ? origins : [''];
+
   const hasInvalidOrigins = origins.length > 0 && origins.some((o) => !o.trim() || !isValidURL(o));
 
   useEffect(() => {
@@ -88,8 +93,11 @@ export default function PasskeysSection({
     }
   };
 
+  // Appends relative to what's on screen (displayOrigins), not the possibly-empty backing
+  // `origins` array — otherwise the first click while the list is empty turns [] into [''],
+  // which renders identically to the placeholder row already shown and looks like nothing happened.
   const handleAdd = (): void => {
-    commit([...origins, '']);
+    commit([...displayOrigins, '']);
   };
 
   const handleRemove = (index: number): void => {
@@ -108,15 +116,19 @@ export default function PasskeysSection({
 
   return (
     <SettingsCard
-      title={t('applications:edit.advanced.labels.passkeys', 'Passkey Allowed Origins')}
-      description={t(
-        'applications:edit.advanced.passkeys.intro',
-        'Allowed origins for passkey operations initiated through this application.',
-      )}
+      title={t('applications:edit.advanced.labels.passkeys', 'Passkeys')}
+      description={t('applications:edit.advanced.passkeys.intro', 'Passkey settings for this application.')}
     >
       <FormControl fullWidth>
-        <Stack spacing={2}>
-          {origins.map((origin, index) => (
+        <FormLabel>{t('applications:edit.advanced.passkeys.allowedOrigins.label', 'Allowed Origins')}</FormLabel>
+        <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
+          {t(
+            'applications:edit.advanced.passkeys.allowedOrigins.hint',
+            'Allowed origins for passkey operations initiated through this application.',
+          )}
+        </Typography>
+        <Stack spacing={2} sx={{mt: 1}}>
+          {displayOrigins.map((origin, index) => (
             // eslint-disable-next-line react/no-array-index-key
             <Stack key={index} direction="row" spacing={1} alignItems="flex-start">
               <FormControl fullWidth sx={{flex: 1}}>
@@ -146,7 +158,7 @@ export default function PasskeysSection({
           ))}
           {isEditable && (
             <Box>
-              <Button variant="outlined" startIcon={<Plus />} onClick={handleAdd} size="small">
+              <Button variant="text" color="primary" startIcon={<Plus />} onClick={handleAdd} size="small">
                 {t('applications:edit.advanced.passkeys.allowedOrigins.addOrigin', 'Add Origin')}
               </Button>
             </Box>

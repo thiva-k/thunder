@@ -191,6 +191,21 @@ describe('DashboardLayout', () => {
     });
   });
 
+  it('renders the user profile picture in the account menu when available', () => {
+    mockUserData.mockReturnValue({
+      name: 'Test User',
+      email: 'test@example.com',
+      picture: 'https://example.com/avatar.png',
+    });
+
+    render(<DashboardLayout />);
+
+    const avatarImages = screen
+      .getAllByRole<HTMLImageElement>('img')
+      .filter((img) => img.src === 'https://example.com/avatar.png');
+    expect(avatarImages.length).toBeGreaterThan(0);
+  });
+
   it('renders with fallback values when user data is missing', () => {
     mockUserData.mockReturnValue(null);
 

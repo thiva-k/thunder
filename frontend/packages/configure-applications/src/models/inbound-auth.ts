@@ -28,7 +28,7 @@ export type InboundAuthType = 'oauth2';
  * ```
  */
 export const InboundAuthTypes = {
-  /** OAuth 2.0 / OpenID Connect authentication */
+  /** OAuth 2 / OpenID Connect authentication */
   OAUTH2: 'oauth2',
 } as const;
 

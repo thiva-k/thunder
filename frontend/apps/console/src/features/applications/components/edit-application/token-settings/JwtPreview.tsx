@@ -6,7 +6,7 @@ import {JsonLogo, JwtLogo} from '@thunderid/components';
 import {getCspNonce} from '@thunderid/design';
 import {Stack, Typography, Box} from '@wso2/oxygen-ui';
 import type {editor as MonacoEditor, IDisposable, IRange} from 'monaco-editor';
-import {useRef, useEffect, useState} from 'react';
+import {useRef, useEffect, useState, useCallback} from 'react';
 
 /**
  * Descriptions for standard JWT claims, shown as hover tooltips in the preview.
@@ -15,12 +15,12 @@ const JWT_CLAIM_DESCRIPTIONS: Record<string, string> = {
   aud: 'Audience — who or what the token is intended for',
   client_id: 'Client ID that requested this token',
   exp: 'Expiration time — Unix timestamp when the token expires',
-  grant_type: 'OAuth 2.0 grant type used to obtain this token',
+  grant_type: 'OAuth 2 grant type used to obtain this token',
   iat: 'Issued at — Unix timestamp when the token was created',
   iss: 'Issuer — entity that created and signed the token',
   jti: 'JWT ID — unique identifier for this specific token',
   nbf: 'Not before — token not valid before this Unix timestamp',
-  scope: 'OAuth 2.0 scopes granted to the token',
+  scope: 'OAuth 2 scopes granted to the token',
   sub: 'Subject — the principal (user) this token represents',
 };
 
@@ -76,7 +76,7 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
   const sizeListenerRef = useRef<IDisposable | null>(null);
   const [measuredPayloadHeight, setMeasuredPayloadHeight] = useState<number | null>(null);
 
-  const applyDecorations = () => {
+  const applyDecorations = useCallback(() => {
     if (format === 'json') return;
     const editorInstance = editorRef.current;
     const monacoInstance = monacoRef.current;
@@ -112,7 +112,7 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
     });
 
     decorationIdsRef.current = editorInstance.deltaDecorations(decorationIdsRef.current, newDecorations);
-  };
+  }, [format]);
 
   // Keep defaultClaimsRef in sync so the content-change listener always sees latest claims
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function JwtPreview({payload, defaultClaims = [], header = undefi
     if (editorRef.current && monacoRef.current) {
       applyDecorations();
     }
-  }, [defaultClaims]);
+  }, [defaultClaims, applyDecorations]);
 
   const handleMount: OnMount = (editorInstance, monacoInstance) => {
     editorRef.current = editorInstance;

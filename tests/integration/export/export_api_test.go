@@ -737,7 +737,6 @@ func idpToConnectionBody(idp IDP) map[string]interface{} {
 		"token_endpoint":         "tokenEndpoint",
 		"userinfo_endpoint":      "userInfoEndpoint",
 		"jwks_endpoint":          "jwksEndpoint",
-		"logout_endpoint":        "logoutEndpoint",
 		"issuer":                 "issuer",
 	}
 	body := map[string]interface{}{"name": idp.Name, "description": idp.Description}

@@ -31,42 +31,6 @@ vi.mock('../McpAccessSection', () => ({
   },
 }));
 
-vi.mock('../../general-settings/DangerZoneSection', () => ({
-  default: ({
-    onRegenerateClick,
-    onDeleteClick,
-    showRegenerateSecret,
-    showRegenerateFlowSecret,
-    onRegenerateFlowSecretClick,
-  }: {
-    onRegenerateClick?: () => void;
-    onDeleteClick: () => void;
-    showRegenerateSecret?: boolean;
-    showRegenerateFlowSecret?: boolean;
-    onRegenerateFlowSecretClick?: () => void;
-  }) => (
-    <div data-testid="danger-zone-section">
-      {showRegenerateSecret && (
-        <button type="button" onClick={onRegenerateClick} data-testid="danger-zone-regenerate-button">
-          Regenerate Client Secret
-        </button>
-      )}
-      {showRegenerateFlowSecret && (
-        <button
-          type="button"
-          onClick={onRegenerateFlowSecretClick}
-          data-testid="danger-zone-regenerate-flow-secret-button"
-        >
-          Regenerate Flow Secret
-        </button>
-      )}
-      <button type="button" onClick={onDeleteClick} data-testid="delete-button">
-        Delete Application
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock('../../../RegenerateSecretDialog', () => ({
   default: ({
     open,
@@ -87,40 +51,11 @@ vi.mock('../../../RegenerateSecretDialog', () => ({
     ) : null,
 }));
 
-vi.mock('../../../RegenerateFlowSecretDialog', () => ({
-  default: ({
-    open,
-    applicationId,
-    onSuccess,
-  }: {
-    open: boolean;
-    applicationId: string | null;
-    onClose: () => void;
-    onSuccess?: (flowSecret: string) => void;
-  }) =>
-    open ? (
-      <div data-testid="regenerate-flow-secret-dialog" data-application-id={applicationId}>
-        <button type="button" onClick={() => onSuccess?.('new-test-flow-secret')} data-testid="flow-dialog-success">
-          Trigger Success
-        </button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('../../../ClientSecretSuccessDialog', () => ({
   default: ({open, clientSecret}: {open: boolean; clientSecret: string}) =>
     open ? (
       <div data-testid="secret-dialog" data-client-secret={clientSecret}>
         Secret dialog
-      </div>
-    ) : null,
-}));
-
-vi.mock('../../../ApplicationDeleteDialog', () => ({
-  default: ({open, applicationId}: {open: boolean; applicationId: string}) =>
-    open ? (
-      <div data-testid="delete-dialog" data-application-id={applicationId}>
-        Delete dialog
       </div>
     ) : null,
 }));
@@ -330,113 +265,6 @@ describe('McpConnectTab', () => {
       await user.click(screen.getByTestId('mcp-access-section-report-invalid'));
 
       expect(mockOnValidationChange).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe('Danger zone', () => {
-    it('does not show a regenerate secret entry in the danger zone', () => {
-      render(
-        <McpConnectTab
-          application={buildApplication()}
-          oauth2Config={m2mOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly={false}
-        />,
-      );
-
-      expect(screen.getByTestId('danger-zone-section')).toBeInTheDocument();
-      expect(screen.queryByTestId('danger-zone-regenerate-button')).not.toBeInTheDocument();
-    });
-
-    it('does not show regenerate Flow Secret for a user-delegated (authorization_code) client', () => {
-      render(
-        <McpConnectTab
-          application={buildApplication()}
-          oauth2Config={userDelegatedOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly={false}
-        />,
-      );
-
-      expect(screen.queryByTestId('danger-zone-regenerate-flow-secret-button')).not.toBeInTheDocument();
-    });
-
-    it('does not show regenerate Flow Secret for a machine-to-machine (client_credentials only) client', () => {
-      render(
-        <McpConnectTab
-          application={buildApplication()}
-          oauth2Config={m2mOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly={false}
-        />,
-      );
-
-      expect(screen.queryByTestId('danger-zone-regenerate-flow-secret-button')).not.toBeInTheDocument();
-    });
-
-    it('does not show regenerate Flow Secret for an explicit mcp type with a client_credentials-only config', () => {
-      render(
-        <McpConnectTab
-          application={buildApplication({type: 'mcp'})}
-          oauth2Config={m2mOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly={false}
-        />,
-      );
-
-      expect(screen.queryByTestId('danger-zone-regenerate-flow-secret-button')).not.toBeInTheDocument();
-    });
-
-    it('shows and wires regenerate Flow Secret for a flow-native oauth2Config', async () => {
-      const user = userEvent.setup();
-      const flowNativeOAuth2Config: OAuth2Config = {
-        clientId: 'mcp-flow-native-client-id',
-        grantTypes: ['refresh_token'],
-        publicClient: false,
-      } as OAuth2Config;
-
-      render(
-        <McpConnectTab
-          application={buildApplication()}
-          oauth2Config={flowNativeOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly={false}
-        />,
-      );
-
-      await user.click(screen.getByTestId('danger-zone-regenerate-flow-secret-button'));
-      expect(screen.getByTestId('regenerate-flow-secret-dialog')).toBeInTheDocument();
-
-      await user.click(screen.getByTestId('flow-dialog-success'));
-      expect(screen.getByTestId('secret-dialog')).toHaveAttribute('data-client-secret', 'new-test-flow-secret');
-    });
-
-    it('does not render the danger zone when the application is read-only', () => {
-      render(
-        <McpConnectTab
-          application={buildApplication({isReadOnly: true})}
-          oauth2Config={m2mOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly
-        />,
-      );
-
-      expect(screen.queryByTestId('danger-zone-section')).not.toBeInTheDocument();
-    });
-
-    it('opens the delete dialog when the danger zone delete button is clicked', () => {
-      render(
-        <McpConnectTab
-          application={buildApplication()}
-          oauth2Config={userDelegatedOAuth2Config}
-          onFieldChange={mockOnFieldChange}
-          isReadOnly={false}
-        />,
-      );
-
-      fireEvent.click(screen.getByTestId('delete-button'));
-
-      expect(screen.getByTestId('delete-dialog')).toBeInTheDocument();
     });
   });
 
