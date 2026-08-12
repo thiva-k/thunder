@@ -293,8 +293,6 @@ const translations = {
     'welcome.applicationTryout.scenarios.tabs.profile': 'View Profile',
     'welcome.applicationTryout.scenarios.tabs.recovery': 'Account Recovery',
     'welcome.applicationTryout.scenarios.tabs.onboard': 'Staff Sign-Up',
-    'welcome.applicationTryout.scenarios.tabs.mfa': 'Multi-Factor Authentication',
-    'welcome.applicationTryout.scenarios.tabs.social': 'Social Login',
 
     'welcome.applicationTryout.scenarios.login.description':
       'Sign in with the test user account to explore {{productName}} Sign in experience.',
