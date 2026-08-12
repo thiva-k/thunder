@@ -69,6 +69,78 @@ reviews:
         - <item 2>: <what needs to be documented and which file to update or create>
         - ..."
 
+    - path: "**/*_test.go"
+      instructions: |
+        Intermittent test failure detection. Scrutinize every changed test, helper, or setup
+        function for patterns that can cause non-deterministic (flaky) outcomes. Common patterns
+        include but are not limited to:
+
+        - **Encoding/decoding equivalence**: mutating a base64 (or hex, URL-encoding, etc.)
+          string in a position where the change does not alter the decoded bytes (e.g., flipping
+          the last character of a `base64.RawURLEncoding` string may produce identical decoded
+          output depending on input length and padding alignment).
+        - **Map iteration order**: relying on the order of `range` over a Go map, which is
+          randomized per iteration.
+        - **Time-dependent assertions**: comparing timestamps with `time.Now()` or fixed
+          durations without tolerance, sleeping for a fixed duration and asserting state, or
+          assuming wall-clock ordering across goroutines.
+        - **Port/resource conflicts**: hardcoded ports, temp file paths, or shared resources
+          that collide when tests run in parallel.
+        - **Goroutine races**: shared mutable state accessed from test goroutines without
+          synchronization, or `t.Parallel()` tests closing over loop variables.
+        - **Random/non-deterministic input**: using `rand` without a fixed seed, or generating
+          values that can collide (e.g., UUID-based names that are later asserted by position).
+        - **External service timing**: assertions that depend on an external server, database,
+          or network call completing within an implicit timeout.
+        - **Flaky cleanup**: `defer` cleanup that races with asynchronous operations, or
+          teardown that depends on creation having fully completed.
+
+        When any of these patterns is detected, flag it as a **critical issue** (not major,
+        not a suggestion) using this format:
+
+        "🔴 **Intermittent test failure**: <description of the non-deterministic pattern>.
+        This will pass most of the time but fail unpredictably in CI, wasting maintainer time
+        and eroding trust in the test suite."
+
+        Provide a concrete explanation of the failure scenario (inputs/state that trigger the
+        flake) and suggest a deterministic fix.
+
+    - path: "tests/**"
+      instructions: |
+        Intermittent test failure detection. Scrutinize every changed test, helper, or setup
+        function for patterns that can cause non-deterministic (flaky) outcomes. Common patterns
+        include but are not limited to:
+
+        - **Encoding/decoding equivalence**: mutating a base64 (or hex, URL-encoding, etc.)
+          string in a position where the change does not alter the decoded bytes (e.g., flipping
+          the last character of a `base64.RawURLEncoding` string may produce identical decoded
+          output depending on input length and padding alignment).
+        - **Map iteration order**: relying on the order of `range` over a Go map, which is
+          randomized per iteration.
+        - **Time-dependent assertions**: comparing timestamps with `time.Now()` or fixed
+          durations without tolerance, sleeping for a fixed duration and asserting state, or
+          assuming wall-clock ordering across goroutines.
+        - **Port/resource conflicts**: hardcoded ports, temp file paths, or shared resources
+          that collide when tests run in parallel.
+        - **Goroutine races**: shared mutable state accessed from test goroutines without
+          synchronization, or `t.Parallel()` tests closing over loop variables.
+        - **Random/non-deterministic input**: using `rand` without a fixed seed, or generating
+          values that can collide (e.g., UUID-based names that are later asserted by position).
+        - **External service timing**: assertions that depend on an external server, database,
+          or network call completing within an implicit timeout.
+        - **Flaky cleanup**: `defer` cleanup that races with asynchronous operations, or
+          teardown that depends on creation having fully completed.
+
+        When any of these patterns is detected, flag it as a **critical issue** (not major,
+        not a suggestion) using this format:
+
+        "🔴 **Intermittent test failure**: <description of the non-deterministic pattern>.
+        This will pass most of the time but fail unpredictably in CI, wasting maintainer time
+        and eroding trust in the test suite."
+
+        Provide a concrete explanation of the failure scenario (inputs/state that trigger the
+        flake) and suggest a deterministic fix.
+
     - path: "**/*.ts"
       instructions: |
         Scan for hardcoded occurrences of the string literals `Thunder` or `ThunderID` in this file.
