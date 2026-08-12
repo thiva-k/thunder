@@ -128,6 +128,19 @@ const translations = {
     'errors.DCR-1002': 'This resource is managed declaratively and cannot be modified.',
     'errors.DCR-1003': 'This resource is managed declaratively and cannot be deleted.',
 
+    // Backend error code translations for flow executor failures (per the flow execution error envelope).
+    'errors.FET-1002': 'Could not check whether a matching user already exists. Please try again.',
+    'errors.FET-1003': 'The provided details match more than one existing user.',
+    'errors.FET-1006': 'The user was created but could not be signed in.',
+    'errors.FET-1007': 'A user with these details already exists.',
+    'errors.FET-1020': 'Provide at least one user attribute to continue.',
+    'errors.FET-1021': 'Something went wrong while creating the user. Please try again.',
+    'errors.FET-1022': 'The user was created but group or role assignment failed.',
+    'errors.FET-1023': 'Select an organization unit before continuing.',
+    'errors.FET-1024': 'A user with these details already exists in the selected organization unit.',
+    'errors.FET-1061': 'A user already exists with the provided {{attribute}}.',
+    'errors.FET-1080': 'A user with the same unique attribute value already exists.',
+
     // External links
     learnMore: 'Learn more',
     'externalLink.title': 'You are leaving {{productName}}',

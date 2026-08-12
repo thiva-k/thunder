@@ -1106,13 +1106,18 @@ export default function UserAddPage(): JSX.Element {
             return;
           }
           logger.error('User onboarding error', {error: err});
+          // onFlowChange runs first and sees the full error envelope, including the code. The SDK
+          // flattens that envelope into a plain Error before onError, so only fill in here when
+          // onFlowChange had nothing to report (for example, a thrown network failure).
           setFlowError(
-            getUserErrorMessage(
-              err,
-              (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
-              'errors.failed.description',
-              'An error occurred. Please try again.',
-            ),
+            (current) =>
+              current ??
+              getUserErrorMessage(
+                err,
+                (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+                'errors.failed.description',
+                'An error occurred. Please try again.',
+              ),
           );
         }}
         onFlowChange={(response) => {
@@ -1124,12 +1129,14 @@ export default function UserAddPage(): JSX.Element {
             setFlowError(null);
             return;
           }
-          const messageKey = (response.error as unknown as Record<string, unknown>)?.['message'] as
-            | Record<string, unknown>
-            | undefined;
-          const key = messageKey?.['key'] as string | undefined;
-          const localizedFallback = t('users:errors.failed.description', 'An error occurred. Please try again.');
-          setFlowError(key ? t(key, localizedFallback) : localizedFallback);
+          setFlowError(
+            getUserErrorMessage(
+              response as unknown as Error,
+              (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+              'errors.failed.description',
+              'An error occurred. Please try again.',
+            ),
+          );
         }}
       >
         {(renderProps: InviteUserRenderProps) => (
