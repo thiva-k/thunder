@@ -6,6 +6,7 @@
 package sample
 
 import (
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,24 +17,13 @@ import (
 	"time"
 )
 
-// stubPortSweep replaces the real port sweep for the duration of the test, so
-// stopping a tracked process never signals unrelated listeners on the machine.
-func stubPortSweep(t *testing.T) *[]int {
-	t.Helper()
-	orig := sweepSamplePorts
-	var swept []int
-	sweepSamplePorts = func(ports []int) { swept = append(swept, ports...) }
-	t.Cleanup(func() { sweepSamplePorts = orig })
-	return &swept
-}
-
 // resetRunning clears the tracked-process state around a test.
 func resetRunning(t *testing.T) {
 	t.Helper()
 	clear := func() {
 		running.Lock()
 		defer running.Unlock()
-		running.cmd, running.aiEnabled, running.started, running.stopping = nil, false, false, false
+		running.cmd, running.stopping = nil, false
 	}
 	clear()
 	t.Cleanup(clear)
@@ -105,11 +95,10 @@ func waitGone(pid int, timeout time.Duration) bool {
 
 func TestStopServicesKillsProcessTree(t *testing.T) {
 	resetRunning(t)
-	swept := stubPortSweep(t)
 
 	cmd, childPID, grandchildPID := startTree(t)
 	go cmd.Wait() //nolint:errcheck // reap the child so it does not linger as a zombie
-	if !trackRunning(cmd, false) {
+	if !trackRunning(cmd) {
 		t.Fatal("trackRunning refused a process outside shutdown")
 	}
 
@@ -125,13 +114,8 @@ func TestStopServicesKillsProcessTree(t *testing.T) {
 	if !waitGone(grandchildPID, 10*time.Second) {
 		t.Errorf("grandchild %d still alive after StopServices", grandchildPID)
 	}
-	if len(*swept) != len(sampleServicePorts(false)) {
-		t.Errorf("swept ports: got %v, want %v", *swept, sampleServicePorts(false))
-	}
 
-	// A second call must be a safe no-op: nothing is tracked any more, so it
-	// must not sweep the ports again either.
-	before := len(*swept)
+	// A second call must be a safe no-op: nothing is tracked any more.
 	done := make(chan struct{})
 	go func() { StopServices(); close(done) }()
 	select {
@@ -139,14 +123,10 @@ func TestStopServicesKillsProcessTree(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("second StopServices call blocked")
 	}
-	if len(*swept) != before {
-		t.Errorf("second StopServices swept ports again: %v", *swept)
-	}
 }
 
 func TestStopServicesWithoutStart(t *testing.T) {
 	resetRunning(t)
-	swept := stubPortSweep(t)
 
 	done := make(chan struct{})
 	go func() { StopServices(); close(done) }()
@@ -155,22 +135,44 @@ func TestStopServicesWithoutStart(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("StopServices blocked with nothing started")
 	}
-	if len(*swept) != 0 {
-		t.Errorf("StopServices swept ports with nothing started: %v", *swept)
-	}
 }
 
-func TestStopServicesSweepsAIPorts(t *testing.T) {
+// Stopping the sample must not touch a listener on one of the sample's ports
+// that this CLI did not start. A regressed port sweep would signal the process
+// holding it, which here is the test binary itself.
+func TestStopServicesLeavesForeignListenerAlone(t *testing.T) {
 	resetRunning(t)
-	swept := stubPortSweep(t)
 
-	trackRunning(nil, true)
+	var ln net.Listener
+	for _, port := range sampleServicePorts(true) {
+		l, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
+		if err != nil {
+			continue // in use by something else on this machine
+		}
+		ln = l
+		break
+	}
+	if ln == nil {
+		t.Skip("no sample port free to bind")
+	}
+	defer ln.Close() //nolint:errcheck
+
+	cmd, childPID, _ := startTree(t)
+	go cmd.Wait() //nolint:errcheck
+	if !trackRunning(cmd) {
+		t.Fatal("trackRunning refused a process outside shutdown")
+	}
+
 	StopServices()
 
-	want := sampleServicePorts(true)
-	if len(*swept) != len(want) {
-		t.Fatalf("swept ports: got %v, want %v", *swept, want)
+	if !waitGone(childPID, 10*time.Second) {
+		t.Errorf("child %d still alive after StopServices", childPID)
 	}
+	conn, err := net.DialTimeout("tcp", ln.Addr().String(), 2*time.Second)
+	if err != nil {
+		t.Fatalf("listener on %s was stopped: %v", ln.Addr(), err)
+	}
+	conn.Close() //nolint:errcheck
 }
 
 // TestKillProcessGroupAfterLeaderExit covers the case where npm itself has
@@ -212,13 +214,12 @@ func TestKillProcessGroupAfterLeaderExit(t *testing.T) {
 // terminates it.
 func TestTrackRunningRefusedDuringShutdown(t *testing.T) {
 	resetRunning(t)
-	stubPortSweep(t)
 
 	StopServices() // latches shutdown
 
 	cmd, childPID, grandchildPID := startTree(t)
 	go cmd.Wait() //nolint:errcheck
-	if trackRunning(cmd, false) {
+	if trackRunning(cmd) {
 		t.Fatal("trackRunning accepted a process after shutdown began")
 	}
 	killProcessGroup(cmd) // what startSampleServices does on refusal
@@ -240,14 +241,37 @@ func TestTrackRunningRefusedDuringShutdown(t *testing.T) {
 
 func TestBeginRunClearsShutdownLatch(t *testing.T) {
 	resetRunning(t)
-	stubPortSweep(t)
 
 	StopServices()
 	beginRun()
 
 	cmd := exec.Command("true")
-	if !trackRunning(cmd, false) {
+	if !trackRunning(cmd) {
 		t.Fatal("trackRunning still refuses after beginRun")
+	}
+}
+
+// A second sample run must stop the first one: trackRunning replaces the tracked
+// handle, so an unstopped first process group could never be signaled again.
+func TestBeginRunStopsThePreviousRun(t *testing.T) {
+	resetRunning(t)
+
+	cmd, childPID, grandchildPID := startTree(t)
+	go cmd.Wait() //nolint:errcheck
+	if !trackRunning(cmd) {
+		t.Fatal("trackRunning refused a process outside shutdown")
+	}
+
+	beginRun()
+
+	if !waitGone(childPID, 10*time.Second) {
+		t.Errorf("previous child %d still alive after beginRun", childPID)
+	}
+	if !waitGone(grandchildPID, 10*time.Second) {
+		t.Errorf("previous grandchild %d still alive after beginRun", grandchildPID)
+	}
+	if !trackRunning(exec.Command("true")) {
+		t.Fatal("beginRun left the shutdown latch set")
 	}
 }
 
@@ -255,7 +279,7 @@ func TestClearRunningOnlyClearsMatchingCmd(t *testing.T) {
 	resetRunning(t)
 
 	current := exec.Command("true")
-	trackRunning(current, false)
+	trackRunning(current)
 	clearRunning(exec.Command("true")) // a different, older command
 
 	running.Lock()
