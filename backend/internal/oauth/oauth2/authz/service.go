@@ -940,6 +940,18 @@ func decodeAttributesFromAssertion(assertion string) (assertionClaims, time.Time
 		claims.tokenFamilyID = v
 	}
 
+	if v, ok := payload[oauth2const.ClaimCorrelationID].(string); ok {
+		claims.correlationID = v
+	}
+
+	if v, ok := payload[oauth2const.ClaimSubjectID].(string); ok {
+		claims.subjectID = v
+	}
+
+	if v, ok := payload[oauth2const.ClaimSubjectType].(string); ok {
+		claims.subjectCategory = v
+	}
+
 	if v, ok := payload[flowcm.ClaimFlowErrorType].(string); ok {
 		claims.flowErrorType = v
 	}
@@ -1037,6 +1049,9 @@ func createAuthorizationCode(
 		CompletedACR:        claims.completedACR,
 		DPoPJkt:             authRequestCtx.OAuthParameters.DPoPJkt,
 		TokenFamilyID:       tokenFamilyID,
+		CorrelationID:       claims.correlationID,
+		SubjectID:           claims.subjectID,
+		SubjectCategory:     claims.subjectCategory,
 	}, nil
 }
 
