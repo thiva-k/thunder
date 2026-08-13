@@ -738,6 +738,61 @@ func RefreshAccessTokenWithClientCredentialsInBody(clientID, clientSecret, refre
 	return refreshAccessToken(clientID, clientSecret, refreshToken, true)
 }
 
+// RefreshAccessTokenRaw uses the refresh token to obtain a new access token with an optional scope
+// parameter, returning the raw HTTP result for both success and failure scenarios (e.g. invalid_scope).
+// client credentials are sent via HTTP Basic Auth header.
+func RefreshAccessTokenRaw(clientID, clientSecret, refreshToken, scope string) (*TokenHTTPResult, error) {
+	tokenURL := TestServerURL + "/oauth2/token"
+	tokenData := url.Values{}
+
+	tokenData.Set("grant_type", "refresh_token")
+	tokenData.Set("refresh_token", refreshToken)
+	if scope != "" {
+		tokenData.Set("scope", scope)
+	}
+
+	req, err := http.NewRequest("POST", tokenURL, bytes.NewBufferString(tokenData.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create refresh token request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if clientID != "" {
+		req.SetBasicAuth(clientID, clientSecret)
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send refresh token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	result := &TokenHTTPResult{
+		StatusCode: resp.StatusCode,
+		Body:       body,
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenResponse TokenResponse
+		if err := json.Unmarshal(body, &tokenResponse); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal token response: %w", err)
+		}
+		result.Token = &tokenResponse
+	}
+
+	return result, nil
+}
+
 // refreshAccessToken uses the refresh token to obtain a new access token
 func refreshAccessToken(clientID, clientSecret, refreshToken string, tokenAuthInBody bool) (
 	*TokenResponse, error) {
