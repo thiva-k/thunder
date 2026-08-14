@@ -1570,6 +1570,101 @@ func PutDefaultResourceServer(resourceServerID string) error {
 	return nil
 }
 
+// GetWritableServerConfig returns the writable layer of the named server-config section, so a
+// caller can restore exactly what was there rather than guessing at a default. An absent layer is
+// reported as an empty object.
+func GetWritableServerConfig(section string) (json.RawMessage, error) {
+	url := fmt.Sprintf("%s/server-config/%s", TestServerURL, section)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create %s server config request: %w", section, err)
+	}
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s server config: %w", section, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s server config response: %w", section, err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("expected status 200 reading %s server config, got %d. Response: %s",
+			section, resp.StatusCode, string(body))
+	}
+
+	var layers struct {
+		Writable json.RawMessage `json:"writable"`
+	}
+	if err := json.Unmarshal(body, &layers); err != nil {
+		return nil, fmt.Errorf("failed to parse %s server config: %w", section, err)
+	}
+
+	if len(layers.Writable) == 0 {
+		return json.RawMessage("{}"), nil
+	}
+	return layers.Writable, nil
+}
+
+// PutWritableServerConfig replaces the writable layer of the named server-config section.
+func PutWritableServerConfig(section string, body []byte) error {
+	url := fmt.Sprintf("%s/server-config/%s", TestServerURL, section)
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create %s server config request: %w", section, err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to update %s server config: %w", section, err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read %s server config response: %w", section, err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("expected status 200 updating %s server config with %s, got %d. Response: %s",
+			section, string(body), resp.StatusCode, string(respBody))
+	}
+	return nil
+}
+
+// MergeWritableServerConfig applies the given top-level keys over the current writable layer of the
+// section and writes the result back, returning the layer as it was beforehand.
+//
+// Merging rather than replacing keeps sibling keys that the caller did not set, which a bare PUT
+// would drop. The returned value is what the caller restores when it is done.
+func MergeWritableServerConfig(section string, patch map[string]interface{}) (json.RawMessage, error) {
+	original, err := GetWritableServerConfig(section)
+	if err != nil {
+		return nil, err
+	}
+
+	merged := make(map[string]interface{})
+	if err := json.Unmarshal(original, &merged); err != nil {
+		return nil, fmt.Errorf("failed to parse writable %s server config: %w", section, err)
+	}
+	for key, value := range patch {
+		merged[key] = value
+	}
+
+	body, err := json.Marshal(merged)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal %s server config: %w", section, err)
+	}
+	if err := PutWritableServerConfig(section, body); err != nil {
+		return nil, err
+	}
+	return original, nil
+}
+
 // createAction creates an action on a resource server via API and returns the action ID
 func createAction(resourceServerID string, action Action) (string, error) {
 	client := GetHTTPClient()

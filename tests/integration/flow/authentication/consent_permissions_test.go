@@ -193,6 +193,7 @@ type consentPurposeDecision struct {
 
 type consentDecisions struct {
 	Approved bool                     `json:"approved"`
+	Reason   string                   `json:"reason,omitempty"`
 	Purposes []consentPurposeDecision `json:"purposes"`
 }
 
