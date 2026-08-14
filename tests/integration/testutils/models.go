@@ -10,11 +10,18 @@ import (
 
 // UserType represents a user type definition
 type UserType struct {
-	ID                    string                 `json:"id,omitempty"`
-	Name                  string                 `json:"name"`
-	OUID                  string                 `json:"ouId"`
-	AllowSelfRegistration bool                   `json:"allowSelfRegistration,omitempty"`
-	Schema                map[string]interface{} `json:"schema"`
+	ID                    string                    `json:"id,omitempty"`
+	Name                  string                    `json:"name"`
+	OUID                  string                    `json:"ouId"`
+	AllowSelfRegistration bool                      `json:"allowSelfRegistration,omitempty"`
+	SystemAttributes      *UserTypeSystemAttributes `json:"systemAttributes,omitempty"`
+	Schema                map[string]interface{}    `json:"schema"`
+}
+
+// UserTypeSystemAttributes carries the system-level settings of a user type, such as the
+// attribute used to render a human-readable display name.
+type UserTypeSystemAttributes struct {
+	Display string `json:"display,omitempty"`
 }
 
 // User represents a user in the system
