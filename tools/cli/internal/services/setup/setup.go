@@ -64,6 +64,17 @@ func isWindows() bool {
 	return runtime.GOOS == "windows"
 }
 
+// powershellExecutable returns the PowerShell binary to run setup.ps1/start.ps1 with.
+// Those scripts require PowerShell 7 (Core), so pwsh.exe is preferred; the legacy
+// Windows PowerShell 5.1 (powershell.exe) is used only as a fallback so the script's
+// own version check can produce the upgrade message.
+func powershellExecutable() string {
+	if _, err := exec.LookPath("pwsh.exe"); err == nil {
+		return "pwsh.exe"
+	}
+	return "powershell.exe"
+}
+
 func findScript(installPath, name string) string {
 	root := filepath.Join(installPath, name)
 	if _, err := os.Stat(root); err == nil {
@@ -130,7 +141,7 @@ func RunSetupOnPort(installPath string, verbose bool, port int) (*AdminCredentia
 
 	var cmd *exec.Cmd
 	if isWindows() {
-		cmd = exec.Command("powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "setup.ps1")
+		cmd = exec.Command(powershellExecutable(), "-ExecutionPolicy", "Bypass", "-File", "setup.ps1")
 	} else {
 		cmd = exec.Command("bash", "setup.sh")
 	}
@@ -265,7 +276,7 @@ func StartBackgroundOnPort(installPath string, verbose bool, port int) (*exec.Cm
 	if isWindows() {
 		startPs1 := filepath.Join(root, "start.ps1")
 		if _, err := os.Stat(startPs1); err == nil {
-			cmd = exec.Command("powershell.exe", "-ExecutionPolicy", "Bypass", "-File", "start.ps1")
+			cmd = exec.Command(powershellExecutable(), "-ExecutionPolicy", "Bypass", "-File", "start.ps1")
 		} else {
 			binary := filepath.Join(root, product.Slug+".exe")
 			if _, err := os.Stat(binary); err != nil {
@@ -317,7 +328,7 @@ func Start(installPath string, args []string) error {
 	if isWindows() {
 		startPs1 := filepath.Join(root, "start.ps1")
 		if _, err := os.Stat(startPs1); err == nil {
-			cmd = exec.Command("powershell.exe", append([]string{"-ExecutionPolicy", "Bypass", "-File", "start.ps1"}, args...)...)
+			cmd = exec.Command(powershellExecutable(), append([]string{"-ExecutionPolicy", "Bypass", "-File", "start.ps1"}, args...)...)
 			cmd.Dir = root
 		} else {
 			binary := filepath.Join(root, product.Slug+".exe")
