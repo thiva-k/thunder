@@ -48,8 +48,8 @@ func InitiateAuthorizationFlow(clientID, redirectURI, responseType, scope, state
 // InitiateAuthorizationFlowWithResource starts the OAuth2 authorization flow with resource parameter
 func InitiateAuthorizationFlowWithResource(clientID, redirectURI, responseType, scope, state,
 	resource string) (*http.Response, error) {
-	return initiateAuthorizationFlow(
-		clientID, redirectURI, responseType, scope, state, resource, "", "", "", "", "", "")
+	return initiateAuthorizationFlow(clientID, redirectURI, responseType, scope, state, resource,
+		"", "", "", "", "", "")
 }
 
 // InitiateAuthorizationFlowWithPKCE starts the OAuth2 authorization flow with PKCE parameters
@@ -65,6 +65,15 @@ func InitiateAuthorizationFlowWithClaims(
 ) (*http.Response, error) {
 	return initiateAuthorizationFlow(
 		clientID, redirectURI, responseType, scope, state, "", "", "", claimsParam, "", "", "")
+}
+
+// InitiateAuthorizationFlowWithClaimsAndPrompt starts the OAuth2 authorization flow with both the
+// claims and the prompt parameters.
+func InitiateAuthorizationFlowWithClaimsAndPrompt(
+	clientID, redirectURI, responseType, scope, state, claimsParam, prompt string,
+) (*http.Response, error) {
+	return initiateAuthorizationFlow(
+		clientID, redirectURI, responseType, scope, state, "", "", "", claimsParam, "", "", prompt)
 }
 
 // InitiateAuthorizationFlowWithClaimsLocales starts the OAuth2 authorization flow with claims_locales parameter
