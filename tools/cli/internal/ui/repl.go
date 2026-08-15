@@ -1394,11 +1394,12 @@ func (m *ReplModel) stopThunderID(explicit bool) error {
 			time.Sleep(time.Second)
 			return nil
 		}
-		// The launcher is already gone, so no trap ran for this stop and the server it
+		// The signal was undeliverable (SIGTERM is unsupported on Windows, or the
+		// launcher is already gone), so no trap ran for this stop and the server it
 		// backgrounded can still be listening. Reporting success here would quit the
-		// session leaving that server up, so fall through to the port stop.
-	}
-	if !explicit {
+		// session leaving that server up, so fall through to the port stop regardless
+		// of explicit: we own this process, an implicit exit still has to clean it up.
+	} else if !explicit {
 		return nil
 	}
 	port := m.effectivePort()
