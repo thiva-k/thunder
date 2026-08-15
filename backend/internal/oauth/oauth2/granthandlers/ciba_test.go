@@ -18,6 +18,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/attributecache"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/ciba"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/tests/mocks/attributecachemock"
@@ -250,6 +251,42 @@ func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Authenticated_IssuesToke
 	suite.NotNil(resp)
 	suite.Equal("access-token", resp.AccessToken.Token)
 	suite.Equal("id-token", resp.IDToken.Token)
+}
+
+// A CIBA access token is sender-constrained to the key the client proved possession of when polling
+// the token endpoint, so a stolen token cannot be replayed without the matching DPoP proof.
+func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Authenticated_BindsDPoPJkt() {
+	record := suite.boundAuthenticatedRecord(testScopeRead)
+	suite.mockCIBAService.EXPECT().GetByAuthReqID(mock.Anything, "auth-req-1").Return(record, nil)
+	suite.expectResourceServer()
+	suite.mockTokenBuilder.EXPECT().BuildAccessToken(mock.Anything, mock.MatchedBy(
+		func(ctx *tokenservice.AccessTokenBuildContext) bool {
+			return ctx.DPoPJkt == "test-jkt"
+		})).Return(&model.TokenDTO{Token: "access-token", TokenType: "DPoP"}, nil)
+	suite.mockCIBAService.EXPECT().MarkConsumed(mock.Anything, "auth-req-1").Return(true, nil)
+
+	ctx := dpop.WithJkt(context.Background(), "test-jkt")
+	resp, errResp := suite.handler.HandleGrant(ctx, suite.tokenReq, suite.oauthApp)
+	suite.Nil(errResp)
+	suite.NotNil(resp)
+	suite.Equal("access-token", resp.AccessToken.Token)
+}
+
+// Without a verified DPoP proof the access token stays unbound, so non-DPoP clients are unaffected.
+func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Authenticated_NoProofLeavesTokenUnbound() {
+	record := suite.boundAuthenticatedRecord(testScopeRead)
+	suite.mockCIBAService.EXPECT().GetByAuthReqID(mock.Anything, "auth-req-1").Return(record, nil)
+	suite.expectResourceServer()
+	suite.mockTokenBuilder.EXPECT().BuildAccessToken(mock.Anything, mock.MatchedBy(
+		func(ctx *tokenservice.AccessTokenBuildContext) bool {
+			return ctx.DPoPJkt == ""
+		})).Return(&model.TokenDTO{Token: "access-token", TokenType: "Bearer"}, nil)
+	suite.mockCIBAService.EXPECT().MarkConsumed(mock.Anything, "auth-req-1").Return(true, nil)
+
+	resp, errResp := suite.handler.HandleGrant(context.Background(), suite.tokenReq, suite.oauthApp)
+	suite.Nil(errResp)
+	suite.NotNil(resp)
+	suite.Equal("access-token", resp.AccessToken.Token)
 }
 
 func (suite *CIBAGrantHandlerTestSuite) TestHandleGrant_Authenticated_NoOpenIDSkipsIDToken() {
