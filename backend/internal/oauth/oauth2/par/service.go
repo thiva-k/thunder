@@ -144,6 +144,7 @@ func (s *parService) HandlePushedAuthorizationRequest(
 		ClaimsLocales:       params[oauth2const.RequestParamClaimsLocales],
 		Nonce:               params[oauth2const.RequestParamNonce],
 		AcrValues:           params[oauth2const.RequestParamAcrValues],
+		MaxAge:              params[oauth2const.RequestParamMaxAge],
 		DPoPJkt:             resolveDPoPJkt(params[oauth2const.RequestParamDPoPJkt], dpopHeaderJkt),
 		Prompt:              params[oauth2const.RequestParamPrompt],
 	}

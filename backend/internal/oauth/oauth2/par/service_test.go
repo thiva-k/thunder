@@ -447,6 +447,26 @@ func (s *ServiceTestSuite) TestHandlePAR_AcrValuesPropagated() {
 		captured.OAuthParameters.AcrValues)
 }
 
+func (s *ServiceTestSuite) TestHandlePAR_MaxAgePropagated() {
+	store := newParStoreInterfaceMock(s.T())
+	var captured pushedAuthorizationRequest
+	store.EXPECT().Store(mock.Anything, mock.Anything, mock.Anything).
+		Run(func(_ context.Context, req pushedAuthorizationRequest, _ int64) {
+			captured = req
+		}).Return("test-uri", nil)
+
+	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
+	app := s.newTestApp()
+	params := s.newValidParams()
+	params[oauth2const.RequestParamMaxAge] = "1"
+
+	resp, errCode, _ := svc.HandlePushedAuthorizationRequest(s.ctx, params, nil, app, "")
+
+	assert.Empty(s.T(), errCode)
+	assert.NotNil(s.T(), resp)
+	assert.Equal(s.T(), "1", captured.OAuthParameters.MaxAge)
+}
+
 func (s *ServiceTestSuite) TestHandlePAR_DPoPHeaderJkt_PersistedOnRequest() {
 	var captured pushedAuthorizationRequest
 	store := newParStoreInterfaceMock(s.T())
