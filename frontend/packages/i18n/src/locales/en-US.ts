@@ -3591,6 +3591,9 @@ const translations = {
     'core.executions.consent.timeout.label': 'Consent Timeout (seconds)',
     'core.executions.consent.timeout.placeholder': '0',
     'core.executions.consent.timeout.hint': 'Time in seconds before the consent request expires. Use 0 for no timeout.',
+    'core.executions.consent.failOnDeny.label': 'Fail flow when user denies consent',
+    'core.executions.consent.failOnDeny.hint':
+      'When enabled, the flow fails if the user denies the consent prompt or lets it time out, even if all requested attributes and permissions are optional.',
 
     // Identifying executor modes
     'core.executions.identifying.mode.identify': 'Identify',
