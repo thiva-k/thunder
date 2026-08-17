@@ -848,6 +848,40 @@ jobs:
       #     name: Backend-combined Coverage (${{ matrix.database }})
       #     fail_ci_if_error: false
 
+  backend-integration-patch-coverage:
+    name: 🛡️ Backend Integration Patch Coverage
+    # Measures only what the integration suite executed. The combined
+    # 🛡️ Patch Coverage Gate pools backend unit, backend integration, and both
+    # frontend reports into one percentage, so a changed backend line covered
+    # only by a unit test satisfies it. This job loads the three
+    # integration-coverage-* artifacts and nothing else, which is the whole
+    # reason it exists separately rather than as another threshold on that gate.
+    #
+    # Gated like the other checks: it needs only build and test-integration, so
+    # unlike the combined gate it does not wait on the frontend or unit jobs, and
+    # it is skipped when those two did not succeed rather than reporting on data
+    # it does not have.
+    needs: [build, test-integration]
+    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.build.result == 'success' && needs.test-integration.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The base-to-head diff needs full history; a shallow clone makes the
+          # merge base unreachable and every changed line look new.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 🛡️ Measure Backend Integration Patch Coverage
+        uses: ./.github/actions/backend-integration-patch-coverage
+        with:
+          base-ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
+          fail-under: '70'
+
   test-integration-status:
     name: ✅ Integration Tests Status
     needs: [test-integration]
