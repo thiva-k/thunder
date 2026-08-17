@@ -72,6 +72,7 @@ type agentImportResponse struct {
 type AgentImportExportSuite struct {
 	suite.Suite
 	ouID               string
+	agentTypeSnapshot  *testutils.AgentTypeSnapshot
 	handleSuffix       string
 	authFlowID         string
 	registrationFlowID string
@@ -93,6 +94,12 @@ func (s *AgentImportExportSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.ouID = ouID
 
+	// The `default` agent type is a singleton shared with every other suite. Snapshot it before
+	// pointing it at this suite's OU, so teardown can put it back before that OU is deleted.
+	snapshot, err := testutils.SnapshotAgentType()
+	s.Require().NoError(err, "failed to snapshot the default agent type")
+	s.agentTypeSnapshot = snapshot
+
 	_, err = testutils.CreateAgentType(testutils.UserType{
 		Name: "default",
 		OUID: s.ouID,
@@ -112,6 +119,13 @@ func (s *AgentImportExportSuite) SetupSuite() {
 }
 
 func (s *AgentImportExportSuite) TearDownSuite() {
+	// Restore the shared agent type before deleting the OU it points at, or the singleton is left
+	// referencing a deleted OU and a later suite's restore fails.
+	if s.agentTypeSnapshot != nil {
+		if err := testutils.RestoreAgentType(s.agentTypeSnapshot); err != nil {
+			s.T().Errorf("teardown: failed to restore the default agent type: %v", err)
+		}
+	}
 	if s.ouID != "" {
 		_ = testutils.DeleteOrganizationUnit(s.ouID)
 	}

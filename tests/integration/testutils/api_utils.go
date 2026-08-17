@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -135,10 +136,171 @@ func CreateAgentType(schema UserType) (string, error) {
 	return existingID, nil
 }
 
-// DeleteAgentType is a no-op. The server rejects agent type deletion (USRS-1015) — see
-// CreateAgentType for how suites share the singleton `default` schema.
-func DeleteAgentType(_ string) error {
+// AgentTypeSnapshot captures the singleton `default` agent type so a suite that mutates it can put
+// it back. It holds every mutable field, not just the schema: an entity-type update replaces the
+// whole record, so any field left out of the restore payload is silently reset to its zero value.
+// The schema in particular cannot come from the list endpoint, which omits it.
+type AgentTypeSnapshot struct {
+	ID                    string
+	OUID                  string
+	AllowSelfRegistration bool
+	SystemAttributes      map[string]interface{}
+	Schema                map[string]interface{}
+}
+
+// SnapshotAgentType reads the current `default` agent type from the detail endpoint. Suites that
+// call CreateAgentType mutate a singleton every other suite shares, so they must snapshot before
+// and RestoreAgentType after, otherwise the schema and OU they installed leak into later packages.
+func SnapshotAgentType() (*AgentTypeSnapshot, error) {
+	id, err := findDefaultAgentTypeID()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/agent-types/%s", TestServerURL, id), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create agent type request: %w", err)
+	}
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch agent type: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read agent type response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("expected status 200 fetching agent type, got %d: %s",
+			resp.StatusCode, string(body))
+	}
+
+	var detail struct {
+		ID                    string                 `json:"id"`
+		OUID                  string                 `json:"ouId"`
+		AllowSelfRegistration bool                   `json:"allowSelfRegistration"`
+		SystemAttributes      map[string]interface{} `json:"systemAttributes"`
+		Schema                map[string]interface{} `json:"schema"`
+	}
+	if err := json.Unmarshal(body, &detail); err != nil {
+		return nil, fmt.Errorf("failed to parse agent type: %w", err)
+	}
+
+	return &AgentTypeSnapshot{
+		ID:                    detail.ID,
+		OUID:                  detail.OUID,
+		AllowSelfRegistration: detail.AllowSelfRegistration,
+		SystemAttributes:      detail.SystemAttributes,
+		Schema:                detail.Schema,
+	}, nil
+}
+
+// RestoreAgentType puts a snapshot back, then re-reads the type to confirm its OU resolves. If the
+// snapshot's OU no longer exists, because a suite pointed the singleton at an OU it then deleted,
+// the type is restored against the bootstrap `default` OU instead so the PUT cannot fail on a
+// dangling reference.
+func RestoreAgentType(snapshot *AgentTypeSnapshot) error {
+	if snapshot == nil {
+		return errors.New("agent type snapshot is nil")
+	}
+
+	ouID := snapshot.OUID
+	if _, err := GetOrganizationUnit(ouID); err != nil {
+		bootstrapOUID, lookupErr := findBootstrapOUID()
+		if lookupErr != nil {
+			return fmt.Errorf("snapshot OU %s is gone and the bootstrap OU is unavailable: %w",
+				ouID, lookupErr)
+		}
+		ouID = bootstrapOUID
+	}
+
+	// Build the payload by hand rather than through UserType: its AllowSelfRegistration carries
+	// `omitempty`, so a snapshotted `false` would be dropped, and it has no SystemAttributes field at
+	// all. Either omission makes the server reset that field instead of restoring it.
+	payload := map[string]interface{}{
+		"name":                  "default",
+		"ouId":                  ouID,
+		"allowSelfRegistration": snapshot.AllowSelfRegistration,
+		"schema":                snapshot.Schema,
+	}
+	if snapshot.SystemAttributes != nil {
+		payload["systemAttributes"] = snapshot.SystemAttributes
+	}
+
+	if err := putAgentTypeRaw(snapshot.ID, payload); err != nil {
+		return err
+	}
+
+	// Confirm the PUT actually applied. A 200 alone does not prove it: a partial or ignored update
+	// would leave the calling suite's state installed and still look successful here.
+	restored, err := SnapshotAgentType()
+	if err != nil {
+		return fmt.Errorf("failed to re-read the agent type after restoring it: %w", err)
+	}
+	if restored.ID != snapshot.ID {
+		return fmt.Errorf("restored agent type has id %s, want %s", restored.ID, snapshot.ID)
+	}
+	if restored.OUID != ouID {
+		return fmt.Errorf("restored agent type has ouId %s, want %s", restored.OUID, ouID)
+	}
+	if restored.AllowSelfRegistration != snapshot.AllowSelfRegistration {
+		return fmt.Errorf("restored agent type has allowSelfRegistration %t, want %t",
+			restored.AllowSelfRegistration, snapshot.AllowSelfRegistration)
+	}
+	if !reflect.DeepEqual(restored.SystemAttributes, snapshot.SystemAttributes) {
+		return fmt.Errorf("restored agent type systemAttributes do not match the snapshot: got %v, want %v",
+			restored.SystemAttributes, snapshot.SystemAttributes)
+	}
+	if !reflect.DeepEqual(restored.Schema, snapshot.Schema) {
+		return fmt.Errorf("restored agent type schema does not match the snapshot: got %v, want %v",
+			restored.Schema, snapshot.Schema)
+	}
+	if _, err := GetOrganizationUnit(restored.OUID); err != nil {
+		return fmt.Errorf("restored agent type points at unresolvable OU %s: %w", restored.OUID, err)
+	}
 	return nil
+}
+
+// findBootstrapOUID resolves the long-lived `default` organization unit seeded at bootstrap.
+func findBootstrapOUID() (string, error) {
+	req, err := http.NewRequest("GET", TestServerURL+"/organization-units?limit=100", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create OU list request: %w", err)
+	}
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to list organization units: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read OU list response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("expected status 200 listing organization units, got %d: %s",
+			resp.StatusCode, string(body))
+	}
+
+	var list struct {
+		OrganizationUnits []struct {
+			ID     string `json:"id"`
+			Handle string `json:"handle"`
+		} `json:"organizationUnits"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return "", fmt.Errorf("failed to parse OU list: %w", err)
+	}
+
+	for _, ou := range list.OrganizationUnits {
+		if ou.Handle == "default" {
+			return ou.ID, nil
+		}
+	}
+	return "", errors.New("bootstrap organization unit with handle 'default' not found")
 }
 
 var errAgentTypeNameConflict = errors.New("agent type name conflict")
@@ -185,7 +347,13 @@ func postAgentType(schema UserType) (string, error) {
 }
 
 func putAgentType(schemaID string, schema UserType) error {
-	payload, err := json.Marshal(schema)
+	return putAgentTypeRaw(schemaID, schema)
+}
+
+// putAgentTypeRaw updates an agent type from an arbitrary payload, so a caller can send fields that
+// the UserType struct drops or does not model.
+func putAgentTypeRaw(schemaID string, body interface{}) error {
+	payload, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal agent type: %w", err)
 	}
@@ -1329,9 +1497,9 @@ func CreateResourceServerWithActions(rs ResourceServer, actions []Action) (strin
 	for i, action := range actions {
 		_, err := createAction(rsID, action)
 		if err != nil {
-			// Cleanup: delete the resource server on failure
-			DeleteResourceServer(rsID)
-			return "", fmt.Errorf("failed to create action %d: %w", i, err)
+			// Roll back through the child-aware delete: any action created before this one blocks a
+			// plain resource-server delete, so a partially built server would otherwise survive.
+			return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create action %d: %w", i, err))
 		}
 	}
 
@@ -1455,6 +1623,9 @@ func GetResourceServerByName(name string) (string, error) {
 	return "", fmt.Errorf("resource server with name %q not found", name)
 }
 
+// DeleteResourceServer deletes a resource server that owns no resources or actions. The server
+// refuses the delete with RES-1006 while any dependency remains, so a server built with resources or
+// actions must go through DeleteResourceServerWithChildren instead.
 func DeleteResourceServer(rsID string) error {
 	client := GetHTTPClient()
 
@@ -1785,7 +1956,8 @@ func createActionUnderResource(resourceServerID, resourceID string, action Actio
 // permissions still enforce when configured. It builds a "system" root resource, then one child
 // resource per handle (each with a "view" action), yielding the permissions "system",
 // "system:<handle>" and "system:<handle>:view". Returns the resource server ID; delete it with
-// DeleteResourceServer during teardown.
+// DeleteResourceServerWithChildren during teardown — a plain DeleteResourceServer is refused with
+// RES-1006 while the resources and actions built here still exist.
 func CreateSystemScopedResourceServer(ouID, name, identifier string, childHandles ...string) (string, error) {
 	rsID, err := createResourceServer(ResourceServer{
 		Name:       name,
@@ -1817,10 +1989,185 @@ func CreateSystemScopedResourceServer(ouID, name, identifier string, childHandle
 // rollbackResourceServer deletes a partially built resource server after a setup step failed. It
 // returns the original cause, wrapping any cleanup failure so neither error is silently discarded.
 func rollbackResourceServer(rsID string, cause error) error {
-	if delErr := DeleteResourceServer(rsID); delErr != nil {
+	if delErr := DeleteResourceServerWithChildren(rsID); delErr != nil {
 		return fmt.Errorf("%w (resource server cleanup also failed: %v)", cause, delErr)
 	}
 	return cause
+}
+
+// DeleteResourceServerWithChildren removes a resource server together with its resource tree and
+// every action it owns. A plain DELETE on a resource server that still has dependencies is refused
+// with RES-1006, so any server built by CreateSystemScopedResourceServer or
+// CreateResourceServerWithActions must be torn down through here or it survives in the shared
+// database.
+//
+// Actions live at two levels and both block deletion: CreateSystemScopedResourceServer attaches them
+// to resources, while CreateResourceServerWithActions attaches them directly to the server.
+func DeleteResourceServerWithChildren(rsID string) error {
+	// Collect the tree depth-first so children are always deleted before their parents. The list
+	// endpoint returns only one level: without a parentId it yields the top-level resources, so the
+	// nested ones are invisible unless each level is walked explicitly.
+	ordered, err := collectResourceIDsDeepestFirst(rsID, "")
+	if err != nil {
+		return err
+	}
+
+	for _, resourceID := range ordered {
+		actions, actionErr := ListActionIDsAtResource(rsID, resourceID)
+		if actionErr != nil {
+			return actionErr
+		}
+		for _, actionID := range actions {
+			if delErr := deleteActionAtResource(rsID, resourceID, actionID); delErr != nil {
+				return delErr
+			}
+		}
+		if delErr := deleteResource(rsID, resourceID); delErr != nil {
+			return fmt.Errorf("failed to delete resource %s of resource server %s: %w",
+				resourceID, rsID, delErr)
+		}
+	}
+
+	serverActions, err := ListActionIDsAtResourceServer(rsID)
+	if err != nil {
+		return err
+	}
+	for _, actionID := range serverActions {
+		if delErr := DeleteAction(rsID, actionID); delErr != nil {
+			return fmt.Errorf("failed to delete action %s of resource server %s: %w",
+				actionID, rsID, delErr)
+		}
+	}
+
+	return DeleteResourceServer(rsID)
+}
+
+// ListActionIDsAtResourceServer returns the IDs of actions attached directly to a resource server,
+// as opposed to those attached to one of its resources.
+func ListActionIDsAtResourceServer(rsID string) ([]string, error) {
+	body, err := getJSON(fmt.Sprintf("%s/resource-servers/%s/actions?limit=100", TestServerURL, rsID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list actions of resource server %s: %w", rsID, err)
+	}
+
+	var list struct {
+		Actions []struct {
+			ID string `json:"id"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("failed to parse action list: %w", err)
+	}
+
+	ids := make([]string, 0, len(list.Actions))
+	for _, action := range list.Actions {
+		ids = append(ids, action.ID)
+	}
+	return ids, nil
+}
+
+// collectResourceIDsDeepestFirst returns the resource subtree under parentID, children ahead of
+// their parents.
+func collectResourceIDsDeepestFirst(rsID, parentID string) ([]string, error) {
+	children, err := ListResourceIDs(rsID, parentID)
+	if err != nil {
+		return nil, err
+	}
+
+	ordered := make([]string, 0, len(children))
+	for _, child := range children {
+		descendants, descErr := collectResourceIDsDeepestFirst(rsID, child)
+		if descErr != nil {
+			return nil, descErr
+		}
+		ordered = append(ordered, descendants...)
+		ordered = append(ordered, child)
+	}
+	return ordered, nil
+}
+
+// ListResourceIDs returns the IDs of resources directly under parentID. An empty parentID lists the
+// top-level resources, which requires omitting the query parameter entirely: sending `parentId=`
+// makes the server look up a resource whose id is the empty string and answer 404.
+func ListResourceIDs(rsID, parentID string) ([]string, error) {
+	requestURL := fmt.Sprintf("%s/resource-servers/%s/resources?limit=100", TestServerURL, rsID)
+	if parentID != "" {
+		requestURL += "&parentId=" + url.QueryEscape(parentID)
+	}
+
+	body, err := getJSON(requestURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list resources of resource server %s: %w", rsID, err)
+	}
+
+	var list struct {
+		Resources []struct {
+			ID string `json:"id"`
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("failed to parse resource list: %w", err)
+	}
+
+	ids := make([]string, 0, len(list.Resources))
+	for _, resource := range list.Resources {
+		ids = append(ids, resource.ID)
+	}
+	return ids, nil
+}
+
+// ListActionIDsAtResource returns the IDs of actions defined directly on a resource.
+func ListActionIDsAtResource(rsID, resourceID string) ([]string, error) {
+	body, err := getJSON(fmt.Sprintf("%s/resource-servers/%s/resources/%s/actions?limit=100",
+		TestServerURL, rsID, resourceID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list actions of resource %s: %w", resourceID, err)
+	}
+
+	var list struct {
+		Actions []struct {
+			ID string `json:"id"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("failed to parse action list: %w", err)
+	}
+
+	ids := make([]string, 0, len(list.Actions))
+	for _, action := range list.Actions {
+		ids = append(ids, action.ID)
+	}
+	return ids, nil
+}
+
+func deleteActionAtResource(rsID, resourceID, actionID string) error {
+	return deleteURL(fmt.Sprintf("%s/resource-servers/%s/resources/%s/actions/%s",
+		TestServerURL, rsID, resourceID, actionID))
+}
+
+func deleteResource(rsID, resourceID string) error {
+	return deleteURL(fmt.Sprintf("%s/resource-servers/%s/resources/%s",
+		TestServerURL, rsID, resourceID))
+}
+
+// deleteURL issues a DELETE and requires a 204.
+func deleteURL(url string) error {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send delete request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204, got %d. Response: %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 // CreateFlow creates a flow via API and returns the flow ID
