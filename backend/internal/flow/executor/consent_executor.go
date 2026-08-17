@@ -6,7 +6,6 @@ package executor
 import (
 	"encoding/json"
 	"errors"
-	"html"
 	"slices"
 	"strconv"
 	"strings"
@@ -211,11 +210,6 @@ func (e *consentExecutor) handleConsentDecisions(ctx *providers.NodeContext, exe
 		execResp.Error = &ErrConsentDecisionsMissing
 		return execResp, nil
 	}
-
-	// SanitizeStringMap HTML-escapes all user inputs as an XSS prevention measure.
-	// For the consent_decisions field the value is a JSON string, so HTML entities
-	// must be unescaped before parsing
-	decisionsJSON = html.UnescapeString(decisionsJSON)
 
 	var decisions providers.ConsentDecisions
 	if err := json.Unmarshal([]byte(decisionsJSON), &decisions); err != nil {

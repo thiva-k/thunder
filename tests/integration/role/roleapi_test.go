@@ -1577,6 +1577,58 @@ func (suite *RoleAPITestSuite) TestDeleteResourceServer_CascadesToRolePermission
 	suite.Equal([]string{testPermission3}, updated.Permissions[0].Permissions)
 }
 
+// Names and descriptions must survive a create -> read -> update cycle byte for byte. The Console
+// echoes the returned name back on every save, so any encoding applied on input compounds per save.
+func (suite *RoleAPITestSuite) TestRoleRoundTrip_SpecialCharactersPreserved() {
+	const name = "Dean's Sub team"
+	const description = `R&D <team> "core"`
+
+	role, err := suite.createRole(CreateRoleRequest{
+		Name:        name,
+		Description: description,
+		OUID:        testOUID,
+		Permissions: []ResourcePermissions{
+			{
+				ResourceServerID: testResourceServer1ID,
+				Permissions:      []string{testPermission1},
+			},
+		},
+	})
+	suite.Require().NoError(err)
+	suite.Require().NotNil(role)
+	defer func() { _ = suite.deleteRole(role.ID) }()
+
+	suite.Equal(name, role.Name, "create response must echo the name verbatim")
+	suite.Equal(description, role.Description, "create response must echo the description verbatim")
+
+	fetched, err := suite.getRole(role.ID)
+	suite.Require().NoError(err)
+	suite.Equal(name, fetched.Name, "stored name must match what was sent")
+	suite.Equal(description, fetched.Description, "stored description must match what was sent")
+
+	// Replay the Console edit loop: echo the returned name back, change only the description.
+	for i := 0; i < 3; i++ {
+		updated, updateErr := suite.updateRole(role.ID, UpdateRoleRequest{
+			Name:        fetched.Name,
+			Description: description,
+			OUID:        testOUID,
+			Permissions: []ResourcePermissions{
+				{
+					ResourceServerID: testResourceServer1ID,
+					Permissions:      []string{testPermission1},
+				},
+			},
+		})
+		suite.Require().NoError(updateErr)
+		suite.Equal(name, updated.Name, "name must not drift on save %d", i+1)
+
+		fetched, err = suite.getRole(role.ID)
+		suite.Require().NoError(err)
+		suite.Equal(name, fetched.Name, "stored name must not drift after save %d", i+1)
+		suite.Equal(description, fetched.Description, "stored description must not drift after save %d", i+1)
+	}
+}
+
 // Helper methods
 
 func (suite *RoleAPITestSuite) createRole(request CreateRoleRequest) (*Role, error) {

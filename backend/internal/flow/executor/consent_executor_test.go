@@ -567,23 +567,21 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_AllApproved_Success
 	assert.Contains(suite.T(), resp.RuntimeData[common.RuntimeKeyConsentedAttributes], "phone")
 }
 
-func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_HTMLEscapedJSON() {
-	// Simulate the HTML-escaped JSON that SanitizeStringMap would produce
+// Consent decisions arrive as a JSON string through SanitizeStringMap. HTML entities in a purpose
+// name must reach the enforcer verbatim; unescaping here would corrupt a legitimate "&amp;" value.
+func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_HTMLEntitiesPreserved() {
+	purposeName := `attributes:R&D <team> &amp; "core"`
 	decisions := providers.ConsentDecisions{
 		Approved: true,
 		Purposes: []providers.PurposeDecision{
-			{PurposeName: "attributes:test-app", Approved: true},
+			{PurposeName: purposeName, Approved: true},
 		},
 	}
-	decisionsJSON, _ := json.Marshal(decisions)
-	// HTML escape the JSON (simulates XSS sanitization)
-	escapedJSON := "&lt;script&gt;" // Won't appear in real flow, just to test unescape doesn't break
-	_ = escapedJSON
-	// Use actual HTML-escaped JSON with angle brackets in values
-	htmlEscaped := string(decisionsJSON) // Normal JSON shouldn't have HTML entities typically
+	decisionsJSON, err := json.Marshal(decisions)
+	assert.NoError(suite.T(), err)
 
 	ctx := buildConsentNodeContext()
-	ctx.UserInputs[userInputConsentDecisions] = htmlEscaped
+	ctx.UserInputs[userInputConsentDecisions] = string(decisionsJSON)
 	suite.setupDefaultAuthnProviderMocks()
 
 	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
@@ -596,14 +594,21 @@ func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_HTMLEscapedJSON() {
 		Purposes: []providers.ConsentPurposeItem{},
 	}
 
+	var recorded *providers.ConsentDecisions
 	suite.mockConsentEnforcer.On("RecordConsent", mock.Anything, mock.Anything, mock.Anything,
-		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		mock.Anything, mock.AnythingOfType("*providers.ConsentDecisions"), mock.Anything,
+		mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			recorded = args.Get(4).(*providers.ConsentDecisions)
+		}).
 		Return(consentResult, nil)
 
-	resp, err := suite.executor.Execute(ctx)
+	resp, execErr := suite.executor.Execute(ctx)
 
-	assert.NoError(suite.T(), err)
+	assert.NoError(suite.T(), execErr)
 	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	assert.NotNil(suite.T(), recorded)
+	assert.Equal(suite.T(), purposeName, recorded.Purposes[0].PurposeName)
 }
 
 func (suite *ConsentExecutorTestSuite) TestExecute_HasInputs_EmptyDecisions() {
