@@ -5006,6 +5006,7 @@ const translations = {
     'claims.name': 'Claim',
     'claims.nameHint':
       'The claim path to request from the wallet, and whether it must be disclosed (Mandatory) or may be withheld (Optional).',
+    'claims.errors.duplicate': 'This claim is already requested. Each claim can be listed only once.',
     'claims.requirement': 'Requirement',
     'claims.mandatory': 'Mandatory',
     'claims.optional': 'Optional',
@@ -5140,6 +5141,8 @@ const translations = {
     'claims.name': 'Attribute Name',
     'claims.displayName': 'Display Name',
     'claims.nameHint': 'Must match a user profile attribute name; the value is sourced from the user.',
+    'claims.errors.duplicate': 'This attribute is already added. Each attribute can be listed only once.',
+    'claims.errors.reserved': 'This name is reserved by the credential format and cannot be used as an attribute.',
 
     // Offer dialog
     'offer.title': 'Credential Offer',
