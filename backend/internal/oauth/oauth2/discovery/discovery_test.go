@@ -204,6 +204,16 @@ func (suite *DiscoveryTestSuite) TestDPoPSigningAlgValuesAdvertised() {
 	assert.Equal(suite.T(), expected, oidcMeta.DPoPSigningAlgValuesSupported)
 }
 
+// TestTokenEndpointAuthSigningAlgValuesAdvertised verifies the discovery metadata publishes
+// token_endpoint_auth_signing_alg_values_supported with FAPI 2.0 permitted algorithms (RFC 8414).
+func (suite *DiscoveryTestSuite) TestTokenEndpointAuthSigningAlgValuesAdvertised() {
+	oauth2Meta := suite.discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background())
+	assert.NotEmpty(suite.T(), oauth2Meta.TokenEndpointAuthSigningAlgValuesSupported)
+	assert.Contains(suite.T(), oauth2Meta.TokenEndpointAuthSigningAlgValuesSupported, "ES256")
+	assert.Contains(suite.T(), oauth2Meta.TokenEndpointAuthSigningAlgValuesSupported, "PS256")
+	assert.Contains(suite.T(), oauth2Meta.TokenEndpointAuthSigningAlgValuesSupported, "EdDSA")
+}
+
 func (suite *DiscoveryTestSuite) TestDPoPSigningAlgValuesOmittedWhenUnconfigured() {
 	config.ResetServerRuntime()
 	testConfig := &config.Config{
