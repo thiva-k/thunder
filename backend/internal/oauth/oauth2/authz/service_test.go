@@ -348,6 +348,25 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Su
 	assert.Equal(suite.T(), "test-flow-id", result.QueryParams[oauth2const.ExecutionID])
 }
 
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Success_WithUILocales() {
+	app := suite.testApp()
+	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
+	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
+		Return(false, "", "")
+	suite.mockFlowExecService.EXPECT().InitiateFlow(mock.Anything, mock.Anything).Return("test-flow-id", nil)
+	suite.mockAuthReqStore.EXPECT().AddRequest(mock.Anything, mock.Anything).Return(testAuthID, nil)
+
+	msg := suite.testMsg()
+	msg.RequestQueryParams["ui_locales"] = []string{"hi"}
+
+	svc := suite.newService()
+	result, authErr := svc.HandleInitialAuthorizationRequest(context.Background(), msg)
+
+	assert.Nil(suite.T(), authErr)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), "hi", result.QueryParams[oauth2const.RequestParamUILocales])
+}
+
 func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_ExplicitResourceSetsRuntimeRSID() {
 	app := suite.testApp()
 	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
