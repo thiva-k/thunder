@@ -100,7 +100,7 @@ jobs:
           done
           set -e
 
-          git push origin "${FORWARD_BRANCH}"
+          git push --force origin "${FORWARD_BRANCH}"
 
           {
             echo "forward_branch=${FORWARD_BRANCH}"
