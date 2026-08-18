@@ -10,7 +10,7 @@
 name: Forward-port Merged PRs
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches:
       # Patch branches whose merged PRs get forward-ported to main.
