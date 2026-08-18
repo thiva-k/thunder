@@ -100,6 +100,7 @@ const RESOURCE_MANIFEST: Array<{
     expected: [
       "Wayfinder Registration Flow",
       "Wayfinder Password Recovery Flow",
+      "Wayfinder Sign Out Flow",
       "Wayfinder Staff Onboarding Flow",
       "Default Wayfinder CIBA Email Notification Flow",
       "Default Wayfinder CIBA SMS Notification Flow",
