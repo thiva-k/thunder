@@ -7,9 +7,7 @@ package constants
 import (
 	"errors"
 
-	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
-	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // OAuth2 request parameters.
@@ -340,50 +338,6 @@ const (
 	// SupportedAuthorizationGrantProfileIDJAG is the constant for supported authorization grant profile ID-JAG.
 	SupportedAuthorizationGrantProfileIDJAG = "urn:ietf:params:oauth:grant-profile:id-jag"
 )
-
-// GetSupportedResponseTypes returns all supported OAuth2 response types.
-func GetSupportedResponseTypes(oauthConfig oauthconfig.Config) []string {
-	allowedResponseTypes := oauthConfig.OAuth.AllowedResponseTypes
-	if len(allowedResponseTypes) > 0 {
-		return allowedResponseTypes
-	}
-	result := make([]string, len(providers.SupportedResponseTypes))
-	for i, rt := range providers.SupportedResponseTypes {
-		result[i] = string(rt)
-	}
-	return result
-}
-
-// GetSupportedGrantTypes returns all supported OAuth2 grant types.
-func GetSupportedGrantTypes(oauthConfig oauthconfig.Config) []string {
-	allowedGrantTypes := oauthConfig.OAuth.AllowedGrantTypes
-	if len(allowedGrantTypes) > 0 {
-		return allowedGrantTypes
-	}
-	result := make([]string, len(providers.SupportedGrantTypes))
-	for i, gt := range providers.SupportedGrantTypes {
-		result[i] = string(gt)
-	}
-	return result
-}
-
-// GetSupportedTokenEndpointAuthMethods returns all supported token endpoint authentication methods.
-func GetSupportedTokenEndpointAuthMethods(oauthConfig oauthconfig.Config) []string {
-	allowedAuthMethods := oauthConfig.OAuth.AllowedAuthMethods
-	if len(allowedAuthMethods) > 0 {
-		return allowedAuthMethods
-	}
-	result := make([]string, len(providers.SupportedTokenEndpointAuthMethods))
-	for i, tam := range providers.SupportedTokenEndpointAuthMethods {
-		result[i] = string(tam)
-	}
-	return result
-}
-
-// GetSupportedSubjectTypes returns all supported OIDC subject types.
-func GetSupportedSubjectTypes() []string {
-	return []string{SubjectTypePublic}
-}
 
 // GetStandardClaims returns all standard JWT claims that are always included in tokens.
 func GetStandardClaims() []string {
