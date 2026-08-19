@@ -252,6 +252,14 @@ type OAuthConfig struct {
 	AllowedResponseTypes []string `yaml:"allowed_response_types" json:"allowed_response_types"`
 	// AllowedAuthMethods lists allowed client token endpoint auth methods
 	AllowedAuthMethods []string `yaml:"allowed_auth_methods" json:"allowed_auth_methods"`
+	// AllowedScopes lists the OAuth scopes advertised as allowed by the server.
+	AllowedScopes []string `yaml:"allowed_scopes" json:"allowed_scopes"`
+	// AllowedClaims lists the claims advertised as allowed by the server.
+	AllowedClaims []string `yaml:"allowed_claims" json:"allowed_claims"`
+	// DefaultScopeClaimsMapping maps each allowed scope to the claims it implies.
+	DefaultScopeClaimsMapping map[string][]string `yaml:"default_scope_claims_mapping" json:"default_scope_claims_mapping"` //nolint:lll
+	// AllowedSubjectTypes lists the OIDC subject types advertised as allowed by the server.
+	AllowedSubjectTypes []string `yaml:"allowed_subject_types" json:"allowed_subject_types"` //nolint:lll
 	// SendServerErrorsToClient controls whether a flow failure that maps to the OAuth
 	// server_error code is reported to the client. Denials (access_denied) are always
 	// reported and are not affected. Nil means unset; the default lives in default.json.
