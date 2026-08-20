@@ -880,7 +880,10 @@ jobs:
         uses: ./.github/actions/backend-integration-patch-coverage
         with:
           base-ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
-          fail-under: '70'
+          # A merge_group payload carries no pull request labels, so queue runs
+          # apply no tag group. Thresholds still come from the base packages map,
+          # and only then the global default.
+          pr-labels: ${{ github.event_name == 'pull_request' && toJSON(github.event.pull_request.labels.*.name) || '' }}
 
   test-integration-status:
     name: ✅ Integration Tests Status
