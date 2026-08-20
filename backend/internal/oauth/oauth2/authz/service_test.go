@@ -45,7 +45,7 @@ func authorizeServiceCfgFromRuntime() oauthconfig.Config {
 	runtime := config.GetServerRuntime()
 	return oauthconfig.Config{
 		JWT:        runtime.Config.JWT,
-		OAuth:      runtime.Config.OAuth,
+		OAuth:      runtime.Config.OAuth.ToEngineConfig(),
 		GateClient: runtime.Config.GateClient,
 	}
 }
@@ -120,7 +120,7 @@ func (suite *AuthorizeServiceTestSuite) BeforeTest(suiteName, testName string) {
 		JWT: engineconfig.JWTConfig{
 			Issuer: "https://localhost:8090",
 		},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
 		},
 	}
@@ -1822,7 +1822,7 @@ func (suite *AuthorizeServiceTestSuite) TestResolveAttrCacheTTL_RefreshAllowed_U
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
 		JWT: engineconfig.JWTConfig{ValidityPeriod: 900},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			RefreshToken:      engineconfig.RefreshTokenConfig{ValidityPeriod: 7200},
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
 		},
@@ -1848,7 +1848,7 @@ func (suite *AuthorizeServiceTestSuite) TestResolveAttrCacheTTL_RefreshTokenAllo
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
 		JWT: engineconfig.JWTConfig{ValidityPeriod: 900},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			RefreshToken:      engineconfig.RefreshTokenConfig{ValidityPeriod: 1800},
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
 		},
@@ -1874,7 +1874,7 @@ func (suite *AuthorizeServiceTestSuite) TestResolveUserAttributesCacheTTL_Refres
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
 		JWT: engineconfig.JWTConfig{ValidityPeriod: 900},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			// RefreshToken.ValidityPeriod is 0 → ResolveTokenConfig falls back to global JWT validity.
 			RefreshToken:      engineconfig.RefreshTokenConfig{ValidityPeriod: 0},
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
@@ -1910,7 +1910,7 @@ func (suite *AuthorizeServiceTestSuite) TestResolveAttrCacheTTL_NoRefreshToken_Z
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
 		JWT: engineconfig.JWTConfig{ValidityPeriod: 900},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
 		},
 	})
@@ -1933,7 +1933,7 @@ func (suite *AuthorizeServiceTestSuite) TestResolveAttrCacheTTL_NoRefreshToken_N
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
 		JWT: engineconfig.JWTConfig{ValidityPeriod: 900},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
 		},
 	})
@@ -1951,7 +1951,7 @@ func (suite *AuthorizeServiceTestSuite) TestResolveAttrCacheTTL_NoRefreshToken_N
 	config.ResetServerRuntime()
 	_ = config.InitializeServerRuntime("test", &config.Config{
 		JWT: engineconfig.JWTConfig{ValidityPeriod: 900},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			AuthorizationCode: engineconfig.AuthorizationCodeConfig{ValidityPeriod: 600},
 		},
 	})
