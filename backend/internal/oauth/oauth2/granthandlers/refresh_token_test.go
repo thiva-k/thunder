@@ -82,7 +82,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) SetupTest() {
 		JWT: engineconfig.JWTConfig{
 			ValidityPeriod: 3600,
 		},
-		OAuth: engineconfig.OAuthConfig{
+		OAuth: config.OAuthConfig{
 			RefreshToken: engineconfig.RefreshTokenConfig{
 				ValidityPeriod: 86400,
 				RenewOnGrant:   false,
