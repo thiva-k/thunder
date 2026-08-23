@@ -96,6 +96,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/mcp"
 	"github.com/thunder-id/thunderid/internal/system/observability"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
+	"github.com/thunder-id/thunderid/internal/system/secretresolver"
 	"github.com/thunder-id/thunderid/internal/system/services"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	"github.com/thunder-id/thunderid/internal/system/template"
@@ -163,7 +164,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	// Initialize the variable store. It takes the config crypto provider directly, since that is
 	// what seals a secret before it reaches the database.
-	variablestore.Initialize(mux, configCryptoSvc, cacheManager)
+	_, references := variablestore.Initialize(mux, configCryptoSvc, cacheManager)
 
 	ouAuthzService, err := sysauthz.Initialize()
 	fatalOnError(ctx, logger, err, "Failed to initialize system authorization service")
@@ -516,6 +517,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		serverConfigService,
 		gatewayService,
 		authZENPDPService,
+		// References in imported configuration are replaced with what this deployment's store holds.
+		secretresolver.New(variablestore.Lookup(references)),
 	)
 
 	attestationProvider := initAttestationProvider(ctx, logger, runtimeCryptoSvc)

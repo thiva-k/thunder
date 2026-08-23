@@ -882,6 +882,8 @@ var defaultMessages = map[string]string{
 	"error.import.missingDeleteFields": "resourceType and resourceKey are required",
 	"error.import.templateResolutionFailed": "Template resolution failed",
 	"error.import.templateResolutionFailed.description": "Failed to resolve one or more template variables in YAML content",
+	"error.import.unresolvedReference": "Unresolved reference",
+	"error.import.unresolvedReference.description": "The resource refers to a variable or secret this deployment holds no value for",
 	"error.import.unsupportedResourceType": "unsupported resource type for declarative file management",
 	"error.interceptor.captcha_invalid": "Invalid captcha",
 	"error.interceptor.captcha_invalid_description": "The captcha token could not be verified",

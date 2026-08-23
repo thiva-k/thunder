@@ -6,6 +6,7 @@ package importer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/secretresolver"
 	"github.com/thunder-id/thunderid/internal/vc/credential"
 	"github.com/thunder-id/thunderid/internal/vc/presentation"
 )
@@ -266,6 +268,10 @@ type importService struct {
 	credentialConfigurationService credentialConfigurationAdapter
 	serverConfigService            serverConfigAdapter
 	gatewayService                 gatewayAdapter
+	// references replaces a var: or sec: reference with the value this deployment holds. Nil leaves
+	// references in place, which is what a control plane wants: it keeps configuration as references
+	// and holds no values.
+	references *secretresolver.Resolver
 }
 
 func newImportService(
@@ -386,7 +392,10 @@ func (s *importService) ImportResources(
 			}
 		}
 
-		outcome := s.importDocument(ctx, doc, options, request.DryRun, flowIDAliases)
+		outcome, resolved := s.resolveReferences(ctx, doc)
+		if resolved {
+			outcome = s.importDocument(ctx, doc, options, request.DryRun, flowIDAliases)
+		}
 		results = append(results, outcome)
 
 		if doc.ResourceType == resourceTypeFlow && outcome.Status == statusSuccess && originalFlowID != "" &&
@@ -425,6 +434,47 @@ func (s *importService) ImportResources(
 		},
 		Results: results,
 	}, nil
+}
+
+// resolveReferences replaces the var: and sec: references in a document with the values this
+// deployment holds, before the document is imported. The service writing the resource then stores each
+// value as it stores any other.
+//
+// A document whose references the store does not all hold is refused, naming them, rather than written
+// with the reference text where a value belongs: a client secret stored as "sec:NAME" would reject
+// every authentication, for a reason that no longer mentions the name.
+func (s *importService) resolveReferences(ctx context.Context, doc parsedDocument) (ImportItemOutcome, bool) {
+	if s.references == nil {
+		return ImportItemOutcome{}, true
+	}
+	err := s.references.ResolveNode(ctx, doc.Node)
+	if err == nil {
+		return ImportItemOutcome{}, true
+	}
+	outcome := ImportItemOutcome{
+		ResourceType: doc.ResourceType,
+		ResourceName: documentName(doc),
+		Status:       statusFailed,
+		Code:         ErrorUnresolvedReference.Code,
+		Message:      err.Error(),
+	}
+	var unresolved *secretresolver.UnresolvedError
+	if !errors.As(err, &unresolved) {
+		log.GetLogger().Error(ctx, "Failed to resolve the references in an imported document", log.Error(err))
+		outcome.Message = "the values this resource refers to could not be read"
+	}
+	return outcome, false
+}
+
+// documentName reads a document's top-level name, for naming it in an outcome before it is decoded.
+func documentName(doc parsedDocument) string {
+	var named struct {
+		Name string `yaml:"name"`
+	}
+	if doc.Node == nil || doc.Node.Decode(&named) != nil {
+		return ""
+	}
+	return named.Name
 }
 
 func (s *importService) DeleteResource(
