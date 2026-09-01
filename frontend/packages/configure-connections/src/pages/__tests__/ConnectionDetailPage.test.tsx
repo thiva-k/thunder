@@ -63,6 +63,46 @@ const OIDC_CONNECTION = {
   redirectUri: 'https://id.acme.io/oauth/callback/oidc',
 };
 
+const AUTHZEN_PDP_CONNECTION = {
+  id: 'pdp1',
+  type: 'authzen-pdp',
+  name: 'AuthZEN PDP',
+  endpoint: 'https://pdp.example.com/.well-known/authzen-configuration',
+  batchEndpoint: 'https://pdp.example.com/access/v1/evaluations',
+  timeoutMs: 500,
+  retryCount: 1,
+  subjectAttributeMappings: [
+    {
+      entityType: 'employee',
+      attributes: [{attribute: 'email'}, {attribute: 'department', pdpAttribute: 'dept'}],
+    },
+  ],
+};
+
+const AUTHZEN_PDP_BEARER_CONNECTION = {
+  ...AUTHZEN_PDP_CONNECTION,
+  authentication: {
+    scheme: 'BEARER',
+    bearer: {token: '******'},
+  },
+};
+
+const AUTHZEN_PDP_BEARER_WITHOUT_TOKEN = {
+  ...AUTHZEN_PDP_CONNECTION,
+  authentication: {
+    scheme: 'BEARER',
+    bearer: {token: ''},
+  },
+};
+
+const AUTHZEN_PDP_API_KEY_WITH_NULL_HEADERS = {
+  ...AUTHZEN_PDP_CONNECTION,
+  authentication: {
+    scheme: 'API_KEY',
+    apiKey: {headers: null},
+  },
+};
+
 const mockParams: {type: string; id: string} = {type: 'google', id: 'g1'};
 const mockConn: {data: Record<string, unknown>} = {data: CONNECTION};
 
@@ -81,8 +121,16 @@ vi.mock('@thunderid/components', async (importOriginal) => ({
   SettingsCard: ({title, children}: {title: string; children: ReactNode}) => (
     <section aria-label={title}>{children}</section>
   ),
-  UnsavedChangesBar: ({onSave, saveLabel}: {onSave: () => void; saveLabel: string}) => (
-    <button type="button" data-testid="save-bar" onClick={onSave}>
+  UnsavedChangesBar: ({
+    onSave,
+    saveLabel,
+    saveDisabled,
+  }: {
+    onSave: () => void;
+    saveLabel: string;
+    saveDisabled: boolean;
+  }) => (
+    <button type="button" data-testid="save-bar" onClick={onSave} disabled={saveDisabled}>
       {saveLabel}
     </button>
   ),
@@ -171,6 +219,69 @@ vi.mock('../../components/AccountLinkingSection', () => ({
       <button type="button" data-testid="clear-linking" onClick={() => onChange(undefined)}>
         clear account linking
       </button>
+    );
+  },
+}));
+
+vi.mock('../../components/SubjectMappingSection', () => ({
+  default: function StubSubjectMappingSection({
+    values,
+    onChange,
+  }: {
+    values: {
+      subjectAttributeMappings?: {
+        entityType: string;
+        attributes: {attribute: string}[];
+      }[];
+    };
+    onChange: (field: 'subjectAttributeMappings', value: unknown[]) => void;
+  }) {
+    return (
+      <div data-testid="stub-subject-mapping">
+        <span>{values.subjectAttributeMappings?.[0]?.attributes.map(({attribute}) => attribute).join(' ')}</span>
+        <button
+          type="button"
+          data-testid="edit-subject-mapping"
+          onClick={() =>
+            onChange('subjectAttributeMappings', [
+              {
+                entityType: 'employee',
+                attributes: [{attribute: 'email'}, {attribute: 'riskScore'}],
+              },
+            ])
+          }
+        >
+          edit subject mapping
+        </button>
+        <button
+          type="button"
+          data-testid="duplicate-subject-mapping"
+          onClick={() =>
+            onChange('subjectAttributeMappings', [
+              {
+                entityType: 'employee',
+                attributes: [{attribute: 'email'}, {attribute: 'email'}],
+              },
+            ])
+          }
+        >
+          duplicate subject mapping
+        </button>
+        <button
+          type="button"
+          data-testid="restore-subject-mapping"
+          onClick={() =>
+            onChange('subjectAttributeMappings', [
+              {
+                entityType: 'employee',
+                attributes: [{attribute: 'email'}, {attribute: 'department', pdpAttribute: 'dept'}],
+              },
+            ])
+          }
+        >
+          restore subject mapping
+        </button>
+      </div>
     );
   },
 }));
@@ -345,5 +456,194 @@ describe('ConnectionDetailPage', () => {
       senderId: '+15005550006',
     });
     expect('attributeConfiguration' in payload).toBe(false);
+  });
+
+  it('AuthZEN PDP: shows subject mapping in its own tab and saves it with the connection', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    expect(screen.getByTestId('connection-tab-subject-mapping')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('connection-tab-subject-mapping'));
+    expect(screen.getByTestId('stub-subject-mapping')).toHaveTextContent('email department');
+
+    fireEvent.click(screen.getByTestId('edit-subject-mapping'));
+    fireEvent.click(screen.getByTestId('save-bar'));
+
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    const payload = updateMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      name: 'AuthZEN PDP',
+      endpoint: 'https://pdp.example.com/.well-known/authzen-configuration',
+      batchEndpoint: 'https://pdp.example.com/access/v1/evaluations',
+      subjectAttributeMappings: [
+        {
+          entityType: 'employee',
+          attributes: [{attribute: 'email'}, {attribute: 'riskScore'}],
+        },
+      ],
+    });
+    expect('resourceType' in payload).toBe(false);
+    expect('resourceId' in payload).toBe(false);
+    expect('authentication' in payload).toBe(false);
+  });
+
+  it('AuthZEN PDP: disables save while one entity type has duplicate attributes', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-subject-mapping'));
+    fireEvent.click(screen.getByTestId('duplicate-subject-mapping'));
+
+    expect(screen.getByTestId('save-bar')).toBeDisabled();
+  });
+
+  it('AuthZEN PDP: becomes clean after a subject mapping edit is undone', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = {
+      ...AUTHZEN_PDP_CONNECTION,
+      subjectAttributeMappings: [
+        ...AUTHZEN_PDP_CONNECTION.subjectAttributeMappings,
+        {entityType: 'assistant', attributes: []},
+      ],
+    };
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-subject-mapping'));
+    fireEvent.click(screen.getByTestId('edit-subject-mapping'));
+    expect(screen.getByTestId('save-bar')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('restore-subject-mapping'));
+    expect(screen.queryByTestId('save-bar')).not.toBeInTheDocument();
+  });
+
+  it('AuthZEN PDP: displays authentication separately from connection configuration', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    expect(screen.getByLabelText('Connection Configuration')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    expect(screen.getByText('Authentication method')).toBeInTheDocument();
+    expect(screen.getByText('None')).toBeInTheDocument();
+  });
+
+  it('AuthZEN PDP: becomes clean after API-key headers are entered and the scheme returns to None', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', {name: 'API key'}));
+    fireEvent.change(document.getElementById('connection-field-httpHeaders-name-1')!, {
+      target: {value: 'X-API-Key'},
+    });
+    fireEvent.change(document.getElementById('connection-field-httpHeaders-value-1')!, {
+      target: {value: 'secret'},
+    });
+    expect(screen.getByTestId('save-bar')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', {name: 'None'}));
+
+    expect(screen.queryByTestId('save-bar')).not.toBeInTheDocument();
+  });
+
+  it('AuthZEN PDP: handles a stored API key response with null headers', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_API_KEY_WITH_NULL_HEADERS;
+
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('edit-name'));
+    expect(screen.getByTestId('save-bar')).toBeDisabled();
+    expect(screen.getByTestId('connection-tab-authentication')).toHaveAttribute('aria-invalid', 'true');
+
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    expect(screen.getByText('This field is required.')).toBeInTheDocument();
+  });
+
+  it('AuthZEN PDP: preserves stored authentication when saving unrelated changes', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_BEARER_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-subject-mapping'));
+    fireEvent.click(screen.getByTestId('edit-subject-mapping'));
+    fireEvent.click(screen.getByTestId('save-bar'));
+
+    const payload = updateMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('authentication');
+  });
+
+  it('AuthZEN PDP: submits a structured Bearer credential replacement', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_BEARER_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    fireEvent.click(screen.getByRole('button', {name: 'Update'}));
+    fireEvent.change(document.getElementById('connection-field-bearerToken')!, {target: {value: 'new-token'}});
+    fireEvent.click(screen.getByTestId('save-bar'));
+
+    const payload = updateMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).toMatchObject({authentication: {scheme: 'BEARER', bearer: {token: 'new-token'}}});
+    expect(payload).not.toHaveProperty('authenticationScheme');
+    expect(payload).not.toHaveProperty('bearerToken');
+  });
+
+  it('AuthZEN PDP: becomes clean after entering and clearing an unstored Bearer token', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_BEARER_WITHOUT_TOKEN;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    const bearerToken = document.getElementById('connection-field-bearerToken')!;
+    fireEvent.change(bearerToken, {target: {value: 'temporary-token'}});
+    expect(screen.getByTestId('save-bar')).toBeInTheDocument();
+
+    fireEvent.change(bearerToken, {target: {value: ''}});
+    expect(screen.queryByTestId('save-bar')).not.toBeInTheDocument();
+  });
+
+  it('AuthZEN PDP: submits an entered Bearer token when no credential is stored', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_BEARER_WITHOUT_TOKEN;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    fireEvent.change(document.getElementById('connection-field-bearerToken')!, {target: {value: 'new-token'}});
+    fireEvent.click(screen.getByTestId('save-bar'));
+
+    expect(updateMock.mock.calls[0][0]).toMatchObject({
+      authentication: {scheme: 'BEARER', bearer: {token: 'new-token'}},
+    });
+  });
+
+  it('AuthZEN PDP: submits NONE when stored authentication is removed', () => {
+    mockParams.type = 'authzen-pdp';
+    mockParams.id = 'pdp1';
+    mockConn.data = AUTHZEN_PDP_BEARER_CONNECTION;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('connection-tab-authentication'));
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', {name: 'None'}));
+    fireEvent.click(screen.getByTestId('save-bar'));
+
+    const payload = updateMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).toMatchObject({authentication: {scheme: 'NONE'}});
   });
 });
