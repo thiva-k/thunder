@@ -37,69 +37,69 @@ Out of scope (see the referenced companion models):
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph Untrusted
-        RO["Resource Owner<br/>(End User Browser)"]
-        APP["OAuth Client Application<br/>(Confidential / Public / M2M)"]
-    end
+    RO["Resource Owner<br/>(End User Browser)"]
+    APP["OAuth Client Application<br/>(Confidential / Public / M2M)"]
+  end
 
   subgraph Trusted [ThunderID trust boundary]
-        subgraph "Public / Front-channel"
-            AUTHZ["Authorization Endpoint<br/>GET /oauth2/authorize<br/>(frame protection, no CORS)"]
-            CB["Flow Callback<br/>POST /oauth2/auth/callback"]
-        end
+    direction TB
+    subgraph "Public / Front-channel"
+      AUTHZ["Authorization Endpoint<br/>GET /oauth2/authorize"]
+      FLOW["Flow Engine + Login UI<br/>[OUT OF SCOPE, see Flow Execution model]"]
+      CB["Flow Callback<br/>POST /oauth2/auth/callback"]
+    end
 
-        subgraph "Client-authenticated"
-            TOKEN["Token Endpoint<br/>POST /oauth2/token<br/>(authorization_code / client_credentials /<br/>refresh_token)"]
-        end
+    subgraph "Client-authenticated"
+      CLIAUTHTS["Client Auth Middleware + Token Service<br/>[see Token and Protocol Features model]"]
+      TOKEN["Token Endpoint<br/>POST /oauth2/token"]
+      ACGH["Authorization Code<br/>Grant Handler"]
+      CCGH["Client Credentials<br/>Grant Handler"]
+      RGH["Refresh Token<br/>Grant Handler"]
+      AUTHZSVC["Authorization Service<br/>EvaluateAccessBatch (RBAC)"]
+    end
 
-        subgraph "Internal Components"
-            VAL["Request Validator<br/>(client lookup, exact-match<br/>redirect_uri, PKCE S256)"]
-            CODEMINT["Auth-code mint<br/>(160-bit, single-use,<br/>bound to client/redirect/PKCE)"]
-            ACGH["Authorization Code<br/>Grant Handler<br/>(atomic consume + re-validate)"]
-            CCGH["Client Credentials<br/>Grant Handler<br/>(RS downscope + RBAC)"]
-            RGH["Refresh Token<br/>Grant Handler<br/>(validate, credential check,<br/>re-authorize, downscope, rotate)"]
-            AUTHZSVC["Authorization Service<br/>EvaluateAccessBatch (RBAC)"]
-            RI["Resource Indicators (RFC 8707)<br/>resolve resource servers /<br/>DownscopeToResourceServer /<br/>ResolveAudienceBinding"]
-            ATTR["Attribute Cache<br/>(fetch + TTL extend)"]
-            CLIAUTH["Client Auth Middleware<br/>[see Token and Protocol Features model]"]
-            TS["Token Service<br/>[see Token and Protocol Features model]"]
-            FLOW["Flow Engine + Login UI<br/>[OUT OF SCOPE, see Flow Execution model]"]
-        end
-      subgraph "Stores"
-        AREQ[("Auth request store<br/>authId, 1 h TTL,<br/>single-use")]
-        ACODE[("Auth code store<br/>600 s TTL, single-use")]
-        DB[("Primary DB / Redis<br/>(clients, groups, RSes,<br/>attribute cache)")]
+    subgraph Databases
+      CONFIGDB[("config<br/>clients, resource servers,<br/>roles, role assignments")]
+      ENTITYDB[("entity<br/>users, groups")]
+      TRANSIENTDB[("runtime_transient<br/>auth requests, auth codes,<br/>attribute cache")]
+      PERSISTENTDB[("runtime_persistent<br/>revoked tokens")]
     end
   end
 
-    RO -->|"HTTPS (no auth)<br/>front-channel redirect"| AUTHZ
-    AUTHZ --> VAL
-    VAL -->|"Persist auth request (authId)"| AREQ
-    VAL -->|"InitiateFlow()"| FLOW
-    FLOW -. "signed assertion JWT (trust input)" .-> CB
-    CB -->|"Load + delete auth request"| AREQ
-    CB --> CODEMINT
-    CODEMINT -->|"Insert single-use code"| ACODE
-    CB -.->|"302 redirect_uri?code=&state=&iss="| RO
-    APP -->|"HTTPS + grant params<br/>+ client credentials"| CLIAUTH
-    CLIAUTH --> TOKEN
-    TOKEN --> ACGH
-    TOKEN --> CCGH
-    TOKEN --> RGH
-    ACGH -->|"Atomic consume + re-validate PKCE/redirect/client/expiry/DPoP"| ACODE
-    CCGH --> RI
-    CCGH --> AUTHZSVC
-    RGH --> RI
-    RGH --> AUTHZSVC
-    RGH --> ATTR
-    RI --> DB
-    AUTHZSVC --> DB
-    ATTR --> DB
-    ACGH --> TS
-    CCGH --> TS
-    RGH --> TS
-    TS -.->|"signed JWTs"| APP
+  RO -->|"HTTPS, no auth<br/>front-channel redirect"| AUTHZ
+  AUTHZ -->|"persist auth request (1 h TTL)"| TRANSIENTDB
+  AUTHZ -->|"InitiateFlow()"| FLOW
+  FLOW -. "signed assertion JWT (trust input)" .-> CB
+  CB -->|"load + delete auth request;<br/>mint + insert single-use code (600 s TTL)"| TRANSIENTDB
+  CB -.->|"302 redirect_uri?code=&state=&iss="| RO
+
+  APP -->|"HTTPS + grant params<br/>+ client credentials"| CLIAUTHTS
+  CLIAUTHTS --> TOKEN
+  TOKEN --> ACGH
+  TOKEN --> CCGH
+  TOKEN --> RGH
+
+  ACGH -->|"atomic consume + re-validate"| TRANSIENTDB
+  ACGH -. "revoke token family on replay" .-> PERSISTENTDB
+
+  CCGH -->|"resolve resource server + downscope"| CONFIGDB
+  CCGH -->|"resolve group memberships"| ENTITYDB
+  CCGH --> AUTHZSVC
+
+  RGH -->|"resolve resource server + downscope"| CONFIGDB
+  RGH -->|"resolve group memberships +<br/>re-authorize scopes"| ENTITYDB
+  RGH --> AUTHZSVC
+  RGH -->|"fetch/extend attribute cache"| TRANSIENTDB
+  RGH -->|"deny-list check;<br/>rotation/replay revocation"| PERSISTENTDB
+
+  AUTHZSVC -->|"read role/permission assignments"| CONFIGDB
+
+  ACGH --> CLIAUTHTS
+  CCGH --> CLIAUTHTS
+  RGH --> CLIAUTHTS
+  CLIAUTHTS -.->|"signed JWTs"| APP
 ```
 
 ### Components
@@ -196,15 +196,18 @@ sequenceDiagram
   participant AUTHZ as Authorization Endpoint
   participant FLOW as Flow Engine + Login UI (out of scope)
   participant CB as Flow Callback
-  participant STORE as Auth request / code store
+  participant TRANSIENTDB as runtime_transient
 
   RO->>AUTHZ: HTTPS, no auth [C-Medium, M-NT]
-  AUTHZ->>AUTHZ: validate params + redirect_uri
-  AUTHZ->>STORE: persist auth request (authId, 1 h TTL)
+  AUTHZ->>AUTHZ: validate client + params + redirect_uri
+  AUTHZ-->>RO: else server error page (invalid client / redirect_uri)
+  AUTHZ->>TRANSIENTDB: persist auth request (authId, 1 h TTL)
   AUTHZ->>FLOW: InitiateFlow() (handoff)
   FLOW-->>CB: signed assertion JWT (trust input)
-  CB->>STORE: load + delete auth request (single-use)
-  CB->>STORE: mint + insert single-use code (600 s TTL)
+  CB->>TRANSIENTDB: load + delete auth request (single-use)
+  CB->>CB: verify assertion signature + sub constraint
+  CB-->>RO: else server error page (invalid assertion)
+  CB->>TRANSIENTDB: mint + insert single-use code (600 s TTL)
   CB-->>RO: 302 redirect_uri?code=&state=&iss=
 ```
 
@@ -253,17 +256,16 @@ sequenceDiagram
   participant APP as OAuth Client Application
   participant CLIAUTH as Client Auth Middleware
   participant ACGH as Authorization Code Grant Handler
-  participant STORE as Auth code store
-  participant TS as Token Service
+  participant TRANSIENTDB as runtime_transient
 
   APP->>CLIAUTH: HTTPS + code + code_verifier + redirect_uri + client credentials [C-High, M-NT]
   CLIAUTH-->>APP: else invalid_client (generic)
   CLIAUTH->>ACGH: authenticated client
-  ACGH->>STORE: atomic consume (take-and-remove)
-  STORE-->>ACGH: else no code present -> replay rejected (invalid_grant)
+  ACGH->>TRANSIENTDB: atomic consume (take-and-remove)
+  TRANSIENTDB-->>ACGH: else no code present -> replay rejected (invalid_grant)
   ACGH->>ACGH: verify PKCE / redirect_uri / client / expiry / DPoP
-  ACGH->>TS: issue tokens
-  TS-->>APP: 200 {access, refresh, id_token} Cache-Control: no-store
+  ACGH-->>APP: else invalid_grant
+  ACGH->>APP: 200 {access, refresh, id_token} Cache-Control: no-store
 ```
 
 **Security considerations**
@@ -300,7 +302,7 @@ A self-authenticating client calls `POST /oauth2/token` with `grant_type=client_
 
 | Initiator | Intermediate | Target |
 | --- | --- | --- |
-| OAuth client application (machine) | Client auth middleware, resource indicators, authorization service | Token endpoint and token service |
+| OAuth client application (machine) | Client auth middleware, authorization service | Token endpoint and token service |
 
 **Data flow**
 
@@ -310,25 +312,19 @@ sequenceDiagram
   participant APP as OAuth Client Application (M2M)
   participant CLIAUTH as Client Auth Middleware
   participant CCGH as Client Credentials Handler
-  participant RI as Resource Indicators
-  participant ACTP as Actor Provider
-  participant AUTHZ as Authorization Service (RBAC)
-  participant TS as Token Service
-  participant STORE as DB / Redis
+  participant CONFIGDB as config
+  participant ENTITYDB as entity
 
   APP->>CLIAUTH: HTTPS + client credentials [C-High, M-NT]
   CLIAUTH-->>APP: else invalid_client (generic)
   CLIAUTH->>CCGH: authenticated oauthApp
-  CCGH->>RI: resolve target resource server + downscope
-  RI->>STORE: read resource servers + valid scopes
-  CCGH->>ACTP: GetActorGroups(appID)
-  ACTP->>STORE: read app group memberships
-  CCGH->>AUTHZ: EvaluateAccessBatch(scope x groups)
-  AUTHZ->>STORE: read role/permission assignments
-  AUTHZ-->>CCGH: authorized scopes only
-  CCGH->>TS: BuildAccessToken (cnf.jkt if DPoP)
-  TS-->>CCGH: signed access token
-  CCGH-->>APP: 200 {access_token} Cache-Control: no-store
+  CCGH->>CONFIGDB: resolve target resource server + downscope
+  CONFIGDB-->>CCGH: else unknown resource -> invalid_target
+  CCGH->>ENTITYDB: resolve group memberships
+  CCGH->>CONFIGDB: EvaluateAccessBatch(scope x groups)
+  CCGH->>CCGH: filter to authorized scopes only
+  CCGH-->>APP: else server_error (resolution failure)
+  CCGH->>APP: 200 {access_token} Cache-Control: no-store
 ```
 
 **Security considerations**
@@ -373,25 +369,26 @@ sequenceDiagram
   participant APP as OAuth Client Application
   participant CLIAUTH as Client Auth Middleware
   participant RGH as Refresh Token Grant Handler
-  participant CACHE as Attribute Cache
-  participant TS as Token Service
+  participant ENTITYDB as entity
+  participant TRANSIENTDB as runtime_transient
+  participant PERSISTENTDB as runtime_persistent
 
   APP->>CLIAUTH: HTTPS + client auth + refresh_token [+ scope, resource, DPoP] [C-High, M-NT]
+  CLIAUTH-->>APP: else invalid_client (generic)
   CLIAUTH->>RGH: authenticated client
-  RGH->>RGH: validate refresh token (signature + sub==client_id + deny lists)
+  RGH->>PERSISTENTDB: validate refresh token (signature + sub==client_id + deny lists)
   RGH-->>APP: else invalid_grant
   RGH->>RGH: verify DPoP proof binding
   RGH-->>APP: else invalid_dpop_proof
   RGH->>RGH: credential-change check (subject / client)
   RGH-->>APP: else invalid_grant (credential changed since issuance)
-  RGH->>RGH: downscope (subset-of-grant) + reauthorizeScopes
+  RGH->>ENTITYDB: downscope (subset-of-grant) + reauthorizeScopes
   RGH-->>APP: else invalid_scope
   RGH->>RGH: audience check (single bound audience)
   RGH-->>APP: else invalid_target
-  RGH->>CACHE: GetAttributeCache + ExtendTTL
-  CACHE-->>RGH: attributes
-  RGH->>TS: rotate refresh token (inherits expiry) + build/sign access, id, refresh tokens
-  TS-->>APP: 200 {access_token, [id_token], refresh_token} Cache-Control: no-store
+  RGH->>TRANSIENTDB: GetAttributeCache + ExtendTTL
+  RGH->>PERSISTENTDB: rotate refresh token (inherits expiry), deny-list old jti
+  RGH->>APP: 200 {access_token, [id_token], refresh_token} Cache-Control: no-store
 ```
 
 **Security considerations**
