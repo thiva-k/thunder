@@ -18,6 +18,8 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/database/providermock"
+
+	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 )
 
 const (
@@ -44,12 +46,12 @@ func TestInboundClientStoreTestSuite(t *testing.T) {
 }
 
 func (suite *InboundClientStoreTestSuite) SetupTest() {
+	loadRuntimeForScope()
 	_ = config.InitializeServerRuntime("test", &config.Config{})
 	suite.mockDBProvider = providermock.NewDBProviderInterfaceMock(suite.T())
 	suite.mockDBClient = providermock.NewDBClientInterfaceMock(suite.T())
 	suite.store = &store{
-		dbProvider:   suite.mockDBProvider,
-		deploymentID: testServerID,
+		dbProvider: suite.mockDBProvider,
 	}
 }
 
@@ -882,4 +884,14 @@ func (suite *InboundClientStoreTestSuite) TestSubjectAttribute_RoundTrip() {
 	suite.NoError(err)
 	suite.Require().NotNil(result)
 	suite.Equal(mapping, result.SubjectAttribute)
+}
+
+// loadRuntimeForScope loads a server runtime naming the deployment these tests assert on. The store
+// resolves its deployment from the runtime rather than holding one, and other suites in this package
+// reset the runtime, so it is loaded per test rather than once for the package.
+func loadRuntimeForScope() {
+	config.ResetServerRuntime()
+	_ = config.InitializeServerRuntime("", &config.Config{
+		Server: engineconfig.ServerConfig{Identifier: testServerID},
+	})
 }
