@@ -158,7 +158,8 @@ Actions are performed through an OAuth client; the rows record which people can 
 ### Out-of-scope interactions and risks
 
 - Security of the authentication flow itself, including credential validation, MFA, federated IdP exchange, and the login UI — Flow Execution model. The returned assertion JWT is treated here only as a verifiable trust input.
-- Client authentication mechanics, token issuance, JWT signing including algorithm-confusion defences, the token model, revocation and its enforcement, and DPoP proof verification — Token and Protocol Features model. The `token_exchange`, `ciba`, and `jwt-bearer`/ID-JAG grants and OIDC logout are also documented there.
+- Client authentication mechanics, token issuance, JWT signing including algorithm-confusion defences, the token model, and DPoP proof verification — Token and Protocol Features model. The `token_exchange`, `ciba`, and `jwt-bearer`/ID-JAG grants and OIDC logout are also documented there.
+- Token revocation and its enforcement — Token Revocation model.
 - How the original grant behind a refresh token was obtained — covered in the relevant interaction here for `authorization_code`, or in the Token and Protocol Features model for `token_exchange` and `ciba`.
 - Resource-server enforcement of the scopes and audiences embedded in issued access tokens — the responsibility of the protected resource consuming the token.
 - Client-side storage and handling of issued tokens, authorization codes, and refresh tokens, for example XSS in the client application — the responsibility of the consuming application. Transport is protected by TLS.
@@ -480,7 +481,7 @@ Fill this in only if the change processes personal data.
 
 | Risk | Description | Current Status | Recommendation |
 | --- | --- | --- | --- |
-| Criteria-based revocation is incomplete | Only the token-family and subject dimensions have a writer and are enforced on the hot path. Role, credential, group, and application changes are not yet wired in, so an issued access token, or an unredeemed authorization code, keeps its original authorization until it expires, across every grant (`[02]-9`, `[03]-3`, `[04]-9`). | Accepted. Added to the criteria-based revocation plan following review. | Interim mitigation is short TTLs and explicit revocation by `jti`. Extend the writer and hot-path enforcement to the remaining dimensions, per the criteria-based token revocation discussion in thunder-id/thunderid#4127. |
+| Criteria-based revocation is incomplete | Only the token-family and subject dimensions have a writer and are enforced on the hot path. Role, credential, group, application, and other dimensions are not yet wired in, so an issued access token, or an unredeemed authorization code, keeps its original authorization until it expires, across every grant (`[02]-9`, `[03]-3`, `[04]-9`). | Accepted. Added to the criteria-based revocation plan following review. | Interim mitigation is short TTLs and explicit revocation by `jti`. Extend the writer and hot-path enforcement to the remaining dimensions, per the criteria-based token revocation discussion in thunder-id/thunderid#4127. |
 | No standardized audit logging | Critical OAuth events (token issuance, revocation, configuration changes) are not logged in a standardized format, and configuration-change logs do not capture before/after values, so critical events cannot be traced and incident response has no audit trail to work from. | Accepted; not yet implemented. | Add structured audit logging for critical functionality and configuration changes, with a defined retention policy. (tracking: thunder-id/thunderid#2116) |
 
 ## Appendix
