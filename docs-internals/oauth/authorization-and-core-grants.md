@@ -10,13 +10,9 @@ ThunderID is a lightweight, open-source IAM stack written in Go. Three grants co
 - **`client_credentials`** is the machine-to-machine grant, where a client authenticates as itself for a token on its own behalf (`sub` is the application's ID; no resource owner, front-channel, refresh token, or ID token). An authorization decision is made at issuance: scopes are downscoped to the single target resource server, then gated by RBAC against the application's group memberships.
 - **`refresh_token`** is the back-channel exchange presenting a refresh token for a fresh access token, and an ID token when `openid` was granted, without re-login. The token is a stateless signed JWT bound to its client via `sub == client_id`.
 
-Client authentication runs as middleware before any grant handler executes.
-
 **Token model and stale authorization.** Issued access, refresh, and ID tokens are stateless signed JWTs, not persisted server-side. Single-token revocation by `jti` is enforced on the authorization server's hot path; otherwise a token is valid until natural expiry (defaults: access 3600 s, refresh 86400 s, code 600 s). Criteria-based revocation is also implemented across token-family, subject, application, organization-unit, role, group, consent, and credential-version dimensions, in both "all" and "before-action" modes. Hot-path enforcement currently covers the token-family and subject dimensions only, so stale authorization is reduced but not eliminated. Rotation with single-use enforcement is on by default, and a rotated token inherits the replaced token's expiry, so the refresh lifetime is an absolute grant ceiling rather than a sliding window.
 
-**Cross-cutting posture.** All `/oauth2/**` paths are public by design, exempt from the platform-wide authenticated-principal middleware, as is standard for OAuth; each endpoint enforces the scheme appropriate to its role.
-
-Cross-cutting concerns covered elsewhere: client authentication (`client_secret_basic`/`post`, `private_key_jwt`, `none`) and constant-time secret verification; token issuance, JWT building and signing, TTLs; token validation; the OAuth stores and their atomic consume primitives; DPoP mechanics (the verifier, `htm`/`htu`/`iat`/`jti`/`ath`, JTI replay cache); and the OIDC endpoints — all covered by the Token and Protocol Features model, and referenced here only as trust inputs. The user authentication flow is covered by the Flow Execution model. Token revocation is covered by the Token Revocation model.
+In scope: grant-type processing for these three grants, and the front-channel authorization request and callback that precede `authorization_code`. Out of scope: client authentication, token issuance and signing, DPoP verification, the login flow itself, and revocation enforcement, each covered in a separate threat model.
 
 ## Scope
 
