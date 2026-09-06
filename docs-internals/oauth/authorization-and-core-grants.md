@@ -15,18 +15,18 @@ In scope: grant-type processing for these three grants, and the front-channel au
 ## Scope
 
 This model covers:
-- `GET /oauth2/authorize` — client and parameter validation, PKCE enforcement, authorization-request persistence, flow initiation
-- `POST /oauth2/auth/callback` — assertion verification and authorization code issuance
-- `POST /oauth2/token` for `grant_type=authorization_code` — code consumption and binding re-validation
-- `POST /oauth2/token` for `grant_type=client_credentials` — resource-server downscoping and the RBAC decision at issuance
-- `POST /oauth2/token` for `grant_type=refresh_token` — token validation, credential-change rejection, re-authorization, rotation
+- `GET /oauth2/authorize`: client and parameter validation, PKCE enforcement, authorization-request persistence, flow initiation
+- `POST /oauth2/auth/callback`: assertion verification and authorization code issuance
+- `POST /oauth2/token` for `grant_type=authorization_code`: code consumption and binding re-validation
+- `POST /oauth2/token` for `grant_type=client_credentials`: resource-server downscoping and the RBAC decision at issuance
+- `POST /oauth2/token` for `grant_type=refresh_token`: token validation, credential-change rejection, re-authorization, rotation
 - Resource indicators (RFC 8707) as they constrain audience and scope for these grants
 
 Out of scope (see the referenced companion models):
-- The authentication flow itself, including credential validation, MFA, federated IdP exchange, and the login UI — Flow Execution model
-- Client authentication mechanics, token issuance and signing, the token model, and DPoP proof verification — Token and Protocol Features model
-- The `token_exchange`, `ciba`, and `jwt-bearer`/ID-JAG grants, and OIDC logout — Token and Protocol Features model
-- Token revocation and its enforcement — Token Revocation model
+- The authentication flow itself, including credential validation, MFA, federated IdP exchange, and the login UI, covered by the Flow Execution model
+- Client authentication mechanics, token issuance and signing, the token model, and DPoP proof verification, covered by the Token and Protocol Features model
+- The `token_exchange`, `ciba`, and `jwt-bearer`/ID-JAG grants, and OIDC logout, covered by the Token and Protocol Features model
+- Token revocation and its enforcement, covered by the Token Revocation model
 
 ## Architecture
 
@@ -157,16 +157,16 @@ Actions are performed through an OAuth client; the rows record which people can 
 
 ### Out-of-scope interactions and risks
 
-- Security of the authentication flow itself, including credential validation, MFA, federated IdP exchange, and the login UI — Flow Execution model. The returned assertion JWT is treated here only as a verifiable trust input.
-- Client authentication mechanics, token issuance, JWT signing including algorithm-confusion defences, the token model, and DPoP proof verification — Token and Protocol Features model. The `token_exchange`, `ciba`, and `jwt-bearer`/ID-JAG grants and OIDC logout are also documented there.
-- Token revocation and its enforcement — Token Revocation model.
-- How the original grant behind a refresh token was obtained — covered in the relevant interaction here for `authorization_code`, or in the Token and Protocol Features model for `token_exchange` and `ciba`.
-- Resource-server enforcement of the scopes and audiences embedded in issued access tokens — the responsibility of the protected resource consuming the token.
-- Client-side storage and handling of issued tokens, authorization codes, and refresh tokens, for example XSS in the client application — the responsibility of the consuming application. Transport is protected by TLS.
-- Database and Redis encryption and access controls — assumed to be managed at the infrastructure layer.
-- TLS certificate management and configuration — assumed to be managed at the deployment layer.
-- Filesystem protection of the signing key — assumed to be managed at the deployment or OS layer.
-- Rate limiting, lockout, and bot detection on the OAuth endpoints — outside the product's core by design; applied at the deployment or gateway layer, see the Production Deployment Guidelines.
+- Security of the authentication flow itself, including credential validation, MFA, federated IdP exchange, and the login UI, covered by the Flow Execution model. The returned assertion JWT is treated here only as a verifiable trust input.
+- Client authentication mechanics, token issuance, JWT signing including algorithm-confusion defences, the token model, and DPoP proof verification, covered by the Token and Protocol Features model. The `token_exchange`, `ciba`, and `jwt-bearer`/ID-JAG grants and OIDC logout are also documented there.
+- Token revocation and its enforcement, covered by the Token Revocation model.
+- How the original grant behind a refresh token was obtained: covered in the relevant interaction here for `authorization_code`, or in the Token and Protocol Features model for `token_exchange` and `ciba`.
+- Resource-server enforcement of the scopes and audiences embedded in issued access tokens: the responsibility of the protected resource consuming the token.
+- Client-side storage and handling of issued tokens, authorization codes, and refresh tokens, for example XSS in the client application: the responsibility of the consuming application. Transport is protected by TLS.
+- Database and Redis encryption and access controls: assumed to be managed at the infrastructure layer.
+- TLS certificate management and configuration: assumed to be managed at the deployment layer.
+- Filesystem protection of the signing key: assumed to be managed at the deployment or OS layer.
+- Rate limiting, lockout, and bot detection on the OAuth endpoints: outside the product's core by design; applied at the deployment or gateway layer, see the Production Deployment Guidelines.
 
 ### Interactions
 
@@ -221,7 +221,7 @@ sequenceDiagram
 
 | ID | Category | Threat | Materializable | Mitigation / comment |
 | --- | --- | --- | --- | --- |
-| 1 | Spoofing | Attacker supplies a malicious `redirect_uri` to steal the authorization code (open redirect). | No | `redirect_uri` is validated against registered URIs (exact match by default; wildcards are opt-in, constrained to single DNS labels, with path cleaning and fragment rejection). Invalid clients or URIs render a server error page and are never redirected to the attacker-supplied target. |
+| 1 | Spoofing | Attacker supplies a malicious `redirect_uri` to steal the authorization code (open redirect). | No | `redirect_uri` is validated against registered URIs (exact match by default; wildcards are opt-in, constrained to single DNS labels, with path cleaning and fragment rejection). Invalid clients or URIs render a server error page and are never redirected to the attacker-supplied target. Wildcard patterns are the registering administrator's responsibility to scope to domains they control; `ThunderID` does not verify ownership of matching subdomains. |
 | 2 | Information disclosure | Authorization code intercepted and replayed, for example on a public client. | No | PKCE is forced for all public clients, S256 only, with `plain` rejected and format strictly validated. The code binds the challenge, client, and redirect URI, all re-verified at the token endpoint. |
 | 3 | Tampering | Forged or tampered assertion presented at the callback to mint a code for an arbitrary user. | No | The assertion signature is verified before issuance; an empty user ID is rejected and the `sub` constraint is enforced for OIDC requests. |
 | 4 | Spoofing | Cross-site request forgery against the authorization request. | No | `state` is round-tripped as the client's CSRF token, and `iss` is returned for mix-up defence. PKCE and `state` together provide CSRF protection. |
@@ -235,7 +235,7 @@ sequenceDiagram
 
 **Description**
 
-The client exchanges the code at `POST /oauth2/token` with `grant_type=authorization_code`. Client authentication runs as middleware first. The handler atomically consumes the code, then re-validates the PKCE `code_verifier` against the stored S256 challenge, plus `redirect_uri`, `client_id`, expiry, and DPoP binding, before token issuance.
+The client exchanges the code at `POST /oauth2/token` with `grant_type=authorization_code`. Client authentication runs as middleware first. The handler atomically consumes the code, then re-validates the PKCE `code_verifier` against the stored S256 challenge (when required by the client or when a challenge was set at authorization), plus `redirect_uri`, `client_id`, expiry, and DPoP binding, before token issuance.
 
 **Assets involved**
 
@@ -310,6 +310,7 @@ sequenceDiagram
   participant CCGH as Client Credentials Handler
   participant CONFIGDB as config
   participant ENTITYDB as entity
+  participant AUTHZSVC as Authorization Service
 
   APP->>CLIAUTH: HTTPS + client credentials [C-High, M-NT]
   CLIAUTH-->>APP: else invalid_client (generic)
@@ -317,7 +318,7 @@ sequenceDiagram
   CCGH->>CONFIGDB: resolve target resource server + downscope
   CONFIGDB-->>CCGH: else unknown resource -> invalid_target
   CCGH->>ENTITYDB: resolve group memberships
-  CCGH->>CONFIGDB: EvaluateAccessBatch(scope x groups)
+  CCGH->>AUTHZSVC: EvaluateAccessBatch(scope x groups)
   CCGH->>CCGH: filter to authorized scopes only
   CCGH-->>APP: else server_error (resolution failure)
   CCGH->>APP: 200 {access_token} Cache-Control: no-store
@@ -342,7 +343,7 @@ sequenceDiagram
 | 2 | Spoofing | Client-secret brute force or credential stuffing. | No | Secrets are 256-bit and verified in constant time, so guessing is computationally impractical and timing gives nothing away. Failure responses are a generic `invalid_client`, revealing no distinction between unknown client and wrong secret. Attempt-rate limiting and lockout are outside the product's core and belong at the deployment or gateway layer; see the Production Deployment Guidelines. |
 | 3 | Repudiation | Stale authorization after a permission change. | Yes | A stolen token can be revoked by `jti` and is rejected on the hot path. Residual: the decision depends on the application's group and role memberships, and while criteria-based revocation can express the application, role, and group dimensions, no writer records them and hot-path enforcement covers only the token-family and subject dimensions. A membership change therefore does not revoke outstanding tokens, which keep their scopes until expiry. This grant has no refresh exchange to self-heal at, so the token is stale for its full TTL rather than until a next refresh (see `[02]-9` and `[04]-9`). Mitigation: short TTLs and explicit revocation. See Residual risks below. |
 | 4 | Spoofing | Stolen bearer access token replayed by an attacker. | No | Tokens are sender-constrained when the client is DPoP-bound, in which case the token carries a key thumbprint and requires a matching proof at the resource server. Otherwise mitigation relies on TLS and short TTLs, which is inherent to bearer tokens. |
-| 5 | Repudiation | Audience confusion, a token minted for one resource server accepted by another. | No | The audience is composed from resolved resource server identifiers, falling back to the client ID only when no resource server contributes. Unknown identifiers are rejected before issuance, so tokens are resource-restricted rather than broadly self-audienced. |
+| 5 | Repudiation | Audience confusion, a token minted for one resource server accepted by another. | No | The audience is composed from resolved resource server identifiers, falling back to the client ID only when no resource server contributes. Unknown identifiers are rejected before issuance, so tokens are resource-restricted rather than broadly scoped to the client itself. |
 | 6 | Denial of service | Group resolution or RBAC evaluation failure mishandled, failing open or leaking detail. | No | Either error returns a generic server error and issues no token; the handler fails closed. |
 
 #### [04]: Refresh token exchange
@@ -366,6 +367,7 @@ sequenceDiagram
   participant CLIAUTH as Client Auth Middleware
   participant RGH as Refresh Token Grant Handler
   participant ENTITYDB as entity
+  participant AUTHZSVC as Authorization Service
   participant TRANSIENTDB as runtime_transient
   participant PERSISTENTDB as runtime_persistent
 
@@ -378,7 +380,9 @@ sequenceDiagram
   RGH-->>APP: else invalid_dpop_proof
   RGH->>RGH: credential-change check (subject / client)
   RGH-->>APP: else invalid_grant (credential changed since issuance)
-  RGH->>ENTITYDB: downscope (subset-of-grant) + reauthorizeScopes
+  RGH->>ENTITYDB: resolve group memberships
+  RGH->>AUTHZSVC: EvaluateAccessBatch(scope x groups)
+  RGH->>RGH: downscope (subset-of-grant) + filter to authorized scopes
   RGH-->>APP: else invalid_scope
   RGH->>RGH: audience check (single bound audience)
   RGH-->>APP: else invalid_target
@@ -434,7 +438,7 @@ A review aid that complements the threat models and the self-assessment. Guidanc
 | 12 | Is Dynamic (DAST) or API scanning conducted on a non-production setup, and are findings addressed? | Yes | Covered by the product scan. |
 | 13 | Are audit logs generated in a standardized format for critical functionality, and available to authorized users to trace critical events and aid incident response? Note the retention period in Comments. | No | See Residual risks below. |
 | 14 | Do audit logs for critical configuration changes record the difference between the old and new versions? | No | See Residual risks below. |
-| 15 | Are data in transit and at rest encrypted? | Yes | TLS is configurable (minimum TLS 1.3) but optional. Authorization codes are stored plaintext in the runtime store, mitigated by 160-bit entropy and a 600 s TTL. Signing-key and at-rest encryption are cross-cutting; see the Token and Protocol Features model. |
+| 15 | Are data in transit and at rest encrypted? | Partial | TLS is configurable (minimum TLS 1.3) but optional. Authorization codes are stored plaintext in the runtime store, mitigated by 160-bit entropy and a 600 s TTL. Signing-key and at-rest encryption are cross-cutting; see the Token and Protocol Features model. |
 | 16 | Are sensitive values such as credentials and keys stored in a secret store or vault? | No | Client secrets are salted-hashed and the signing key is an on-disk file (cross-cutting; Token and Protocol Features model). No secrets-manager integration. |
 | 17 | Is personal, sensitive, or confidential data kept out of logs? | Yes | Codes, `code_verifier`, refresh tokens, assertions, and issued tokens are not logged by observed statements; `client_id`/`authId` are masked or debug-only. The `client_credentials` grant logs `appID` on group/RBAC resolution failures but this involves no end-user personal data. |
 | 18 | Have users been given clear instructions for secure usage? | Yes | Docs should cover registering exact redirect URIs, enforcing HTTPS/TLS, requiring PKCE/DPoP for public clients, persisting the rotated refresh token returned by every exchange, keeping code/access/refresh TTLs short, and securing the runtime store. |
@@ -450,7 +454,7 @@ For an open-source component, most of these are shared with the operator who dep
 Resilience details to record:
 - High availability requirements: not defined at the project level
 - Disaster recovery requirements: not defined at the project level
-- Backups, frequency, and retention: database backups and replication, system backups, object and volume storage backups, configuration backups, logs — all deployer-owned
+- Backups, frequency, and retention: database backups and replication, system backups, object and volume storage backups, configuration backups, logs (all deployer-owned)
 - Health checks: not defined at the project level
 - User banners: not defined at the project level
 
@@ -470,7 +474,7 @@ Fill this in only if the change processes personal data.
 | --- | --- | --- | --- |
 | 1 | Is the purpose and legal basis for processing personal data clearly defined? | Yes | The `authorization_code` and `refresh_token` grants process user identity and attribute claims, carried in the assertion or attribute cache and reflected into issued access/ID tokens. Not applicable to `client_credentials`. |
 | 2 | Are the collection, storage, processing, sharing, archival, and disposal of personal data aligned with the data minimization principle? | Partial | The auth request and authorization code may reference user identity (subject, scope, nonce); refresh-token user claims are read from the attribute cache (DB/Redis, keyed by `aci`), whose TTL is extended to outlive the longest-lived token but is bounded by the grant's fixed expiry. Encryption at rest and access controls for both store types need verification. Not applicable to `client_credentials`. |
-| 3 | Is personal data stored securely? | N/A | |
+| 3 | Is personal data stored securely? | Partial | See item 2: encryption at rest and access controls for the auth-code and attribute-cache stores need verification. |
 | 4 | Are privacy notices updated to reflect any new processing or changes to purpose and legal basis? | Partial | Not yet reviewed for this area. |
 | 5 | Is access to personal data granted on a need-to-know basis? | Yes | |
 | 6 | Are data retention requirements considered? | Yes | Authorization codes (600 s) and authorization requests (3600 s) have short TTLs; tokens expire by `exp` (refresh 24 h default). The attribute cache TTL is extended to outlive the longest-lived token, bounded by the grant's fixed expiry since rotation no longer extends it. |
@@ -535,14 +539,14 @@ A typical machine client for `client_credentials`:
 Step 1, authorization request (front-channel redirect):
 
 ```bash
-curl 'https://localhost:8090/oauth2/authorize?response_type=code&response_mode=query&client_id=&redirect_uri=&scope=&state=&nonce=&code_challenge=&code_challenge_method=S256&request_uri=&resource=&acr_values=&claims=&prompt='
+curl 'https://localhost:8090/oauth2/authorize?response_type=code&client_id=client-001&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid%20profile&state=xyz123&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256'
 ```
 
 Response: `302 Found` to the Gate login UI (`?authId=...&appId=...&executionId=...`). The user then authenticates via the flow engine, out of scope (see the Flow Execution model).
 
 Step 2, after authentication, the callback issues the code:
 
-```
+```http
 POST /oauth2/auth/callback
 Content-Type: application/json
 
@@ -557,7 +561,7 @@ Response:
 
 Step 3, token exchange with `code_verifier`:
 
-```
+```http
 POST /oauth2/token
 Authorization: Basic base64(client_id:client_secret)
 Content-Type: application/x-www-form-urlencoded
@@ -585,13 +589,13 @@ Response (`Cache-Control: no-store`):
 
 Request, client authentication plus an optional resource indicator:
 
-```
+```http
 POST /oauth2/token
 Authorization: Basic base64(client_id:client_secret)
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials
-&scope=openid
+&scope=orders:read
 &resource=https%3A%2F%2Fapi.example.com%2Forders
 ```
 
@@ -602,13 +606,13 @@ Response (`Cache-Control: no-store`; note there is no `refresh_token` or `id_tok
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "openid"
+  "scope": "orders:read"
 }
 ```
 
 ### Sample refresh token exchange
 
-```
+```http
 POST /oauth2/token
 Authorization: Basic base64(client_id:client_secret)
 Content-Type: application/x-www-form-urlencoded
