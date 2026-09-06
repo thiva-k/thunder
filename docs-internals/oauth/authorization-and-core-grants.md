@@ -1,4 +1,4 @@
-# ThunderID OAuth 2.0 Authorization and Core Grants Threat Model
+# OAuth 2.0 Authorization and Core Grants Threat Model
 
 This model covers grant-type processing at the OAuth 2.0 / OpenID Connect token endpoint for the `authorization_code`, `client_credentials`, and `refresh_token` grants, together with the front-channel authorization request and flow callback that precede the `authorization_code` exchange.
 
