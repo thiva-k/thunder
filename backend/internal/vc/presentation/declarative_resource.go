@@ -13,6 +13,7 @@ import (
 
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
 	"gopkg.in/yaml.v3"
@@ -216,7 +217,7 @@ func resolveDefinitionOU(
 	ctx context.Context, def *PresentationDefinitionDTO, ouService ou.OrganizationUnitServiceInterface,
 ) error {
 	if ouService != nil && def.OUID == "" && strings.TrimSpace(def.OUHandle) != "" {
-		resolved, svcErr := ouService.GetOrganizationUnitByPath(ctx, def.OUHandle)
+		resolved, svcErr := ouService.GetOrganizationUnitByPath(security.WithRuntimeContext(ctx), def.OUHandle)
 		if svcErr != nil {
 			return fmt.Errorf("organization unit with handle %q not found for presentation definition '%s'",
 				def.OUHandle, def.Handle)

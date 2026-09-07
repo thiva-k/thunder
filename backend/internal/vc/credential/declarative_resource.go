@@ -13,6 +13,7 @@ import (
 
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
 	"gopkg.in/yaml.v3"
@@ -188,7 +189,7 @@ func resolveConfigurationOU(
 	ctx context.Context, cfg *CredentialConfigurationDTO, ouService ou.OrganizationUnitServiceInterface,
 ) error {
 	if ouService != nil && cfg.OUID == "" && strings.TrimSpace(cfg.OUHandle) != "" {
-		resolved, svcErr := ouService.GetOrganizationUnitByPath(ctx, cfg.OUHandle)
+		resolved, svcErr := ouService.GetOrganizationUnitByPath(security.WithRuntimeContext(ctx), cfg.OUHandle)
 		if svcErr != nil {
 			return fmt.Errorf("organization unit with handle %q not found for credential configuration '%s'",
 				cfg.OUHandle, cfg.Handle)
