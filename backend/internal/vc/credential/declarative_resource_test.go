@@ -17,6 +17,9 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 )
 
 type ConfigurationExporterTestSuite struct {
@@ -297,6 +300,23 @@ func (s *ConfigurationExporterTestSuite) TestValidateRejectsUnknownOUHandle() {
 	err := validateConfigurationWrapper(dto, nil, nil, ouSvc)
 	s.Require().Error(err)
 	s.Contains(err.Error(), "no/such/ou")
+}
+
+// TestValidateResolvesOUHandleUsesRuntimeContext verifies the ouHandle lookup carries a runtime
+// context. Declarative resources load at server boot with no authenticated caller, and
+// GetOrganizationUnitByPath's authorization check denies unauthenticated, non-runtime callers;
+// a plain context here would make every ouHandle-based resource fail to load with a misleading
+// "organization unit ... not found" error even though the OU exists. Regression test for that.
+func (s *ConfigurationExporterTestSuite) TestValidateResolvesOUHandleUsesRuntimeContext() {
+	ouSvc := oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
+	ouSvc.EXPECT().
+		GetOrganizationUnitByPath(mock.MatchedBy(security.IsRuntimeContext), "root/eng").
+		Return(providers.OrganizationUnit{ID: "ou-123"}, nil).Once()
+	ouSvc.EXPECT().IsOrganizationUnitExists(mock.Anything, "ou-123").Return(true, nil).Once()
+
+	cfg := &CredentialConfigurationDTO{ID: "cfg-1", Handle: "h", VCT: "v", OUHandle: "root/eng"}
+	s.Require().NoError(validateConfigurationWrapper(cfg, nil, nil, ouSvc))
+	s.Equal("ou-123", cfg.OUID)
 }
 
 // TestValidateRejectsMissingOU verifies a declarative configuration without an organization
