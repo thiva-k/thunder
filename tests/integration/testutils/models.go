@@ -50,6 +50,7 @@ type Application struct {
 	ClientSecret              string                   `json:"clientSecret,omitempty"`
 	RedirectURIs              []string                 `json:"redirectUris,omitempty"`
 	AllowedUserTypes          []string                 `json:"allowedUserTypes,omitempty"`
+	AllowedAgentTypes         []string                 `json:"allowedAgentTypes,omitempty"`
 	SubjectAttribute          map[string]string        `json:"subjectAttribute,omitempty"`
 	Certificate               map[string]interface{}   `json:"certificate,omitempty"`
 	PasskeyAllowedOrigins     []string                 `json:"passkeyAllowedOrigins,omitempty"`
