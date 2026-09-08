@@ -12,8 +12,6 @@ package core
 var defaultMessages = map[string]string{
 	"design.resolve.error.app_no_design": "Application has no design configuration",
 	"design.resolve.error.app_no_design_description": "The specified application does not have an associated theme or layout configuration",
-	"design.resolve.error.app_not_found": "Application not found",
-	"design.resolve.error.app_not_found_description": "The application with the specified id does not exist",
 	"design.resolve.error.invalid_type": "Invalid request format",
 	"design.resolve.error.invalid_type_description": "The 'type' query parameter is required and must be either 'APP' or 'OU'",
 	"design.resolve.error.missing_id": "Invalid request format",
