@@ -50,6 +50,10 @@ func assembleApplication(
 		},
 	}
 
+	if entity != nil {
+		app.EntityCategory = entity.Category
+	}
+
 	entityAttrs := readEntitySystemAttributes(entity)
 	if name, ok := entityAttrs["name"].(string); ok {
 		app.Name = name
