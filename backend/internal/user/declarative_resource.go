@@ -457,6 +457,8 @@ func parseCredentialObject(
 	}
 
 	iterations, _ := paramsMap["iterations"].(int)
+	parallelism, _ := paramsMap["parallelism"].(int)
+	memory, _ := paramsMap["memory"].(int)
 	keySize, _ := paramsMap["keySize"].(int)
 	salt, _ := paramsMap["salt"].(string)
 
@@ -464,9 +466,11 @@ func parseCredentialObject(
 		StorageType: storageType,
 		StorageAlgo: cryptolib.CredAlgorithm(storageAlgo),
 		StorageAlgoParams: cryptolib.CredParameters{
-			Iterations: iterations,
-			KeySize:    keySize,
-			Salt:       salt,
+			Iterations:  iterations,
+			Parallelism: parallelism,
+			Memory:      memory,
+			KeySize:     keySize,
+			Salt:        salt,
 		},
 		Value: value,
 	}, nil
