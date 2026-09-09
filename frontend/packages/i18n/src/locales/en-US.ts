@@ -3232,6 +3232,8 @@ const translations = {
     'configureExport.labels.resourceServers': 'Resource Servers',
     'configureExport.labels.roles': 'Roles',
     'configureExport.labels.groups': 'Groups',
+    'configureExport.labels.credentialConfigurations': 'Credential Configurations',
+    'configureExport.labels.presentationDefinitions': 'Presentation Definitions',
     'configureExport.fallback.unnamedApplication': 'Unnamed Application',
     'configureExport.fallback.unnamedProvider': 'Unnamed Provider',
     'configureExport.fallback.unnamedFlow': 'Unnamed Flow',
