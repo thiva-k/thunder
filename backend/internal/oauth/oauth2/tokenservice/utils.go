@@ -415,7 +415,19 @@ func ReservedAccessTokenClaimNames() map[string]bool {
 	reserved[constants.ClaimSubType] = true
 	reserved[constants.ClaimIDP] = true
 	reserved[constants.ClaimTokenFamilyID] = true
+	reserved[constants.ClaimSessionID] = true
 	return reserved
+}
+
+// builderOwnedIDTokenClaimNames returns the ID-token claims the builder writes itself, so a configured
+// attribute of the same name can never supply or replace one.
+func builderOwnedIDTokenClaimNames() map[string]bool {
+	return map[string]bool{
+		constants.ClaimAuthTime:     true,
+		constants.RequestParamNonce: true,
+		constants.ClaimACR:          true,
+		constants.ClaimSessionID:    true,
+	}
 }
 
 // builderOwnedClaimNames returns the access-token claims the builder writes itself, so a configured
