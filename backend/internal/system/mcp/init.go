@@ -37,7 +37,7 @@ func Initialize(
 ) {
 	httpHandler := mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server {
 		return mcpServer
-	}, nil)
+	}, &mcpsdk.StreamableHTTPOptions{Stateless: true})
 
 	securedHandler := guard(httpHandler)
 
