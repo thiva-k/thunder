@@ -132,6 +132,12 @@ const sidebars: SidebarsConfig = {
                   key: 'sdk-overview',
                 },
                 {
+                  type: 'doc',
+                  id: 'contributing/contributing-code/sdk-development/feature-parity',
+                  label: 'Cross-SDK Feature Parity',
+                  key: 'sdk-feature-parity',
+                },
+                {
                   type: 'category',
                   label: 'JavaScript SDK Development',
                   collapsed: true,

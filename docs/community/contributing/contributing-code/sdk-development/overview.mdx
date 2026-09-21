@@ -38,3 +38,9 @@ Each SDK has its own development and testing guide:
 - [iOS SDK Development](../ios/overview)
 - [Android SDK Development](../android/overview)
 - [Flutter SDK Development](../flutter/overview)
+
+## Feature Parity Across the SDKs
+
+A capability is rarely a single SDK change. The same thing usually has to exist in every SDK where it applies before a developer can rely on it, so each pull request in an SDK repository answers whether the change needs to ship in the others too. A required check holds the pull request until it does.
+
+See [Cross-SDK Feature Parity](feature-parity.mdx) for the labels, what accounts for a sibling SDK, and how to record a deferral.
