@@ -618,8 +618,8 @@ an unanswered decision on a merged pull request is what an audit looks for. A ma
 record the decision by hand, which is the escape hatch when the check misjudges a change.
 
 How the check reads the decision, and what it records it as, is implementation detail and is not
-fixed here. The current implementation is a reusable workflow in `thunder-id/.github` called by
-each SDK repository.
+fixed here. The current implementation is a reusable workflow in this repository,
+`.github/workflows/sdk-parity-check.yml`, called by each SDK repository.
 
 **Existing divergences.** The rule applies from the point it is adopted. Capabilities that
 already differ between SDKs are reconciled through the normal issue backlog rather than
