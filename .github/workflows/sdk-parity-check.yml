@@ -117,7 +117,9 @@ jobs:
             const hasRaised = labels.includes(RAISED_LABEL);
             const hasNotNeeded = labels.includes(NOT_NEEDED_LABEL);
 
-            const { data: comments } = await github.rest.issues.listComments({
+            // Paginated: a long thread puts later replies, and possibly this check's own
+            // comment, past the first page, which would lose port links and post a duplicate.
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: target.number,
@@ -134,34 +136,65 @@ jobs:
                 .map(comment => comment.body || ''),
             ].join('\n');
 
+            const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
             // Recognises both link styles GitHub renders: the full URL and the owner/repo#123
             // shorthand. Issues count as well as pull requests, since a recorded deferral is a
-            // recorded deferral.
+            // recorded deferral, and the kind is carried through so the checklist links back to
+            // the thing that was actually written.
             const findPorts = (repo) => {
-              const escaped = repo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const escaped = escapeForRegExp(repo);
               const patterns = [
-                new RegExp(`https?://github\\.com/${escaped}/(?:pull|issues)/(\\d+)`, 'g'),
-                new RegExp(`(?:^|[^\\w/-])${escaped}#(\\d+)`, 'g'),
+                [new RegExp(`https?://github\\.com/${escaped}/(pull|issues)/(\\d+)`, 'g'), true],
+                [new RegExp(`(?:^|[^\\w/-])${escaped}#(\\d+)`, 'g'), false],
               ];
-              const numbers = new Set();
-              for (const pattern of patterns) {
+              const byNumber = new Map();
+              for (const [pattern, carriesKind] of patterns) {
                 for (const match of haystack.matchAll(pattern)) {
-                  numbers.add(Number(match[1]));
+                  // The shorthand does not say which it is. Either path redirects to the other on
+                  // GitHub, so an unqualified reference is rendered as an issue link.
+                  const kind = carriesKind ? match[1] : 'issues';
+                  const number = Number(carriesKind ? match[2] : match[1]);
+                  if (!byNumber.has(number)) byNumber.set(number, kind);
                 }
               }
-              return [...numbers].sort((a, b) => a - b);
+              return [...byNumber.entries()]
+                .map(([number, kind]) => ({ number, kind }))
+                .sort((a, b) => a.number - b.number);
             };
 
-            const ports = siblings.map(sibling => ({ ...sibling, numbers: findPorts(sibling.repo) }));
-            const linked = ports.filter(port => port.numbers.length);
+            // A sibling a change does not reach is accounted for by saying so in the thread.
+            // Free prose cannot be recognised, so one of these phrases on a line naming the
+            // repository is what marks it, and the check's own comment says as much.
+            const NOT_APPLICABLE = /\b(n\/a|not applicable|not needed|no change needed|does not apply|doesn't apply)\b/i;
+            const findNotApplicable = (repo) => {
+              const name = escapeForRegExp(repo.split('/')[1]);
+              const mentions = new RegExp(`(?:^|[^\\w/-])(?:[\\w.-]+/)?${name}\\b`, 'i');
+              const line = haystack
+                .split('\n')
+                .map(entry => entry.trim())
+                .find(entry => mentions.test(entry) && NOT_APPLICABLE.test(entry));
+              return line || null;
+            };
+
+            const ports = siblings.map(sibling => {
+              const links = findPorts(sibling.repo);
+              return {
+                ...sibling,
+                links,
+                notApplicable: links.length ? null : findNotApplicable(sibling.repo),
+              };
+            });
+            const accountedFor = ports.filter(port => port.links.length || port.notApplicable);
+            const unaccounted = ports.filter(port => !port.links.length && !port.notApplicable);
 
             const checklist = ports
-              .map(({ repo, description, numbers }) => {
-                const box = numbers.length ? 'x' : ' ';
-                const links = numbers
-                  .map(number => `[#${number}](https://github.com/${repo}/pull/${number})`)
-                  .join(', ');
-                return `- [${box}] \`${repo}\`, ${description}${links ? ` => ${links}` : ''}`;
+              .map(({ repo, description, links, notApplicable }) => {
+                const box = links.length || notApplicable ? 'x' : ' ';
+                const rendered = links.length
+                  ? links.map(({ number, kind }) => `[#${number}](https://github.com/${repo}/${kind}/${number})`).join(', ')
+                  : notApplicable ? 'does not apply' : '';
+                return `- [${box}] \`${repo}\`, ${description}${rendered ? ` => ${rendered}` : ''}`;
               })
               .join('\n');
 
@@ -173,16 +206,20 @@ jobs:
             ].join('\n');
 
             const howToReply = [
-              '**Reply to this comment with your port links** and the boxes above tick themselves.',
-              'Nothing needs editing by hand. Either style works:',
+              '**Reply to this comment** and the boxes above tick themselves. Nothing needs',
+              'editing by hand. For a port, link it in either style:',
               '',
               `> ${siblings[0].repo}#123`,
               `> https://github.com/${siblings[0].repo}/pull/123`,
+              '',
+              'For an SDK this change does not reach, name it and say so on one line:',
+              '',
+              `> ${siblings[0].repo}: not applicable, the capability has no equivalent there`,
             ].join('\n');
 
-            const detected = linked.length
-              ? `Detected ports in ${linked.length} of ${ports.length} sibling SDKs so far.`
-              : 'No ports detected on this thread yet.';
+            const detected = accountedFor.length
+              ? `${accountedFor.length} of ${ports.length} sibling SDKs accounted for.`
+              : 'No sibling SDKs accounted for on this thread yet.';
 
             const unaccountedFor = [
               'Where an SDK genuinely does not need this change, say so in a reply rather than',
@@ -223,6 +260,13 @@ jobs:
                 unaccountedFor,
               ].join('\n');
             } else if (hasRaised) {
+              // The label asserts the capability reaches the other SDKs, so every one of them
+              // needs a disposition before this passes: a linked pull request, a linked tracked
+              // issue where the port is deferred, or a line saying it does not apply there. A
+              // partial answer is how a gap gets missed, so it fails like no answer at all.
+              if (unaccounted.length) {
+                failure = `Labelled ${RAISED_LABEL}, but ${unaccounted.map(port => port.repo).join(', ')} ${unaccounted.length === 1 ? 'is' : 'are'} unaccounted for.`;
+              }
               body = [
                 MARKER,
                 '### 🔀 Cross-SDK feature parity, ports raised',
@@ -234,7 +278,9 @@ jobs:
                 checklist,
                 '',
                 detected,
-                '',
+                unaccounted.length
+                  ? `\nStill unaccounted for: ${unaccounted.map(port => `\`${port.repo}\``).join(', ')}. This check stays red until each one has a linked pull request, a linked tracked issue, or a line saying it does not apply.\n`
+                  : '\nEvery sibling SDK is accounted for.\n',
                 howToReply,
                 '',
                 unaccountedFor,

@@ -867,10 +867,11 @@ and go missing in the others unnoticed.
   recorded on it, then the check fails and the pull request cannot merge.
 - **AC5.2:** Given the parity decision is then recorded, when the check runs again, then it
   passes, without requiring a push.
-- **AC5.3:** Given a pull request whose decision is that the change reaches other SDKs, when the
-  pull request is read, then every sibling repository has a disposition on it: a linked pull
-  request, a linked tracked issue where the port is deferred, or a stated reason the capability
-  does not apply there.
+- **AC5.3:** Given a pull request whose decision is that the change reaches other SDKs, when any
+  sibling repository has no disposition on it, being a linked pull request, a linked tracked
+  issue where the port is deferred, or a stated reason the capability does not apply there, then
+  the check fails and identifies the repositories still unaccounted for. A partial answer is how
+  a gap gets missed, so it fails as no answer does.
 - **AC5.4:** Given a change that does not reach the public surface, when the parity decision is
   recorded as not applicable, then the check passes on that basis alone.
 - **AC5.5:** Given a set of merged pull requests, when they are queried for their parity
