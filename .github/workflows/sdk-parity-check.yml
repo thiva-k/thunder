@@ -43,6 +43,13 @@ on:
         required: false
         type: string
         default: ""
+      automation_authors:
+        description: >
+          Accounts whose pull requests record the parity decision automatically, one per line or
+          comma separated. Any login ending in "[bot]" is treated this way without being listed.
+        required: false
+        type: string
+        default: "thunder-automation-bot"
 
 jobs:
   parity:
@@ -64,6 +71,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           SIBLINGS_OVERRIDE: ${{ inputs.siblings }}
+          AUTOMATION_AUTHORS: ${{ inputs.automation_authors }}
         with:
           script: |
             // Identifies this check's own comment so it is updated in place rather than posted
@@ -127,6 +135,63 @@ jobs:
             const labels = (target.labels || []).map(label => label.name);
             const hasRaised = labels.includes(RAISED_LABEL);
             const hasNotNeeded = labels.includes(NOT_NEEDED_LABEL);
+
+            // A dependency bump raised by automation is the mechanism the specification asks
+            // for: the pins follow a native release, so the change has already been made and
+            // reviewed in the SDK it came from. There is nothing to port and nobody to ask,
+            // and a checklist comment on every one of them trains people to ignore the check.
+            //
+            // The decision is still recorded rather than skipped, which is what the
+            // specification actually requires: the label goes on, it survives the merge, and a
+            // merged pull request that never made the decision is still queryable. The
+            // judgement is a person's, made once when they put an account on this list, rather
+            // than per pull request.
+            //
+            // Author based, never path based. Which files a change touches cannot be trusted to
+            // say whether it reaches the other SDKs; who raised it can, because a machine
+            // account raises exactly one kind of change.
+            const automationAuthors = (process.env.AUTOMATION_AUTHORS || '')
+              .split(/[\n,]/)
+              .map(entry => entry.trim().toLowerCase())
+              .filter(Boolean);
+            const author = ((target.user || {}).login || '').toLowerCase();
+            const isAutomation = author.endsWith('[bot]') || automationAuthors.includes(author);
+
+            if (isAutomation && isOpen) {
+              if (!hasRaised && !hasNotNeeded) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: target.number,
+                  labels: [NOT_NEEDED_LABEL],
+                });
+                core.info(`Raised by ${author}; recorded ${NOT_NEEDED_LABEL} automatically.`);
+              } else {
+                core.info(`Raised by ${author}; a parity label is already present.`);
+              }
+              // Clear a checklist this check left on an earlier run, from before the account
+              // was recognised as automation. Leaving it would keep asking a question that is
+              // already answered, and it is this check's own comment to withdraw.
+              const priorComments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: target.number,
+                per_page: 100,
+              });
+              const stranded = priorComments.find(c => c.body && c.body.includes(MARKER));
+              if (stranded) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: stranded.id,
+                });
+                core.info('Removed the parity checklist left on an automation pull request.');
+              }
+
+              // No checklist comment: there is no question outstanding for anyone to answer.
+              return;
+            }
+
 
             // Paginated: a long thread puts later replies, and possibly this check's own
             // comment, past the first page, which would lose port links and post a duplicate.
