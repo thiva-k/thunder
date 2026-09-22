@@ -40,6 +40,7 @@ type applicationAdapter interface {
 		*appmodel.ApplicationDTO,
 		*tidcommon.ServiceError,
 	)
+	DeleteApplication(ctx context.Context, appID string) *tidcommon.ServiceError
 }
 
 type idpAdapter interface {
@@ -50,6 +51,7 @@ type idpAdapter interface {
 		*providers.IDPDTO,
 		*tidcommon.ServiceError,
 	)
+	DeleteIdentityProvider(ctx context.Context, idpID string) *tidcommon.ServiceError
 }
 
 // senderAdapter is the subset of notification.NotificationSenderMgtSvcInterface the importer
@@ -64,6 +66,7 @@ type senderAdapter interface {
 		*ncommon.NotificationSenderDTO,
 		*tidcommon.ServiceError,
 	)
+	DeleteSender(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 // authZENPDPAdapter defines the AuthZEN PDP connection operations required by the importer.
@@ -78,6 +81,7 @@ type authZENPDPAdapter interface {
 		id string,
 		request authzenpdp.ConnectionRequest,
 	) (*authzenpdp.AuthZENPDPConnection, *tidcommon.ServiceError)
+	DeleteAuthZENPDPConnection(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type flowAdapter interface {
@@ -90,6 +94,7 @@ type flowAdapter interface {
 		*tidcommon.ServiceError)
 	UpdateFlow(ctx context.Context, flowID string, flowDef *flowmgt.FlowDefinition) (*providers.CompleteFlowDefinition,
 		*tidcommon.ServiceError)
+	DeleteFlow(ctx context.Context, flowID string) *tidcommon.ServiceError
 }
 
 type ouAdapter interface {
@@ -105,6 +110,7 @@ type ouAdapter interface {
 	UpdateOrganizationUnit(ctx context.Context, id string, request providers.OrganizationUnitRequestWithID) (
 		providers.OrganizationUnit,
 		*tidcommon.ServiceError)
+	DeleteOrganizationUnit(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type entityTypeAdapter interface {
@@ -120,6 +126,7 @@ type entityTypeAdapter interface {
 		request entitytype.UpdateEntityTypeRequest) (
 		*entitytype.EntityType,
 		*tidcommon.ServiceError)
+	DeleteEntityType(ctx context.Context, category entitytype.TypeCategory, schemaID string) *tidcommon.ServiceError
 }
 
 type roleAdapter interface {
@@ -128,6 +135,7 @@ type roleAdapter interface {
 	GetRoleWithPermissions(ctx context.Context, id string) (*role.RoleWithPermissions, *tidcommon.ServiceError)
 	UpdateRoleWithPermissions(ctx context.Context, id string, role role.RoleUpdateDetail) (*role.RoleWithPermissions,
 		*tidcommon.ServiceError)
+	DeleteRole(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type roleAssignmentAdapter interface {
@@ -141,6 +149,7 @@ type groupAdapter interface {
 		*group.Group, *tidcommon.ServiceError)
 	AddGroupMembers(ctx context.Context, groupID string, members []group.Member) (
 		*group.Group, *tidcommon.ServiceError)
+	DeleteGroup(ctx context.Context, groupID string) *tidcommon.ServiceError
 }
 
 type resourceServerAdapter interface {
@@ -155,6 +164,7 @@ type resourceServerAdapter interface {
 		*resource.ResourceList, *tidcommon.ServiceError)
 	CreateAction(ctx context.Context, resourceServerID string, resourceID *string, action providers.Action) (
 		*providers.Action, *tidcommon.ServiceError)
+	DeleteResourceServer(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type themeAdapter interface {
@@ -163,6 +173,7 @@ type themeAdapter interface {
 	GetTheme(ctx context.Context, id string) (*thememgt.Theme, *tidcommon.ServiceError)
 	UpdateTheme(ctx context.Context,
 		id string, theme thememgt.UpdateThemeRequest) (*thememgt.Theme, *tidcommon.ServiceError)
+	DeleteTheme(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type layoutAdapter interface {
@@ -171,6 +182,7 @@ type layoutAdapter interface {
 	GetLayout(ctx context.Context, id string) (*layoutmgt.Layout, *tidcommon.ServiceError)
 	UpdateLayout(ctx context.Context,
 		id string, layout layoutmgt.UpdateLayoutRequest) (*layoutmgt.Layout, *tidcommon.ServiceError)
+	DeleteLayout(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type userAdapter interface {
@@ -194,6 +206,7 @@ type agentAdapter interface {
 		*agentmodel.AgentGetResponse, *tidcommon.ServiceError)
 	UpdateAgent(ctx context.Context, agentID string, req *agentmodel.UpdateAgentRequest) (
 		*agentmodel.AgentCompleteResponse, *tidcommon.ServiceError)
+	DeleteAgent(ctx context.Context, agentID string) *tidcommon.ServiceError
 }
 
 type presentationDefinitionAdapter interface {
@@ -203,6 +216,7 @@ type presentationDefinitionAdapter interface {
 		*presentation.PresentationDefinitionDTO, *tidcommon.ServiceError)
 	UpdatePresentationDefinition(ctx context.Context, id string, dto *presentation.PresentationDefinitionDTO) (
 		*presentation.PresentationDefinitionDTO, *tidcommon.ServiceError)
+	DeletePresentationDefinition(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 type credentialConfigurationAdapter interface {
@@ -212,6 +226,7 @@ type credentialConfigurationAdapter interface {
 		*credential.CredentialConfigurationDTO, *tidcommon.ServiceError)
 	UpdateCredentialConfiguration(ctx context.Context, id string, dto *credential.CredentialConfigurationDTO) (
 		*credential.CredentialConfigurationDTO, *tidcommon.ServiceError)
+	DeleteCredentialConfiguration(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
 // ImportServiceInterface defines runtime resource import and declarative resource deletion operations.
@@ -305,7 +320,7 @@ func newImportService(
 func (s *importService) ImportResources(
 	ctx context.Context, request *ImportRequest,
 ) (*ImportResponse, *tidcommon.ServiceError) {
-	if request == nil || request.Content == "" {
+	if request == nil || (request.Content == "" && len(request.Deletions) == 0) {
 		return nil, tidcommon.CustomServiceError(ErrorInvalidImportRequest,
 			tidcommon.I18nMessage{Key: "error.import.emptyContent", DefaultValue: "import content cannot be empty"})
 	}
@@ -336,18 +351,22 @@ func (s *importService) ImportResources(
 		)
 	}
 
-	resolvedContent, err := resolveTemplate(request.Content, request.Variables)
-	if err != nil {
-		log.GetLogger().Warn(ctx, "Import template resolution failed", log.String("error", err.Error()))
-		return nil, tidcommon.CustomServiceError(ErrorTemplateResolutionFailed,
-			tidcommon.I18nMessage{Key: "error.import.dynamic", DefaultValue: err.Error()})
-	}
+	// A request may carry only deletions, in which case there is no payload to resolve or parse.
+	var docs []parsedDocument
+	if request.Content != "" {
+		resolvedContent, err := resolveTemplate(request.Content, request.Variables)
+		if err != nil {
+			log.GetLogger().Warn(ctx, "Import template resolution failed", log.String("error", err.Error()))
+			return nil, tidcommon.CustomServiceError(ErrorTemplateResolutionFailed,
+				tidcommon.I18nMessage{Key: "error.import.dynamic", DefaultValue: err.Error()})
+		}
 
-	docs, err := parseDocuments(resolvedContent)
-	if err != nil {
-		log.GetLogger().Warn(ctx, "Import YAML parsing failed", log.String("error", err.Error()))
-		return nil, tidcommon.CustomServiceError(ErrorInvalidYAMLContent,
-			tidcommon.I18nMessage{Key: "error.import.dynamic", DefaultValue: err.Error()})
+		docs, err = parseDocuments(resolvedContent)
+		if err != nil {
+			log.GetLogger().Warn(ctx, "Import YAML parsing failed", log.String("error", err.Error()))
+			return nil, tidcommon.CustomServiceError(ErrorInvalidYAMLContent,
+				tidcommon.I18nMessage{Key: "error.import.dynamic", DefaultValue: err.Error()})
+		}
 	}
 
 	results := make([]ImportItemOutcome, 0, len(docs))
@@ -384,10 +403,22 @@ func (s *importService) ImportResources(
 		}
 	}
 
+	// Deletions run after the upserts so that resources moved or replaced by this same request are in
+	// place before their predecessors are pruned.
+	deleted := 0
+	if len(request.Deletions) > 0 && (failed == 0 || options.IsContinueOnErrorEnabled()) {
+		deleteOutcomes, deleteCount, deleteFailures := s.deleteResources(ctx, request.Deletions, options,
+			request.DryRun)
+		results = append(results, deleteOutcomes...)
+		deleted = deleteCount
+		failed += deleteFailures
+	}
+
 	return &ImportResponse{
 		Summary: &ImportSummary{
 			TotalDocuments: len(docs),
 			Imported:       imported,
+			Deleted:        deleted,
 			Failed:         failed,
 			ImportedAt:     time.Now().UTC(),
 		},
