@@ -41,28 +41,32 @@ A partial answer fails the same way no answer does, because answering for one SD
 
 ## Recording Your Dispositions
 
-The check posts one comment carrying a checklist of the sibling repositories, and keeps it up to date as you work. **Reply to that comment** and the boxes tick themselves. Nothing needs editing by hand, which matters for contributors who cannot edit a comment the bot owns.
-
-Link a port in either style:
+The check posts one comment carrying a checklist of the sibling repositories, and keeps it up to date as you work. An open pull request raised before the check existed owes the same decision, so it gets the same comment the next time the check runs on it with something to ask for. It also carries a block to copy, listing every SDK still unanswered:
 
 ```text
-thunder-id/ios-sdks#412
-https://github.com/thunder-id/ios-sdks/pull/412
+- thunder-id/ios-sdks: <paste the port link here>
+- thunder-id/android-sdks: <paste the port link here>
+- thunder-id/flutter-sdks: <paste the port link here>
 ```
 
-A linked issue counts too, so a deferred port is recorded rather than forgotten:
+**Reply to that comment with the block, filled in.** The boxes tick themselves when you post it, so nothing needs editing by hand, which matters for contributors who cannot edit a comment the bot owns. Answered SDKs drop out of the block, so it never asks twice.
+
+A link can be a pull request or a tracked issue, written in full or in the shorthand:
 
 ```text
-Deferred for Android: thunder-id/android-sdks#233
+- thunder-id/ios-sdks: https://github.com/thunder-id/ios-sdks/pull/412
+- thunder-id/android-sdks: thunder-id/android-sdks#233
 ```
 
-For an SDK the change does not reach, name the repository and say so on one line:
+An issue counts as much as a pull request, so a deferred port is recorded rather than forgotten. For an SDK the change does not reach, replace the placeholder with `N/A` and a short reason:
 
 ```text
-thunder-id/flutter-sdks: not applicable, it wraps the native SDKs and needs no change
+- thunder-id/flutter-sdks: N/A, it wraps the native SDKs and needs no change
 ```
 
-Any of `not applicable`, `n/a`, `not needed`, `no change needed`, or `does not apply` marks it. Write the reason on the same line, since the next person reading the pull request needs to know why, not just that somebody decided.
+Any of `N/A`, `not applicable`, `not needed`, `no change needed`, or `does not apply` marks it. Write the reason on the same line, since the next person reading the pull request needs to know why, not just that somebody decided.
+
+The checklist itself is maintained by the check. Editing it by hand changes nothing, since every run rewrites it from what the thread says.
 
 ## What Is Exempt
 

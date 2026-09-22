@@ -73,6 +73,13 @@ jobs:
             const RAISED_LABEL = 'parity/prs-raised';
             const NOT_NEEDED_LABEL = 'parity/prs-not-needed';
             const SPEC = 'https://github.com/thunder-id/thunderid/blob/main/docs-internals/sdk-development/spec.md';
+            const UNACCOUNTED_HEADING = 'Still unaccounted for:';
+            // Only a pull request event can set the check's status, so only those runs record
+            // what it was set to. A comment run carries the previous value through untouched,
+            // which is what lets it tell "the check is red and my reply just fixed that" from
+            // "the check is already green".
+            const GATE_RED = '<!-- thunderid-parity-gate:red -->';
+            const GATE_GREEN = '<!-- thunderid-parity-gate:green -->';
 
             // Every ThunderID SDK repository. The one the check is running in drops out below, so
             // this list is identical in all four and there is no per repository input to keep in
@@ -113,6 +120,10 @@ jobs:
               return;
             }
 
+            // `issue_comment` fires on merged and closed pull requests as well, where there is no
+            // decision left to ask for.
+            const isOpen = (target.state || 'open') === 'open';
+
             const labels = (target.labels || []).map(label => label.name);
             const hasRaised = labels.includes(RAISED_LABEL);
             const hasNotNeeded = labels.includes(NOT_NEEDED_LABEL);
@@ -126,6 +137,9 @@ jobs:
               per_page: 100,
             });
             const existing = comments.find(comment => comment.body && comment.body.includes(MARKER));
+            // Read before the comment is rewritten below. A thread with no comment yet has never
+            // had a passing check, so it counts as red.
+            const gateWasRed = !existing || !existing.body.includes(GATE_GREEN);
 
             // Everywhere a port link could have been written: the pull request description and
             // every reply on the thread, minus this check's own comment.
@@ -205,26 +219,45 @@ jobs:
               `| \`${NOT_NEEDED_LABEL}\` | Nothing to port: a fix, refactor, docs, CI, dependency bump, release, or a change specific to this platform. |`,
             ].join('\n');
 
-            const howToReply = [
-              '**Reply to this comment** and the boxes above tick themselves. Nothing needs',
-              'editing by hand. For a port, link it in either style:',
+            // A block to copy, one line per repository still open, rather than a description of
+            // what to write. The placeholder deliberately carries none of the phrases that mark a
+            // repository as not applicable: pasting this back unfilled must leave the answer
+            // incomplete rather than quietly accounting for everything.
+            const isCommentRun = context.eventName === 'issue_comment';
+            const missing = unaccounted.map(port => `\`${port.repo}\``).join(', ');
+
+            const PLACEHOLDER = '<paste the port link here>';
+            const replyTemplate = unaccounted
+              .map(({ repo }) => `- ${repo}: ${PLACEHOLDER}`)
+              .join('\n');
+
+            // Raised to an alert, because this is the one thing on the comment the author has to
+            // act on and it sits below a checklist that looks like the actionable part.
+            const howToReply = !unaccounted.length ? '' : [
+              '[!IMPORTANT]',
+              '**Reply to this comment with this block**, filled in. The boxes above tick',
+              'themselves when you post it.',
               '',
-              `> ${siblings[0].repo}#123`,
-              `> https://github.com/${siblings[0].repo}/pull/123`,
+              '```',
+              replyTemplate,
+              '```',
               '',
-              'For an SDK this change does not reach, name it and say so on one line:',
-              '',
-              `> ${siblings[0].repo}: not applicable, the capability has no equivalent there`,
-            ].join('\n');
+              `A link can be a pull request or a tracked issue, written in full or as \`${siblings[0].repo}#123\`.`,
+              'Where the change does not reach an SDK, replace the placeholder with `N/A` and a short',
+              `reason, as in \`- ${siblings[0].repo}: N/A, the capability has no equivalent there\`.`,
+            ]
+              // Flattened first: the template is itself several lines, and every one of them has
+              // to carry the quote marker or the alert ends early.
+              .join('\n')
+              .split('\n')
+              .map(line => (line ? `> ${line}` : '>'))
+              .join('\n');
 
             const detected = accountedFor.length
               ? `${accountedFor.length} of ${ports.length} sibling SDKs accounted for.`
               : 'No sibling SDKs accounted for on this thread yet.';
 
-            const unaccountedFor = [
-              'Where an SDK genuinely does not need this change, say so in a reply rather than',
-              `leaving it unaccounted for. The contract is in the [SDK development specification](${SPEC}).`,
-            ].join(' ');
+            const unaccountedFor = `The contract is in the [SDK development specification](${SPEC}).`;
 
             let failure = null;
             let body = null;
@@ -249,7 +282,7 @@ jobs:
                 '',
                 howToDecide,
                 '',
-                '#### Ports',
+                '#### Ports (DO NOT EDIT)',
                 '',
                 checklist,
                 '',
@@ -273,14 +306,26 @@ jobs:
                 '',
                 `This pull request is labelled \`${RAISED_LABEL}\`, so the capability it introduces is expected in the other ThunderID SDKs as well.`,
                 '',
-                '#### Ports',
+                '#### Ports (DO NOT EDIT)',
                 '',
                 checklist,
                 '',
                 detected,
+                // What this says about the check has to match what the check actually says, and
+                // a comment run changes neither: it cannot set the status, so a thread can be
+                // complete under a red check, or incomplete under a green one where a reply
+                // carrying a port link was edited away.
+                // Only a comment run can disagree with the check: it sets no status, so the
+                // thread can be complete under a red check, or incomplete under a green one
+                // where the reply carrying a port link was edited away. A pull request run is
+                // setting the status as it writes this, so it speaks for it directly.
                 unaccounted.length
-                  ? `\nStill unaccounted for: ${unaccounted.map(port => `\`${port.repo}\``).join(', ')}. This check stays red until each one has a linked pull request, a linked tracked issue, or a line saying it does not apply.\n`
-                  : '\nEvery sibling SDK is accounted for.\n',
+                  ? isCommentRun && !gateWasRed
+                    ? `\n${UNACCOUNTED_HEADING} ${missing}. The check last passed and still shows green. It goes red the next time it runs, unless each one has a linked pull request, a linked tracked issue, or a line saying it does not apply.\n`
+                    : `\n${UNACCOUNTED_HEADING} ${missing}. This check stays red until each one has a linked pull request, a linked tracked issue, or a line saying it does not apply.\n`
+                  : isCommentRun && gateWasRed
+                    ? '\nEvery sibling SDK is accounted for. The check cannot turn itself green from a reply: re-run it, push to the branch, or re-apply the label, and it will clear.\n'
+                    : '\nEvery sibling SDK is accounted for.\n',
                 howToReply,
                 '',
                 unaccountedFor,
@@ -294,6 +339,13 @@ jobs:
               ].join('\n');
             }
 
+            // A comment run cannot change the status, so it must not claim to: it carries the
+            // marker the last pull request run left behind.
+            const gateMarker = context.eventName === 'issue_comment'
+              ? (gateWasRed ? GATE_RED : GATE_GREEN)
+              : (failure ? GATE_RED : GATE_GREEN);
+            body = `${body}\n${gateMarker}`;
+
             if (existing) {
               if (existing.body !== body) {
                 await github.rest.issues.updateComment({
@@ -305,11 +357,16 @@ jobs:
               } else {
                 core.info('Comment already up to date.');
               }
-            } else if (hasRaised || failure) {
+            } else if ((hasRaised || failure) && isOpen) {
               // A pull request that opens straight into `prs-not-needed` has nothing to ask for,
               // so stay quiet rather than commenting only to say there is nothing to do. Every
               // other state, the both-labels conflict included, needs its explanation or the red
               // check has nothing pointing at the fix.
+              //
+              // An open pull request that predates this check still owes the same decision, so
+              // introducing the checklist there, including from a comment on the thread, is the
+              // point. A closed or merged one owes nothing, and `issue_comment` fires on those
+              // too, so the checklist would be landing on settled history.
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
