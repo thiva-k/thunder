@@ -228,6 +228,19 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
+          label: 'Managed Deployments',
+          collapsible: true,
+          collapsed: true,
+          items: [
+            {
+              type: 'doc',
+              id: 'use-cases/managed-deployments/centralized-configuration',
+              label: 'Centralized Configuration',
+            },
+          ],
+        },
+        {
+          type: 'category',
           label: 'AI Agents',
           collapsible: true,
           collapsed: true,
