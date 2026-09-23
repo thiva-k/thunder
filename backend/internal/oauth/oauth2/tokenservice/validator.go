@@ -584,7 +584,12 @@ func (tv *tokenValidator) extractSubjectTokenClaims(
 		return nil, err
 	}
 
-	isAuthAssertion := tv.isAuthAssertion(claims)
+	// Assertion handling is scoped to self-issued tokens, matching the isSelfIssuer guard applied at
+	// both other isAuthAssertion call sites and at the revocation check below. An external issuer's
+	// claim vocabulary is not ours to interpret: a trusted IdP that happens to emit "assurance" must
+	// not have its token held to this server's auth assertion audience rules, which it has no reason
+	// to satisfy and which it has already been checked against by validateExternalTokenAudience.
+	isAuthAssertion := tv.isSelfIssuer(iss) && tv.isAuthAssertion(claims)
 
 	// Extract and validate audience claim
 	var auds []string
