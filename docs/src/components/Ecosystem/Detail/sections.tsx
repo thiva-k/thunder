@@ -20,6 +20,7 @@ import {ComponentType, JSX, useState} from 'react';
 import {CodeCard, Cta, Note, Pill, SectionHeading, TabStrip} from './primitives';
 import StepShell from './StepShell';
 import {toneColour, useInk} from './theme';
+import {PACKAGE_MANAGER_ICONS} from '../../packageManagerIcons';
 import type {
   EcosystemApiEntry,
   EcosystemGuide,
@@ -105,6 +106,20 @@ interface LinkedSectionProps<T> extends SectionProps<T> {
 /** One numbered step: description, then any of code, a click path, or a note. */
 function Step({step, index, total, accent}: {step: EcosystemStep; index: number; total: number; accent: string}): JSX.Element {
   const ink = useInk();
+  // Package-manager variants (`step.tabs`) pick their own active tab, independent of any
+  // other step's — each CodeCard in the page keeps its own selection, same as CodeGroup.tsx
+  // does per code block rather than syncing every package-manager tab strip on the page.
+  const [activeTab, setActiveTab] = useState(0);
+
+  const activeVariant = step.tabs?.[activeTab] ?? step.tabs?.[0];
+  const code = step.code ?? activeVariant?.code;
+  const tabs = step.tabs?.map((tabItem, i) => ({
+    value: tabItem.label.toLowerCase(),
+    label: tabItem.label,
+    icon: PACKAGE_MANAGER_ICONS[tabItem.label.toLowerCase()],
+    active: i === activeTab,
+    onSelect: () => setActiveTab(i),
+  }));
 
   return (
     <StepShell index={index} total={total} title={step.title} accent={accent}>
@@ -113,7 +128,7 @@ function Step({step, index, total, accent}: {step: EcosystemStep; index: number;
           {step.description}
         </Typography>
       )}
-      {step.code && <CodeCard code={step.code} accent={accent} />}
+      {code && <CodeCard code={code} accent={accent} tabs={tabs} />}
       {step.uiPath && (
         <Box
           sx={{

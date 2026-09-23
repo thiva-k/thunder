@@ -11,6 +11,7 @@ status: ga
 package:
   name: '@thunderid/better-auth'
   manager: npm
+  showDownloadCount: false
 description: '{{ProductName}} provider helper for the Better Auth Generic OAuth plugin. It supplies the configuration;
   Better Auth performs the OAuth 2.0 and OIDC handling.'
 links:
@@ -49,16 +50,60 @@ sections:
   - title: Start from a Next.js app
     description: Create one, or skip this step and use the app you already have. An existing App Router project needs
       no restructuring.
-    code:
-      lang: bash
-      content: |-
-        npx create-next-app@latest my-app --typescript --app
-        cd my-app
+    tabs:
+    - label: npm
+      code:
+        lang: bash
+        content: |-
+          npx create-next-app@latest my-app --typescript --app
+          cd my-app
+    - label: Yarn
+      code:
+        lang: bash
+        content: |-
+          yarn create next-app my-app --typescript --app
+          cd my-app
+    - label: pnpm
+      code:
+        lang: bash
+        content: |-
+          pnpm create next-app my-app --typescript --app
+          cd my-app
+    - label: Bun
+      code:
+        lang: bash
+        content: |-
+          bunx create-next-app@latest my-app --typescript --app
+          cd my-app
+    - label: Deno
+      code:
+        lang: bash
+        content: |-
+          deno run -A npm:create-next-app@latest my-app --typescript --app
+          cd my-app
   - title: Install the packages
     description: Better Auth does the OAuth 2.0 and OIDC work; the helper supplies the {{ProductName}} configuration.
-    code:
-      lang: bash
-      content: npm install better-auth @thunderid/better-auth
+    tabs:
+    - label: npm
+      code:
+        lang: bash
+        content: npm install better-auth @thunderid/better-auth
+    - label: Yarn
+      code:
+        lang: bash
+        content: yarn add better-auth @thunderid/better-auth
+    - label: pnpm
+      code:
+        lang: bash
+        content: pnpm add better-auth @thunderid/better-auth
+    - label: Bun
+      code:
+        lang: bash
+        content: bun add better-auth @thunderid/better-auth
+    - label: Deno
+      code:
+        lang: bash
+        content: deno add npm:better-auth npm:@thunderid/better-auth
   - title: Add the environment variables
     description: '`THUNDERID_CLIENT_ID` and `THUNDERID_CLIENT_SECRET` come from the application''s Credentials tab
       in the {{ProductName}} console. `BETTER_AUTH_URL` is the base URL this app is served from, and the callback

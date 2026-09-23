@@ -24,6 +24,11 @@
           "label": "Get ThunderID"
         },
         {
+          "type": "html",
+          "value": "What are you building?",
+          "className": "sidebar-connect-label"
+        },
+        {
           "type": "category",
           "label": "Application",
           "className": "connect-section connect-section--app",
