@@ -2317,3 +2317,53 @@ func (s *DCRServiceTestSuite) TestUpdateClient_InsecureJWKSURI() {
 	s.Equal(ErrorInvalidClientMetadata.Code, err.Code)
 	s.mockAppService.AssertNotCalled(s.T(), "GetOAuthApplication", mock.Anything, mock.Anything)
 }
+
+func (s *DCRServiceTestSuite) TestRegisterClient_BackchannelLogoutMetadataRoundTrip() {
+	request := &DCRRegistrationRequest{
+		OUID:                   "test-ou-1",
+		RedirectURIs:           []string{"https://client.example.com/callback"},
+		PostLogoutRedirectURIs: []string{"https://client.example.com/logged-out"},
+		BackchannelLogoutURI:   "https://client.example.com/backchannel-logout",
+		GrantTypes:             []providers.GrantType{providers.GrantTypeAuthorizationCode},
+	}
+	appDTO := &model.ApplicationDTO{
+		ID: "app-id", Name: "client",
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{{
+			Type: providers.OAuthInboundAuthType,
+			OAuthConfig: &providers.OAuthConfigWithSecret{
+				ClientID:               "client-id",
+				PostLogoutRedirectURIs: request.PostLogoutRedirectURIs,
+				BackchannelLogoutURI:   request.BackchannelLogoutURI,
+			},
+		}},
+	}
+	s.mockAppService.On("CreateApplication", mock.Anything, mock.MatchedBy(func(dto *model.ApplicationDTO) bool {
+		cfg := dto.InboundAuthConfig[0].OAuthConfig
+		return cfg.BackchannelLogoutURI == request.BackchannelLogoutURI &&
+			len(cfg.PostLogoutRedirectURIs) == 1
+	})).Return(appDTO, (*tidcommon.ServiceError)(nil))
+
+	response, err := s.service.RegisterClient(context.Background(), request)
+
+	s.Nil(err)
+	s.Require().NotNil(response)
+	s.Equal(request.PostLogoutRedirectURIs, response.PostLogoutRedirectURIs)
+	s.Equal(request.BackchannelLogoutURI, response.BackchannelLogoutURI)
+}
+
+// Reading a registration back returns the back-channel logout URI the client registered.
+func (s *DCRServiceTestSuite) TestGetClient_ReturnsBackchannelLogoutURI() {
+	client := s.existingOAuthClient()
+	client.PostLogoutRedirectURIs = []string{"https://client.example.com/logged-out"}
+	client.BackchannelLogoutURI = "https://client.example.com/backchannel-logout"
+	s.mockAppService.On("GetOAuthApplication", mock.Anything, svcTestClientID).
+		Return(client, (*tidcommon.ServiceError)(nil))
+	s.mockAppService.On("GetApplication", mock.Anything, svcTestAppID).
+		Return(s.existingApplication(), (*tidcommon.ServiceError)(nil))
+
+	response, err := s.service.GetClient(context.Background(), svcTestClientID)
+
+	s.Require().Nil(err)
+	s.Equal(client.PostLogoutRedirectURIs, response.PostLogoutRedirectURIs)
+	s.Equal(client.BackchannelLogoutURI, response.BackchannelLogoutURI)
+}
