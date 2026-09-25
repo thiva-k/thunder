@@ -1,14 +1,13 @@
 ---
-title: Notification Delivery
+title: Notification
 docType: use-case
-description: How notification channel, provider, and transport decisions shape the journeys a B2C deployment can complete.
+description: How the notifications a B2C deployment sends are delivered, and how their content, design, and language are authored.
 sidebar_position: 12
 ---
 
+# Notification
 
-# Notification Delivery
-
-Account recovery, invitations, and passwordless sign-in all finish with a message arriving, which makes the delivery path part of the identity system rather than an operational detail beside it. The channel decides how the message reaches the customer. The provider decides which server or gateway carries it. Credentials and transport security decide how much you can trust the hop in between.
+Account recovery, invitations, and passwordless sign-in all finish with a message arriving, which makes the delivery path part of the identity system rather than an operational detail beside it. The channel decides how the message reaches the customer. The provider decides which server or gateway carries it. Credentials and transport security decide how much you can trust the hop in between. You can also customize what the message says, how it looks, and the language each recipient sees.
 
 ## Choose the Channel
 
@@ -31,8 +30,16 @@ The credential a provider authenticates with belongs to that provider's configur
 
 Transport security is a separate decision. Any connection that carries a credential has to be encrypted, and <ProductName /> validates the server's certificate rather than trusting the hostname alone. For SMTP that means STARTTLS on the submission port, and a server that fails to offer it ends the send rather than continuing in plaintext. An unencrypted connection cannot carry a credential, which leaves it useful only for a relay on a network you already trust.
 
+## Customize notifications
+
+A notification’s content, its design, and the language it arrives in are all yours to customize. A password recovery email can use your own wording, reflect your application’s design, and reach each recipient in their language.
+
+## Preview Before Sending
+
+Check how a notification will look before it goes out. Preview its content in a chosen language and see how the design of a chosen application is applied. Catch a broken layout or a missing translation while you design, before the message reaches a customer’s inbox.
+
 ## Continue Designing Your Architecture
 
 Review the other architecture decisions that shape your B2C application.
 
-<B2CArchitectureDecisions currentDecision="notification-delivery" />
+<B2CArchitectureDecisions currentDecision="notification" />
