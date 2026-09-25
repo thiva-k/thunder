@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 type HierarchyEnumeratorTestSuite struct {
@@ -26,10 +24,10 @@ func TestHierarchyEnumeratorTestSuite(t *testing.T) {
 }
 
 // basics returns a one-page listing of organization units with the given ids.
-func basics(ids ...string) []providers.OrganizationUnitBasic {
-	out := make([]providers.OrganizationUnitBasic, 0, len(ids))
+func basics(ids ...string) []OrganizationUnitBasic {
+	out := make([]OrganizationUnitBasic, 0, len(ids))
 	for _, id := range ids {
-		out = append(out, providers.OrganizationUnitBasic{ID: id})
+		out = append(out, OrganizationUnitBasic{ID: id})
 	}
 	return out
 }
