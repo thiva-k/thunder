@@ -18,20 +18,8 @@ vi.mock('@thunderid/configure-translations', () => ({
 
 vi.mock('../lib/monaco-setup', () => ({}));
 
-vi.mock('../features/home/pages/HomePage', () => ({
+vi.mock('../pages/HomePage', () => ({
   default: () => <div data-testid="home-page" />,
-}));
-
-vi.mock('../features/users/pages/UsersListPage', () => ({
-  default: () => <div data-testid="users-list-page">Users List Page</div>,
-}));
-
-vi.mock('../features/users/pages/UserCreatePage', () => ({
-  default: () => <div data-testid="create-user-page">Create User Page</div>,
-}));
-
-vi.mock('../features/users/pages/UserEditPage', () => ({
-  default: () => <div data-testid="user-edit-page">User Edit Page</div>,
 }));
 
 vi.mock('@thunderid/configure-user-types', () => ({
@@ -137,7 +125,7 @@ vi.mock('../layouts/FullScreenLayout', async () => {
   return {default: () => <Outlet />};
 });
 
-vi.mock('../features/welcome/components/WelcomeRedirect', () => ({
+vi.mock('../components/welcome/WelcomeRedirect', () => ({
   default: () => null,
 }));
 
