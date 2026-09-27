@@ -54,6 +54,7 @@ export default function RegistrationFlowSection({
 }: RegistrationFlowSectionProps) {
   const routes = useApplicationRoutes();
   const {t} = useTranslation();
+  const selectedFlowId = editedApp.registrationFlowId ?? application.registrationFlowId;
   const {data: regFlowsData, isLoading: loadingRegFlows} = useGetFlows({flowType: FlowType.REGISTRATION});
 
   const regFlowOptions = regFlowsData?.flows ?? [];
@@ -69,14 +70,14 @@ export default function RegistrationFlowSection({
       enabled={editedApp.isRegistrationFlowEnabled ?? application.isRegistrationFlowEnabled ?? false}
       onToggle={application.isReadOnly ? undefined : (enabled) => onFieldChange('isRegistrationFlowEnabled', enabled)}
     >
-      {(editedApp.registrationFlowId ?? application.registrationFlowId) && (
+      {selectedFlowId && (
         <Alert severity="info" sx={{mb: 2}}>
           <Trans
             i18nKey="applications:edit.flows.registrationFlow.alert"
             components={[
               <Link
                 key="edit"
-                to={routes.flows.detail(editedApp.registrationFlowId ?? application.registrationFlowId ?? '')}
+                to={routes.flows.detail(selectedFlowId)}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link
@@ -92,10 +93,7 @@ export default function RegistrationFlowSection({
         fullWidth
         options={regFlowOptions}
         getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
-        value={
-          regFlowOptions.find((flow) => flow.id === (editedApp.registrationFlowId ?? application.registrationFlowId)) ??
-          null
-        }
+        value={regFlowOptions.find((flow) => flow.id === selectedFlowId) ?? null}
         onChange={(_event, newValue) => onFieldChange('registrationFlowId', newValue?.id ?? '')}
         loading={loadingRegFlows}
         disabled={application.isReadOnly}

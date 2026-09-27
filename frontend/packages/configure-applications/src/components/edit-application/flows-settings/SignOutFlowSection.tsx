@@ -51,6 +51,7 @@ export default function SignOutFlowSection({
 }: SignOutFlowSectionProps) {
   const routes = useApplicationRoutes();
   const {t} = useTranslation();
+  const selectedFlowId = editedApp.signOutFlowId ?? application.signOutFlowId;
   const {data: signoutFlowsData, isLoading: loadingSignOutFlows} = useGetFlows({flowType: FlowType.SIGNOUT});
 
   const signoutFlowOptions = signoutFlowsData?.flows ?? [];
@@ -64,14 +65,14 @@ export default function SignOutFlowSection({
         {entity: entityLabel},
       )}
     >
-      {(editedApp.signOutFlowId ?? application.signOutFlowId) && (
+      {selectedFlowId && (
         <Alert severity="info" sx={{mb: 2}}>
           <Trans
             i18nKey="applications:edit.flows.signOutFlow.alert"
             components={[
               <Link
                 key="edit"
-                to={routes.flows.detail(editedApp.signOutFlowId ?? application.signOutFlowId ?? '')}
+                to={routes.flows.detail(selectedFlowId)}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link
@@ -87,9 +88,7 @@ export default function SignOutFlowSection({
         fullWidth
         options={signoutFlowOptions}
         getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
-        value={
-          signoutFlowOptions.find((flow) => flow.id === (editedApp.signOutFlowId ?? application.signOutFlowId)) ?? null
-        }
+        value={signoutFlowOptions.find((flow) => flow.id === selectedFlowId) ?? null}
         onChange={(_event, newValue) => onFieldChange('signOutFlowId', newValue?.id ?? '')}
         loading={loadingSignOutFlows}
         disabled={application.isReadOnly}

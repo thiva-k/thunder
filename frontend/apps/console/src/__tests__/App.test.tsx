@@ -44,8 +44,8 @@ vi.mock('@thunderid/configure-connections', async (importOriginal) => ({
 
 vi.mock('@thunderid/configure-agents', () => ({
   AgentEditPage: () => <div data-testid="agent-edit-page">Agent Edit Page</div>,
-  AgentOnboardPage: () => null,
-  AgentsListPage: () => null,
+  AgentOnboardPage: () => <div data-testid="agent-onboard-page">Agent Onboard Page</div>,
+  AgentsListPage: () => <div data-testid="agents-list-page">Agents List Page</div>,
 }));
 
 vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
@@ -53,6 +53,8 @@ vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
   ApplicationsListPage: () => <div data-testid="applications-list-page">Applications List Page</div>,
   ApplicationCreatePage: () => <div data-testid="application-create-page">Application Create Page</div>,
   ApplicationEditPage: () => <div data-testid="application-edit-page">Application Edit Page</div>,
+  ApplicationTemplateSelectPage: () => <div data-testid="application-template-select-page">Template Select Page</div>,
+  ApplicationCreateProvider: ({children}: {children: React.ReactNode}) => children as React.ReactElement,
 }));
 
 vi.mock('@thunderid/configure-design', async (importOriginal) => ({
@@ -377,6 +379,46 @@ describe('App', () => {
     render(<App />);
     await waitFor(() => {
       expect(screen.getByTestId('import-configuration-validate-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads ApplicationsListPage lazily at /applications', async () => {
+    window.history.pushState({}, '', '/applications');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('applications-list-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads ApplicationTemplateSelectPage lazily at /applications/types', async () => {
+    window.history.pushState({}, '', '/applications/types');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('application-template-select-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads ApplicationCreatePage lazily at /applications/create', async () => {
+    window.history.pushState({}, '', '/applications/create');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('application-create-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads AgentsListPage lazily at /agents', async () => {
+    window.history.pushState({}, '', '/agents');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('agents-list-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads AgentOnboardPage lazily at /agents/create', async () => {
+    window.history.pushState({}, '', '/agents/create');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-onboard-page')).toBeInTheDocument();
     });
   });
 });

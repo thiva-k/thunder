@@ -77,8 +77,22 @@ vi.mock('@thunderid/configure-users', async (importOriginal) => ({
 // The OU picker fetches its own tree; the page only has to hand it the value and the change handler.
 vi.mock('@thunderid/configure-organization-units', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@thunderid/configure-organization-units')>()),
-  OrganizationUnitTreePicker: ({value, onChange}: {value: string; onChange: (id: string) => void}) => (
-    <button type="button" data-testid="ou-picker" data-value={value} onClick={() => onChange('ou-child-1')}>
+  OrganizationUnitTreePicker: ({
+    value,
+    onChange,
+    rootOuId = undefined,
+  }: {
+    value: string;
+    onChange: (id: string) => void;
+    rootOuId?: string;
+  }) => (
+    <button
+      type="button"
+      data-testid="ou-picker"
+      data-value={value}
+      data-root-ou-id={rootOuId}
+      onClick={() => onChange('ou-child-1')}
+    >
       organization unit picker
     </button>
   ),
@@ -327,6 +341,42 @@ describe('AgentOnboardPage', () => {
       expect(options[2]).toHaveAttribute('data-value', 'user-2');
     });
 
+    it('should name a user by email, then by identifier, when there is no display name or username', async () => {
+      h.users.current = [{attributes: {email: 'grace@example.com'}, id: 'user-2'}, {id: 'user-3'}];
+      givenStep([{id: 'owner_input', label: 'Owner', ref: 'owner', required: false, type: 'USER_SELECT'}]);
+
+      render(<AgentOnboardPage />);
+
+      await userEvent.click(await screen.findByRole('combobox'));
+
+      const options = await screen.findAllByRole('option');
+
+      expect(options.map((option) => option.textContent)).toEqual(['Select an option', 'grace@example.com', 'user-3']);
+    });
+
+    // SELECT options arrive either as {value, label} pairs or as bare values that double as labels.
+    it('should offer the options a select carries, in either shape', async () => {
+      givenStep([
+        {
+          id: 'tier_input',
+          label: 'Tier',
+          options: [{label: 'Gold', value: 'gold'}, 'silver'],
+          ref: 'tier',
+          type: 'SELECT',
+        },
+      ]);
+
+      render(<AgentOnboardPage />);
+
+      await userEvent.click(await screen.findByRole('combobox'));
+
+      const options = await screen.findAllByRole('option');
+
+      expect(options.map((option) => option.textContent)).toEqual(['Select an option', 'Gold', 'silver']);
+      expect(options[1]).toHaveAttribute('data-value', 'gold');
+      expect(options[2]).toHaveAttribute('data-value', 'silver');
+    });
+
     // OU_SELECT is the same contract: the picker sources its own tree, so the page only wires it up.
     it('should render the organization unit picker', async () => {
       givenStep([{id: 'ou_selection_input', label: 'Organization Unit', ref: 'ouId', type: 'OU_SELECT'}]);
@@ -334,6 +384,20 @@ describe('AgentOnboardPage', () => {
       render(<AgentOnboardPage />);
 
       expect(await screen.findByTestId('ou-picker')).toBeInTheDocument();
+    });
+
+    it('should root the organization unit picker where the flow says and record the chosen unit', async () => {
+      givenStep([{id: 'ou_selection_input', label: 'Organization Unit', ref: 'ouId', type: 'OU_SELECT'}], {
+        rootOuId: 'ou-root-1',
+      });
+
+      render(<AgentOnboardPage />);
+
+      const picker = await screen.findByTestId('ou-picker');
+
+      expect(picker).toHaveAttribute('data-root-ou-id', 'ou-root-1');
+      await userEvent.click(picker);
+      expect(h.handleInputChange).toHaveBeenCalledWith('ouId', 'ou-child-1');
     });
   });
 

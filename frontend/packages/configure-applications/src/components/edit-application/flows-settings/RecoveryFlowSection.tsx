@@ -52,6 +52,7 @@ export default function RecoveryFlowSection({
 }: RecoveryFlowSectionProps) {
   const routes = useApplicationRoutes();
   const {t} = useTranslation();
+  const selectedFlowId = editedApp.recoveryFlowId ?? application.recoveryFlowId;
   const {data: recoveryFlowsData, isLoading: loadingRecoveryFlows} = useGetFlows({flowType: FlowType.RECOVERY});
 
   const recoveryFlowOptions = recoveryFlowsData?.flows ?? [];
@@ -67,14 +68,14 @@ export default function RecoveryFlowSection({
       enabled={editedApp.isRecoveryFlowEnabled ?? application.isRecoveryFlowEnabled ?? false}
       onToggle={application.isReadOnly ? undefined : (enabled) => onFieldChange('isRecoveryFlowEnabled', enabled)}
     >
-      {(editedApp.recoveryFlowId ?? application.recoveryFlowId) && (
+      {selectedFlowId && (
         <Alert severity="info" sx={{mb: 2}}>
           <Trans
             i18nKey="applications:edit.flows.recoveryFlow.alert"
             components={[
               <Link
                 key="edit"
-                to={routes.flows.detail(editedApp.recoveryFlowId ?? application.recoveryFlowId ?? '')}
+                to={routes.flows.detail(selectedFlowId)}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link
@@ -90,10 +91,7 @@ export default function RecoveryFlowSection({
         fullWidth
         options={recoveryFlowOptions}
         getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
-        value={
-          recoveryFlowOptions.find((flow) => flow.id === (editedApp.recoveryFlowId ?? application.recoveryFlowId)) ??
-          null
-        }
+        value={recoveryFlowOptions.find((flow) => flow.id === selectedFlowId) ?? null}
         onChange={(_event, newValue) => onFieldChange('recoveryFlowId', newValue?.id ?? '')}
         loading={loadingRecoveryFlows}
         disabled={application.isReadOnly}

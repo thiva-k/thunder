@@ -160,4 +160,21 @@ describe('AgentOverview', () => {
 
     expect(screen.getByText('alice@example.com')).toBeInTheDocument();
   });
+
+  it('falls back to the user id for the owner label when the matched user has no display name or attributes', () => {
+    mockUseGetUsers.mockReturnValue({data: {users: [{id: 'user-1'}]}, isLoading: false});
+
+    render(<AgentOverview agent={baseAgent} />);
+
+    expect(screen.getByText('user-1')).toBeInTheDocument();
+  });
+
+  it('shows the raw owner id when the owner is not among the fetched users', () => {
+    mockUseGetUsers.mockReturnValue({data: {users: [{id: 'someone-else', display: 'Bob'}]}, isLoading: false});
+
+    render(<AgentOverview agent={baseAgent} />);
+
+    expect(screen.getByText('user-1')).toBeInTheDocument();
+    expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+  });
 });

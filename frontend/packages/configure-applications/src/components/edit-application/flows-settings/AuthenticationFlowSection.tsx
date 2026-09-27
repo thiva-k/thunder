@@ -53,6 +53,7 @@ export default function AuthenticationFlowSection({
 }: AuthenticationFlowSectionProps) {
   const routes = useApplicationRoutes();
   const {t} = useTranslation();
+  const selectedFlowId = editedApp.authFlowId ?? application.authFlowId;
   const {data: authFlowsData, isLoading: loadingAuthFlows} = useGetFlows({flowType: FlowType.AUTHENTICATION});
 
   const authFlowOptions = authFlowsData?.flows ?? [];
@@ -66,14 +67,14 @@ export default function AuthenticationFlowSection({
         {entity: entityLabel},
       )}
     >
-      {(editedApp.authFlowId ?? application.authFlowId) && (
+      {selectedFlowId && (
         <Alert severity="info" sx={{mb: 2}}>
           <Trans
             i18nKey="applications:edit.flows.authFlow.alert"
             components={[
               <Link
                 key="edit"
-                to={routes.flows.detail(editedApp.authFlowId ?? application.authFlowId ?? '')}
+                to={routes.flows.detail(selectedFlowId)}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link
@@ -89,7 +90,7 @@ export default function AuthenticationFlowSection({
         fullWidth
         options={authFlowOptions}
         getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
-        value={authFlowOptions.find((flow) => flow.id === (editedApp.authFlowId ?? application.authFlowId)) ?? null}
+        value={authFlowOptions.find((flow) => flow.id === selectedFlowId) ?? null}
         onChange={(_event, newValue) => onFieldChange('authFlowId', newValue?.id ?? '')}
         loading={loadingAuthFlows}
         disabled={application.isReadOnly}
