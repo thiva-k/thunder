@@ -242,11 +242,11 @@ catalogs:
       specifier: 14.6.1
       version: 14.6.1
     '@thunderid/react':
-      specifier: 1.0.3
-      version: 1.0.3
+      specifier: 1.1.0
+      version: 1.1.0
     '@thunderid/react-router':
-      specifier: 1.0.3
-      version: 1.0.3
+      specifier: 1.1.0
+      version: 1.1.0
     '@types/lodash-es':
       specifier: 4.17.12
       version: 4.17.12
@@ -513,7 +513,7 @@ importers:
         version: link:../frontend/packages/prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/utils':
         specifier: workspace:^
         version: link:../frontend/packages/utils
@@ -665,6 +665,9 @@ importers:
       '@thunderid/configure-agent-types':
         specifier: workspace:^
         version: link:../../packages/configure-agent-types
+      '@thunderid/configure-agents':
+        specifier: workspace:^
+        version: link:../../packages/configure-agents
       '@thunderid/configure-applications':
         specifier: workspace:^
         version: link:../../packages/configure-applications
@@ -724,10 +727,10 @@ importers:
         version: link:../../packages/logger
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/react-router':
         specifier: 'catalog:'
-        version: 1.0.3(@thunderid/browser@1.0.3)(@thunderid/react@1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2))(react-router@8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        version: 1.1.0(@thunderid/browser@1.1.0)(@thunderid/react@1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2))(react-router@8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       '@thunderid/utils':
         specifier: workspace:^
         version: link:../../packages/utils
@@ -911,10 +914,10 @@ importers:
         version: link:../../packages/logger
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/react-router':
         specifier: 'catalog:'
-        version: 1.0.3(@thunderid/browser@1.0.3)(@thunderid/react@1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2))(react-router@8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        version: 1.1.0(@thunderid/browser@1.1.0)(@thunderid/react@1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2))(react-router@8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       '@thunderid/utils':
         specifier: workspace:^
         version: link:../../packages/utils
@@ -1059,7 +1062,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -1159,7 +1162,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -1252,8 +1255,11 @@ importers:
         specifier: '>=4.1.0'
         version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.7.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(jsdom@27.0.1(supports-color@10.2.2))(vite@8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3))
 
-  frontend/packages/configure-applications:
+  frontend/packages/configure-agents:
     devDependencies:
+      '@monaco-editor/react':
+        specifier: 'catalog:'
+        version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.60.0
@@ -1269,21 +1275,54 @@ importers:
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@10.4.1)
+      '@thunderid/components':
+        specifier: workspace:^
+        version: link:../components
+      '@thunderid/configure-agent-types':
+        specifier: workspace:^
+        version: link:../configure-agent-types
+      '@thunderid/configure-applications':
+        specifier: workspace:^
+        version: link:../configure-applications
+      '@thunderid/configure-organization-units':
+        specifier: workspace:^
+        version: link:../configure-organization-units
+      '@thunderid/configure-user-types':
+        specifier: workspace:^
+        version: link:../configure-user-types
+      '@thunderid/configure-users':
+        specifier: workspace:^
+        version: link:../configure-users
       '@thunderid/contexts':
         specifier: workspace:^
         version: link:../contexts
+      '@thunderid/design':
+        specifier: workspace:^
+        version: link:../design
       '@thunderid/eslint-plugin':
         specifier: workspace:^
         version: link:../eslint-plugin
+      '@thunderid/hooks':
+        specifier: workspace:^
+        version: link:../hooks
+      '@thunderid/logger':
+        specifier: workspace:^
+        version: link:../logger
       '@thunderid/prettier-config':
         specifier: workspace:^
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
+      '@thunderid/types':
+        specifier: workspace:^
+        version: link:../types
+      '@thunderid/utils':
+        specifier: workspace:^
+        version: link:../utils
       '@types/node':
         specifier: 'catalog:'
         version: 24.7.2
@@ -1296,9 +1335,18 @@ importers:
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 4.1.10(supports-color@10.2.2)(vitest@4.1.10)
+      '@wso2/oxygen-ui':
+        specifier: 'catalog:'
+        version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+      '@wso2/oxygen-ui-icons-react':
+        specifier: 'catalog:'
+        version: 0.13.1(react@19.2.3)
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)(supports-color@10.2.2)
+      monaco-editor:
+        specifier: ^0.55.1
+        version: 0.55.1
       prettier:
         specifier: 'catalog:'
         version: 3.6.2
@@ -1308,6 +1356,15 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.3(react@19.2.3)
+      react-hook-form:
+        specifier: 'catalog:'
+        version: 7.65.0(react@19.2.3)
+      react-i18next:
+        specifier: 'catalog:'
+        version: 16.0.1(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      react-router:
+        specifier: 'catalog:'
+        version: 8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
@@ -1320,9 +1377,153 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vite:
+        specifier: 8.0.16
+        version: 8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3)
       vitest:
         specifier: '>=4.1.0'
         version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.7.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(jsdom@27.0.1(supports-color@10.2.2))(vite@8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3))
+
+  frontend/packages/configure-applications:
+    devDependencies:
+      '@hookform/resolvers':
+        specifier: 'catalog:'
+        version: 5.2.2(react-hook-form@7.65.0(react@19.2.3))(zod@4.3.6)
+      '@monaco-editor/react':
+        specifier: 'catalog:'
+        version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.60.0
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.90.5(react@19.2.3)
+      '@testing-library/jest-dom':
+        specifier: 'catalog:'
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.0(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@testing-library/user-event':
+        specifier: 'catalog:'
+        version: 14.6.1(@testing-library/dom@10.4.1)
+      '@thunderid/components':
+        specifier: workspace:^
+        version: link:../components
+      '@thunderid/configure-connections':
+        specifier: workspace:^
+        version: link:../configure-connections
+      '@thunderid/configure-design':
+        specifier: workspace:^
+        version: link:../configure-design
+      '@thunderid/configure-flows':
+        specifier: workspace:^
+        version: link:../configure-flows
+      '@thunderid/configure-organization-units':
+        specifier: workspace:^
+        version: link:../configure-organization-units
+      '@thunderid/configure-settings':
+        specifier: workspace:^
+        version: link:../configure-settings
+      '@thunderid/configure-user-types':
+        specifier: workspace:^
+        version: link:../configure-user-types
+      '@thunderid/contexts':
+        specifier: workspace:^
+        version: link:../contexts
+      '@thunderid/design':
+        specifier: workspace:^
+        version: link:../design
+      '@thunderid/eslint-plugin':
+        specifier: workspace:^
+        version: link:../eslint-plugin
+      '@thunderid/hooks':
+        specifier: workspace:^
+        version: link:../hooks
+      '@thunderid/logger':
+        specifier: workspace:^
+        version: link:../logger
+      '@thunderid/prettier-config':
+        specifier: workspace:^
+        version: link:../prettier-config
+      '@thunderid/react':
+        specifier: 'catalog:'
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+      '@thunderid/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
+      '@thunderid/types':
+        specifier: workspace:^
+        version: link:../types
+      '@thunderid/utils':
+        specifier: workspace:^
+        version: link:../utils
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.7.2
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@vitest/browser-playwright':
+        specifier: 'catalog:'
+        version: 4.1.10(playwright@1.60.0)(vite@8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3))(vitest@4.1.10)
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.10(supports-color@10.2.2)(vitest@4.1.10)
+      '@wso2/oxygen-ui':
+        specifier: 'catalog:'
+        version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+      '@wso2/oxygen-ui-icons-react':
+        specifier: 'catalog:'
+        version: 0.13.1(react@19.2.3)
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.5(jiti@2.7.0)(supports-color@10.2.2)
+      framer-motion:
+        specifier: 'catalog:'
+        version: 12.39.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      monaco-editor:
+        specifier: ^0.55.1
+        version: 0.55.1
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
+      react-hook-form:
+        specifier: 'catalog:'
+        version: 7.65.0(react@19.2.3)
+      react-i18next:
+        specifier: 'catalog:'
+        version: 16.0.1(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      react-router:
+        specifier: 'catalog:'
+        version: 8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.45(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 8.0.16
+        version: 8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3)
+      vitest:
+        specifier: '>=4.1.0'
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@24.7.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(jsdom@27.0.1(supports-color@10.2.2))(vite@8.0.16(@types/node@24.7.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.47.1)(tsx@4.22.4)(yaml@2.8.3))
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   frontend/packages/configure-connections:
     dependencies:
@@ -1331,7 +1532,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -1473,7 +1674,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -1594,9 +1795,6 @@ importers:
       '@thunderid/components':
         specifier: workspace:^
         version: link:../components
-      '@thunderid/configure-applications':
-        specifier: workspace:^
-        version: link:../configure-applications
       '@thunderid/configure-connections':
         specifier: workspace:^
         version: link:../configure-connections
@@ -1635,7 +1833,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -1785,7 +1983,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -1884,7 +2082,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -1959,7 +2157,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -2077,7 +2275,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -2234,7 +2432,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -2327,7 +2525,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -2393,7 +2591,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -2496,7 +2694,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -2614,7 +2812,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -2765,7 +2963,7 @@ importers:
         version: link:../prettier-config
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -2956,7 +3154,7 @@ importers:
         version: link:../logger
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@thunderid/utils':
         specifier: workspace:^
         version: link:../utils
@@ -3217,7 +3415,7 @@ importers:
         version: 5.90.5(react@19.2.3)
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       i18next:
         specifier: 25.6.0
         version: 25.6.0(typescript@5.9.3)
@@ -3549,7 +3747,7 @@ importers:
     dependencies:
       '@thunderid/react':
         specifier: 'catalog:'
-        version: 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+        version: 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.13.1(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3)(supports-color@10.2.2))(@types/react@19.2.14)(react@19.2.3))(@types/react@19.2.14)(@wso2/oxygen-ui-icons-react@0.13.1(react@19.2.3))(dayjs@1.11.21)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
@@ -7476,8 +7674,8 @@ packages:
   '@thunderid/browser@0.13.0':
     resolution: {integrity: sha512-C4dICYO+/LtW8FuqTyXhFqSOCmLG+7zSoYk077JJ9eZtukyiQja44q4rhMLx17oZbwtOqr+aBMLZbBrg7dPTWQ==}
 
-  '@thunderid/browser@1.0.3':
-    resolution: {integrity: sha512-9KY8WL/VtTy6iRbph2j5RHrJV3enMfdaRf18Qsy+3J3mQZmKBJJkKfuBVME47X4i4Nju6bX65yw2yv7wafAepw==}
+  '@thunderid/browser@1.1.0':
+    resolution: {integrity: sha512-2621Q60JPJDHrcf1PBryqRLtWZ37VG6suwD8ksVsnz/XMJ+xS2efAm2eLo/P8JGnpgXWkjkCeghCUz+xoikx9w==}
 
   '@thunderid/javascript@0.0.5':
     resolution: {integrity: sha512-lMjbHCsNgYWclUiPlN3CA6vjKSyjIBIxVGSnuJwiC9eVakVsWmRuxkO8KX6AWlA4SRHgpGLMnD4ZE5lpM+gi9g==}
@@ -7485,11 +7683,11 @@ packages:
   '@thunderid/javascript@0.13.0':
     resolution: {integrity: sha512-ZLDf9CnjP0HHxtB8urwyZRdzl3hINTDGJW9dtUnbNY+cHhikMLPR71Evv3x2OrATl3WEx0aHjAs1msmPxgFfXg==}
 
-  '@thunderid/javascript@1.0.3':
-    resolution: {integrity: sha512-AJnY0w/I3sVyrSeZ0GZooYBMGQjuTW8SMz63VDxknuOYmIDSAUc38KLxCMjiz7UddH/LDXuxMXBTmPySa4N/1w==}
+  '@thunderid/javascript@1.1.0':
+    resolution: {integrity: sha512-/z4BeaVSmFIA+KVDqQVMaUSWLXYemE0fbs+Uq3SoQ620PodIKTeunTk/JS52ohFn5Uet1+88PTU8/6WU4oRtWQ==}
 
-  '@thunderid/react-router@1.0.3':
-    resolution: {integrity: sha512-DOcs+QNE0y4oSKzBI7bjxA7Se5HN6ZPX+K7v1wUe/vKJAxJm6NIYEFN1aq03XwweOpBO3StenyHs9p9vFhiggA==}
+  '@thunderid/react-router@1.1.0':
+    resolution: {integrity: sha512-B808PU4duF1fCByy1WcHGJXMQtIPsKbRyoMOkw9+dm29Qz9a55qL+ZurpUP1kQIXm9Smt9fAg7MqL2jIQrT27g==}
     peerDependencies:
       '@thunderid/browser': '>=0.1.0'
       '@thunderid/react': '>=0.1.0'
@@ -7503,8 +7701,8 @@ packages:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
 
-  '@thunderid/react@1.0.3':
-    resolution: {integrity: sha512-PXm9BnjC5rXoSRFH2lNIs1H6gzRZPPgs1kHf9EwtMG6vcj667KY3rixF+sZI8K6+hvVsQUkTaX2GF4zr5GApbA==}
+  '@thunderid/react@1.1.0':
+    resolution: {integrity: sha512-fvm3XvoDcnXA1WYkLjgkfsaK0rpXdrE54Su031YlZlNxYW95nw2Th8pp8WzylmAlbr6OBuPdDWDB27NbGs88Dw==}
     peerDependencies:
       '@types/react': '>=16.8.0'
       react: '>=16.8.0'
@@ -19667,9 +19865,9 @@ snapshots:
       stream-browserify: 3.0.0
       tslib: 2.8.1
 
-  '@thunderid/browser@1.0.3':
+  '@thunderid/browser@1.1.0':
     dependencies:
-      '@thunderid/javascript': 1.0.3
+      '@thunderid/javascript': 1.1.0
       base64url: 3.0.1
       buffer: 6.0.3
       core-js: 3.42.0
@@ -19690,15 +19888,15 @@ snapshots:
       jose: 6.2.3
       tslib: 2.8.1
 
-  '@thunderid/javascript@1.0.3':
+  '@thunderid/javascript@1.1.0':
     dependencies:
       jose: 6.2.3
       tslib: 2.8.1
 
-  '@thunderid/react-router@1.0.3(@thunderid/browser@1.0.3)(@thunderid/react@1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2))(react-router@8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@thunderid/react-router@1.1.0(@thunderid/browser@1.1.0)(@thunderid/react@1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2))(react-router@8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
-      '@thunderid/browser': 1.0.3
-      '@thunderid/react': 1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
+      '@thunderid/browser': 1.1.0
+      '@thunderid/react': 1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)
       react: 19.2.3
       react-router: 8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tslib: 2.8.1
@@ -19716,11 +19914,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@thunderid/react@1.0.3(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)':
+  '@thunderid/react@1.1.0(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@10.2.2)':
     dependencies:
       '@emotion/css': 11.13.5(supports-color@10.2.2)
       '@floating-ui/react': 0.27.12(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@thunderid/browser': 1.0.3
+      '@thunderid/browser': 1.1.0
       '@types/react': 19.2.14
       dompurify: 3.4.14
       react: 19.2.3

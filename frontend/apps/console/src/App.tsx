@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {PageLoader} from '@thunderid/components';
+import {ApplicationCreateProvider} from '@thunderid/configure-applications';
 import {LayoutBuilderProvider, ThemeBuilderProvider} from '@thunderid/configure-design';
 import {GroupCreateProvider} from '@thunderid/configure-groups';
 import {OrganizationUnitProvider} from '@thunderid/configure-organization-units';
@@ -13,7 +14,6 @@ import {ProtectedRoute} from '@thunderid/react-router';
 import {lazy, Suspense, type JSX} from 'react';
 import {BrowserRouter, Navigate, Outlet, Route, Routes} from 'react-router';
 import RouteConfig, {ROUTE_SEGMENTS} from './configs/RouteConfig';
-import ApplicationCreateProvider from './features/applications/contexts/ApplicationCreate/ApplicationCreateProvider';
 import WelcomeRedirect from './features/welcome/components/WelcomeRedirect';
 import GetStartedPage from './features/welcome/pages/GetStartedPage';
 import TryoutSecuringAIAgentsPage from './features/welcome/pages/TryoutSecuringAIAgentsPage';
@@ -62,17 +62,27 @@ const CreateResourceServerPage = lazy(() =>
   import('@thunderid/configure-resource-servers').then((m) => ({default: m.CreateResourceServerPage})),
 );
 
-const AgentOnboardPage = lazy(() => import('./features/agents/pages/AgentOnboardPage'));
+const AgentOnboardPage = lazy(() => import('@thunderid/configure-agents').then((m) => ({default: m.AgentOnboardPage})));
 const AgentEditPage = lazy(() =>
-  import('./lib/monaco-setup').then(() => import('./features/agents/pages/AgentEditPage')),
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-agents').then((m) => ({default: m.AgentEditPage})),
+  ),
 );
-const AgentsListPage = lazy(() => import('./features/agents/pages/AgentsListPage'));
-const ApplicationCreatePage = lazy(() => import('./features/applications/pages/ApplicationCreatePage'));
+const AgentsListPage = lazy(() => import('@thunderid/configure-agents').then((m) => ({default: m.AgentsListPage})));
+const ApplicationCreatePage = lazy(() =>
+  import('@thunderid/configure-applications').then((m) => ({default: m.ApplicationCreatePage})),
+);
 const ApplicationEditPage = lazy(() =>
-  import('./lib/monaco-setup').then(() => import('./features/applications/pages/ApplicationEditPage')),
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-applications').then((m) => ({default: m.ApplicationEditPage})),
+  ),
 );
-const ApplicationsListPage = lazy(() => import('./features/applications/pages/ApplicationsListPage'));
-const ApplicationTemplateSelectPage = lazy(() => import('./features/applications/pages/ApplicationTemplateSelectPage'));
+const ApplicationsListPage = lazy(() =>
+  import('@thunderid/configure-applications').then((m) => ({default: m.ApplicationsListPage})),
+);
+const ApplicationTemplateSelectPage = lazy(() =>
+  import('@thunderid/configure-applications').then((m) => ({default: m.ApplicationTemplateSelectPage})),
+);
 const DesignPage = lazy(() => import('@thunderid/configure-design').then((m) => ({default: m.DesignPage})));
 const LayoutBuilderPage = lazy(() =>
   import('./lib/monaco-setup').then(() =>

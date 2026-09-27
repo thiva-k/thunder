@@ -54,20 +54,17 @@ vi.mock('@thunderid/configure-connections', async (importOriginal) => ({
   TrustedIssuerDetailPage: () => <div data-testid="trusted-issuer-detail-page">Trusted Issuer Detail Page</div>,
 }));
 
-vi.mock('../features/agents/pages/AgentEditPage', () => ({
-  default: () => <div data-testid="agent-edit-page">Agent Edit Page</div>,
+vi.mock('@thunderid/configure-agents', () => ({
+  AgentEditPage: () => <div data-testid="agent-edit-page">Agent Edit Page</div>,
+  AgentOnboardPage: () => null,
+  AgentsListPage: () => null,
 }));
 
-vi.mock('../features/applications/pages/ApplicationsListPage', () => ({
-  default: () => <div data-testid="applications-list-page">Applications List Page</div>,
-}));
-
-vi.mock('../features/applications/pages/ApplicationCreatePage', () => ({
-  default: () => <div data-testid="application-create-page">Application Create Page</div>,
-}));
-
-vi.mock('../features/applications/pages/ApplicationEditPage', () => ({
-  default: () => <div data-testid="application-edit-page">Application Edit Page</div>,
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  ApplicationsListPage: () => <div data-testid="applications-list-page">Applications List Page</div>,
+  ApplicationCreatePage: () => <div data-testid="application-create-page">Application Create Page</div>,
+  ApplicationEditPage: () => <div data-testid="application-edit-page">Application Edit Page</div>,
 }));
 
 vi.mock('@thunderid/configure-design', async (importOriginal) => ({

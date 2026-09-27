@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {AgentTypeRoutePaths} from '@thunderid/configure-agent-types';
+import type {AgentRoutePaths} from '@thunderid/configure-agents';
+import type {ApplicationRoutePaths} from '@thunderid/configure-applications';
 import type {ConnectionRoutePaths} from '@thunderid/configure-connections';
 import type {DesignRoutePaths} from '@thunderid/configure-design';
 import type {FlowRoutePaths} from '@thunderid/configure-flows';
@@ -27,17 +29,6 @@ import type {VerifiableCredentialRoutePaths} from '@thunderid/configure-verifiab
 export interface ConsoleRoutePaths {
   home: {
     list: () => string;
-  };
-  applications: {
-    list: () => string;
-    detail: (id: string) => string;
-    types: () => string;
-    create: () => string;
-  };
-  agents: {
-    list: () => string;
-    detail: (id: string) => string;
-    create: () => string;
   };
   welcome: {
     root: () => string;
@@ -74,6 +65,8 @@ export type RouteConfig = OrganizationUnitRoutePaths &
   UserRoutePaths &
   UserTypeRoutePaths &
   AgentTypeRoutePaths &
+  AgentRoutePaths &
+  ApplicationRoutePaths &
   ConnectionRoutePaths &
   ResourceServerRoutePaths &
   TranslationRoutePaths &
