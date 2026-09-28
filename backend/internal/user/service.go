@@ -310,6 +310,9 @@ func (us *userService) CreateUser(
 	if user == nil {
 		return nil, &ErrorInvalidRequestFormat
 	}
+	if user.LinkedAccount != nil && (user.LinkedAccount.IdpID == "" || user.LinkedAccount.Sub == "") {
+		return nil, &ErrorInvalidRequestFormat
+	}
 
 	// Check if caller is authorized to create users in the target OU.
 	if svcErr := us.checkUserAccess(ctx, security.ActionCreateUser, user.OUID, ""); svcErr != nil {
@@ -333,7 +336,7 @@ func (us *userService) CreateUser(
 
 	e := userToEntity(user)
 	submitted := user.Attributes
-	created, err := us.entityService.CreateEntity(ctx, e, nil)
+	created, err := us.entityService.CreateEntity(ctx, e, nil, user.LinkedAccount)
 	if err != nil {
 		if svcErr := mapEntityError(err); svcErr != nil {
 			return nil, svcErr
@@ -1177,6 +1180,8 @@ func mapEntityError(err error) *tidcommon.ServiceError {
 		return &ErrorAttributeConflict
 	case errors.Is(err, entity.ErrInvalidCredential):
 		return &ErrorInvalidCredential
+	case errors.Is(err, entity.ErrLinkedAccountConflict):
+		return &ErrorLinkedAccountConflict
 	default:
 		return nil
 	}

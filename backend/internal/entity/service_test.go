@@ -66,7 +66,7 @@ func testEntity(id string) *providers.Entity {
 }
 
 func (s *ServiceTestSuite) TestCreateEntity_NilEntity() {
-	_, err := s.svc.CreateEntity(s.ctx, nil, nil)
+	_, err := s.svc.CreateEntity(s.ctx, nil, nil, nil)
 	s.ErrorIs(err, ErrEntityNotFound)
 }
 
@@ -74,7 +74,7 @@ func (s *ServiceTestSuite) TestCreateEntity_StoreCreateFails() {
 	e := testEntity("e1")
 	s.store.On("CreateEntity", mock.Anything, *e, json.RawMessage(nil), json.RawMessage(nil)).
 		Return(s.testErr)
-	_, err := s.svc.CreateEntity(s.ctx, e, nil)
+	_, err := s.svc.CreateEntity(s.ctx, e, nil, nil)
 	s.Error(err)
 }
 
@@ -83,7 +83,7 @@ func (s *ServiceTestSuite) TestCreateEntity_GetAfterCreateFails() {
 	s.store.On("CreateEntity", mock.Anything, *e, json.RawMessage(nil), json.RawMessage(nil)).
 		Return(nil)
 	s.store.On("GetEntity", mock.Anything, e.ID).Return(providers.Entity{}, s.testErr)
-	_, err := s.svc.CreateEntity(s.ctx, e, nil)
+	_, err := s.svc.CreateEntity(s.ctx, e, nil, nil)
 	s.Error(err)
 }
 
@@ -92,9 +92,47 @@ func (s *ServiceTestSuite) TestCreateEntity_Success() {
 	s.store.On("CreateEntity", mock.Anything, *e, json.RawMessage(nil), json.RawMessage(nil)).
 		Return(nil)
 	s.store.On("GetEntity", mock.Anything, e.ID).Return(*e, nil)
-	got, err := s.svc.CreateEntity(s.ctx, e, nil)
+	got, err := s.svc.CreateEntity(s.ctx, e, nil, nil)
 	s.NoError(err)
 	s.Equal(e.ID, got.ID)
+}
+
+// A new entity linked to a subject another entity holds is refused before anything is written, and
+// a subject nobody holds is written as the entity's linkedIds.
+func (s *ServiceTestSuite) TestCreateEntity_LinkedAccount() {
+	other := "someone-else"
+	for name, tc := range map[string]struct {
+		holder  *string
+		lookErr error
+		wantErr error
+	}{
+		"free":      {lookErr: ErrEntityNotFound},
+		"held":      {holder: &other, wantErr: ErrLinkedAccountConflict},
+		"ambiguous": {lookErr: ErrAmbiguousEntity, wantErr: ErrLinkedAccountConflict},
+	} {
+		s.Run(name, func() {
+			s.SetupTest()
+			e := testEntity("e-linked")
+			s.store.On("ResolveLinkedAccount", mock.Anything, "idp-a", "sub-1").
+				Return(tc.holder, tc.lookErr).Once()
+			if tc.wantErr == nil {
+				s.store.On("CreateEntity", mock.Anything, mock.MatchedBy(func(got providers.Entity) bool {
+					return string(got.SystemAttributes) == `{"linkedIds":{"idp-a":{"sub-1":{}}}}`
+				}), json.RawMessage(nil), json.RawMessage(nil)).Return(nil).Once()
+				s.store.On("GetEntity", mock.Anything, e.ID).Return(*e, nil).Once()
+			}
+
+			_, err := s.svc.CreateEntity(s.ctx, e, nil, &providers.LinkedAccount{IdpID: "idp-a", Sub: "sub-1"})
+
+			if tc.wantErr == nil {
+				s.NoError(err)
+				return
+			}
+			s.ErrorIs(err, tc.wantErr)
+			s.store.AssertNotCalled(s.T(), "CreateEntity", mock.Anything, mock.Anything, mock.Anything,
+				mock.Anything)
+		})
+	}
 }
 
 func (s *ServiceTestSuite) TestGetEntity_Success() {
@@ -894,6 +932,35 @@ func (s *ServiceTestSuite) TestLinkAccount_RecordsLink() {
 	s.store.AssertNotCalled(s.T(), "GetEntity", mock.Anything, mock.Anything)
 }
 
+// linkedIds a caller writes into the system attributes are dropped, so a link is created only through
+// the typed link and its conflict check.
+func (s *ServiceTestSuite) TestCreateEntity_CallerLinkedIDsDropped() {
+	e := testEntity("e-raw-links")
+	e.SystemAttributes = json.RawMessage(`{"name":"x","linkedIds":{"idp-a":{"sub-1":{}}}}`)
+	s.store.On("CreateEntity", mock.Anything, mock.MatchedBy(func(got providers.Entity) bool {
+		return string(got.SystemAttributes) == `{"name":"x"}`
+	}), json.RawMessage(nil), json.RawMessage(nil)).Return(nil).Once()
+	s.store.On("GetEntity", mock.Anything, e.ID).Return(*e, nil).Once()
+
+	_, err := s.svc.CreateEntity(s.ctx, e, nil, nil)
+	s.NoError(err)
+	s.store.AssertNotCalled(s.T(), "ResolveLinkedAccount", mock.Anything, mock.Anything, mock.Anything)
+}
+
+// A link missing its connection or subject names nothing, so the create is refused before anything
+// is looked up or written.
+func (s *ServiceTestSuite) TestCreateEntity_IncompleteLinkRejected() {
+	for name, link := range map[string]providers.LinkedAccount{
+		"no connection": {Sub: "sub-1"},
+		"no subject":    {IdpID: "idp-a"},
+	} {
+		s.Run(name, func() {
+			_, err := s.svc.CreateEntity(s.ctx, testEntity("e-linked"), nil, &link)
+			s.ErrorIs(err, ErrBadAttributesInRequest)
+		})
+	}
+}
+
 func (s *ServiceTestSuite) TestLinkAccount_AddsSecondConnection() {
 	e := testEntity("e-link-2")
 	e.SystemAttributes = json.RawMessage(`{"linkedIds":{"idp-a":{"sub-1":{}}}}`)
@@ -1096,7 +1163,7 @@ func (s *ServiceTestSuite) TestCreateEntity_TooManyIndexedValuesRejectedBeforeSc
 	e := testEntity("e1")
 	e.Attributes = emailArrayAttrs(maxIndexedValuesPerAttribute + 1)
 
-	_, err := svc.CreateEntity(s.ctx, e, nil)
+	_, err := svc.CreateEntity(s.ctx, e, nil, nil)
 	s.ErrorIs(err, ErrSchemaValidationFailed)
 	s.ErrorIs(err, ErrIndexedValueLimitExceeded)
 }
@@ -1106,7 +1173,7 @@ func (s *ServiceTestSuite) TestCreateEntity_TooManyIndexedSystemValuesRejected()
 	e := testEntity("e1")
 	e.SystemAttributes = emailArrayAttrs(maxIndexedValuesPerAttribute + 1)
 
-	_, err := svc.CreateEntity(s.ctx, e, nil)
+	_, err := svc.CreateEntity(s.ctx, e, nil, nil)
 	s.ErrorIs(err, ErrIndexedValueLimitExceeded)
 }
 

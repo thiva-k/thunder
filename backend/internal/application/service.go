@@ -173,7 +173,7 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 		return nil, &tidcommon.InternalServerError
 	}
 
-	_, entErr := as.entityService.CreateEntity(ctx, appEntity, sysCredsJSON)
+	_, entErr := as.entityService.CreateEntity(ctx, appEntity, sysCredsJSON, nil)
 	if entErr != nil {
 		if svcErr := mapEntityError(entErr); svcErr != nil {
 			return nil, svcErr

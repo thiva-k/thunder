@@ -146,7 +146,7 @@ func (suite *ServiceTestSuite) setupTestService() (
 		Maybe().Return((*providers.Entity)(nil), epNotFound)
 	mockEntityService.On("GetEntitiesByIDs", mock.Anything, mock.Anything).
 		Maybe().Return([]providers.Entity{}, noEPErr)
-	mockEntityService.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntityService.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Maybe().Return(&providers.Entity{}, noEPErr)
 	mockEntityService.On("DeleteEntity", mock.Anything, mock.Anything).Maybe().Return(noEPErr)
 	mockEntityService.On("UpdateSystemAttributes", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(noEPErr)
@@ -2004,7 +2004,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_IssuesFlowSecretForEmbedded
 
 	var capturedCreds json.RawMessage
 	ep := resetEntityServiceMethod(service, "CreateEntity")
-	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			capturedCreds = args.Get(2).(json.RawMessage)
 		}).
@@ -2055,7 +2055,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForM2MClient() 
 
 	var capturedCreds json.RawMessage
 	ep := resetEntityServiceMethod(service, "CreateEntity")
-	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			capturedCreds = args.Get(2).(json.RawMessage)
 		}).
@@ -2113,7 +2113,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForRedirectClie
 
 	var capturedCreds json.RawMessage
 	ep := resetEntityServiceMethod(service, "CreateEntity")
-	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			capturedCreds = args.Get(2).(json.RawMessage)
 		}).
@@ -2170,7 +2170,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForPublicClient
 
 	var capturedCreds json.RawMessage
 	ep := resetEntityServiceMethod(service, "CreateEntity")
-	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			capturedCreds = args.Get(2).(json.RawMessage)
 		}).

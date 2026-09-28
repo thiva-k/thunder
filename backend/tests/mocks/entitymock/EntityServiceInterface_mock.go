@@ -189,8 +189,8 @@ func (_c *EntityServiceInterfaceMock_AuthenticateEntityByID_Call) RunAndReturn(r
 }
 
 // CreateEntity provides a mock function for the type EntityServiceInterfaceMock
-func (_mock *EntityServiceInterfaceMock) CreateEntity(ctx context.Context, entity1 *providers.Entity, systemCredentials json.RawMessage) (*providers.Entity, error) {
-	ret := _mock.Called(ctx, entity1, systemCredentials)
+func (_mock *EntityServiceInterfaceMock) CreateEntity(ctx context.Context, entity1 *providers.Entity, systemCredentials json.RawMessage, link *providers.LinkedAccount) (*providers.Entity, error) {
+	ret := _mock.Called(ctx, entity1, systemCredentials, link)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateEntity")
@@ -198,18 +198,18 @@ func (_mock *EntityServiceInterfaceMock) CreateEntity(ctx context.Context, entit
 
 	var r0 *providers.Entity
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *providers.Entity, json.RawMessage) (*providers.Entity, error)); ok {
-		return returnFunc(ctx, entity1, systemCredentials)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *providers.Entity, json.RawMessage, *providers.LinkedAccount) (*providers.Entity, error)); ok {
+		return returnFunc(ctx, entity1, systemCredentials, link)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *providers.Entity, json.RawMessage) *providers.Entity); ok {
-		r0 = returnFunc(ctx, entity1, systemCredentials)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *providers.Entity, json.RawMessage, *providers.LinkedAccount) *providers.Entity); ok {
+		r0 = returnFunc(ctx, entity1, systemCredentials, link)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*providers.Entity)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *providers.Entity, json.RawMessage) error); ok {
-		r1 = returnFunc(ctx, entity1, systemCredentials)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *providers.Entity, json.RawMessage, *providers.LinkedAccount) error); ok {
+		r1 = returnFunc(ctx, entity1, systemCredentials, link)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -225,11 +225,12 @@ type EntityServiceInterfaceMock_CreateEntity_Call struct {
 //   - ctx context.Context
 //   - entity1 *providers.Entity
 //   - systemCredentials json.RawMessage
-func (_e *EntityServiceInterfaceMock_Expecter) CreateEntity(ctx interface{}, entity1 interface{}, systemCredentials interface{}) *EntityServiceInterfaceMock_CreateEntity_Call {
-	return &EntityServiceInterfaceMock_CreateEntity_Call{Call: _e.mock.On("CreateEntity", ctx, entity1, systemCredentials)}
+//   - link *providers.LinkedAccount
+func (_e *EntityServiceInterfaceMock_Expecter) CreateEntity(ctx interface{}, entity1 interface{}, systemCredentials interface{}, link interface{}) *EntityServiceInterfaceMock_CreateEntity_Call {
+	return &EntityServiceInterfaceMock_CreateEntity_Call{Call: _e.mock.On("CreateEntity", ctx, entity1, systemCredentials, link)}
 }
 
-func (_c *EntityServiceInterfaceMock_CreateEntity_Call) Run(run func(ctx context.Context, entity1 *providers.Entity, systemCredentials json.RawMessage)) *EntityServiceInterfaceMock_CreateEntity_Call {
+func (_c *EntityServiceInterfaceMock_CreateEntity_Call) Run(run func(ctx context.Context, entity1 *providers.Entity, systemCredentials json.RawMessage, link *providers.LinkedAccount)) *EntityServiceInterfaceMock_CreateEntity_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -243,10 +244,15 @@ func (_c *EntityServiceInterfaceMock_CreateEntity_Call) Run(run func(ctx context
 		if args[2] != nil {
 			arg2 = args[2].(json.RawMessage)
 		}
+		var arg3 *providers.LinkedAccount
+		if args[3] != nil {
+			arg3 = args[3].(*providers.LinkedAccount)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -257,7 +263,7 @@ func (_c *EntityServiceInterfaceMock_CreateEntity_Call) Return(entity11 *provide
 	return _c
 }
 
-func (_c *EntityServiceInterfaceMock_CreateEntity_Call) RunAndReturn(run func(ctx context.Context, entity1 *providers.Entity, systemCredentials json.RawMessage) (*providers.Entity, error)) *EntityServiceInterfaceMock_CreateEntity_Call {
+func (_c *EntityServiceInterfaceMock_CreateEntity_Call) RunAndReturn(run func(ctx context.Context, entity1 *providers.Entity, systemCredentials json.RawMessage, link *providers.LinkedAccount) (*providers.Entity, error)) *EntityServiceInterfaceMock_CreateEntity_Call {
 	_c.Call.Return(run)
 	return _c
 }
