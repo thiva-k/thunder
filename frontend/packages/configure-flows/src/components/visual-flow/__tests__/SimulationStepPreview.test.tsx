@@ -122,8 +122,8 @@ vi.mock('@thunderid/configure-design', async (importOriginal) => ({
   ),
 }));
 
-vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+vi.mock('@thunderid/react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/react')>()),
   useGetApplications: () => ({
     data: {applications: mockApplications},
   }),

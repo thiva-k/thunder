@@ -18,20 +18,8 @@ vi.mock('@thunderid/configure-translations', () => ({
 
 vi.mock('../lib/monaco-setup', () => ({}));
 
-vi.mock('../features/home/pages/HomePage', () => ({
+vi.mock('../pages/HomePage', () => ({
   default: () => <div data-testid="home-page" />,
-}));
-
-vi.mock('../features/users/pages/UsersListPage', () => ({
-  default: () => <div data-testid="users-list-page">Users List Page</div>,
-}));
-
-vi.mock('../features/users/pages/UserCreatePage', () => ({
-  default: () => <div data-testid="create-user-page">Create User Page</div>,
-}));
-
-vi.mock('../features/users/pages/UserEditPage', () => ({
-  default: () => <div data-testid="user-edit-page">User Edit Page</div>,
 }));
 
 vi.mock('@thunderid/configure-user-types', () => ({
@@ -54,20 +42,19 @@ vi.mock('@thunderid/configure-connections', async (importOriginal) => ({
   TrustedIssuerDetailPage: () => <div data-testid="trusted-issuer-detail-page">Trusted Issuer Detail Page</div>,
 }));
 
-vi.mock('../features/agents/pages/AgentEditPage', () => ({
-  default: () => <div data-testid="agent-edit-page">Agent Edit Page</div>,
+vi.mock('@thunderid/configure-agents', () => ({
+  AgentEditPage: () => <div data-testid="agent-edit-page">Agent Edit Page</div>,
+  AgentOnboardPage: () => <div data-testid="agent-onboard-page">Agent Onboard Page</div>,
+  AgentsListPage: () => <div data-testid="agents-list-page">Agents List Page</div>,
 }));
 
-vi.mock('../features/applications/pages/ApplicationsListPage', () => ({
-  default: () => <div data-testid="applications-list-page">Applications List Page</div>,
-}));
-
-vi.mock('../features/applications/pages/ApplicationCreatePage', () => ({
-  default: () => <div data-testid="application-create-page">Application Create Page</div>,
-}));
-
-vi.mock('../features/applications/pages/ApplicationEditPage', () => ({
-  default: () => <div data-testid="application-edit-page">Application Edit Page</div>,
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  ApplicationsListPage: () => <div data-testid="applications-list-page">Applications List Page</div>,
+  ApplicationCreatePage: () => <div data-testid="application-create-page">Application Create Page</div>,
+  ApplicationEditPage: () => <div data-testid="application-edit-page">Application Edit Page</div>,
+  ApplicationTemplateSelectPage: () => <div data-testid="application-template-select-page">Template Select Page</div>,
+  ApplicationCreateProvider: ({children}: {children: React.ReactNode}) => children as React.ReactElement,
 }));
 
 vi.mock('@thunderid/configure-design', async (importOriginal) => ({
@@ -140,7 +127,7 @@ vi.mock('../layouts/FullScreenLayout', async () => {
   return {default: () => <Outlet />};
 });
 
-vi.mock('../features/welcome/components/WelcomeRedirect', () => ({
+vi.mock('../components/welcome/WelcomeRedirect', () => ({
   default: () => null,
 }));
 
@@ -392,6 +379,46 @@ describe('App', () => {
     render(<App />);
     await waitFor(() => {
       expect(screen.getByTestId('import-configuration-validate-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads ApplicationsListPage lazily at /applications', async () => {
+    window.history.pushState({}, '', '/applications');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('applications-list-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads ApplicationTemplateSelectPage lazily at /applications/types', async () => {
+    window.history.pushState({}, '', '/applications/types');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('application-template-select-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads ApplicationCreatePage lazily at /applications/create', async () => {
+    window.history.pushState({}, '', '/applications/create');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('application-create-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads AgentsListPage lazily at /agents', async () => {
+    window.history.pushState({}, '', '/agents');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('agents-list-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads AgentOnboardPage lazily at /agents/create', async () => {
+    window.history.pushState({}, '', '/agents/create');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-onboard-page')).toBeInTheDocument();
     });
   });
 });

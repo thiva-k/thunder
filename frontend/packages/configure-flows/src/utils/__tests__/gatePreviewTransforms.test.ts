@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import type {Application} from '@thunderid/configure-applications';
+import type {Application} from '@thunderid/react';
 import {describe, expect, it} from 'vitest';
 import {
   resolveApplicationMeta,

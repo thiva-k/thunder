@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {BuilderStaticPanel} from '@thunderid/components';
-import {useGetApplication, useGetApplications} from '@thunderid/configure-applications';
-import type {BasicApplication} from '@thunderid/configure-applications';
 import {GatePreview} from '@thunderid/configure-design';
 import {DefaultTheme, DesignResolveType, useGetDesignResolve, type Theme} from '@thunderid/design';
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
-import type {EmbeddedFlowComponent} from '@thunderid/react';
+import {useGetApplication, useGetApplications} from '@thunderid/react';
+import type {BasicApplication, EmbeddedFlowComponent} from '@thunderid/react';
 import {
   Box,
   Chip,
