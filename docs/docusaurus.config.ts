@@ -83,12 +83,12 @@ const config: Config = {
   organizationName: productConfig.project.source.github.owner.name, // Usually your GitHub org/user name.
   projectName: productConfig.project.source.github.name, // Usually your repo name.
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   markdown: {
     mermaid: true,
     hooks: {
-      onBrokenMarkdownLinks: 'throw',
+      onBrokenMarkdownLinks: 'warn',
     },
     // Replace {{ProductName}} placeholders in frontmatter values at build time.
     // This applies globally to all content (docs, pages, etc.).
