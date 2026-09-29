@@ -222,13 +222,14 @@ overrides:
   # JUSTIFICATION: Fixes GHSA-5jgf-p345-68v8 (host confusion via skipped IDN canonicalization on
   # scheme-relative references), GHSA-f65p-4m7j-42xc (SSRF via malformed IPv6 normalization),
   # GHSA-fph4-wmhf-6fwf (SSRF via repeated hostname percent-decoding) and GHSA-jqff-g426-hqxp
-  # (host confusion via percent-encoded scheme normalization). Transitive via the Docusaurus
+  # (host confusion via percent-encoded scheme normalization); raised to 3.1.8 for GHSA-qw65-cvwx-89v3
+  # (authority injection, fixed in 3.1.7) and GHSA-58mr-gqgx-xq4g (host confusion via an unclosed
+  # bracket in the authority, affects 3.1.6 only). Transitive via the Docusaurus
   # webpack -> schema-utils -> ajv chain (100+ paths), so overridden globally. Constrained to the
-  # 3.x line: the consumers here (ajv) declare fast-uri ^3.0.1, and an open-ended '>=3.1.6' lets
-  # the resolver dedupe this edge onto the 4.x major, which those consumers were never tested
-  # against. 3.1.6 is a patch release on the 3.1.x line already resolved here (3.1.5), so no API
-  # change.
-  fast-uri: '>=3.1.6 <4'
+  # 3.x line: the consumers here (ajv) declare fast-uri ^3.0.1, and an open-ended floor lets the
+  # resolver dedupe this edge onto the 4.x major, which those consumers were never tested against.
+  # 3.1.8 is a patch release on the 3.1.x line already resolved here (3.1.6), so no API change.
+  fast-uri: '>=3.1.8 <4'
 
 packageExtensions:
   '@hookform/resolvers':
