@@ -249,6 +249,7 @@ type importService struct {
 	presentationDefinitionService  presentationDefinitionAdapter
 	credentialConfigurationService credentialConfigurationAdapter
 	serverConfigService            serverConfigAdapter
+	gatewayService                 gatewayAdapter
 }
 
 func newImportService(
@@ -270,6 +271,7 @@ func newImportService(
 	presentationDefinitionService presentationDefinitionAdapter,
 	credentialConfigurationService credentialConfigurationAdapter,
 	serverConfigService serverConfigAdapter,
+	gatewayService gatewayAdapter,
 	authZENPDPServices ...authZENPDPAdapter,
 ) ImportServiceInterface {
 	var authZENPDPService authZENPDPAdapter
@@ -296,6 +298,7 @@ func newImportService(
 		presentationDefinitionService:  presentationDefinitionService,
 		credentialConfigurationService: credentialConfigurationService,
 		serverConfigService:            serverConfigService,
+		gatewayService:                 gatewayService,
 	}
 }
 
@@ -457,6 +460,8 @@ func (s *importService) importDocument(
 		return s.importCredentialConfiguration(ctx, doc, options, dryRun)
 	case resourceTypeServerConfig:
 		return s.importServerConfig(ctx, doc, dryRun)
+	case resourceTypeGateway:
+		return s.importGateway(ctx, doc, options, dryRun)
 	default:
 		return ImportItemOutcome{
 			ResourceType: doc.ResourceType,
@@ -852,6 +857,9 @@ func (s *importService) importFlow(
 }
 
 var resourceDependencyOrder = []string{
+	// A gateway refers to no other resource and nothing refers to it, so its position is free.
+	// First keeps it out of the way of the ordering that does matter.
+	resourceTypeGateway,
 	resourceTypeOrganizationUnit,
 	resourceTypeEntityType,
 	resourceTypeAgentType,

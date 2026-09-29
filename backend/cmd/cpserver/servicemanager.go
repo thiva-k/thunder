@@ -39,6 +39,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/graphbuilder"
 	"github.com/thunder-id/thunderid/internal/flow/interceptor"
 	flowmgt "github.com/thunder-id/thunderid/internal/flow/mgt"
+	"github.com/thunder-id/thunderid/internal/gateway"
 	"github.com/thunder-id/thunderid/internal/group"
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/inboundclient"
@@ -313,6 +314,11 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// Initialize export service with collected exporters
 	_ = export.Initialize(mux, exporters)
 
+	// The gateways this control plane administers. Registration is bounded by gateway.max_gateways,
+	// which is one unless a deployment raises it.
+	gatewayService, err := gateway.Initialize(mux)
+	fatalOnError(ctx, logger, err, "Failed to initialize gateway service")
+
 	// Initialize import service
 	importService := importer.Initialize(
 		mux,
@@ -334,6 +340,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		openid4vpDefSvc,
 		openid4vciCredSvc,
 		serverConfigService,
+		gatewayService,
 		authZENPDPService,
 	)
 

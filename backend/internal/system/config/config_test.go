@@ -1785,3 +1785,38 @@ allowed_subject_types:
 	assert.Empty(suite.T(), dst.DefaultScopeClaimsMapping)
 	assert.Empty(suite.T(), dst.AllowedSubjectTypes)
 }
+
+// A deployment that sets max_gateways to zero means it administers none, and the merge has to keep
+// that. The merge only takes a user-supplied primitive when it is non-zero, so a plain int would be
+// indistinguishable from an omitted field and default.json's one would win.
+func TestMergeKeepsAnExplicitlyZeroGatewayBound(t *testing.T) {
+	shipped := 1
+	none := 0
+
+	base := &Config{Gateway: GatewayConfig{MaxGateways: &shipped}}
+	mergeConfigs(base, &Config{Gateway: GatewayConfig{MaxGateways: &none}})
+
+	if got := base.Gateway.MaxGatewayCount(); got != 0 {
+		t.Errorf("an explicit zero was discarded by the merge, got %d", got)
+	}
+}
+
+// Omitting it is the other half: nothing supplied leaves what default.json carries.
+func TestMergeKeepsTheShippedGatewayBoundWhenUnset(t *testing.T) {
+	shipped := 1
+
+	base := &Config{Gateway: GatewayConfig{MaxGateways: &shipped}}
+	mergeConfigs(base, &Config{})
+
+	if got := base.Gateway.MaxGatewayCount(); got != 1 {
+		t.Errorf("an omitted field overwrote the shipped bound, got %d", got)
+	}
+}
+
+// With nothing configured at all a deployment administers none, rather than this code inventing a
+// number that default.json already carries.
+func TestGatewayBoundDefaultsToNone(t *testing.T) {
+	if got := (GatewayConfig{}).MaxGatewayCount(); got != 0 {
+		t.Errorf("expected an unconfigured bound to be none, got %d", got)
+	}
+}
