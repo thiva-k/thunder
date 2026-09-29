@@ -4,6 +4,7 @@ If your organization is using ThunderID, or your open source project integrates 
 
 | Organization Name | Link | Date of First Use | Description |
 |---|---|---|---|
+| [LSF](https://opensource.lk) | [OpenNSW](https://github.com/OpenNSW) | 2026-02 | Open-source Digital Public Infrastructure building blocks for National Single Window systems, where applicants complete multi-agency approvals through one entry point. OpenNSW recommends ThunderID as the identity provider for Single Windows built with it. Its first implementation, [nsw-srilanka](https://github.com/OpenNSW/nsw-srilanka) (Sri Lanka's Trade Single Window), uses ThunderID to sign in traders, agency officers, and administrators with OIDC, and to secure calls between the Single Window and agency systems with OAuth2 client credentials. |
 | [OpenChoreo](https://openchoreo.dev) | [Identity configuration](https://openchoreo.dev/docs/platform-engineer-guide/identity-configuration/) | 2025-10 | [CNCF Sandbox](https://www.cncf.io/projects/openchoreo/) developer platform for Kubernetes. OpenChoreo ships ThunderID as its default identity provider, providing OAuth2 and OIDC authentication for its Backstage-powered developer portal, the `occ` CLI, its AI agents, and its MCP servers, along with the platform's users, groups, and client applications. |
 
 ---
