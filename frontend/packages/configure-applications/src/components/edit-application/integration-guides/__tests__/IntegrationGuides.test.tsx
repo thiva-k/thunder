@@ -9,6 +9,7 @@ import type {OAuth2Config} from '../../../../models/oauth';
 import IntegrationGuides from '../IntegrationGuides';
 
 const mockGetServerUrl = vi.fn(() => 'https://localhost:8090');
+const mockGetRuntimeUrl = vi.fn(() => 'https://localhost:8090');
 const mockGetDocumentationLink = vi.fn((key: string) => documentationLinks[key]);
 
 const documentationLinks: Record<string, string> = {
@@ -36,6 +37,8 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
       getServerUrl: mockGetServerUrl,
       getDocumentationLink: mockGetDocumentationLink,
     }),
+    // With no gateway registered the runtime URL is the server URL, which is what most tests assert.
+    useRuntimeUrl: () => mockGetRuntimeUrl(),
   };
 });
 
@@ -98,6 +101,7 @@ describe('IntegrationGuides', () => {
   beforeEach(() => {
     vi.useFakeTimers({shouldAdvanceTime: true});
     mockUseGetOrganizationUnit.mockReset().mockReturnValue({data: undefined});
+    mockGetRuntimeUrl.mockReset().mockReturnValue('https://localhost:8090');
     mockWriteText.mockReset().mockResolvedValue(undefined);
     mockGetDocumentationLink.mockImplementation((key: string) => documentationLinks[key]);
     mockFetch.mockReset().mockImplementation((url: string) =>
@@ -252,6 +256,19 @@ describe('IntegrationGuides', () => {
     expect(screen.getByText('https://localhost:8090/oauth2/token')).toBeInTheDocument();
     expect(screen.getByText('https://localhost:8090/oauth2/userinfo')).toBeInTheDocument();
     expect(screen.getByText('https://localhost:8090/oauth2/jwks')).toBeInTheDocument();
+  });
+
+  // The endpoints are for someone to copy into their own application, so they name the gateway that
+  // answers them, not the server the console talks to.
+  it('renders the OIDC endpoints from the runtime gateway URL rather than the server URL', () => {
+    mockGetRuntimeUrl.mockReturnValue('https://gateway.example.com');
+
+    renderWithProviders(<IntegrationGuides application={reactApplication} oauth2Config={oauth2Config} />);
+
+    expect(screen.getByText('https://gateway.example.com/.well-known/openid-configuration')).toBeInTheDocument();
+    expect(screen.getByText('https://gateway.example.com/oauth2/authorize')).toBeInTheDocument();
+    expect(screen.getByText('https://gateway.example.com/oauth2/token')).toBeInTheDocument();
+    expect(screen.queryByText('https://localhost:8090/oauth2/authorize')).not.toBeInTheDocument();
   });
 
   it('navigates to the Flows and Customization tabs via the sign-in preview links', () => {
