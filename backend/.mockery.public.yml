@@ -362,6 +362,7 @@ packages:
     # method takes the unexported ouFlowResolver interface, which cannot be referenced
     # from this external mock package.
     interfaces:
+      HierarchyEnumeratorInterface:
       OUUserResolver:
       OUGroupResolver:
       OURoleResolver:
