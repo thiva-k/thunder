@@ -645,6 +645,33 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'category',
+              label: 'Authorization',
+              collapsed: true,
+              collapsible: true,
+              items: [
+                {
+                  type: 'doc',
+                  id: 'guides/integrations/authorization/overview',
+                  label: 'Overview',
+                  key: 'authorization-overview',
+                },
+                {
+                  type: 'category',
+                  label: 'Policy Decision Points',
+                  collapsed: true,
+                  collapsible: true,
+                  items: [
+                    {
+                      type: 'doc',
+                      id: 'guides/integrations/authorization/authzen',
+                      label: 'AuthZEN',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: 'category',
               label: 'Notifications',
               collapsed: true,
               collapsible: true,
@@ -1008,6 +1035,11 @@ const sidebars: SidebarsConfig = {
                   type: 'doc',
                   id: 'guides/protocols/authzen/pdp',
                   label: 'Policy Decision Point',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/protocols/authzen/pep',
+                  label: 'Policy Enforcement Point',
                 },
               ],
             },
