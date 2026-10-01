@@ -517,6 +517,11 @@ configuration:
     # Leave empty to inherit the global declarativeResources.enabled setting.
     store: ""
 
+  # SCIM 2.0 provisioning configuration.
+  scim:
+    # URN prefix of the per-user-type SCIM extension schemas. A trailing colon is added if missing.
+    urnPrefix: "urn:thunderid:params:scim:schemas:"
+
   # SMTP server used to deliver emails (email OTP, magic link, verification).
   # Leave host empty to omit the section, in which case no email can be sent.
   # port and fromAddress are required once host is set. enableStartTls and

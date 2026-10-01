@@ -330,6 +330,9 @@ openid4vci:
   store: {{ include "thunderid.validateStoreMode" (dict "value" .Values.configuration.openid4vci.store "field" "configuration.openid4vci.store") | quote }}
   {{- end }}
 
+scim:
+  urn_prefix: {{ .Values.configuration.scim.urnPrefix | quote }}
+
 {{- $email := default dict .Values.configuration.email }}
 {{- $smtp := default dict $email.smtp }}
 {{- if $smtp.host }}
