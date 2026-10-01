@@ -14,6 +14,7 @@ export const ConnectionTypes = {
   TWILIO: 'twilio',
   VONAGE: 'vonage',
   SMS_GATEWAY: 'sms-gateway',
+  AUTHZEN_PDP: 'authzen-pdp',
 } as const;
 
 export type ConnectionType = (typeof ConnectionTypes)[keyof typeof ConnectionTypes];
@@ -31,6 +32,7 @@ export type ConnectionCategory =
   | 'identity-verification'
   | 'crm'
   | 'data-store'
+  | 'authorization'
   | 'trusted-idp'
   | 'custom';
 
@@ -40,6 +42,7 @@ export type ConnectionCategory =
 export const ConnectionInstanceCategories = {
   IDENTITY_PROVIDER: 'identity-provider',
   SMS_PROVIDER: 'sms-provider',
+  AUTHORIZATION_PDP: 'authorization-pdp',
 } as const;
 
 export type ConnectionInstanceCategory =
@@ -323,16 +326,58 @@ export interface SMSGatewayConnectionRequest {
   httpHeaders?: string;
 }
 
+export interface AuthZENPDPConnectionRequest {
+  name: string;
+  description?: string;
+  endpoint: string;
+  batchEndpoint?: string;
+  timeoutMs?: number;
+  retryCount?: number;
+  authentication?: OutboundAuthentication;
+  subjectAttributeMappings?: AuthZENPDPSubjectAttributeMapping[];
+}
+
+export interface APIKeyHeader {
+  name: string;
+  value: string;
+}
+
+export interface OutboundAuthentication {
+  scheme: 'NONE' | 'BEARER' | 'BASIC' | 'API_KEY';
+  bearer?: {token: string};
+  basic?: {username: string; password: string};
+  apiKey?: {headers: APIKeyHeader[]};
+}
+
+export interface OutboundAuthenticationResponse extends Omit<OutboundAuthentication, 'apiKey'> {
+  apiKey?: {headers: APIKeyHeader[] | null};
+}
+
+export interface AuthZENPDPSubjectAttributeMapping {
+  entityType: string;
+  attributes: AuthZENPDPSubjectAttribute[];
+}
+
+export interface AuthZENPDPSubjectAttribute {
+  attribute: string;
+  pdpAttribute?: string;
+}
+
+export interface SubjectMappingValues {
+  subjectAttributeMappings?: AuthZENPDPSubjectAttributeMapping[];
+}
+
 export type ConnectionRequest =
   | OAuthConnectionRequest
   | OIDCConnectionRequest
   | OAuth2ConnectionRequest
   | TwilioConnectionRequest
   | VonageConnectionRequest
-  | SMSGatewayConnectionRequest;
+  | SMSGatewayConnectionRequest
+  | AuthZENPDPConnectionRequest;
 
 /**
- * Vendor response — secrets returned masked as "******". A superset carrying every vendor's
+ * Vendor response — secrets are never returned. A superset carrying every vendor's
  * fields (IdP + SMS); the shared form mapping reads only the fields relevant to each type.
  */
 export interface ConnectionResponse extends OIDCConnectionRequest {
@@ -351,6 +396,13 @@ export interface ConnectionResponse extends OIDCConnectionRequest {
   httpMethod?: string;
   contentType?: string;
   httpHeaders?: string;
+  /** AuthZEN PDP fields. */
+  endpoint?: string;
+  batchEndpoint?: string;
+  timeoutMs?: number | string;
+  retryCount?: number | string;
+  authentication?: OutboundAuthenticationResponse;
+  subjectAttributeMappings?: AuthZENPDPSubjectAttributeMapping[];
 }
 
 /**
@@ -361,6 +413,7 @@ export interface ConnectionResponse extends OIDCConnectionRequest {
  * - coming-soon: a placeholder tile for a not-yet-wired vendor (no API calls).
  */
 export type ConnectionPresentation = 'branded' | 'custom' | 'coming-soon';
+export type ConnectionGeneralSettingsCardCopy = 'configuration' | 'credentials';
 
 /**
  * Frontend-owned presentation metadata for a vendor.
@@ -378,6 +431,12 @@ export interface ConnectionVendorMeta {
   comingSoon?: boolean;
   /** Whether this connection provisions users and therefore exposes attribute mapping (IdPs only). */
   supportsAttributeMapping?: boolean;
+  /** Whether this connection exposes outbound service authentication settings. */
+  supportsAuthentication?: boolean;
+  /** Whether this connection exposes subject attribute mappings for authorization requests. */
+  supportsSubjectMapping?: boolean;
+  /** Copy variant for the General tab settings card. */
+  generalSettingsCardCopy?: ConnectionGeneralSettingsCardCopy;
   /** i18n key for the create-wizard setup hint (vendors that need an OAuth app registered first). */
   createHintKey?: string;
 }

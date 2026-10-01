@@ -21,6 +21,7 @@ import {
 import {Plus, Trash2, UserRound} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
+import SettingsCardIcon from './SettingsCardIcon';
 import type {AttributeConfiguration} from '../models/connection';
 import {
   flattenUserTypeAttributes,
@@ -425,23 +426,6 @@ export default function AttributeMappingSection({
       ),
     );
 
-  const iconBox = (icon: JSX.Element): JSX.Element => (
-    <Box
-      sx={{
-        width: 30,
-        height: 30,
-        borderRadius: 1.5,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'action.hover',
-        color: 'primary.main',
-      }}
-    >
-      {icon}
-    </Box>
-  );
-
   return (
     <Stack direction="column" spacing={3} data-testid="attribute-mapping-section">
       {/* Section 1 — user type resolution (hidden when there's only one user type to resolve to) */}
@@ -449,7 +433,11 @@ export default function AttributeMappingSection({
         <SettingsCard
           title={t('attributeMapping.resolution.title')}
           description={t('attributeMapping.resolution.description')}
-          titleIcon={iconBox(<UserRound size={16} />)}
+          titleIcon={
+            <SettingsCardIcon>
+              <UserRound size={16} />
+            </SettingsCardIcon>
+          }
         >
           <Stack direction="column" spacing={3.5}>
             {canResolveDynamic && (
