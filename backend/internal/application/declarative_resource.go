@@ -231,6 +231,8 @@ func (e *applicationExporter) GetResourceRules() *declarativeresource.ResourceRu
 	return &declarativeresource.ResourceRules{
 		Variables: []string{
 			"InboundAuthConfig[].OAuthConfig.ClientID",
+		},
+		SecretVariables: []string{
 			"InboundAuthConfig[].OAuthConfig.ClientSecret",
 		},
 		ArrayVariables: []string{
