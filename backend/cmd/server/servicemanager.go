@@ -230,6 +230,10 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	ouService.SetOUGroupResolver(ouGroupResolver)
 	ouService.SetOURoleResolver(ouRoleResolver)
 
+	// Adapt the OU service to the runtime provider contract. The OAuth and flow layers depend only
+	// on providers.OrganizationUnitProvider and never see the management model.
+	ouProvider := ou.NewOrganizationUnitProvider(ouService)
+
 	// Complete the two-phase initialization of the privilege-escalation guard. The resolver spans
 	// roles, groups, and entities, so it can only be built once all three are ready. Until it is
 	// injected the guard fails closed, so this must not be skipped.
@@ -368,7 +372,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	flowConfig.Session = sessionCfg
 	flowFactory, execRegistry, interceptorRegistry, graphBuilder := initializeFlowCoreAndExecutor(ctx, logger,
 		cacheManager, executor.ExecutorDependencies{
-			OUService:             ouService,
+			OUService:             ouProvider,
 			IDPService:            idpService,
 			NotifSenderSvc:        notifSenderSvc,
 			JWTService:            jwtService,
@@ -479,7 +483,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	actorProvider := actorprovider.Initialize(inboundClientService, entityProvider, authnProvider, roleService)
 
 	// Initialize flow metadata service
-	_ = flowmeta.Initialize(mux, actorProvider, ouService, designResolveService, i18nService)
+	_ = flowmeta.Initialize(mux, actorProvider, ouProvider, designResolveService, i18nService)
 
 	// Initialize export service with collected exporters
 	export.Initialize(mux, exporters)
@@ -522,7 +526,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	// Initialize OAuth services.
 	tokenValidator, err := oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
-		flowExecService, observabilitySvc, runtimeCryptoSvc, ouService, attributeCacheService, authZService,
+		flowExecService, observabilitySvc, runtimeCryptoSvc, ouProvider, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
 		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc,
 		sessionService, flowMgtService, oauthCfg)
