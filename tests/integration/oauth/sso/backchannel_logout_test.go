@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,7 +19,8 @@ import (
 const (
 	backchannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
 	// deliveryTimeout covers the default retry schedule: waits of 2 and 4 seconds plus the attempts.
-	deliveryTimeout = 15 * time.Second
+	deliveryTimeout        = 15 * time.Second
+	tokenExchangeGrantType = "urn:ietf:params:oauth:grant-type:token-exchange"
 )
 
 // logoutReceiver is a relying party's back-channel logout endpoint. It answers with the given
@@ -114,8 +117,9 @@ func (r *logoutReceiver) quiet(ts *SSOLogoutTestSuite, window time.Duration) {
 }
 
 // createBackchannelApplication registers a confidential client on the suite's SSO flow with the given
-// back-channel logout URI, and deletes it when the test ends.
-func (ts *SSOLogoutTestSuite) createBackchannelApplication(name, cID, cSecret, logoutURI string) {
+// back-channel logout URI, and deletes it when the test ends. Extra grant types join authorization_code.
+func (ts *SSOLogoutTestSuite) createBackchannelApplication(name, cID, cSecret, logoutURI string,
+	extraGrantTypes ...string) {
 	ts.T().Helper()
 
 	appID, err := testutils.CreateApplication(testutils.Application{
@@ -135,7 +139,7 @@ func (ts *SSOLogoutTestSuite) createBackchannelApplication(name, cID, cSecret, l
 					"redirectUris":            []string{redirectURI},
 					"postLogoutRedirectUris":  []string{postLogoutRedirectURI},
 					"backchannelLogoutUri":    logoutURI,
-					"grantTypes":              []string{"authorization_code"},
+					"grantTypes":              append([]string{"authorization_code"}, extraGrantTypes...),
 					"responseTypes":           []string{"code"},
 					"tokenEndpointAuthMethod": "client_secret_basic",
 					"scopes":                  []string{"openid"},
@@ -341,4 +345,52 @@ func (ts *SSOLogoutTestSuite) TestBackchannelLogout_RetriesTransientFailureAndRe
 	// retry_delay, so a wrong retry of the 302 would land inside it.
 	redirecting.await(ts, 1)
 	redirecting.quiet(ts, 3*time.Second)
+}
+
+// exchangeSubjectToken presents the token as a subject_token on token exchange and returns the status
+// and response body.
+func (ts *SSOLogoutTestSuite) exchangeSubjectToken(cID, cSecret, subjectToken string) (int, string) {
+	ts.T().Helper()
+
+	form := url.Values{}
+	form.Set("grant_type", tokenExchangeGrantType)
+	form.Set("subject_token", subjectToken)
+	form.Set("subject_token_type", "urn:ietf:params:oauth:token-type:jwt")
+	req, err := http.NewRequest(http.MethodPost, testutils.TestServerURL+"/oauth2/token",
+		strings.NewReader(form.Encode()))
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(cID, cSecret)
+
+	resp, err := testutils.GetHTTPClient().Do(req)
+	ts.Require().NoError(err, "token exchange request failed")
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, string(body)
+}
+
+// A logout token cannot be redeemed on token exchange, even by the relying party it was delivered to.
+// The token is a real one, so only its type stands between it and a new token about its subject. The
+// client exchanges its ID token first, which shows the refusal is not down to the client.
+func (ts *SSOLogoutTestSuite) TestBackchannelLogout_LogoutTokenCannotBeExchanged() {
+	const cID, cSecret = "sso_bcl_exchange_client", "sso_bcl_exchange_secret"
+	username := "sso_bcl_exchange_user"
+	ts.createUser(username)
+
+	rx := ts.newLogoutReceiver(http.StatusOK)
+	ts.createBackchannelApplication("SSOBackchannelExchangeApp", cID, cSecret, rx.srv.URL+"/bcl",
+		tokenExchangeGrantType)
+
+	client := ts.newSessionClient()
+	tokens := ts.loginTokensAsClient(client, cID, cSecret, username, "bcl_exchange_1")
+	status, body := ts.exchangeSubjectToken(cID, cSecret, tokens.IDToken)
+	ts.Require().Equal(http.StatusOK, status, "the client should be able to exchange its ID token: %s", body)
+
+	ts.signOut(client, tokens.IDToken, "bcl_exchange_2")
+	logoutToken := rx.await(ts, 1)[0].token
+	ts.Require().NotEmpty(logoutToken, "the receiver should have captured a logout token")
+
+	status, body = ts.exchangeSubjectToken(cID, cSecret, logoutToken)
+	ts.Equal(http.StatusBadRequest, status, "a logout token must be refused as a subject_token: %s", body)
+	ts.Contains(body, "invalid_request")
 }
