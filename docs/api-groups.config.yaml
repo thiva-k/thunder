@@ -165,8 +165,13 @@ explicitSubGroups:
   # ── SCIM Provisioning ─────────────────────────────────────────────────────────
   - name: SCIM Provisioning
     tags:
-      - SCIM Discovery
-      - SCIM Provisioning
+      - SCIM Service Provider Config
+      - SCIM Schemas
+      - SCIM Resource Types
+      - SCIM Users
+      - SCIM Me
+      - SCIM Groups
+      - SCIM Unimplemented
 
 # Defines the display order of all sidebar groups (explicit and auto-derived).
 # Groups not listed here are appended alphabetically after all ordered entries.

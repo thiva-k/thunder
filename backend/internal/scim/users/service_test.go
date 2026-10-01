@@ -1055,7 +1055,9 @@ func (suite *ServiceTestSuite) TestReplaceUser_CoreOnly_NoExtensionURN_DefaultsT
 
 	mockUserTypeService.On(
 		"GetEntityTypeByName", mock.Anything, entitytype.TypeCategoryUser, testUserTypeEmployee,
-	).Return(&entitytype.EntityType{Name: testUserTypeEmployee, OUID: testOUID}, (*tidcommon.ServiceError)(nil))
+	).Return(&entitytype.EntityType{
+		Name: testUserTypeEmployee, OUID: testOUID, Schema: json.RawMessage(`{"username":{"type":"string"}}`),
+	}, (*tidcommon.ServiceError)(nil))
 	// resolveIsCoreUserType resolves the designated core type to check the CoreAttrs against it;
 	// with no CoreUserTypeID configured, that falls back to the sole configured user type.
 	mockUserTypeService.On(
