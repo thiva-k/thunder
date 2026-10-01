@@ -811,6 +811,9 @@ func LoadConfig(configPath string, defaultPath string, serverHome string) (*Conf
 	if err := cfg.OAuth.TokenExchange.Validate(); err != nil {
 		return nil, err
 	}
+	if err := cfg.OAuth.Logout.Backchannel.Validate(); err != nil {
+		return nil, err
+	}
 	if err := cfg.Notification.Validate(); err != nil {
 		return nil, err
 	}
