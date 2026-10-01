@@ -66,6 +66,9 @@ type InboundClientServiceInterface interface {
 	GetOAuthProfileByEntityID(ctx context.Context, entityID string) (*providers.OAuthProfile, error)
 	// GetOAuthClientByClientID resolves a full OAuthClient by its public client_id.
 	GetOAuthClientByClientID(ctx context.Context, clientID string) (*providers.OAuthClient, error)
+	// GetOAuthClientByEntityID returns the runtime OAuth client of the entity, or (nil, nil) when the
+	// entity does not exist or has no OAuth client registered.
+	GetOAuthClientByEntityID(ctx context.Context, entityID string) (*providers.OAuthClient, error)
 
 	// GetInboundClientAttributes returns the configured user attributes for a single inbound client.
 	// A missing inbound client is treated as one with no configured attributes.
@@ -385,15 +388,7 @@ func (s *inboundClientService) resolveClientID(ctx context.Context, entityID str
 			log.String("entityID", entityID), log.Error(epErr))
 		return ""
 	}
-	if e == nil {
-		return ""
-	}
-	var attrs map[string]interface{}
-	if err := json.Unmarshal(e.SystemAttributes, &attrs); err != nil || attrs == nil {
-		return ""
-	}
-	clientID, _ := attrs["clientId"].(string)
-	return clientID
+	return clientIDFromEntity(e)
 }
 
 // DeleteInboundClient removes the inbound client, OAuth profile, and certificates for the given entity.
@@ -540,16 +535,41 @@ func (s *inboundClientService) GetOAuthClientByClientID(ctx context.Context, cli
 	if entityIDPtr == nil {
 		return nil, nil
 	}
-	entityID := *entityIDPtr
+	return s.oauthClientForEntity(ctx, *entityIDPtr, clientID)
+}
+
+// GetOAuthClientByEntityID returns the runtime OAuth client of the entity with the given id. The
+// client id comes from the entity's system attributes; an entity without one has no OAuth client.
+func (s *inboundClientService) GetOAuthClientByEntityID(ctx context.Context, entityID string) (
+	*providers.OAuthClient, error) {
+	if s.entityProvider == nil {
+		return nil, fmt.Errorf("entity provider not configured")
+	}
+	if entityID == "" {
+		return nil, nil
+	}
+	return s.oauthClientForEntity(ctx, entityID, "")
+}
+
+// oauthClientForEntity assembles the runtime OAuth client of an entity from the entity, its stored
+// OAuth profile, and its certificate. clientID may be empty, in which case it is read from the
+// entity's system attributes. It returns (nil, nil) when the entity, its client id, or its profile
+// is missing.
+func (s *inboundClientService) oauthClientForEntity(ctx context.Context, entityID, clientID string) (
+	*providers.OAuthClient, error) {
 	e, epErr := s.entityProvider.GetEntity(entityID)
 	if epErr != nil {
 		if epErr.Code == entityprovider.ErrorCodeEntityNotFound {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to load entity for client_id: %w", epErr)
+		return nil, fmt.Errorf("failed to load entity for OAuth client: %w", epErr)
 	}
-	ouID := e.OUID
-
+	if clientID == "" {
+		clientID = clientIDFromEntity(e)
+		if clientID == "" {
+			return nil, nil
+		}
+	}
 	oauthProfile, err := s.store.GetOAuthProfileByEntityID(ctx, entityID)
 	if err != nil && !errors.Is(err, ErrInboundClientNotFound) {
 		return nil, err
@@ -557,16 +577,26 @@ func (s *inboundClientService) GetOAuthClientByClientID(ctx context.Context, cli
 	if oauthProfile == nil {
 		return nil, nil
 	}
-
-	client := BuildOAuthClient(entityID, clientID, ouID, e.Category, oauthProfile)
-
+	client := BuildOAuthClient(entityID, clientID, e.OUID, e.Category, oauthProfile)
 	certificate, opErr := s.GetCertificate(ctx, cert.CertificateReferenceTypeOAuthApp, clientID)
 	if opErr != nil {
 		return nil, opErr
 	}
 	client.Certificate = certificate
-
 	return client, nil
+}
+
+// clientIDFromEntity returns the OAuth client_id recorded in the entity's system attributes, or "".
+func clientIDFromEntity(e *providers.Entity) string {
+	if e == nil {
+		return ""
+	}
+	var attrs map[string]interface{}
+	if err := json.Unmarshal(e.SystemAttributes, &attrs); err != nil || attrs == nil {
+		return ""
+	}
+	clientID, _ := attrs["clientId"].(string)
+	return clientID
 }
 
 // BuildOAuthClient assembles an OAuthClient from a stored OAuthProfile and entity context.

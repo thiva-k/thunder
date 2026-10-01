@@ -5,6 +5,7 @@ package inboundclient
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -2884,6 +2885,71 @@ func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByClientID_StoreEr
 	got, err := svc.GetOAuthClientByClientID(context.Background(), "x")
 	assert.ErrorIs(suite.T(), err, storeErr)
 	assert.Nil(suite.T(), got)
+}
+
+// ----- GetOAuthClientByEntityID -----
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByEntityID_NoEntityProvider() {
+	svc := newServiceForTest(newInboundClientStoreInterfaceMock(suite.T())).(*inboundClientService)
+	got, err := svc.GetOAuthClientByEntityID(context.Background(), testServiceEntityID)
+	assert.ErrorContains(suite.T(), err, "entity provider not configured")
+	assert.Nil(suite.T(), got)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByEntityID_EmptyEntityID() {
+	svc := &inboundClientService{
+		entityProvider: entityprovidermock.NewEntityProviderInterfaceMock(suite.T()),
+		store:          newInboundClientStoreInterfaceMock(suite.T()),
+	}
+	got, err := svc.GetOAuthClientByEntityID(context.Background(), "")
+	assert.NoError(suite.T(), err)
+	assert.Nil(suite.T(), got)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByEntityID_EntityNotFound() {
+	ep := entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
+	ep.EXPECT().GetEntity(testServiceEntityID).Return(nil, &entityprovider.EntityProviderError{
+		Code: entityprovider.ErrorCodeEntityNotFound,
+	})
+	svc := &inboundClientService{entityProvider: ep, store: newInboundClientStoreInterfaceMock(suite.T())}
+	got, err := svc.GetOAuthClientByEntityID(context.Background(), testServiceEntityID)
+	assert.NoError(suite.T(), err)
+	assert.Nil(suite.T(), got)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByEntityID_NoClientIDReturnsNil() {
+	ep := entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
+	ep.EXPECT().GetEntity(testServiceEntityID).Return(&providers.Entity{ID: testServiceEntityID}, nil)
+	svc := &inboundClientService{entityProvider: ep, store: newInboundClientStoreInterfaceMock(suite.T())}
+	got, err := svc.GetOAuthClientByEntityID(context.Background(), testServiceEntityID)
+	assert.NoError(suite.T(), err)
+	assert.Nil(suite.T(), got)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByEntityID_BuildsClient() {
+	ep := entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
+	ep.EXPECT().GetEntity(testServiceEntityID).Return(&providers.Entity{
+		ID:               testServiceEntityID,
+		OUID:             "ou-1",
+		SystemAttributes: json.RawMessage(`{"clientId":"client-1"}`),
+	}, nil)
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, testServiceEntityID).Return(
+		&providers.OAuthProfile{BackchannelLogoutURI: "https://rp.example.com/bcl"}, nil)
+	mockCert := certmock.NewCertificateServiceInterfaceMock(suite.T())
+	mockCert.EXPECT().
+		GetCertificateByReference(mock.Anything, cert.CertificateReferenceTypeOAuthApp, "client-1").
+		Return(nil, &cert.ErrorCertificateNotFound)
+	svc := &inboundClientService{entityProvider: ep, store: store, certService: mockCert}
+
+	got, err := svc.GetOAuthClientByEntityID(context.Background(), testServiceEntityID)
+
+	assert.NoError(suite.T(), err)
+	suite.Require().NotNil(got)
+	assert.Equal(suite.T(), testServiceEntityID, got.ID)
+	assert.Equal(suite.T(), "client-1", got.ClientID)
+	assert.Equal(suite.T(), "ou-1", got.OUID)
+	assert.Equal(suite.T(), "https://rp.example.com/bcl", got.BackchannelLogoutURI)
 }
 
 func (suite *InboundClientServiceTestSuite) TestCollectConfiguredUserAttributes_AllNil() {

@@ -56,6 +56,12 @@ type ActorProvider interface {
 	GetOAuthClientByClientID(
 		ctx context.Context, clientID string,
 	) (*OAuthClient, *common.ServiceError)
+	// GetOAuthClientByID returns the runtime OAuth client of the application or agent with the given
+	// entity id, so a caller that knows only the application can address its OAuth configuration. A
+	// missing client is a nil client with no error, as in GetOAuthClientByClientID.
+	GetOAuthClientByID(
+		ctx context.Context, id string,
+	) (*OAuthClient, *common.ServiceError)
 	GetOAuthProfileByID(
 		ctx context.Context, id string,
 	) (*OAuthProfile, *common.ServiceError)

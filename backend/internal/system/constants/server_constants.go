@@ -25,6 +25,10 @@ const AcceptHeaderName = "Accept"
 // ContentTypeHeaderName is the name of the content type header used in HTTP requests.
 const ContentTypeHeaderName = "Content-Type"
 
+// RetryAfterHeaderName is the name of the header a server uses to say how long to wait before
+// retrying a request (RFC 9110 section 10.2.3).
+const RetryAfterHeaderName = "Retry-After"
+
 // CorrelationIDHeaderName is the name of the correlation ID (trace ID) header used to propagate
 // the request's trace ID across service boundaries.
 const CorrelationIDHeaderName = "X-Correlation-ID"
