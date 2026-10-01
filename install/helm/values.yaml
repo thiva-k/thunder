@@ -443,6 +443,10 @@ configuration:
     clientAssertion:
       maxLifetime: 300
       maxIatAge: 60
+    # Advertise Client ID Metadata Document support in the authorization server metadata. Turn it off when
+    # MCP clients should register through Dynamic Client Registration instead.
+    cimd:
+      enabled: true
     # Report an authentication flow failure that maps to the OAuth server_error code to the client.
     sendServerErrorsToClient: false
     # Client token endpoint auth methods allowed during registration.
