@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
-import {useConfig, useToast} from '@thunderid/contexts';
+import {AdministrationModes, useAdministrationOperation, useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import ApplicationQueryKeys from '../constants/application-query-keys';
-import {deleteApplicationViaFlow, type HttpLike} from '../utils/applicationAdministrationFlow';
+import {
+  deleteApplicationNatively,
+  deleteApplicationViaFlow,
+  type HttpLike,
+} from '../utils/applicationAdministrationFlow';
 
 /**
  * Custom React hook to delete an application from the server.
@@ -56,10 +60,21 @@ export default function useDeleteApplication(): UseMutationResult<void, Error, s
   const queryClient: ReturnType<typeof useQueryClient> = useQueryClient();
   const {t} = useTranslation('applications');
   const {showToast} = useToast();
+  const mode = useAdministrationOperation<[string], void>('applications', 'delete');
 
   return useMutation<void, Error, string>({
     mutationFn: async (applicationId: string): Promise<void> => {
-      await deleteApplicationViaFlow(http as unknown as HttpLike, getServerUrl(), applicationId);
+      const client = http as unknown as HttpLike;
+
+      if (typeof mode === 'function') {
+        await mode(applicationId);
+        return;
+      }
+      if (mode === AdministrationModes.NATIVE) {
+        await deleteApplicationNatively(client, getServerUrl(), applicationId);
+        return;
+      }
+      await deleteApplicationViaFlow(client, getServerUrl(), applicationId);
     },
     onSuccess: (_data, applicationId) => {
       // Remove the specific application from cache

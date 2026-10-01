@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {AdministrationModes} from '@thunderid/contexts';
 import {waitFor, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import ApplicationQueryKeys from '../../constants/application-query-keys';
@@ -19,8 +20,13 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
     ...actual,
     useConfig: vi.fn(),
     useToast: vi.fn(),
+    useAdministrationOperation: () => administrationOperation,
   };
 });
+
+// How the console says this operation runs. Defaults to the flow, which is what a console that
+// declares nothing gets, so the tests written before the option existed are unaffected.
+let administrationOperation: unknown = AdministrationModes.FLOW;
 
 const {useThunderID} = await import('@thunderid/react');
 const {useConfig, useToast} = await import('@thunderid/contexts');
@@ -109,6 +115,7 @@ describe('useRegenerateClientSecret', () => {
     mockHttpRequest = vi.fn<HttpRequest>();
     mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
     mockShowToast = vi.fn();
+    administrationOperation = AdministrationModes.FLOW;
 
     vi.mocked(useThunderID).mockReturnValue({
       http: {
@@ -509,5 +516,53 @@ describe('useRegenerateClientSecret', () => {
 
     // Cryptographically random secrets should be different
     expect(firstSecret).not.toBe(secondSecret);
+  });
+
+  // A console that holds configuration only rotates the secret itself. The regeneration flow is
+  // never asked for, even when one is configured, because the mode decides rather than the rotation
+  // discovering whether a flow happens to exist.
+  it('rotates through the update endpoint when the console says native', async () => {
+    administrationOperation = AdministrationModes.NATIVE;
+    routeHttp({
+      'GET /applications/': mockApplication,
+      'PUT /applications/': mockUpdatedApplication,
+      // Configured, and to be ignored.
+      '/server-config/flow': flowConfiguredConfig,
+      '/flows': administrationFlows,
+    });
+
+    const {result} = renderHook(() => useRegenerateClientSecret());
+
+    result.current.mutate({applicationId: mockApplication.id});
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(requestsTo('PUT', '/applications/')).toHaveLength(1);
+    expect(requestsTo('POST', '/flow/execute')).toHaveLength(0);
+    expect(requestsTo('GET', '/server-config/flow')).toHaveLength(0);
+  });
+
+  // A distributor can replace one operation without forking this package.
+  it('calls the function the console supplied', async () => {
+    const rotated: string[] = [];
+    administrationOperation = (applicationId: string): Promise<{clientSecret: string}> => {
+      rotated.push(applicationId);
+      return Promise.resolve({clientSecret: 'supplied-secret'});
+    };
+    routeHttp({});
+
+    const {result} = renderHook(() => useRegenerateClientSecret());
+
+    result.current.mutate({applicationId: mockApplication.id});
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(rotated).toEqual([mockApplication.id]);
+    expect(result.current.data?.clientSecret).toBe('supplied-secret');
+    expect(mockHttpRequest).not.toHaveBeenCalled();
   });
 });

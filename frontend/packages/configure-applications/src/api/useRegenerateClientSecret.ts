@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
-import {useConfig, useToast} from '@thunderid/contexts';
+import {AdministrationModes, useAdministrationOperation, useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import ApplicationQueryKeys from '../constants/application-query-keys';
@@ -131,19 +131,29 @@ export default function useRegenerateClientSecret(): UseMutationResult<
   const queryClient = useQueryClient();
   const {t} = useTranslation('applications');
   const {showToast} = useToast();
+  const mode = useAdministrationOperation<[string], RegenerateSecretResult>('applications', 'regenerateSecret');
 
   return useMutation<RegenerateSecretResult, Error, RegenerateSecretVariables>({
     mutationFn: async ({applicationId}: RegenerateSecretVariables): Promise<RegenerateSecretResult> => {
       const serverUrl: string = getServerUrl();
 
-      const flowSecret: string | null = await regenerateClientSecretViaFlow(
-        http as unknown as HttpLike,
-        serverUrl,
-        applicationId,
-      );
+      if (typeof mode === 'function') {
+        return mode(applicationId);
+      }
 
-      if (flowSecret) {
-        return {clientSecret: flowSecret};
+      // The flow is asked only when the console says to run this operation through one. Under
+      // `native` the steps below generate the secret instead, which is what a console holding
+      // configuration only wants: there is no live credential to rotate anywhere else.
+      if (mode !== AdministrationModes.NATIVE) {
+        const flowSecret: string | null = await regenerateClientSecretViaFlow(
+          http as unknown as HttpLike,
+          serverUrl,
+          applicationId,
+        );
+
+        if (flowSecret) {
+          return {clientSecret: flowSecret};
+        }
       }
 
       // Step 1: Fetch the current application details

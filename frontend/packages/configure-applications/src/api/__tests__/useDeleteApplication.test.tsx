@@ -1,6 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {AdministrationModes} from '@thunderid/contexts';
 import {waitFor, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import ApplicationQueryKeys from '../../constants/application-query-keys';
@@ -19,8 +20,13 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
     ...actual,
     useConfig: vi.fn(),
     useToast: vi.fn(),
+    useAdministrationOperation: () => administrationOperation,
   };
 });
+
+// How the console says this operation runs. Defaults to the flow, which is what a console that
+// declares nothing gets, so the tests written before the option existed are unaffected.
+let administrationOperation: unknown = AdministrationModes.FLOW;
 
 const {useThunderID} = await import('@thunderid/react');
 const {useConfig, useToast} = await import('@thunderid/contexts');
@@ -57,6 +63,7 @@ describe('useDeleteApplication', () => {
     mockHttpRequest = vi.fn<HttpRequest>();
     mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
     mockShowToast = vi.fn();
+    administrationOperation = AdministrationModes.FLOW;
 
     vi.mocked(useThunderID).mockReturnValue({
       http: {
@@ -587,5 +594,51 @@ describe('useDeleteApplication', () => {
 
     expect(result.current.error).toEqual(serverError);
     expect(result.current.error?.message).toBe('Application has active users and cannot be deleted');
+  });
+
+  // A console that holds configuration only has no tokens or sessions to end, so it deletes through
+  // the endpoint. The flow is not looked up at all: the mode decides, rather than the deletion
+  // discovering whether a flow happens to be configured.
+  it('deletes through the endpoint when the console says native', async () => {
+    administrationOperation = AdministrationModes.NATIVE;
+    // A flow *is* configured. Native has to ignore it rather than fall back to it.
+    routeHttp({
+      '/server-config/flow': flowConfiguredConfig,
+      '/flows': administrationFlows,
+      '/applications/': {},
+    });
+
+    const {result} = renderHook(() => useDeleteApplication());
+
+    result.current.mutate('550e8400-e29b-41d4-a716-446655440000');
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(requestsTo('/applications/')).toHaveLength(1);
+    expect(requestsTo('/flow/execute')).toHaveLength(0);
+    expect(requestsTo('/server-config/flow')).toHaveLength(0);
+  });
+
+  // A distributor can replace one operation without forking this package.
+  it('calls the function the console supplied', async () => {
+    const deleted: string[] = [];
+    administrationOperation = (applicationId: string): Promise<void> => {
+      deleted.push(applicationId);
+      return Promise.resolve();
+    };
+    routeHttp({});
+
+    const {result} = renderHook(() => useDeleteApplication());
+
+    result.current.mutate('550e8400-e29b-41d4-a716-446655440000');
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(deleted).toEqual(['550e8400-e29b-41d4-a716-446655440000']);
+    expect(mockHttpRequest).not.toHaveBeenCalled();
   });
 });
