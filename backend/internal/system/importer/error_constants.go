@@ -103,4 +103,16 @@ var (
 			DefaultValue: "The requested resource type does not support runtime deletion",
 		},
 	}
+
+	// ErrorUnresolvedReference represents a document referring to a variable or secret this deployment
+	// holds no value for.
+	ErrorUnresolvedReference = tidcommon.ServiceError{
+		Type:  tidcommon.ClientErrorType,
+		Code:  "IMP-1006",
+		Error: tidcommon.I18nMessage{Key: "error.import.unresolvedReference", DefaultValue: "Unresolved reference"},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.import.unresolvedReference.description",
+			DefaultValue: "The resource refers to a variable or secret this deployment holds no value for",
+		},
+	}
 )

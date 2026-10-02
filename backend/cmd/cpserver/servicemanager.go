@@ -344,6 +344,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		serverConfigService,
 		gatewayService,
 		authZENPDPService,
+		// A control plane keeps configuration as references and holds no values, so none are resolved.
+		nil,
 	)
 
 	// Register the health service.

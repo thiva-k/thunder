@@ -23,6 +23,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/serverconfig"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
+	"github.com/thunder-id/thunderid/internal/system/secretresolver"
 	"github.com/thunder-id/thunderid/internal/user"
 	"github.com/thunder-id/thunderid/internal/vc/credential"
 	"github.com/thunder-id/thunderid/internal/vc/presentation"
@@ -51,8 +52,9 @@ func Initialize(
 	serverConfigService serverconfig.ServerConfigService,
 	gatewayService gateway.ServiceInterface,
 	authZENPDPService authzenpdp.AuthZENPDPServiceInterface,
+	references *secretresolver.Resolver,
 ) ImportServiceInterface {
-	importService := newImportService(
+	service := newImportService(
 		applicationService,
 		idpService,
 		senderService,
@@ -74,11 +76,13 @@ func Initialize(
 		gatewayService,
 		authZENPDPService,
 	)
-	importHandler := newImportHandler(importService)
+	// Set here rather than passed to newImportService, which every test constructs without one.
+	service.(*importService).references = references
+	importHandler := newImportHandler(service)
 
 	registerRoutes(mux, importHandler)
 
-	return importService
+	return service
 }
 
 func registerRoutes(mux *http.ServeMux, importHandler *importHandler) {
