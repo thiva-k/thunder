@@ -151,6 +151,22 @@ type Policy struct {
 	Rules []StoredRule
 }
 
+// PolicyList is one page of a resource's policies, for a management API to serve.
+//
+// It carries no pagination links: the framework is shared by every resource type, so the path a
+// policy is listed under belongs to the type's own API rather than to the framework. The handler
+// that knows the path builds the links from these counts.
+type PolicyList struct {
+	// TotalResults is how many policies the resource has, not how many this page holds.
+	TotalResults int
+	// StartIndex is the one-based position of the first policy in this page.
+	StartIndex int
+	// Count is how many policies this page holds.
+	Count int
+	// Policies is the page itself.
+	Policies []Policy
+}
+
 // PolicyLevelRules returns the rules that apply to every target of the policy.
 func (p Policy) PolicyLevelRules() map[string]OverlayRule {
 	out := make(map[string]OverlayRule)
