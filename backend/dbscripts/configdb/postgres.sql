@@ -435,12 +435,21 @@ CREATE TABLE "GATEWAY" (
     BASE_URL TEXT NOT NULL,
     MANAGEMENT_KEY TEXT NOT NULL,
     CA_CERTIFICATE TEXT,
+    -- The default gateway, whose URL the console shows for an application's runtime endpoints. At
+    -- most one per deployment, which the index below enforces.
+    IS_DEFAULT BOOLEAN NOT NULL DEFAULT FALSE,
     CREATED_AT TIMESTAMPTZ DEFAULT NOW(),
     UPDATED_AT TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (NAME, DEPLOYMENT_ID),
     -- One gateway registers once, and its address is what says which one it is.
     UNIQUE (BASE_URL, DEPLOYMENT_ID)
 );
+
+-- At most one gateway of a deployment is the default. A partial index rather than a table
+-- constraint, because the rule is about the rows that are the default, not about the column.
+CREATE UNIQUE INDEX idx_gateway_default_deployment
+    ON "GATEWAY" (DEPLOYMENT_ID)
+    WHERE IS_DEFAULT = TRUE;
 
 -- Table capturing the resource-sharing graph. Generic across resource types: a policy is one
 -- organization unit's standing decision about one resource, and there is exactly one per

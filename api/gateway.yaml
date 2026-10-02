@@ -317,6 +317,15 @@ components:
             For a gateway serving a certificate no public authority signed, which is what a local
             or on-premise deployment usually has. Leave empty for a gateway behind an ingress with
             a publicly-issued certificate: it verifies against the system roots with nothing here.
+        isDefault:
+          type: boolean
+          default: false
+          description: |
+            Makes this the default gateway. Its `baseUrl` is the one the console shows for an
+            application's runtime endpoints.
+
+            At most one gateway is the default. If another already is, it gives that up to this
+            one. The first gateway registered is the default whether or not this is set.
     UpdateRequest:
       type: object
       minProperties: 1
@@ -371,6 +380,11 @@ components:
           type: string
         caCertificate:
           type: string
+        isDefault:
+          type: boolean
+          description: |
+            Whether this is the default gateway. At most one gateway is, and the first one registered
+            becomes it. Omitted when false.
         createdAt:
           type: string
           format: date-time
