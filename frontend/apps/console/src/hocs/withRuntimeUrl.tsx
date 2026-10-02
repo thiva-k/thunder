@@ -14,8 +14,8 @@ interface RegisteredGateway {
   id: string;
   name: string;
   baseUrl?: string;
-  /** Whether this is the gateway the control plane administers directly. At most one holds it. */
-  managedByControlPlane?: boolean;
+  /** Whether this is the default gateway. At most one is. */
+  isDefault?: boolean;
 }
 
 /**
@@ -27,11 +27,11 @@ interface RegisteredGateway {
  * that will answer them. The gateways registered against this deployment are the record of
  * where that is, so this asks for them rather than taking the answer from configuration.
  *
- * The URL shown is the managed gateway's: the one the control plane administers directly, marked
- * `managedByControlPlane`. Other registered gateways only receive configuration when it is applied
- * to them, so they are not where a developer's application is expected to point.
+ * The URL shown is the default gateway's, marked `isDefault`. Other registered gateways only
+ * receive configuration when it is applied to them, so they are not where a developer's
+ * application is expected to point.
  *
- * No managed gateway, no permission to list them, or a deployment with no gateway API at all
+ * No default gateway, no permission to list them, or a deployment with no gateway API at all
  * leaves the URL unset, and every consumer falls back to the server URL. That is the ordinary
  * answer for a deployment that serves its own runtime, so the failure is silent by design. A
  * failed request is left as an error rather than stored as an empty list, so it is asked again
@@ -69,7 +69,7 @@ export default function withRuntimeUrl<P extends object>(WrappedComponent: Compo
     });
 
     const runtimeUrl: string | undefined = isSignedIn
-      ? gateways?.find((gateway) => gateway.managedByControlPlane && Boolean(gateway.baseUrl))?.baseUrl
+      ? gateways?.find((gateway) => gateway.isDefault && Boolean(gateway.baseUrl))?.baseUrl
       : undefined;
 
     return (
