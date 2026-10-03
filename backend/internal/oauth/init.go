@@ -23,6 +23,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jwksresolver"
 	oauth2logout "github.com/thunder-id/thunderid/internal/oauth/oauth2/logout"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/logout/backchannel"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/par"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/token"
@@ -59,7 +60,7 @@ func Initialize(
 	ssoSession session.Service,
 	flowProvider providers.FlowProvider,
 	cfg oauthconfig.Config,
-) (tokenservice.TokenValidatorInterface, error) {
+) (tokenservice.TokenValidatorInterface, backchannel.DispatcherInterface, error) {
 	jwks.Initialize(mux, runtimeCrypto)
 	httpClient := syshttp.NewHTTPClientWithCheckRedirect(func(req *http.Request, _ []*http.Request) error {
 		return syshttp.IsSSRFSafeURL(req.URL.String())
@@ -87,7 +88,7 @@ func Initialize(
 		jwtService, flowExecService, parService, revocationSvc, ssoSession, flowProvider, cfg,
 		runtimeStore, transactioner, jtiStore)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var cibaService ciba.CIBAServiceInterface
@@ -114,5 +115,8 @@ func Initialize(
 	if cfg.OAuth.Logout.IsEnabled() {
 		oauth2logout.Initialize(mux, jwtService, actorProvider, flowExecService, runtimeStore, cfg)
 	}
-	return tokenValidator, nil
+	// Sessions also end without the logout endpoint, such as on user deletion, so delivery follows
+	// only its own flag.
+	dispatcher := backchannel.Initialize(tokenBuilder, actorProvider, observabilitySvc, cfg)
+	return tokenValidator, dispatcher, nil
 }

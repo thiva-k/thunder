@@ -46,6 +46,7 @@ type Application struct {
 	AuthFlowID                string                   `json:"authFlowId,omitempty"`
 	RegistrationFlowID        string                   `json:"registrationFlowId,omitempty"`
 	RecoveryFlowID            string                   `json:"recoveryFlowId,omitempty"`
+	SignOutFlowID             string                   `json:"signOutFlowId,omitempty"`
 	ClientID                  string                   `json:"clientId,omitempty"`
 	ClientSecret              string                   `json:"clientSecret,omitempty"`
 	RedirectURIs              []string                 `json:"redirectUris,omitempty"`

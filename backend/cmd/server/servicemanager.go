@@ -65,6 +65,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dcr"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/logout/backchannel"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/internal/openid4vci"
@@ -120,7 +121,8 @@ var observabilitySvc observability.ObservabilityServiceInterface
 // to the number of services. Eventhough it has many branching statements, almost all are early exits so cognitive
 // complexity is low.
 func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterface) (
-	jwt.JWTServiceInterface, kmprovider.RuntimeCryptoProvider, importer.ImportServiceInterface, *mcpsdk.Server) {
+	jwt.JWTServiceInterface, kmprovider.RuntimeCryptoProvider, importer.ImportServiceInterface, *mcpsdk.Server,
+	backchannel.DispatcherInterface) {
 	logger := log.GetLogger()
 
 	// Service registration runs during application startup, outside any request.
@@ -377,9 +379,9 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	revocationEnforcer, revocationSvc := revocation.Initialize(jwtService, observabilitySvc,
 		tokenFamilyRevocationTTL, runtime.Config.OAuth.Revocation.TokenFamily.OnExplicitRevokeEnabled())
 	sessionRevoker := sessionCriteriaRevoker{revoker: revocationSvc}
-	// The termination hook is kept for the back-channel logout dispatcher, which is built after the
-	// actor provider and installed through it.
-	sessionService, _, sessionCfg := initSessionService(ctx, serverConfigService,
+	// The termination hook is kept for the back-channel logout dispatcher, which OAuth builds and which
+	// is added to the hook once OAuth is initialized.
+	sessionService, terminationHook, sessionCfg := initSessionService(ctx, serverConfigService,
 		runtime.Config.Server.Identifier, sessionRevoker, logger)
 	flowConfig.Session = sessionCfg
 	flowFactory, execRegistry, interceptorRegistry, graphBuilder := initializeFlowCoreAndExecutor(ctx, logger,
@@ -539,12 +541,16 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize flow execution service")
 
 	// Initialize OAuth services.
-	tokenValidator, err := oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
+	tokenValidator, dispatcher, err := oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
 		flowExecService, observabilitySvc, runtimeCryptoSvc, ouProvider, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
 		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc,
 		sessionService, flowMgtService, oauthCfg)
 	fatalOnError(ctx, logger, err, "Failed to initialize OAuth services")
+	if dispatcher != nil {
+		err = terminationHook.Add(dispatcher)
+		fatalOnError(ctx, logger, err, "Failed to register the back-channel logout dispatcher")
+	}
 
 	// Initialized after the OAuth services because credential issuance validates the presented
 	// access token with the OAuth token validator and resolves the wallet application behind it.
@@ -562,7 +568,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	healthSvc := healthcheckservice.Initialize(dbprovider.GetDBProvider(), dbprovider.GetRedisProvider())
 	services.NewHealthCheckService(mux, healthSvc)
 
-	return jwtService, runtimeCryptoSvc, importService, mcpServer
+	return jwtService, runtimeCryptoSvc, importService, mcpServer, dispatcher
 }
 
 // initAttestationProvider initializes the platform attestation provider, terminating server startup
