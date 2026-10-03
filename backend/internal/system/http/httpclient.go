@@ -119,6 +119,10 @@ func NewHTTPClientWithoutRedirects(timeout time.Duration, rejectPrivate bool) HT
 	}
 }
 
+// ErrPrivateAddress is returned, wrapped, when the SSRF-safe dialer refuses a host that resolves to a
+// loopback, link-local, private or unspecified address.
+var ErrPrivateAddress = errors.New("refused a private address")
+
 // ssrfSafeDialContext resolves the target hostname and validates every returned IP against
 // privateIPRanges before dialing. Connecting to the first validated IP directly pins the
 // connection and prevents DNS rebinding attacks. TLS hostname verification is unaffected:
@@ -140,11 +144,11 @@ func ssrfSafeDialContext(ctx context.Context, network, addr string) (net.Conn, e
 	var safeIP net.IP
 	for _, ia := range ipAddrs {
 		if ia.IP.IsUnspecified() {
-			return nil, fmt.Errorf("host %q resolves to an unspecified address %s", host, ia.IP)
+			return nil, fmt.Errorf("host %q resolves to an unspecified address %s: %w", host, ia.IP, ErrPrivateAddress)
 		}
 		for _, block := range privateIPRanges {
 			if block.Contains(ia.IP) {
-				return nil, fmt.Errorf("host %q resolves to a private address %s", host, ia.IP)
+				return nil, fmt.Errorf("host %q resolves to a private address %s: %w", host, ia.IP, ErrPrivateAddress)
 			}
 		}
 		if safeIP == nil {

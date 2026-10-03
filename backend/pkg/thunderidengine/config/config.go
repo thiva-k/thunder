@@ -346,12 +346,13 @@ type BackchannelLogoutConfig struct {
 	Enabled *bool `yaml:"enabled" json:"enabled"`
 	// TokenValidityPeriod is the lifetime of a logout token.
 	TokenValidityPeriod int64 `yaml:"token_validity_period" json:"token_validity_period"`
-	// RequestTimeout bounds one delivery attempt to a relying party.
+	// RequestTimeout bounds one delivery attempt to a relying party, in seconds; at most 30.
 	RequestTimeout int64 `yaml:"request_timeout" json:"request_timeout"`
-	// MaxAttempts is the number of delivery attempts per relying party; 1 means no retry.
+	// MaxAttempts is the number of delivery attempts per relying party; 1 means no retry. At most 10.
 	MaxAttempts int `yaml:"max_attempts" json:"max_attempts"`
-	// RetryDelay is the wait before the second attempt; it doubles on every further attempt. A
-	// Retry-After returned on 429 is honored up to the longest wait of that schedule.
+	// RetryDelay is the wait before the second attempt, in seconds; it doubles on every further
+	// attempt. At most 60. A Retry-After returned on 429 is honored up to the longest wait of that
+	// schedule.
 	RetryDelay int64 `yaml:"retry_delay" json:"retry_delay"`
 	// MaxInFlight caps concurrent deliveries across the whole dispatcher.
 	MaxInFlight int `yaml:"max_in_flight" json:"max_in_flight"`

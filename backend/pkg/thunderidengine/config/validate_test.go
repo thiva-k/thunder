@@ -480,4 +480,24 @@ func (suite *ValidateTestSuite) TestBackchannelLogoutConfig_Validate() {
 			assert.ErrorContains(t, c.Validate(), tc.name)
 		}
 	})
+	suite.T().Run("retry settings are accepted up to their bounds", func(t *testing.T) {
+		c := valid()
+		c.RequestTimeout, c.MaxAttempts, c.RetryDelay = 30, 10, 60
+		assert.NoError(t, c.Validate())
+	})
+	suite.T().Run("retry settings above their bounds are rejected", func(t *testing.T) {
+		over := []struct {
+			name string
+			set  func(*BackchannelLogoutConfig)
+		}{
+			{"request_timeout", func(c *BackchannelLogoutConfig) { c.RequestTimeout = 31 }},
+			{"max_attempts", func(c *BackchannelLogoutConfig) { c.MaxAttempts = 11 }},
+			{"retry_delay", func(c *BackchannelLogoutConfig) { c.RetryDelay = 61 }},
+		}
+		for _, tc := range over {
+			c := valid()
+			tc.set(&c)
+			assert.ErrorContains(t, c.Validate(), "oauth.logout.backchannel."+tc.name+" must be at most")
+		}
+	})
 }

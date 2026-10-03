@@ -79,8 +79,17 @@ func (c *TokenRevocationConfig) Validate() error {
 	return nil
 }
 
+// Upper bounds for the back-channel logout retry settings. The retry wait doubles per attempt, so
+// without them a large max_attempts or retry_delay overflows the wait to zero or less and the
+// remaining attempts fire back to back. At the bounds the longest wait is 60s x 2^8, about 4.3 hours.
+const (
+	maxBackchannelRequestTimeout = 30
+	maxBackchannelMaxAttempts    = 10
+	maxBackchannelRetryDelay     = 60
+)
+
 // Validate checks the back-channel logout configuration when delivery is enabled: every tuning
-// value must be positive.
+// value must be positive, and the retry settings must stay within their upper bounds.
 func (c *BackchannelLogoutConfig) Validate() error {
 	if !c.IsEnabled() {
 		return nil
@@ -99,6 +108,19 @@ func (c *BackchannelLogoutConfig) Validate() error {
 	for _, f := range positive {
 		if f.value <= 0 {
 			return fmt.Errorf("oauth.logout.backchannel.%s must be positive (got %d)", f.name, f.value)
+		}
+	}
+	bounded := []struct {
+		name       string
+		value, max int64
+	}{
+		{"request_timeout", c.RequestTimeout, maxBackchannelRequestTimeout},
+		{"max_attempts", int64(c.MaxAttempts), maxBackchannelMaxAttempts},
+		{"retry_delay", c.RetryDelay, maxBackchannelRetryDelay},
+	}
+	for _, f := range bounded {
+		if f.value > f.max {
+			return fmt.Errorf("oauth.logout.backchannel.%s must be at most %d (got %d)", f.name, f.max, f.value)
 		}
 	}
 	return nil

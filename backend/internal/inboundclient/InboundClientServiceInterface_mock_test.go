@@ -600,6 +600,74 @@ func (_c *InboundClientServiceInterfaceMock_GetOAuthClientByClientID_Call) RunAn
 	return _c
 }
 
+// GetOAuthClientByEntityID provides a mock function for the type InboundClientServiceInterfaceMock
+func (_mock *InboundClientServiceInterfaceMock) GetOAuthClientByEntityID(ctx context.Context, entityID string) (*providers.OAuthClient, error) {
+	ret := _mock.Called(ctx, entityID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOAuthClientByEntityID")
+	}
+
+	var r0 *providers.OAuthClient
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*providers.OAuthClient, error)); ok {
+		return returnFunc(ctx, entityID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *providers.OAuthClient); ok {
+		r0 = returnFunc(ctx, entityID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*providers.OAuthClient)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, entityID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOAuthClientByEntityID'
+type InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call struct {
+	*mock.Call
+}
+
+// GetOAuthClientByEntityID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - entityID string
+func (_e *InboundClientServiceInterfaceMock_Expecter) GetOAuthClientByEntityID(ctx interface{}, entityID interface{}) *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call {
+	return &InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call{Call: _e.mock.On("GetOAuthClientByEntityID", ctx, entityID)}
+}
+
+func (_c *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call) Run(run func(ctx context.Context, entityID string)) *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call) Return(oAuthClient *providers.OAuthClient, err error) *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call {
+	_c.Call.Return(oAuthClient, err)
+	return _c
+}
+
+func (_c *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call) RunAndReturn(run func(ctx context.Context, entityID string) (*providers.OAuthClient, error)) *InboundClientServiceInterfaceMock_GetOAuthClientByEntityID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetOAuthProfileByEntityID provides a mock function for the type InboundClientServiceInterfaceMock
 func (_mock *InboundClientServiceInterfaceMock) GetOAuthProfileByEntityID(ctx context.Context, entityID string) (*providers.OAuthProfile, error) {
 	ret := _mock.Called(ctx, entityID)
