@@ -29,7 +29,8 @@ var (
 
 	indexedAttributesEntityTypes = map[string]testutils.UserType{
 		"all_indexed": {
-			Name: "all_indexed",
+			Handle:      "all_indexed",
+			DisplayName: "All Indexed",
 			Schema: map[string]interface{}{
 				"username": map[string]interface{}{
 					"type": "string",
@@ -50,7 +51,8 @@ var (
 			},
 		},
 		"partial_indexed": {
-			Name: "partial_indexed",
+			Handle:      "partial_indexed",
+			DisplayName: "Partial Indexed",
 			Schema: map[string]interface{}{
 				"username": map[string]interface{}{
 					"type": "string",
@@ -68,7 +70,8 @@ var (
 			},
 		},
 		"no_indexed": {
-			Name: "no_indexed",
+			Handle:      "no_indexed",
+			DisplayName: "No Indexed",
 			Schema: map[string]interface{}{
 				"displayName": map[string]interface{}{
 					"type": "string",
@@ -83,7 +86,8 @@ var (
 			},
 		},
 		"mixed_types": {
-			Name: "mixed_types",
+			Handle:      "mixed_types",
+			DisplayName: "Mixed Types",
 			Schema: map[string]interface{}{
 				"username": map[string]interface{}{
 					"type": "string",

@@ -1,7 +1,8 @@
 resource_type: user_type
 id: wayfinder-customer-type
 category: user
-name: Customer
+handle: customer
+displayName: Customer
 ouHandle: default
 allowSelfRegistration: true
 systemAttributes:
@@ -47,7 +48,8 @@ schema:
 resource_type: user_type
 id: wayfinder-staff-type
 category: user
-name: Staff
+handle: staff
+displayName: Staff
 ouHandle: default
 allowSelfRegistration: false
 systemAttributes:
@@ -1021,7 +1023,7 @@ assertion:
     - groups
     - username
 allowedUserTypes:
-  - Customer
+  - customer
 inboundAuthConfig:
   - type: oauth2
     config:
@@ -1650,7 +1652,7 @@ type: default
 logoUrl: "emoji:✈️"
 authFlowHandle: wayfinder-ciba-email-flow
 allowedUserTypes:
-  - Customer
+  - customer
 inboundAuthConfig:
   - type: oauth2
     config:
@@ -1689,7 +1691,7 @@ url: http://localhost:8787/mcp
 # step is shown.
 authFlowHandle: wayfinder-agent-auth-flow
 allowedUserTypes:
-  - Customer
+  - customer
 inboundAuthConfig:
   - type: oauth2
     config:
@@ -1821,7 +1823,7 @@ assignments:
 ---
 resource_type: user
 id: wayfinder-john-doe
-type: Customer
+type: customer
 ouHandle: default
 attributes:
   username: john.doe
@@ -1838,7 +1840,7 @@ credentials:
 ---
 resource_type: user
 id: wayfinder-jane-smith
-type: Customer
+type: customer
 ouHandle: default
 attributes:
   username: jane.smith
@@ -1852,7 +1854,7 @@ credentials:
 ---
 resource_type: user
 id: wayfinder-alex-carter
-type: Staff
+type: staff
 ouHandle: default
 attributes:
   username: alex.carter
@@ -1918,7 +1920,7 @@ authFlowHandle: default-flow
 isRegistrationFlowEnabled: false
 isRecoveryFlowEnabled: false
 allowedUserTypes:
-  - Customer
+  - customer
 inboundAuthConfig:
   - type: oauth2
     config:
@@ -1949,7 +1951,7 @@ authFlowHandle: default-flow
 isRegistrationFlowEnabled: false
 isRecoveryFlowEnabled: false
 allowedUserTypes:
-  - Customer
+  - customer
 inboundAuthConfig:
   - type: oauth2
     config:

@@ -830,6 +830,9 @@ const translations = {
     'types.array': 'Array',
     'types.object': 'Object',
     'validationErrors.nameRequired': 'Please enter a user type name',
+    'validationErrors.handleRequired': 'Please enter a user type handle',
+    'validationErrors.handleInvalid':
+      'Handle must start and end with a lowercase letter or number, and may contain only lowercase letters, numbers, hyphens, and underscores',
     'validationErrors.ouIdRequired': 'Please provide an organization unit ID',
     'validationErrors.propertiesRequired': 'Please add at least one property',
     'validationErrors.duplicateProperties': 'Duplicate property names found: {{duplicates}}',
@@ -844,12 +847,15 @@ const translations = {
     noOrganizationUnits: 'No organization units available',
     confirmDeleteUserType: 'Are you sure you want to delete this user type?',
     'errors.USRS-1002': 'This user type no longer exists. It may have already been deleted.',
-    'errors.USRS-1003': 'A user type with the same name already exists.',
+    'errors.USRS-1003': 'A user type with the same handle already exists.',
     'errors.USRS-1004': 'The user type request is missing required fields or contains invalid data.',
     'errors.USRS-1008': 'This user type is managed by the system and cannot be modified or deleted.',
     'errors.USRS-1011': 'Display attribute must reference an attribute defined in the schema.',
     'errors.USRS-1012': 'Display attribute must reference a string or number type.',
     'errors.USRS-1013': 'Display attribute cannot reference a credential attribute.',
+    'errors.USRS-1016':
+      'The handle is invalid. It must start and end with a lowercase letter or number, and may contain only lowercase letters, numbers, hyphens, and underscores.',
+    'errors.USRS-1017': 'The handle of a user type cannot be changed.',
 
     // Edit page
     'manageUserType.title': 'Manage User Type',
@@ -859,6 +865,7 @@ const translations = {
     'edit.back': 'Back to User Types',
     'edit.editName': 'Edit user type name',
     'edit.copyId': 'Copy user type ID',
+    'edit.copyHandle': 'Copy user type handle',
     'edit.tabs.general': 'General',
     'edit.tabs.schema': 'Schema',
     'edit.tabs.advanced': 'Advanced',
@@ -873,6 +880,10 @@ const translations = {
     'schemaChangeWarning.affected': 'Affected attributes:',
     'schemaChangeWarning.areYouSure': 'Do you want to continue?',
     'schemaChangeWarning.confirm': 'Continue',
+    'edit.general.sections.quickCopy.title': 'Quick Copy',
+    'edit.general.sections.quickCopy.description': 'Copy user type identifiers for use in your application.',
+    'edit.general.labels.userTypeHandle': 'User Type Handle',
+    'edit.general.labels.userTypeId': 'User Type ID',
     'edit.general.organizationUnit.title': 'Organization Unit',
     'edit.general.organizationUnit.description': 'The organization unit this user type belongs to.',
     'edit.general.selfRegistration.title': 'Self Registration',
@@ -902,6 +913,12 @@ const translations = {
     'createWizard.name.fieldLabel': 'User Type Name',
     'createWizard.name.placeholder': 'Enter your user type name',
     'createWizard.name.maxLength': 'User type name cannot exceed {{max}} characters',
+    'createWizard.handle.fieldLabel': 'Handle',
+    'createWizard.handle.placeholder': 'e.g., customer',
+    'createWizard.handle.hint': "A unique identifier for this user type. You can't change it once created.",
+    'createWizard.handle.invalid':
+      'Handle must start and end with a lowercase letter or number, and may contain only lowercase letters, numbers, hyphens, and underscores',
+    'createWizard.handle.maxLength': 'Handle cannot exceed {{max}} characters',
     'createWizard.general.subtitle': 'Set registration preferences for this user type.',
     'createWizard.properties.title': 'Define your schema properties',
     'createWizard.properties.subtitle': 'Add the fields that make up this user type',
@@ -1244,7 +1261,7 @@ const translations = {
     'edit.flows.allowedUserTypes.title': 'Allowed User Types',
     'edit.flows.allowedUserTypes.description': 'Restrict which user types can sign up through this agent.',
     'edit.flows.allowedUserTypes.label': 'User Types',
-    'edit.flows.allowedUserTypes.placeholder': 'Select or add user types',
+    'edit.flows.allowedUserTypes.placeholder': 'Select user types',
     'edit.flows.allowedUserTypes.hint': 'Users of these types can sign up through this agent.',
     'edit.flows.allowedUserTypes.required': 'Select at least one user type that can sign up through this agent.',
     'edit.flows.delegationLock.message':
@@ -3899,7 +3916,7 @@ const translations = {
     'core.executions.userTypeResolver.allowedUserTypes.label': 'Allowed User Types',
     'core.executions.userTypeResolver.allowedUserTypes.placeholder': 'e.g., employee, customer',
     'core.executions.userTypeResolver.allowedUserTypes.hint':
-      'Comma-separated list of allowed user type names to filter available types.',
+      'Comma-separated list of allowed user type handles to filter available types.',
 
     // Entity category shared by mode-driven executors
     'core.executions.entityMode.user': 'User',
@@ -3917,7 +3934,7 @@ const translations = {
     'core.executions.agentTypeResolver.allowedAgentTypes.label': 'Allowed Agent Types',
     'core.executions.agentTypeResolver.allowedAgentTypes.placeholder': 'e.g., default',
     'core.executions.agentTypeResolver.allowedAgentTypes.hint':
-      'Comma-separated list of allowed agent type names to filter available types.',
+      'Comma-separated list of allowed agent type handles to filter available types.',
 
     // HTTP Request executor
     'core.executions.httpRequest.description': 'Configure the HTTP request executor settings.',

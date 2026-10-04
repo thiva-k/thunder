@@ -125,7 +125,7 @@ func (ts *SSOLogoutTestSuite) createBackchannelApplication(name, cID, cSecret, l
 		Type:             "fullstack",
 		AuthFlowID:       ts.authFlowID,
 		SignOutFlowID:    ts.signOutFlowID,
-		AllowedUserTypes: []string{testUserType.Name},
+		AllowedUserTypes: []string{testUserType.Handle},
 		InboundAuthConfig: []map[string]interface{}{
 			{
 				"type": "oauth2",

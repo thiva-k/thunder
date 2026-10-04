@@ -114,7 +114,8 @@ var magicLinkTestApp = testutils.Application{
 }
 
 var magicLinkTestUserSchema = testutils.UserType{
-	Name: "magic_link_test_user",
+	Handle:      "magic_link_test_user",
+	DisplayName: "Magic Link Test User",
 	Schema: map[string]interface{}{
 		"email": map[string]interface{}{
 			"type": "string",
@@ -129,7 +130,7 @@ var magicLinkTestUserSchema = testutils.UserType{
 }
 
 var magicLinkTestUser = testutils.User{
-	Type: magicLinkTestUserSchema.Name,
+	Type: magicLinkTestUserSchema.Handle,
 	Attributes: json.RawMessage(`{
 		"email": "userA@example.com",
 		"given_name": "user",
@@ -408,9 +409,9 @@ func (ts *magicLinkAuthFlowTestSuite) TestMagicLinkLoginFlow() {
 	ts.Require().NotEmpty(completeStep.Assertion)
 
 	claims, err := testutils.ValidateJWTAssertionFields(completeStep.Assertion, ts.appID,
-		magicLinkTestUserSchema.Name, ts.ouID, magicLinkTestOU.Name, magicLinkTestOU.Handle)
+		magicLinkTestUserSchema.Handle, ts.ouID, magicLinkTestOU.Name, magicLinkTestOU.Handle)
 	ts.Require().NoError(err, "Failed to validate JWT assertion")
-	ts.Require().Equal(magicLinkTestUserSchema.Name, claims.UserType)
+	ts.Require().Equal(magicLinkTestUserSchema.Handle, claims.UserType)
 	ts.Require().Equal(ts.ouID, claims.OUID)
 }
 

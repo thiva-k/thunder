@@ -195,7 +195,7 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_PrunesSeeded
 		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
 		Return(&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "users"}},
 		}, nil)
 	et.EXPECT().
 		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
@@ -753,7 +753,7 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_StripsUndecl
 		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
 		Return(&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "users"}},
 		}, nil)
 	// Exactly one schema lookup per allowed user type on the update path.
 	et.EXPECT().
@@ -799,7 +799,7 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_PrunesScopeC
 		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
 		Return(&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "users"}},
 		}, nil)
 	et.EXPECT().
 		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
@@ -839,7 +839,7 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_SeedsAttribu
 		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
 		Return(&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "users"}},
 		}, nil)
 	et.EXPECT().
 		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
@@ -879,7 +879,7 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_NoAttributes
 		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
 		Return(&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "users"}},
 		}, nil)
 	et.EXPECT().
 		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
@@ -910,7 +910,7 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_KeepsSupplie
 		GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryUser, mock.Anything, mock.Anything, false).
 		Return(&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "users"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "users"}},
 		}, nil)
 	et.EXPECT().
 		GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "users",
@@ -2068,7 +2068,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateAllowedUserTypes_AllExis
 	us.EXPECT().GetEntityTypeList(mock.Anything, mock.Anything, mock.Anything, 0, false).Return(
 		&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "person"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "person"}},
 		}, nil)
 	svc := &inboundClientService{entityType: us, logger: log.GetLogger()}
 	assert.NoError(suite.T(), svc.validateAllowedUserTypes(context.Background(), []string{"person"}))
@@ -2079,7 +2079,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateAllowedUserTypes_Missing
 	us.EXPECT().GetEntityTypeList(mock.Anything, mock.Anything, mock.Anything, 0, false).Return(
 		&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "person"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "person"}},
 		}, nil)
 	svc := &inboundClientService{entityType: us, logger: log.GetLogger()}
 	err := svc.validateAllowedUserTypes(context.Background(), []string{"ghost"})
@@ -2113,7 +2113,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateAllowedAgentTypes_AllExi
 	us.EXPECT().GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryAgent, mock.Anything, 0, false).Return(
 		&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "default"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "default"}},
 		}, nil)
 	svc := &inboundClientService{entityType: us, logger: log.GetLogger()}
 	assert.NoError(suite.T(), svc.validateAllowedAgentTypes(context.Background(), []string{"default"}))
@@ -2124,7 +2124,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateAllowedAgentTypes_Missin
 	us.EXPECT().GetEntityTypeList(mock.Anything, entitytypepkg.TypeCategoryAgent, mock.Anything, 0, false).Return(
 		&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "default"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "default"}},
 		}, nil)
 	svc := &inboundClientService{entityType: us, logger: log.GetLogger()}
 	err := svc.validateAllowedAgentTypes(context.Background(), []string{"ghost"})
@@ -3218,7 +3218,7 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_RejectsInval
 	us.EXPECT().GetEntityTypeList(mock.Anything, mock.Anything, mock.Anything, 0, false).Return(
 		&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "employee"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "employee"}},
 		}, nil)
 	us.EXPECT().GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "employee",
 		entitytypepkg.AttributeFilter{AllowNonCredential: true}).
@@ -3242,7 +3242,7 @@ func (suite *InboundClientServiceTestSuite) TestValidate_RejectsInvalidUserAttri
 	us.EXPECT().GetEntityTypeList(mock.Anything, mock.Anything, mock.Anything, 0, false).Return(
 		&entitytypepkg.EntityTypeListResponse{
 			TotalResults: 1,
-			Types:        []entitytypepkg.EntityTypeListItem{{Name: "employee"}},
+			Types:        []entitytypepkg.EntityTypeListItem{{Handle: "employee"}},
 		}, nil)
 	us.EXPECT().GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "employee",
 		entitytypepkg.AttributeFilter{AllowNonCredential: true}).

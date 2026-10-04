@@ -97,7 +97,8 @@ var (
 	}
 
 	emailOTPEntityType = testutils.UserType{
-		Name: "email_otp_user",
+		Handle:      "email_otp_user",
+		DisplayName: "Email Otp User",
 		Schema: map[string]interface{}{
 			"username": map[string]interface{}{"type": "string"},
 			"email":    map[string]interface{}{"type": "string"},
@@ -135,7 +136,7 @@ func (ts *EmailOTPAuthFlowTestSuite) SetupSuite() {
 
 	userIDs, err := testutils.CreateMultipleUsers(testutils.User{
 		OUID: ouID,
-		Type: emailOTPEntityType.Name,
+		Type: emailOTPEntityType.Handle,
 		Attributes: json.RawMessage(`{
 			"username": "emailotpuser",
 			"email": "` + ts.testEmail + `"
@@ -181,7 +182,7 @@ func (ts *EmailOTPAuthFlowTestSuite) SetupSuite() {
 		ClientID:                  "email_otp_auth_flow_test_client",
 		ClientSecret:              "email_otp_auth_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
-		AllowedUserTypes:          []string{emailOTPEntityType.Name},
+		AllowedUserTypes:          []string{emailOTPEntityType.Handle},
 		AuthFlowID:                flowID,
 		AssertionConfig: map[string]interface{}{
 			"userAttributes": []string{"userType", "ouId", "ouName", "ouHandle"},
@@ -298,7 +299,7 @@ func (ts *EmailOTPAuthFlowTestSuite) TestEmailOTPAuthFlow_Success() {
 	ts.Require().NotEmpty(finalStep.Assertion, "A JWT assertion should be returned")
 
 	claims, err := testutils.ValidateJWTAssertionFields(finalStep.Assertion, ts.appID,
-		emailOTPEntityType.Name, emailOTPTestOU.ID, emailOTPTestOU.Name, emailOTPTestOU.Handle)
+		emailOTPEntityType.Handle, emailOTPTestOU.ID, emailOTPTestOU.Name, emailOTPTestOU.Handle)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(claims, "JWT claims should not be nil")
 }

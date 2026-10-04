@@ -123,8 +123,8 @@ type entityTypeAdapter interface {
 	GetEntityType(ctx context.Context, category entitytype.TypeCategory, schemaID string,
 		includeDisplay bool) (*entitytype.EntityType,
 		*tidcommon.ServiceError)
-	GetEntityTypeByName(ctx context.Context, category entitytype.TypeCategory,
-		schemaName string) (*entitytype.EntityType, *tidcommon.ServiceError)
+	GetEntityTypeByHandle(ctx context.Context, category entitytype.TypeCategory,
+		handle string) (*entitytype.EntityType, *tidcommon.ServiceError)
 	UpdateEntityType(ctx context.Context, category entitytype.TypeCategory, schemaID string,
 		request entitytype.UpdateEntityTypeRequest) (
 		*entitytype.EntityType,

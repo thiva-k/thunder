@@ -49,7 +49,7 @@ func (s *FederatedMappingSuite) authenticate(
 func (s *FederatedMappingSuite) TestAuthenticationFlowLinksToExistingUserByMappedAttribute() {
 	linkEmail := s.nextSubject() + "@example.com"
 	existingID, err := testutils.CreateUser(testutils.User{
-		Type: fedPersonType.Name,
+		Type: fedPersonType.Handle,
 		OUID: s.ouID,
 		Attributes: mustJSON(map[string]interface{}{
 			"username": linkEmail,
@@ -67,7 +67,7 @@ func (s *FederatedMappingSuite) TestAuthenticationFlowLinksToExistingUserByMappe
 	user := s.baseUser(s.nextSubject())
 	user.Email = linkEmail
 
-	config := mapping(fedPersonType.Name, pair("email", "email"))
+	config := mapping(fedPersonType.Handle, pair("email", "email"))
 	config.AccountLinking = &testutils.AccountLinking{Attributes: []string{"email"}}
 
 	// The strict flow carries no provisioning step, so a completed run proves the identity resolved to
@@ -92,7 +92,7 @@ func (s *FederatedMappingSuite) TestAuthenticationFlowWithoutLocalUserProceedsWh
 
 	// Provisioning needs every required attribute, so the mapping supplies the username too; without it
 	// the flow would stop to collect it, which Phase 3 already covers.
-	config := mapping(fedPersonType.Name, pair("email", "email"), pair("email", "username"))
+	config := mapping(fedPersonType.Handle, pair("email", "email"), pair("email", "username"))
 
 	step, err := s.authenticate(s.authAppID, config, user)
 
@@ -111,7 +111,7 @@ func (s *FederatedMappingSuite) TestAuthenticationFlowWithoutLocalUserProceedsWh
 func (s *FederatedMappingSuite) TestAuthenticationFlowWithoutLocalUserFailsWhenNotAllowed() {
 	user := s.baseUser(s.nextSubject())
 
-	step, err := s.authenticate(s.strictAuthAppID, mapping(fedPersonType.Name, pair("email", "email")), user)
+	step, err := s.authenticate(s.strictAuthAppID, mapping(fedPersonType.Handle, pair("email", "email")), user)
 
 	// Asserted exactly rather than "any failure": an unrelated OIDC, state or executor fault would
 	// otherwise satisfy this test. The identity currently fails as an opaque HTTP 500 carrying

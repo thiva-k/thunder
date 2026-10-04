@@ -1415,8 +1415,8 @@ func (s *inboundClientService) validateAllowedAgentTypes(
 		ErrFKInvalidAgentType, ErrAgentSchemaLookupFailed)
 }
 
-// validateAllowedEntityTypes validates that each name in allowedTypes corresponds to an existing
-// entity type in the given category. invalidErr is returned for an unknown name; lookupErr is
+// validateAllowedEntityTypes validates that each handle in allowedTypes corresponds to an existing
+// entity type in the given category. invalidErr is returned for an unknown handle; lookupErr is
 // returned when the entity type service itself fails, so the caller can tell a client validation
 // failure from a server fault.
 func (s *inboundClientService) validateAllowedEntityTypes(
@@ -1440,7 +1440,7 @@ func (s *inboundClientService) validateAllowedEntityTypes(
 			return lookupErr
 		}
 		for _, schema := range entityTypeList.Types {
-			existingTypes[schema.Name] = true
+			existingTypes[schema.Handle] = true
 		}
 		if len(entityTypeList.Types) == 0 ||
 			offset+len(entityTypeList.Types) >= entityTypeList.TotalResults {

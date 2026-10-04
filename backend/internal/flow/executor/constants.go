@@ -103,8 +103,8 @@ const (
 	userTypeKey  = "userType"
 	agentTypeKey = "agentType"
 
-	// categoryTypeKey is the runtime slot carrying the resolved type name. A run provisions one
-	// category, so the resolvers share a single slot. Readers pair the name with the category they
+	// categoryTypeKey is the runtime slot carrying the resolved type handle. A run provisions one
+	// category, so the resolvers share a single slot. Readers pair the handle with the category they
 	// already hold from the node's mode property, which is what every type lookup needs.
 	categoryTypeKey = "categoryType"
 

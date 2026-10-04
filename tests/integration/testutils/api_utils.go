@@ -114,15 +114,15 @@ func CreateUserType(schema UserType) (string, error) {
 // and returns its ID. The server restricts agent types to one `default` schema and rejects
 // deletion, so suites share the singleton: this helper creates it on first call and updates
 // it (PUT) on subsequent calls so each suite's schema fixture takes effect. The caller's
-// `Name` is ignored — it is always coerced to `default`.
+// `Handle` is ignored. It is always coerced to `default`.
 func CreateAgentType(schema UserType) (string, error) {
-	schema.Name = "default"
+	schema.Handle = "default"
 
 	id, err := postAgentType(schema)
 	if err == nil {
 		return id, nil
 	}
-	if !errors.Is(err, errAgentTypeNameConflict) {
+	if !errors.Is(err, errAgentTypeHandleConflict) {
 		return "", err
 	}
 
@@ -142,6 +142,7 @@ func CreateAgentType(schema UserType) (string, error) {
 // The schema in particular cannot come from the list endpoint, which omits it.
 type AgentTypeSnapshot struct {
 	ID                    string
+	DisplayName           string
 	OUID                  string
 	AllowSelfRegistration bool
 	SystemAttributes      map[string]interface{}
@@ -179,6 +180,7 @@ func SnapshotAgentType() (*AgentTypeSnapshot, error) {
 
 	var detail struct {
 		ID                    string                 `json:"id"`
+		DisplayName           string                 `json:"displayName"`
 		OUID                  string                 `json:"ouId"`
 		AllowSelfRegistration bool                   `json:"allowSelfRegistration"`
 		SystemAttributes      map[string]interface{} `json:"systemAttributes"`
@@ -190,6 +192,7 @@ func SnapshotAgentType() (*AgentTypeSnapshot, error) {
 
 	return &AgentTypeSnapshot{
 		ID:                    detail.ID,
+		DisplayName:           detail.DisplayName,
 		OUID:                  detail.OUID,
 		AllowSelfRegistration: detail.AllowSelfRegistration,
 		SystemAttributes:      detail.SystemAttributes,
@@ -220,7 +223,8 @@ func RestoreAgentType(snapshot *AgentTypeSnapshot) error {
 	// `omitempty`, so a snapshotted `false` would be dropped, and it has no SystemAttributes field at
 	// all. Either omission makes the server reset that field instead of restoring it.
 	payload := map[string]interface{}{
-		"name":                  "default",
+		"handle":                "default",
+		"displayName":           snapshot.DisplayName,
 		"ouId":                  ouID,
 		"allowSelfRegistration": snapshot.AllowSelfRegistration,
 		"schema":                snapshot.Schema,
@@ -241,6 +245,10 @@ func RestoreAgentType(snapshot *AgentTypeSnapshot) error {
 	}
 	if restored.ID != snapshot.ID {
 		return fmt.Errorf("restored agent type has id %s, want %s", restored.ID, snapshot.ID)
+	}
+	if restored.DisplayName != snapshot.DisplayName {
+		return fmt.Errorf("restored agent type has displayName %q, want %q",
+			restored.DisplayName, snapshot.DisplayName)
 	}
 	if restored.OUID != ouID {
 		return fmt.Errorf("restored agent type has ouId %s, want %s", restored.OUID, ouID)
@@ -303,7 +311,7 @@ func findBootstrapOUID() (string, error) {
 	return "", errors.New("bootstrap organization unit with handle 'default' not found")
 }
 
-var errAgentTypeNameConflict = errors.New("agent type name conflict")
+var errAgentTypeHandleConflict = errors.New("agent type handle conflict")
 
 func postAgentType(schema UserType) (string, error) {
 	payload, err := json.Marshal(schema)
@@ -329,7 +337,7 @@ func postAgentType(schema UserType) (string, error) {
 	}
 
 	if resp.StatusCode == http.StatusConflict {
-		return "", errAgentTypeNameConflict
+		return "", errAgentTypeHandleConflict
 	}
 	if resp.StatusCode != http.StatusCreated {
 		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
@@ -395,15 +403,15 @@ func findDefaultAgentTypeID() (string, error) {
 
 	var list struct {
 		Types []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
+			ID     string `json:"id"`
+			Handle string `json:"handle"`
 		} `json:"types"`
 	}
 	if err := json.Unmarshal(body, &list); err != nil {
 		return "", fmt.Errorf("failed to parse list response: %w. Response: %s", err, string(body))
 	}
 	for _, s := range list.Types {
-		if s.Name == "default" {
+		if s.Handle == "default" {
 			return s.ID, nil
 		}
 	}
@@ -466,8 +474,8 @@ func ListUserTypes() ([]UserType, error) {
 	var listing struct {
 		TotalResults int `json:"totalResults"`
 		Types        []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
+			ID     string `json:"id"`
+			Handle string `json:"handle"`
 		} `json:"types"`
 	}
 	if err := json.Unmarshal(body, &listing); err != nil {
@@ -484,11 +492,11 @@ func ListUserTypes() ([]UserType, error) {
 	for _, item := range listing.Types {
 		detail, err := getJSON(fmt.Sprintf("%s/user-types/%s", TestServerURL, item.ID))
 		if err != nil {
-			return nil, fmt.Errorf("failed to read user type %q: %w", item.Name, err)
+			return nil, fmt.Errorf("failed to read user type %q: %w", item.Handle, err)
 		}
 		var userType UserType
 		if err := json.Unmarshal(detail, &userType); err != nil {
-			return nil, fmt.Errorf("failed to parse user type %q: %w. Response: %s", item.Name, err, string(detail))
+			return nil, fmt.Errorf("failed to parse user type %q: %w. Response: %s", item.Handle, err, string(detail))
 		}
 		userTypes = append(userTypes, userType)
 	}

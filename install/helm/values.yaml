@@ -811,7 +811,7 @@ bootstrap:
     # Example - Creating a custom user (filename must end in .yaml/.yml/.json):
     # 70-custom-users.yaml: |
     #   # resource_type: user
-    #   type: Person
+    #   type: person
     #   ouHandle: default
     #   attributes:
     #     username: alice

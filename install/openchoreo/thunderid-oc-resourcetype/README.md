@@ -212,7 +212,7 @@ The practical workflow is to export from an existing ThunderID installation
   ```yaml
   # resource_type: user
   id: 01900000-0000-7000-8000-000000000030
-  type: Person
+  type: person
   attributes:
     username: "admin"
     # ...

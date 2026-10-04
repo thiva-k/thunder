@@ -1827,7 +1827,7 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_UserCategory
 			name:    "SingleSelfRegistrableTypeResolves",
 			allowed: []string{testUserType},
 			entityTypes: map[string]*entitytype.EntityType{
-				testUserType: {Name: testUserType, OUID: testOUID, AllowSelfRegistration: true},
+				testUserType: {Handle: testUserType, OUID: testOUID, AllowSelfRegistration: true},
 			},
 			expected: &entityRef{entityType: testUserType, ouID: testOUID},
 		},
@@ -1835,7 +1835,7 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_UserCategory
 			name:    "NoSelfRegistrableType",
 			allowed: []string{testUserType},
 			entityTypes: map[string]*entitytype.EntityType{
-				testUserType: {Name: testUserType, OUID: testOUID, AllowSelfRegistration: false},
+				testUserType: {Handle: testUserType, OUID: testOUID, AllowSelfRegistration: false},
 			},
 			expected: nil,
 		},
@@ -1843,8 +1843,8 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_UserCategory
 			name:    "AmbiguousSelfRegistrableTypes",
 			allowed: []string{testUserType, "EXTERNAL"},
 			entityTypes: map[string]*entitytype.EntityType{
-				testUserType: {Name: testUserType, OUID: testOUID, AllowSelfRegistration: true},
-				"EXTERNAL":   {Name: "EXTERNAL", OUID: testOUID, AllowSelfRegistration: true},
+				testUserType: {Handle: testUserType, OUID: testOUID, AllowSelfRegistration: true},
+				"EXTERNAL":   {Handle: "EXTERNAL", OUID: testOUID, AllowSelfRegistration: true},
 			},
 			expected: nil,
 		},
@@ -1854,7 +1854,7 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_UserCategory
 		suite.Run(tt.name, func() {
 			suite.SetupTest()
 			for name, et := range tt.entityTypes {
-				suite.mockEntityTypeService.On("GetEntityTypeByName", mock.Anything,
+				suite.mockEntityTypeService.On("GetEntityTypeByHandle", mock.Anything,
 					entitytype.TypeCategoryUser, name).
 					Return(et, (*tidcommon.ServiceError)(nil)).Maybe()
 			}
@@ -1874,7 +1874,7 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_UserCategory
 }
 
 func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_EntityTypeLookupFails() {
-	suite.mockEntityTypeService.On("GetEntityTypeByName", mock.Anything,
+	suite.mockEntityTypeService.On("GetEntityTypeByHandle", mock.Anything,
 		entitytype.TypeCategoryUser, testUserType).
 		Return(nil, &tidcommon.ServiceError{Code: "internal_error",
 			Error: tidcommon.I18nMessage{DefaultValue: "boom"}}).Once()
@@ -1901,9 +1901,9 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_AgentCategor
 			InboundAuthProfile: providers.InboundAuthProfile{AllowedAgentTypes: []string{testAgentType}},
 		},
 	}
-	suite.mockEntityTypeService.On("GetEntityTypeByName", mock.Anything, entitytype.TypeCategoryAgent,
+	suite.mockEntityTypeService.On("GetEntityTypeByHandle", mock.Anything, entitytype.TypeCategoryAgent,
 		testAgentType).
-		Return(&entitytype.EntityType{Name: testAgentType, OUID: testOUID, AllowSelfRegistration: true},
+		Return(&entitytype.EntityType{Handle: testAgentType, OUID: testOUID, AllowSelfRegistration: true},
 			(*tidcommon.ServiceError)(nil)).Once()
 
 	ref, err := suite.executor.getDefaultEntityRef(ctx, entitytype.TypeCategoryAgent)
@@ -1923,7 +1923,7 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_AgentCategor
 
 	assert.NoError(suite.T(), err)
 	assert.Nil(suite.T(), ref, "an application admitting no agent type provisions none")
-	suite.mockEntityTypeService.AssertNotCalled(suite.T(), "GetEntityTypeByName",
+	suite.mockEntityTypeService.AssertNotCalled(suite.T(), "GetEntityTypeByHandle",
 		mock.Anything, mock.Anything, mock.Anything)
 }
 
@@ -1939,8 +1939,8 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_AgentCategor
 	}
 
 	for _, name := range []string{testAgentType, "another"} {
-		suite.mockEntityTypeService.On("GetEntityTypeByName", mock.Anything, entitytype.TypeCategoryAgent, name).
-			Return(&entitytype.EntityType{Name: name, OUID: testOUID, AllowSelfRegistration: true},
+		suite.mockEntityTypeService.On("GetEntityTypeByHandle", mock.Anything, entitytype.TypeCategoryAgent, name).
+			Return(&entitytype.EntityType{Handle: name, OUID: testOUID, AllowSelfRegistration: true},
 				(*tidcommon.ServiceError)(nil)).Once()
 	}
 
@@ -1959,9 +1959,9 @@ func (suite *ProvisioningExecutorTestSuite) TestGetDefaultEntityRef_AgentCategor
 			InboundAuthProfile: providers.InboundAuthProfile{AllowedAgentTypes: []string{testAgentType}},
 		},
 	}
-	suite.mockEntityTypeService.On("GetEntityTypeByName", mock.Anything, entitytype.TypeCategoryAgent,
+	suite.mockEntityTypeService.On("GetEntityTypeByHandle", mock.Anything, entitytype.TypeCategoryAgent,
 		testAgentType).
-		Return(&entitytype.EntityType{Name: testAgentType, OUID: testOUID, AllowSelfRegistration: false},
+		Return(&entitytype.EntityType{Handle: testAgentType, OUID: testOUID, AllowSelfRegistration: false},
 			(*tidcommon.ServiceError)(nil)).Once()
 
 	ref, err := suite.executor.getDefaultEntityRef(ctx, entitytype.TypeCategoryAgent)
@@ -4617,18 +4617,18 @@ func (suite *ProvisioningExecutorTestSuite) TestSelfRegistrableEntityTypes_Reads
 		entitytype.TypeCategoryUser:  testUserType,
 		entitytype.TypeCategoryAgent: testAgentType,
 	} {
-		suite.mockEntityTypeService.On("GetEntityTypeByName", mock.Anything, category, name).
-			Return(&entitytype.EntityType{Name: name, OUID: testOUID, AllowSelfRegistration: true},
+		suite.mockEntityTypeService.On("GetEntityTypeByHandle", mock.Anything, category, name).
+			Return(&entitytype.EntityType{Handle: name, OUID: testOUID, AllowSelfRegistration: true},
 				(*tidcommon.ServiceError)(nil)).Once()
 	}
 
 	userTypes, err := suite.executor.selfRegistrableEntityTypes(ctx, entitytype.TypeCategoryUser)
 	assert.NoError(suite.T(), err)
 	require.Len(suite.T(), userTypes, 1)
-	assert.Equal(suite.T(), testUserType, userTypes[0].Name)
+	assert.Equal(suite.T(), testUserType, userTypes[0].Handle)
 
 	agentTypes, err := suite.executor.selfRegistrableEntityTypes(ctx, entitytype.TypeCategoryAgent)
 	assert.NoError(suite.T(), err)
 	require.Len(suite.T(), agentTypes, 1)
-	assert.Equal(suite.T(), testAgentType, agentTypes[0].Name)
+	assert.Equal(suite.T(), testAgentType, agentTypes[0].Handle)
 }
