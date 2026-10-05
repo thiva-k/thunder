@@ -75,7 +75,8 @@ type userDeclarativeYAML struct {
 type entityTypeDeclarativeYAML struct {
 	ID                    string                       `yaml:"id"`
 	Category              entitytype.TypeCategory      `yaml:"category,omitempty"`
-	Name                  string                       `yaml:"name"`
+	Handle                string                       `yaml:"handle"`
+	DisplayName           string                       `yaml:"displayName"`
 	OUID                  string                       `yaml:"ouId,omitempty"`
 	OUHandle              string                       `yaml:"ouHandle,omitempty"`
 	AllowSelfRegistration bool                         `yaml:"allowSelfRegistration,omitempty"`
@@ -182,7 +183,7 @@ func (s *importService) importEntityType(
 
 	var req entityTypeDeclarativeYAML
 	if err := doc.Node.Decode(&req); err != nil {
-		return decodeErrorOutcome(resourceTypeEntityType, req.ID, req.Name, err)
+		return decodeErrorOutcome(resourceTypeEntityType, req.ID, req.DisplayName, err)
 	}
 
 	var (
@@ -198,7 +199,7 @@ func (s *importService) importEntityType(
 			return ImportItemOutcome{
 				ResourceType: resourceTypeEntityType,
 				ResourceID:   req.ID,
-				ResourceName: req.Name,
+				ResourceName: req.DisplayName,
 				Status:       statusFailed,
 				Code:         ErrorInvalidYAMLContent.Code,
 				Message:      fmt.Sprintf("failed to marshal schema: %v", err),
@@ -218,7 +219,7 @@ func (s *importService) importEntityType(
 		return ImportItemOutcome{
 			ResourceType: resourceTypeEntityType,
 			ResourceID:   req.ID,
-			ResourceName: req.Name,
+			ResourceName: req.DisplayName,
 			Status:       statusFailed,
 			Code:         ErrorInvalidYAMLContent.Code,
 			Message:      fmt.Sprintf("invalid entity type category %q", string(category)),
@@ -227,7 +228,8 @@ func (s *importService) importEntityType(
 
 	createReq := entitytype.CreateEntityTypeRequestWithID{
 		ID:                    req.ID,
-		Name:                  req.Name,
+		Handle:                req.Handle,
+		DisplayName:           req.DisplayName,
 		OUID:                  req.OUID,
 		OUHandle:              req.OUHandle,
 		AllowSelfRegistration: req.AllowSelfRegistration,
@@ -235,7 +237,8 @@ func (s *importService) importEntityType(
 		Schema:                schemaBytes,
 	}
 	updateReq := entitytype.UpdateEntityTypeRequest{
-		Name:                  createReq.Name,
+		Handle:                createReq.Handle,
+		DisplayName:           createReq.DisplayName,
 		OUID:                  createReq.OUID,
 		OUHandle:              createReq.OUHandle,
 		AllowSelfRegistration: createReq.AllowSelfRegistration,
@@ -247,39 +250,39 @@ func (s *importService) importEntityType(
 		if options.IsUpsertEnabled() && req.ID != "" {
 			_, svcErr := s.entityTypeService.GetEntityType(ctx, category, req.ID, false)
 			if svcErr == nil {
-				return successOutcome(resourceTypeEntityType, req.ID, req.Name, operationUpdate)
+				return successOutcome(resourceTypeEntityType, req.ID, req.DisplayName, operationUpdate)
 			}
 
 			if !isNotFoundServiceError(svcErr) {
-				return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.Name, operationUpdate, svcErr)
+				return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.DisplayName, operationUpdate, svcErr)
 			}
 		}
 
-		return successOutcome(resourceTypeEntityType, req.ID, req.Name, operationCreate)
+		return successOutcome(resourceTypeEntityType, req.ID, req.DisplayName, operationCreate)
 	}
 
 	if options.IsUpsertEnabled() && req.ID != "" {
 		updated, svcErr := s.entityTypeService.UpdateEntityType(ctx, category, req.ID, updateReq)
 		if svcErr == nil {
-			return successOutcome(resourceTypeEntityType, updated.ID, updated.Name, operationUpdate)
+			return successOutcome(resourceTypeEntityType, updated.ID, updated.DisplayName, operationUpdate)
 		}
 
 		if !isNotFoundServiceError(svcErr) {
-			return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.Name, operationUpdate, svcErr)
+			return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.DisplayName, operationUpdate, svcErr)
 		}
 
 		created, createErr := s.entityTypeService.CreateEntityType(ctx, category, createReq)
 		if createErr != nil {
-			return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.Name, operationCreate, createErr)
+			return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.DisplayName, operationCreate, createErr)
 		}
-		return successOutcome(resourceTypeEntityType, created.ID, created.Name, operationCreate)
+		return successOutcome(resourceTypeEntityType, created.ID, created.DisplayName, operationCreate)
 	}
 
 	created, svcErr := s.entityTypeService.CreateEntityType(ctx, category, createReq)
 	if svcErr != nil {
-		return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.Name, operationCreate, svcErr)
+		return serviceErrorOutcome(resourceTypeEntityType, req.ID, req.DisplayName, operationCreate, svcErr)
 	}
-	return successOutcome(resourceTypeEntityType, created.ID, created.Name, operationCreate)
+	return successOutcome(resourceTypeEntityType, created.ID, created.DisplayName, operationCreate)
 }
 
 func (s *importService) importRole(

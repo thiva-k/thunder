@@ -145,7 +145,8 @@ var magicLinkRegTestApp = testutils.Application{
 }
 
 var magicLinkRegTestUserSchema = testutils.UserType{
-	Name: "magic_link_reg_test_user",
+	Handle:      "magic_link_reg_test_user",
+	DisplayName: "Magic Link Reg Test User",
 	Schema: map[string]interface{}{
 		"username": map[string]interface{}{
 			"type": "string",
@@ -459,7 +460,7 @@ func (ts *MagicLinkRegistrationTestSuite) TestMagicLinkRegistration_ExistingUser
 	emailAddr := common.GenerateUniqueUsername("existing") + "@example.com"
 	existingUsername := common.GenerateUniqueUsername("existinguser")
 	userIDs, err := testutils.CreateMultipleUsers(testutils.User{
-		Type: magicLinkRegTestUserSchema.Name,
+		Type: magicLinkRegTestUserSchema.Handle,
 		OUID: ts.ouID,
 		Attributes: json.RawMessage(`{
 			"email": "` + emailAddr + `",

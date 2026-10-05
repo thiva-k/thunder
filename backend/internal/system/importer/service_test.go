@@ -490,7 +490,7 @@ type fakeEntityTypeService struct {
 	updated          []entitytype.UpdateEntityTypeRequest
 	createCategories []entitytype.TypeCategory
 	byID             map[string]*entitytype.EntityType
-	byName           map[string]*entitytype.EntityType
+	byHandle         map[string]*entitytype.EntityType
 }
 
 func (f *fakeEntityTypeService) CreateEntityType(
@@ -502,7 +502,8 @@ func (f *fakeEntityTypeService) CreateEntityType(
 	}
 	created := &entitytype.EntityType{
 		ID:                    id,
-		Name:                  request.Name,
+		Handle:                request.Handle,
+		DisplayName:           request.DisplayName,
 		OUID:                  request.OUID,
 		AllowSelfRegistration: request.AllowSelfRegistration,
 		SystemAttributes:      request.SystemAttributes,
@@ -513,11 +514,11 @@ func (f *fakeEntityTypeService) CreateEntityType(
 	if f.byID == nil {
 		f.byID = map[string]*entitytype.EntityType{}
 	}
-	if f.byName == nil {
-		f.byName = map[string]*entitytype.EntityType{}
+	if f.byHandle == nil {
+		f.byHandle = map[string]*entitytype.EntityType{}
 	}
 	f.byID[created.ID] = created
-	f.byName[created.Name] = created
+	f.byHandle[created.Handle] = created
 	return created, nil
 }
 
@@ -535,10 +536,10 @@ func (f *fakeEntityTypeService) GetEntityType(
 	}
 }
 
-func (f *fakeEntityTypeService) GetEntityTypeByName(
-	_ context.Context, _ entitytype.TypeCategory, schemaName string,
+func (f *fakeEntityTypeService) GetEntityTypeByHandle(
+	_ context.Context, _ entitytype.TypeCategory, handle string,
 ) (*entitytype.EntityType, *tidcommon.ServiceError) {
-	if existing, ok := f.byName[schemaName]; ok {
+	if existing, ok := f.byHandle[handle]; ok {
 		return existing, nil
 	}
 
@@ -562,7 +563,8 @@ func (f *fakeEntityTypeService) UpdateEntityType(
 
 	updated := &entitytype.EntityType{
 		ID:                    schemaID,
-		Name:                  request.Name,
+		Handle:                request.Handle,
+		DisplayName:           request.DisplayName,
 		OUID:                  request.OUID,
 		AllowSelfRegistration: request.AllowSelfRegistration,
 		SystemAttributes:      request.SystemAttributes,
@@ -570,7 +572,7 @@ func (f *fakeEntityTypeService) UpdateEntityType(
 	}
 	f.updated = append(f.updated, request)
 	f.byID[schemaID] = updated
-	f.byName[updated.Name] = updated
+	f.byHandle[updated.Handle] = updated
 	return updated, nil
 }
 
@@ -2070,8 +2072,8 @@ func TestImportResources_LayoutCreateError(t *testing.T) {
 //nolint:dupl // Test pattern repeated across resource types to verify ID preservation behavior
 func TestImportResources_EntityTypeUpsertCreatePreservesID(t *testing.T) {
 	entityTypeSvc := &fakeEntityTypeService{
-		byID:   map[string]*entitytype.EntityType{},
-		byName: map[string]*entitytype.EntityType{},
+		byID:     map[string]*entitytype.EntityType{},
+		byHandle: map[string]*entitytype.EntityType{},
 	}
 	svc := newImportService(
 		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -2079,7 +2081,8 @@ func TestImportResources_EntityTypeUpsertCreatePreservesID(t *testing.T) {
 	content := strings.Join([]string{
 		"resource_type: user_type",
 		"id: usrs-123",
-		"name: customer",
+		"handle: customer",
+		"displayName: Customer",
 		"ouId: ou-1",
 		"schema:",
 		"  type: object",
@@ -2097,14 +2100,17 @@ func TestImportResources_EntityTypeUpsertCreatePreservesID(t *testing.T) {
 	assert.Equal(t, "usrs-123", resp.Results[0].ResourceID)
 	assert.Len(t, entityTypeSvc.created, 1)
 	assert.Equal(t, "usrs-123", entityTypeSvc.created[0].ID)
+	assert.Equal(t, "customer", entityTypeSvc.created[0].Handle)
+	assert.Equal(t, "Customer", entityTypeSvc.created[0].DisplayName)
+	assert.Equal(t, "Customer", resp.Results[0].ResourceName)
 }
 
 func TestImportResources_UpsertCreatePreservesIDsAcrossResourceTypes(t *testing.T) {
 	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
 	themeSvc := &fakeThemeService{byID: map[string]*thememgt.Theme{}, byHandle: map[string]*thememgt.Theme{}}
 	entityTypeSvc := &fakeEntityTypeService{
-		byID:   map[string]*entitytype.EntityType{},
-		byName: map[string]*entitytype.EntityType{},
+		byID:     map[string]*entitytype.EntityType{},
+		byHandle: map[string]*entitytype.EntityType{},
 	}
 	flowSvc := &fakeFlowService{
 		byID:  map[string]*providers.CompleteFlowDefinition{},
@@ -2134,7 +2140,8 @@ func TestImportResources_UpsertCreatePreservesIDsAcrossResourceTypes(t *testing.
 		"---",
 		"resource_type: user_type",
 		"id: usrs-123",
-		"name: customer",
+		"handle: customer",
+		"displayName: Customer",
 		"ouId: ou-123",
 		"schema:",
 		"  type: object",
@@ -2190,8 +2197,8 @@ func TestImportResources_UpsertCreatePreservesIDsAcrossResourceTypes(t *testing.
 
 func TestImportResources_EntityTypeOUHandlePassedToService(t *testing.T) {
 	entityTypeSvc := &fakeEntityTypeService{
-		byID:   map[string]*entitytype.EntityType{},
-		byName: map[string]*entitytype.EntityType{},
+		byID:     map[string]*entitytype.EntityType{},
+		byHandle: map[string]*entitytype.EntityType{},
 	}
 	svc := newImportService(
 		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -2199,7 +2206,8 @@ func TestImportResources_EntityTypeOUHandlePassedToService(t *testing.T) {
 	content := strings.Join([]string{
 		"resource_type: user_type",
 		"id: usrs-123",
-		"name: customer",
+		"handle: customer",
+		"displayName: Customer",
 		"ouHandle: default",
 		"schema:",
 		"  type: object",
@@ -2219,8 +2227,8 @@ func TestImportResources_EntityTypeOUHandlePassedToService(t *testing.T) {
 
 func TestImportResources_AgentTypeDefaultsToAgentCategory(t *testing.T) {
 	entityTypeSvc := &fakeEntityTypeService{
-		byID:   map[string]*entitytype.EntityType{},
-		byName: map[string]*entitytype.EntityType{},
+		byID:     map[string]*entitytype.EntityType{},
+		byHandle: map[string]*entitytype.EntityType{},
 	}
 	svc := newImportService(
 		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -2228,7 +2236,8 @@ func TestImportResources_AgentTypeDefaultsToAgentCategory(t *testing.T) {
 	content := strings.Join([]string{
 		"resource_type: agent_type",
 		"id: agtt-123",
-		"name: support-agent",
+		"handle: support-agent",
+		"displayName: Support Agent",
 		"ouId: ou-1",
 		"schema:",
 		"  type: object",
@@ -2252,8 +2261,8 @@ func TestImportResources_AgentTypeDefaultsToAgentCategory(t *testing.T) {
 
 func TestImportResources_AgentTypeExplicitCategoryTakesPrecedence(t *testing.T) {
 	entityTypeSvc := &fakeEntityTypeService{
-		byID:   map[string]*entitytype.EntityType{},
-		byName: map[string]*entitytype.EntityType{},
+		byID:     map[string]*entitytype.EntityType{},
+		byHandle: map[string]*entitytype.EntityType{},
 	}
 	svc := newImportService(
 		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -2261,7 +2270,8 @@ func TestImportResources_AgentTypeExplicitCategoryTakesPrecedence(t *testing.T) 
 	content := strings.Join([]string{
 		"resource_type: agent_type",
 		"id: agtt-124",
-		"name: support-agent",
+		"handle: support-agent",
+		"displayName: Support Agent",
 		"category: user",
 		"ouId: ou-1",
 		"schema:",
@@ -2281,8 +2291,8 @@ func TestImportResources_AgentTypeExplicitCategoryTakesPrecedence(t *testing.T) 
 
 func TestImportResources_UserTypeExplicitAgentCategoryStillWorks(t *testing.T) {
 	entityTypeSvc := &fakeEntityTypeService{
-		byID:   map[string]*entitytype.EntityType{},
-		byName: map[string]*entitytype.EntityType{},
+		byID:     map[string]*entitytype.EntityType{},
+		byHandle: map[string]*entitytype.EntityType{},
 	}
 	svc := newImportService(
 		nil, nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -2290,7 +2300,8 @@ func TestImportResources_UserTypeExplicitAgentCategoryStillWorks(t *testing.T) {
 	content := strings.Join([]string{
 		"resource_type: user_type",
 		"id: usrs-124",
-		"name: support-agent",
+		"handle: support-agent",
+		"displayName: Support Agent",
 		"category: agent",
 		"ouId: ou-1",
 		"schema:",

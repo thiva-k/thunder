@@ -20,7 +20,7 @@ CREATE TABLE "ENTITY" (
     DEPLOYMENT_ID       VARCHAR(255) NOT NULL,
     ID                  VARCHAR(36) NOT NULL,
     CATEGORY            VARCHAR(50)  NOT NULL,
-    TYPE                VARCHAR(50)  NOT NULL,
+    TYPE                VARCHAR(100) NOT NULL,
     STATE               VARCHAR(50)  NOT NULL,
     OU_ID               VARCHAR(36)  NOT NULL,
     ATTRIBUTES          JSONB,

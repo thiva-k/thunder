@@ -208,7 +208,8 @@ var attributeConfigOU = testutils.OrganizationUnit{
 }
 
 var attributeConfigUserType = testutils.UserType{
-	Name: "connection_attr_person",
+	Handle:      "connection_attr_person",
+	DisplayName: "Connection Attr Person",
 	Schema: map[string]interface{}{
 		"username":  map[string]interface{}{"type": "string", "required": true, "unique": true},
 		"email":     map[string]interface{}{"type": "string", "required": true, "unique": true},
@@ -228,7 +229,7 @@ func (s *ConnectionAPITestSuite) SetupSuite() {
 	userTypeID, err := testutils.CreateUserType(userType)
 	s.Require().NoError(err, "failed to create user type")
 	s.userTypeID = userTypeID
-	s.userTypeName = userType.Name
+	s.userTypeName = userType.Handle
 
 	rsID, err := testutils.CreateResourceServerWithActions(testutils.ResourceServer{
 		Name:       "Connection Attribute Config API",
@@ -1091,7 +1092,7 @@ func (s *ConnectionAPITestSuite) userTypeAllowingDuplicateEmails() string {
 	s.Require().NotEmpty(userTypes, "expected at least the bootstrapped user type")
 	for _, userType := range userTypes {
 		if !userType.IsAttributeUnique("email") {
-			return userType.Name
+			return userType.Handle
 		}
 	}
 	return ""

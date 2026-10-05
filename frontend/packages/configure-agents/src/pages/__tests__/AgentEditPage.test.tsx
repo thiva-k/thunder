@@ -219,12 +219,12 @@ describe('AgentEditPage', () => {
     mockMutateAsync.mockResolvedValue(undefined);
     mockRefetch.mockResolvedValue({});
     mockUseGetAgentTypes.mockReturnValue({
-      data: {types: [{id: 'default-type', name: 'default'}]},
+      data: {types: [{id: 'default-type', handle: 'default', displayName: 'Default'}]},
       isLoading: false,
       error: null,
     });
     mockUseGetAgentType.mockReturnValue({
-      data: {id: 'default-type', name: 'default', schema: {}},
+      data: {id: 'default-type', handle: 'default', displayName: 'Default', schema: {}},
       isLoading: false,
       error: null,
     });

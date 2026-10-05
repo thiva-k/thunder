@@ -1141,7 +1141,7 @@ func (p *provisioningExecutor) getDefaultEntityRef(ctx *providers.NodeContext,
 	}
 
 	return &entityRef{
-		entityType: candidates[0].Name,
+		entityType: candidates[0].Handle,
 		ouID:       candidates[0].OUID,
 	}, nil
 }
@@ -1165,11 +1165,11 @@ func (p *provisioningExecutor) selfRegistrableEntityTypes(ctx *providers.NodeCon
 	}
 
 	types := make([]entitytype.EntityType, 0, len(allowed))
-	for _, name := range allowed {
-		entityType, svcErr := p.entityTypeService.GetEntityTypeByName(ctx.Context, category, name)
+	for _, handle := range allowed {
+		entityType, svcErr := p.entityTypeService.GetEntityTypeByHandle(ctx.Context, category, handle)
 		if svcErr != nil {
 			return nil, fmt.Errorf("failed to retrieve entity type %q in category %q: %s",
-				name, category, svcErr.Error.DefaultValue)
+				handle, category, svcErr.Error.DefaultValue)
 		}
 		if entityType.AllowSelfRegistration {
 			types = append(types, *entityType)

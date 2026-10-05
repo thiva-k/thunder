@@ -899,7 +899,7 @@ bootstrap:
   scripts:
     70-custom-users.yaml: |
       # resource_type: user
-      type: Person
+      type: person
       ouHandle: default
       attributes:
         username: alice

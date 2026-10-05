@@ -1418,7 +1418,7 @@ components:
       properties:
         entityType:
           type: string
-          description: ThunderID entity type to which this mapping applies.
+          description: Handle of the user type or agent type to which this mapping applies.
         attributes:
           type: array
           items:
@@ -1541,27 +1541,27 @@ components:
 
     UserTypeResolution:
       type: object
-      description: Resolves which local user type an incoming federated identity maps to.
+      description: Resolves which local user type an incoming federated identity maps to. User types are referenced by their handle.
       required:
         - default
       properties:
         default:
           type: string
           description: >
-            Fallback local user type, used when claim-driven resolution is not configured or the
-            external attribute's value does not match a mapping.
-          example: "Person"
+            Handle of the fallback local user type, used when claim-driven resolution is not configured
+            or the external attribute's value does not match a mapping.
+          example: "person"
         externalAttribute:
           type: string
           description: External claim whose value selects the local user type.
           example: "user_type"
         valueMapping:
           type: object
-          description: Maps an external attribute value to a local user type.
+          description: Maps an external attribute value to the handle of a local user type.
           additionalProperties:
             type: string
           example:
-            staff: "Employee"
+            staff: "employee"
 
     UserTypeAttributeMapping:
       type: object
@@ -1571,8 +1571,8 @@ components:
       properties:
         userType:
           type: string
-          description: Local user type this profile applies to.
-          example: "Person"
+          description: Handle of the local user type this profile applies to.
+          example: "person"
         attributes:
           type: array
           description: External-to-local attribute mappings for this user type.

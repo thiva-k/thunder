@@ -314,7 +314,8 @@ var (
 	}
 
 	assuranceEntityType = testutils.UserType{
-		Name: "assurance_test_user",
+		Handle:      "assurance_test_user",
+		DisplayName: "Assurance Test User",
 		Schema: map[string]interface{}{
 			"username": map[string]interface{}{
 				"type": "string",
@@ -333,7 +334,7 @@ var (
 	}
 
 	assuranceTestUser = testutils.User{
-		Type: assuranceEntityType.Name,
+		Type: assuranceEntityType.Handle,
 		Attributes: json.RawMessage(`{
 			"username": "assurance_user",
 			"password": "testpassword123",

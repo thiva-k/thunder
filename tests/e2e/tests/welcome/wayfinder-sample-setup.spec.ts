@@ -66,8 +66,8 @@ const RESOURCE_MANIFEST: Array<{
     label: "User types",
     path: "/user-types?limit=100",
     listKey: "types",
-    getName: t => t.name,
-    expected: ["Customer", "Staff"],
+    getName: t => t.handle,
+    expected: ["customer", "staff"],
   },
   {
     label: "Resource servers",

@@ -26,7 +26,8 @@ var (
 	}
 
 	basicRecoveryUserSchema = testutils.UserType{
-		Name: "basic-recovery-user-type",
+		Handle:      "basic-recovery-user-type",
+		DisplayName: "Basic Recovery User Type",
 		Schema: map[string]interface{}{
 			"username": map[string]interface{}{
 				"type": "string",
@@ -83,7 +84,7 @@ func (ts *EmailLinkPasswordRecoveryTestSuite) SetupSuite() {
 	// Create a test user with known credentials
 	userID, err := testutils.CreateMultipleUsers(testutils.User{
 		OUID: ts.testOUID,
-		Type: basicRecoveryUserSchema.Name,
+		Type: basicRecoveryUserSchema.Handle,
 		Attributes: json.RawMessage(`{
 			"username": "` + ts.testUsername + `",
 			"password": "` + ts.testPassword + `",
@@ -136,7 +137,7 @@ func (ts *EmailLinkPasswordRecoveryTestSuite) SetupSuite() {
 		ClientID:                  "basic_recovery_test_client",
 		ClientSecret:              "basic_recovery_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
-		AllowedUserTypes:          []string{basicRecoveryUserSchema.Name},
+		AllowedUserTypes:          []string{basicRecoveryUserSchema.Handle},
 		AuthFlowID:                ts.authFlowID,
 		RecoveryFlowID:            ts.recoveryFlowID,
 	})
@@ -355,7 +356,7 @@ func (ts *EmailLinkPasswordRecoveryTestSuite) TestBasicRecoveryFlow_RecoveryDisa
 		ClientID:              "no_recovery_client",
 		ClientSecret:          "no_recovery_secret",
 		RedirectURIs:          []string{"http://localhost:3000/callback"},
-		AllowedUserTypes:      []string{basicRecoveryUserSchema.Name},
+		AllowedUserTypes:      []string{basicRecoveryUserSchema.Handle},
 		AuthFlowID:            ts.authFlowID,
 	})
 	ts.Require().NoError(err, "Failed to create no-recovery app")
@@ -418,7 +419,7 @@ func (ts *EmailLinkPasswordRecoveryTestSuite) TestCredentialSetter_NoUserInConte
 		ClientID:              "recovery_no_identify_client",
 		ClientSecret:          "recovery_no_identify_secret",
 		RedirectURIs:          []string{"http://localhost:3000/callback"},
-		AllowedUserTypes:      []string{basicRecoveryUserSchema.Name},
+		AllowedUserTypes:      []string{basicRecoveryUserSchema.Handle},
 		AuthFlowID:            ts.authFlowID,
 		RecoveryFlowID:        flowID,
 	})
