@@ -110,6 +110,11 @@ func (ds *discoveryService) GetOIDCMetadata(ctx context.Context) (*OIDCProviderM
 	if ds.cfg.OAuth.Logout.IsEnabled() {
 		oidcProviderMetadata.EndSessionEndpoint = ds.getEndSessionEndpoint()
 	}
+	// Delivery does not depend on the logout endpoint, so neither do these. Every logout token
+	// carries sid, so session support follows delivery itself.
+	backchannel := ds.cfg.OAuth.Logout.Backchannel.IsEnabled()
+	oidcProviderMetadata.BackchannelLogoutSupported = backchannel
+	oidcProviderMetadata.BackchannelLogoutSessionSupported = backchannel
 
 	return oidcProviderMetadata, nil
 }

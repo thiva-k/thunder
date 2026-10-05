@@ -431,6 +431,14 @@ configuration:
     dcr:
       enabled: true
       insecure: false
+    # OIDC Back-Channel Logout: notify relying parties that registered a back-channel logout URI when
+    # a session they took part in ends.
+    logout:
+      backchannel:
+        enabled: true
+        # Reject back-channel logout URIs naming localhost or a private IP address, and refuse a
+        # hostname that resolves to one. Set to false when relying parties run on internal networks.
+        rejectPrivateAddresses: true
     # Validation policy for private_key_jwt client assertions, in seconds.
     clientAssertion:
       maxLifetime: 300

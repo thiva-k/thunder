@@ -256,6 +256,10 @@ oauth:
   dcr:
     enabled: {{ .Values.configuration.oauth.dcr.enabled }}
     insecure: {{ .Values.configuration.oauth.dcr.insecure }}
+  logout:
+    backchannel:
+      enabled: {{ .Values.configuration.oauth.logout.backchannel.enabled }}
+      reject_private_addresses: {{ .Values.configuration.oauth.logout.backchannel.rejectPrivateAddresses }}
   client_assertion:
     max_lifetime: {{ .Values.configuration.oauth.clientAssertion.maxLifetime }}
     max_iat_age: {{ .Values.configuration.oauth.clientAssertion.maxIatAge }}

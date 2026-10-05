@@ -507,6 +507,8 @@ Password fields are available in `configuration.database.config.postgres`, `conf
 | `configuration.oauth.refreshToken.validityPeriod` | Refresh token validity period in seconds                                                                                                                | `86400`                      |
 | `configuration.oauth.authorizationCode.validityPeriod` | Authorization code validity period in seconds                                                                                                      | `600`                        |
 | `configuration.oauth.authorizationRequest.validityPeriod` | How long the authorization request context stays valid while the user completes the login flow, in seconds                                       | `3600`                       |
+| `configuration.oauth.logout.backchannel.enabled` | Send OIDC Back-Channel Logout notifications to applications that registered a back-channel logout URI | `true` |
+| `configuration.oauth.logout.backchannel.rejectPrivateAddresses` | Reject back-channel logout URIs naming localhost or a private IP address, and refuse hostnames that resolve to one. Set to `false` when relying parties run on internal networks | `true` |
 | `configuration.oauth.clientAssertion.maxLifetime` | Maximum lifetime of a `private_key_jwt` client assertion in seconds | `300` |
 | `configuration.oauth.clientAssertion.maxIatAge` | Maximum age of a `private_key_jwt` client assertion's `iat` claim in seconds | `60` |
 | `configuration.oauth.sendServerErrorsToClient`    | Report an authentication flow failure that maps to the OAuth `server_error` code to the client | `false`                      |
