@@ -35,6 +35,25 @@ generates for that field, so configuration exported from a control plane and the
 holds agree without a second mapping to keep in sync. See [Export Resources](../resource-export.mdx)
 for how those names are derived.
 
+## A List of Values
+
+A field that takes a list, such as an application's redirect URIs, refers to one variable as the
+list's only item. The variable holds the deployment's items as a JSON list of strings, so each
+deployment can have as many as it needs. A variable holding a plain string stands in for one item.
+
+```yaml
+redirectUris:
+  - var:APPLICATION_ORDERS_REDIRECT_URIS
+```
+
+With `APPLICATION_ORDERS_REDIRECT_URIS` set to `["https://orders.example.com/callback", "https://orders.example.com/silent"]`,
+the application is written with both URIs. A list item that is not a reference is kept beside them.
+Only a `var:` reference expands into items. A `sec:` reference is always one value, even when the
+secret it names reads as a JSON list.
+
+A control plane exports an empty list as it is, with no reference, so no gateway has to hold a value
+for it. A client that signs no user in, for example, exports `redirectUris: []`.
+
 ## Why Reference Instead of Store
 
 A reference lets configuration move between deployments without carrying values with it. The
@@ -72,7 +91,8 @@ references as they are. They are resolved by the deployment the configuration is
 A control plane writes the values its references name to its default gateway as you create and
 change resources, so the gateway holds them when a configuration version is applied to it. Each
 value is stored under the name the export refers to it by: a client ID among the gateway's variables,
-a client secret or a password among its secrets.
+a client secret or a password among its secrets. A list, such as an application's redirect URIs, is
+stored among the variables as the JSON list of its items, which is what its reference expands from.
 
 The control plane captures values when you write these resources:
 
@@ -99,6 +119,9 @@ Capture follows these rules:
   set it on the gateway then.
 - **Replaces what is there.** A value is set whether or not the gateway already holds that name, so
   writing a resource again replaces the value the gateway held under its name.
+- **Values, never references.** A value that is itself a reference, or a list holding one among its
+  items, is not captured. The export keeps those as they are, so the gateway holds nothing under the
+  name, and a reference stored as a value would never resolve.
 
 ### Limits
 
