@@ -68,6 +68,43 @@ type TemplateListResponse struct {
 	Links        []utils.Link      `json:"links"`
 }
 
+// RenderInput carries the per-send inputs the renderer needs to turn a stored template into
+// ready-to-send content: the recipient locale for translation, the runtime values substituted
+// into {{ctx(...)}} placeholders, and the theme the {{design(...)}} tokens resolve against.
+type RenderInput struct {
+	// Locale is the recipient's language tag (e.g. "en-US"); empty falls back to the system language.
+	Locale string
+	// Data holds the runtime values substituted into {{ctx(<key>)}} placeholders.
+	Data map[string]string
+	// ThemeID is the theme whose color scheme resolves {{design(<token>)}} placeholders (email body
+	// only). Empty means no theme is available, so a template that embeds a design token fails closed.
+	ThemeID string
+}
+
+// ResolvedContent is the fully-resolved, ready-to-send output of a render: every placeholder is
+// substituted. Subject is empty for channels that have none (e.g. SMS).
+type ResolvedContent struct {
+	Subject string
+	Body    string
+}
+
+// renderOptions carries what renderField needs for one field: whether to HTML-escape context values,
+// the optional design context (nil resolves no design), the context values (data), and the per-render
+// translation memo (translations), shared across the subject and body so a repeated key resolves once.
+type renderOptions struct {
+	escapeHTML   bool
+	design       *designContext
+	data         map[string]string
+	translations map[string]string
+}
+
+// designContext is the theme and color scheme {{design(...)}} tokens resolve against. It is set only
+// for a field that may carry design tokens (an email body); a nil designContext resolves no design.
+type designContext struct {
+	themeID     string
+	colorScheme string
+}
+
 // templateDAO is the store-level representation of a template: content is stored as a single JSON
 // column (CONTENT), and the design (when present) as a single JSON column (DESIGN).
 type templateDAO struct {

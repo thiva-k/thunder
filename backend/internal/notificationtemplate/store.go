@@ -22,6 +22,7 @@ import (
 type notificationTemplateStoreInterface interface {
 	CreateTemplate(ctx context.Context, template templateDAO) error
 	GetTemplate(ctx context.Context, channel channelType, id string) (templateDAO, error)
+	GetTemplateByHandle(ctx context.Context, channel channelType, handle string) (templateDAO, error)
 	ListTemplates(ctx context.Context, channel channelType, limit, offset int) ([]templateDAO, error)
 	CountTemplates(ctx context.Context, channel channelType) (int, error)
 	UpdateTemplate(ctx context.Context, template templateDAO) error
@@ -83,6 +84,30 @@ func (s *notificationTemplateStore) GetTemplate(ctx context.Context, channel cha
 	}
 
 	results, err := dbClient.QueryContext(ctx, queryGetTemplateByID, id, string(channel), s.scope(ctx))
+	if err != nil {
+		return templateDAO{}, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	if len(results) == 0 {
+		return templateDAO{}, errTemplateNotFound
+	}
+	if len(results) != 1 {
+		return templateDAO{}, fmt.Errorf("unexpected number of results: %d", len(results))
+	}
+
+	return buildTemplateFromRow(results[0])
+}
+
+// GetTemplateByHandle retrieves a template by channel and handle (the runtime lookup key; handles are
+// immutable and unique per channel).
+func (s *notificationTemplateStore) GetTemplateByHandle(ctx context.Context, channel channelType, handle string) (
+	templateDAO, error) {
+	dbClient, err := s.getConfigDBClient()
+	if err != nil {
+		return templateDAO{}, err
+	}
+
+	results, err := dbClient.QueryContext(ctx, queryGetTemplateByHandle, handle, string(channel), s.scope(ctx))
 	if err != nil {
 		return templateDAO{}, fmt.Errorf("failed to execute query: %w", err)
 	}

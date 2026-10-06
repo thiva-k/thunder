@@ -479,11 +479,15 @@ packages:
 
   github.com/thunder-id/thunderid/internal/notificationtemplate:
     config:
-      all: true
       dir: internal/notificationtemplate
       structname: '{{.InterfaceName}}Mock'
       pkgname: notificationtemplate
       filename: "{{.InterfaceName}}_mock_test.go"
+    interfaces:
+      notificationTemplateStoreInterface:
+      NotificationTemplateServiceInterface:
+      translationResolver:
+      designResolver:
 
   github.com/thunder-id/thunderid/internal/system/resourcedependency:
     config:

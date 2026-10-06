@@ -267,7 +267,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	notifSenderMgtSvc, notifOTPService, notifSenderSvc, err := notification.Initialize(jwtService)
 	fatalOnError(ctx, logger, err, "Failed to initialize NotificationService")
 
-	notifTemplateSvc, err := notificationtemplate.Initialize(mux)
+	notifTemplateSvc, notifTemplateRenderer, err := notificationtemplate.Initialize(mux, cacheManager, i18nService)
 	fatalOnError(ctx, logger, err, "Failed to initialize NotificationTemplateService")
 
 	// Register the /connections API as a thin layer over the identity-provider and
@@ -498,6 +498,9 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	// Initialize design resolve service for theme and layout resolution
 	designResolveService := resolve.Initialize(mux, themeMgtService, layoutMgtService, applicationService)
+
+	// Inject the design resolve service now that it exists (the translation resolver was passed at init).
+	notifTemplateRenderer.SetDesignResolver(designResolveService)
 
 	actorProvider := actorprovider.Initialize(inboundClientService, entityProvider, authnProvider, roleService)
 

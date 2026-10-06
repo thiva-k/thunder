@@ -10,6 +10,9 @@ import "regexp"
 // convention (internal/flow/mgt).
 var handleFormatRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$`)
 
+// translationNamespace is the translation namespace that {{t(...)}} keys resolve under.
+const translationNamespace = "notification"
+
 // channelType is the notification channel a template belongs to.
 type channelType string
 
