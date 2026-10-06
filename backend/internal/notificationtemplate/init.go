@@ -7,26 +7,30 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/thunder-id/thunderid/internal/system/cache"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 )
 
-// Initialize wires the store, service, and handler for the notification template feature and
-// registers its HTTP routes. The store is config-DB backed (mutable); default templates are seeded
-// through the bootstrap bundle.
-func Initialize(mux *http.ServeMux) (NotificationTemplateServiceInterface, error) {
+// Initialize wires the store, service, handler, and runtime renderer, and registers HTTP routes.
+// The DB-backed store is wrapped with a read cache for the runtime hot path.
+func Initialize(mux *http.ServeMux, cacheManager cache.CacheManagerInterface,
+	translation translationResolver) (NotificationTemplateServiceInterface, TemplateRendererInterface, error) {
 	transactioner, err := provider.GetDBProvider().GetConfigDBTransactioner()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get config database transactioner: %w", err)
+		return nil, nil, fmt.Errorf("failed to get config database transactioner: %w", err)
 	}
 
-	store := newNotificationTemplateStore()
+	byHandle := cache.GetCache[templateDAO](cacheManager, "NotificationTemplateByHandleCache")
+	store := newCacheBackedStore(byHandle, newNotificationTemplateStore())
+
 	service := newNotificationTemplateService(store, transactioner)
 	handler := newNotificationTemplateHandler(service)
-
 	registerRoutes(mux, handler)
 
-	return service, nil
+	templateRenderer := newTemplateRenderer(store, translation)
+
+	return service, templateRenderer, nil
 }
 
 // registerRoutes registers the notification template management routes.

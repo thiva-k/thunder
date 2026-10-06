@@ -64,4 +64,12 @@ var (
 		Query: `SELECT COUNT(*) as total FROM "NOTIFICATION_TEMPLATE" ` +
 			`WHERE CHANNEL = $1 AND HANDLE = $2 AND DEPLOYMENT_ID = $3`,
 	}
+
+	// queryGetTemplateByHandle retrieves a template by channel and handle (the runtime lookup key).
+	queryGetTemplateByHandle = dbmodel.DBQuery{
+		ID: "NTQ-NOTIF_TMPL-08",
+		Query: `SELECT ID, CHANNEL, HANDLE, DISPLAY_NAME, DESCRIPTION, CONTENT, DESIGN ` +
+			`FROM "NOTIFICATION_TEMPLATE" ` +
+			`WHERE HANDLE = $1 AND CHANNEL = $2 AND DEPLOYMENT_ID = $3`,
+	}
 )

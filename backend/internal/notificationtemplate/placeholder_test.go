@@ -66,6 +66,23 @@ func (s *PlaceholderTestSuite) TestValidatePlaceholders_DesignScoping() {
 		validatePlaceholders(TemplateContent{Subject: "{{design(x)}}", Body: "b"}, true).Code)
 }
 
+// TestUnresolvedBeforeContext reports leftover {{t}}/{{design}} and malformed blocks, but allows a
+// well-formed {{ctx(...)}} (resolved by the following context pass) and ignores non-placeholder braces.
+func (s *PlaceholderTestSuite) TestUnresolvedBeforeContext() {
+	// Leftover translation/design tokens must be reported (an earlier pass should have resolved them).
+	s.Equal("{{t(inner)}}", unresolvedBeforeContext("see {{t(inner)}} now"))
+	s.Equal("{{design(palette.primary.main)}}", unresolvedBeforeContext("c {{design(palette.primary.main)}}"))
+	// Malformed placeholders are reported.
+	s.Equal("{{ctx( otp )}}", unresolvedBeforeContext("hi {{ctx( otp )}}"))
+	s.Equal("{{translate(x)}}", unresolvedBeforeContext("{{translate(x)}}"))
+
+	// A well-formed {{ctx(...)}} is allowed to remain for the context pass.
+	s.Equal("", unresolvedBeforeContext("hi {{ctx(user.name)}}"))
+	// Placeholder-free content returns "".
+	s.Equal("", unresolvedBeforeContext("no placeholders"))
+	s.Equal("", unresolvedBeforeContext("#fa7b3f and {text}"))
+}
+
 func (s *PlaceholderTestSuite) TestCreateTemplate_PlaceholderValidation() {
 	s.mockStore.On("IsHandleExists", mock.Anything, channelTypeEmail, "otp").Return(false, nil)
 	s.mockStore.On("CreateTemplate", mock.Anything, mock.Anything).Return(nil)
