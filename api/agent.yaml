@@ -350,6 +350,16 @@ paths:
                     description:
                       key: "error.agentservice.invalid_grant_type_description"
                       defaultValue: "One or more grant types are not supported"
+                missing-delegation-grant-type:
+                  summary: A delegated agent has no grant type that lets it act for a user
+                  value:
+                    code: "AGT-1044"
+                    message:
+                      key: "error.agentservice.missing_delegation_grant_type"
+                      defaultValue: "Missing required grant types for a delegated agent"
+                    description:
+                      key: "error.agentservice.missing_delegation_grant_type_description"
+                      defaultValue: "A delegated agent needs at least one of these grant types: {{param(grantTypes)}}"
                 ou-not-found:
                   summary: Organization unit not found
                   value:
@@ -1951,6 +1961,13 @@ components:
             Optional ID of the entity that should own this agent. Defaults to the authenticated
             principal creating the agent.
           example: "e1b6ba6c-deb2-4d24-87b0-bbf79fa4487c"
+        delegated:
+          type: boolean
+          default: false
+          description: |
+            Whether the agent acts on behalf of a signed-in user. It decides the OAuth grant types
+            the agent is given and allowed, and is not stored. See `inboundAuthConfig`.
+          example: false
         attributes:
           type: object
           additionalProperties: true
@@ -2013,6 +2030,17 @@ components:
             OAuth/OIDC configuration for the agent. Providing this also creates an inbound
             client row (inbound auth profile fields are not required to be explicitly set).
 
+            The `client_credentials` grant type is always granted: it is added when missing, and is
+            the default when no grant types are given. A public client, which has no secret, is not
+            given it. All other requested grant types are accepted as given. When `delegated` is
+            `true`, an OAuth configuration is created if none is given, and the grant types are
+            checked:
+            - When any grant type beyond `client_credentials` is given, at least one of
+              `authorization_code`, `urn:openid:params:grant-type:ciba` and
+              `urn:ietf:params:oauth:grant-type:token-exchange` must be among them.
+            - When none beyond `client_credentials` is given, `authorization_code` and
+              `refresh_token` are added, with the `code` response type and PKCE required.
+
     UpdateAgentRequest:
       type: object
       required: [type]
@@ -2046,6 +2074,14 @@ components:
           format: uuid
           description: Admins can transfer ownership by setting this to a different entity ID.
           example: "e1b6ba6c-deb2-4d24-87b0-bbf79fa4487c"
+        delegated:
+          type: boolean
+          default: false
+          description: |
+            Whether the agent acts on behalf of a signed-in user. It is not stored, so send it on
+            every update that should be held to the delegated grant rules described on
+            `inboundAuthConfig` in `CreateAgentRequest`.
+          example: false
         attributes:
           type: object
           additionalProperties: true

@@ -40,6 +40,7 @@ type CreateAgentRequest struct {
 	Description string          `json:"description,omitempty"`
 	LogoURL     string          `json:"logoUrl,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
+	Delegated   bool            `json:"delegated,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
 	inboundmodel.InboundAuthProfileReq
@@ -54,6 +55,7 @@ type UpdateAgentRequest struct {
 	Description string          `json:"description,omitempty"`
 	LogoURL     string          `json:"logoUrl,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
+	Delegated   bool            `json:"delegated,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
 	inboundmodel.InboundAuthProfileReq

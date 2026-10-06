@@ -1145,6 +1145,15 @@ const translations = {
       'The agent onboarding flow could not be loaded. Check that the server is reachable and try again.',
     'onboarding.errors.stepFailed': 'This step could not be completed. Review the values and try again.',
     'onboarding.selectPlaceholder': 'Select an option',
+    'onboarding.authFlow.loading': 'Loading login flows...',
+    'onboarding.authFlow.error': 'Login flows could not be loaded.',
+    'onboarding.authFlow.empty': 'No login flows are available.',
+    'onboarding.userType.loading': 'Loading user types...',
+    'onboarding.userType.error': 'User types could not be loaded.',
+    'onboarding.userType.empty': 'No user types are available.',
+    'onboarding.user.loading': 'Loading users...',
+    'onboarding.user.error': 'Users could not be loaded.',
+    'onboarding.user.empty': 'No users are available.',
     'onboarding.addAnother': 'Add another agent',
 
     // Add form (native creation, no onboarding flow)
@@ -1437,6 +1446,8 @@ const translations = {
     'errors.AGT-1041': 'The provided logo URL is not valid.',
     'errors.AGT-1042':
       'The subject attribute mapping must reference an attribute that is unique, required, and string typed in an allowed agent type.',
+    'errors.AGT-1044':
+      'A delegated agent needs at least one grant type that lets it act for a signed-in user, such as authorization code.',
   },
 
   // ============================================================================
@@ -4294,6 +4305,9 @@ const translations = {
 
     // Provisioning executor
     'core.executions.provisioning.description': 'Configure the provisioning executor settings.',
+    'core.executions.provisioning.delegated.label': 'Delegated mode',
+    'core.executions.provisioning.delegated.hint':
+      'When enabled, agents created by this node act on behalf of a signed-in user. A value collected by the flow takes precedence.',
     'core.executions.provisioning.includeOptional.label': 'Allow optional non-credential attributes',
     'core.executions.provisioning.includeOptional.hint':
       'Prompt for optional non-credential attributes during dynamic input collection.',
