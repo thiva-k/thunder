@@ -191,6 +191,9 @@
     "auto_infer_registration": false,
     "store": "composite"
   },
+  "direct_api": {
+    "enabled": true
+  },
   "notification": {
     "otp": {
       "length": 6,

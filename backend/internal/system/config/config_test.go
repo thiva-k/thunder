@@ -877,6 +877,7 @@ func (suite *ConfigTestSuite) TestMergeConfigs_BoolPointerOverride() {
 		return &Config{
 			Notification: NotificationConfig{OTP: OTPConfig{UseNumericOnly: boolPtr(true)}},
 			OpenID4VP:    OpenID4VPConfig{EnforceKeyBinding: boolPtr(true)},
+			DirectAPI:    DirectAPIConfig{Enabled: boolPtr(true)},
 			OAuth: OAuthConfig{
 				RefreshToken:    engineconfig.RefreshTokenConfig{RevokePreviousOnRenew: boolPtr(true)},
 				TokenRevocation: engineconfig.OAuthTokenRevocationConfig{Enabled: boolPtr(true)},
@@ -898,6 +899,7 @@ func (suite *ConfigTestSuite) TestMergeConfigs_BoolPointerOverride() {
 		user := &Config{
 			Notification: NotificationConfig{OTP: OTPConfig{UseNumericOnly: boolPtr(false)}},
 			OpenID4VP:    OpenID4VPConfig{EnforceKeyBinding: boolPtr(false)},
+			DirectAPI:    DirectAPIConfig{Enabled: boolPtr(false)},
 			OAuth: OAuthConfig{
 				RefreshToken:    engineconfig.RefreshTokenConfig{RevokePreviousOnRenew: boolPtr(false)},
 				TokenRevocation: engineconfig.OAuthTokenRevocationConfig{Enabled: boolPtr(false)},
@@ -917,6 +919,7 @@ func (suite *ConfigTestSuite) TestMergeConfigs_BoolPointerOverride() {
 
 		assert.False(suite.T(), base.Notification.OTP.UsesNumericOnly())
 		assert.False(suite.T(), base.OpenID4VP.EnforceKeyBindingEnabled())
+		assert.False(suite.T(), base.DirectAPI.IsEnabled())
 		assert.False(suite.T(), base.OAuth.RefreshToken.RevokePreviousOnRenewEnabled())
 		assert.False(suite.T(), base.OAuth.TokenRevocation.IsEnabled())
 		assert.False(suite.T(), base.OAuth.Logout.IsEnabled())
@@ -933,6 +936,7 @@ func (suite *ConfigTestSuite) TestMergeConfigs_BoolPointerOverride() {
 
 		assert.True(suite.T(), base.Notification.OTP.UsesNumericOnly())
 		assert.True(suite.T(), base.OpenID4VP.EnforceKeyBindingEnabled())
+		assert.True(suite.T(), base.DirectAPI.IsEnabled())
 		assert.True(suite.T(), base.OAuth.RefreshToken.RevokePreviousOnRenewEnabled())
 		assert.True(suite.T(), base.OAuth.TokenRevocation.IsEnabled())
 		assert.True(suite.T(), base.OAuth.Logout.IsEnabled())

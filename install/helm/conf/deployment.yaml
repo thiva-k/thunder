@@ -296,6 +296,9 @@ flow:
   {{- end }}
 {{- end }}
 
+direct_api:
+  enabled: {{ .Values.configuration.directApi.enabled }}
+
 passkey:
   allowed_origins:
   {{- range .Values.configuration.passkey.allowedOrigins }}
