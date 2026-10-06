@@ -98,7 +98,14 @@ overrides:
   vite: 'catalog:'
   # JUSTIFICATION: Fixes GHSA-fx2h-pf6j-xcff — vite `server.fs.deny` bypass on Windows alternate paths.
   vite@>=8.0.0 <=8.0.15: '>=8.0.16'
-  vue: 3.5.34
+  # JUSTIFICATION: Fixes GHSA-g2v6-rqmx-r4w6, XSS via a missing carriage return in
+  # @vue/server-renderer's attribute-name blacklist. Keep Vue and its renderer aligned.
+  vue: 3.5.42
+  # JUSTIFICATION: Fixes GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr, prototype-pollution
+  # gadgets leading to RCE in Tinypool worker and run options. Docusaurus still requires 1.x.
+  # Added 2026-10-06. Remove once Docusaurus ships with tinypool 2.1.2 or later.
+  # Tracking: https://github.com/thunder-id/thunderid/issues/5654
+  '@docusaurus/core>tinypool': 2.1.2
   defu: 6.1.5
   # JUSTIFICATION: i18next 26 breaks compatibility, gives a white screen issue on Console when navigating with "TypeError: n.getResourceBundle"
   i18next: '25.6.0'
@@ -295,6 +302,9 @@ auditConfig:
 minimumReleaseAgeExclude:
   - '@thunderid/*'
   - nanoid@3.3.18
+  # JUSTIFICATION: Install the security patch for GHSA-68fv-2mgg-jv7q without waiting
+  # for the release-age window. Limited to this patched source-map-js version.
+  - source-map-js@1.2.2
 
 patchedDependencies:
   minimatch@3.1.5: patches/minimatch@3.1.5.patch
