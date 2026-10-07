@@ -181,6 +181,16 @@ type PasskeyConfig struct {
 	AllowedOrigins []string `yaml:"allowed_origins" json:"allowed_origins"`
 }
 
+// DirectAPIConfig holds the configuration for the Direct API endpoints.
+type DirectAPIConfig struct {
+	Enabled *bool `yaml:"enabled" json:"enabled"`
+}
+
+// IsEnabled reports whether the Direct API endpoints are enabled, defaulting to false when unset.
+func (c DirectAPIConfig) IsEnabled() bool {
+	return derefBool(c.Enabled)
+}
+
 // AttestationConfig holds engine-level platform attestation configuration shared across
 // applications.
 type AttestationConfig struct {
@@ -713,6 +723,7 @@ type Config struct {
 	EntityType           EntityTypeConfig                  `yaml:"user_type"             json:"user_type"`
 	Observability        engineconfig.ObservabilityConfig  `yaml:"observability"         json:"observability"`
 	Passkey              PasskeyConfig                     `yaml:"passkey"               json:"passkey"`
+	DirectAPI            DirectAPIConfig                   `yaml:"direct_api"            json:"direct_api"`
 	Attestation          AttestationConfig                 `yaml:"attestation"           json:"attestation"`
 	OpenID4VP            OpenID4VPConfig                   `yaml:"openid4vp"             json:"openid4vp"`
 	OpenID4VCI           OpenID4VCIConfig                  `yaml:"openid4vci"            json:"openid4vci"`
