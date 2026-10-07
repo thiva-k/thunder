@@ -497,6 +497,15 @@ packages:
       translationResolver:
       designResolver:
 
+  github.com/thunder-id/thunderid/internal/system/importer:
+    config:
+      dir: internal/system/importer
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: importer
+      filename: "{{.InterfaceName}}_mock_test.go"
+    interfaces:
+      notificationTemplateAdapter:
+
   github.com/thunder-id/thunderid/internal/system/resourcedependency:
     config:
       all: true
