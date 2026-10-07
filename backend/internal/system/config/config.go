@@ -779,6 +779,7 @@ func LoadConfig(configPath string, defaultPath string, serverHome string) (*Conf
 
 	// Merge user configuration with defaults
 	mergeConfigs(&cfg, &userCfg)
+	cfg.Server.EnableOUQualifiedEndpoints = true
 
 	// Default gate_client to the server's own URL when not explicitly configured, so the gate only
 	// needs configuring when it is hosted separately from the server.
