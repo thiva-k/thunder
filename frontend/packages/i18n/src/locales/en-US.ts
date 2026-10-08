@@ -1917,8 +1917,12 @@ const translations = {
     'detail.configuration.title': 'Connection Configuration',
     'detail.configuration.description': 'Provide the details ThunderID needs to connect to this service.',
     'detail.authentication.title': 'Authentication',
+    'detail.authentication.endpointChanged': 'The PDP endpoint changed. Enter fresh credentials before saving.',
+    'detail.authentication.gatewayUrlChanged': 'The SMS gateway URL changed. Enter fresh credentials before saving.',
     'detail.authentication.description':
       'Configure how ThunderID authenticates requests sent to this policy decision point.',
+    'detail.authentication.gatewayDescription':
+      'Configure how ThunderID authenticates requests sent to this SMS gateway.',
     'detail.authentication.method.label': 'Authentication method',
     'detail.authentication.method.none': 'None',
     'detail.outboundAuthentication.description':
@@ -1948,7 +1952,6 @@ const translations = {
     'form.fields.authScheme.bearer': 'Bearer token',
     'form.fields.authScheme.basic': 'Basic authentication',
     'form.fields.authScheme.apiKey': 'API key',
-    'form.fields.authScheme.hint': 'Choose how ThunderID authenticates requests sent to this policy decision point.',
     'form.fields.bearerToken.label': 'Bearer token',
     'form.fields.bearerToken.hint': 'Token sent in the Authorization header for each PDP request.',
     'form.fields.basicUsername.label': 'Username',
@@ -2056,6 +2059,14 @@ const translations = {
       'These mappings could not be matched to exactly one user or agent type. Remove them before saving this connection.',
     'subjectMapping.mappings.unresolved.entityType': 'Entity type: {{entityType}}',
     'subjectMapping.mappings.unresolved.attributes': 'Attributes: {{attributes}}',
+    'form.fields.apiKeyHeaders.label': 'API key headers',
+    'form.fields.apiKeyHeaders.hint':
+      'Use headers that authenticate your SMS gateway, for example X-API-Key. Stored values are masked.',
+    'form.fields.apiKeyHeaders.add': 'Add API key header',
+    'form.fields.smsHttpHeaders.label': 'Other HTTP headers',
+    'form.fields.smsHttpHeaders.hint':
+      'Add other headers your SMS gateway needs, such as X-Campaign-ID. Values remain visible after saving. Commas are not supported.',
+    'form.fields.smsHttpHeaders.add': 'Add HTTP header',
     'form.fields.smtpHost.label': 'Host',
     'form.fields.smtpHost.hint': 'Hostname of the SMTP server email is sent through.',
     'form.fields.smtpPort.label': 'Port',
@@ -2075,6 +2086,8 @@ const translations = {
     'form.keyValue.showValue': 'Show value',
     'form.keyValue.hideValue': 'Hide value',
     'form.keyValue.add': 'Add',
+    'form.keyValue.update': 'Update',
+    'form.keyValue.cancel': 'Cancel',
     'form.keyValue.remove': 'Remove',
     'form.sections.authentication': 'Authentication',
     'form.authentication.loadError': 'Failed to load authentication methods',
@@ -2213,6 +2226,7 @@ const translations = {
       'Use HTTPS for authenticated PDP endpoints. HTTP is allowed only for localhost and loopback IP addresses.',
     'validation.positiveInteger': 'Enter a positive integer.',
     'validation.nonNegativeInteger': 'Enter zero or a positive integer.',
+    'validation.keyValuePair': 'Enter both a name and value for every header.',
     'validation.accountSid': 'Enter a valid Account SID: “AC” followed by 32 hexadecimal characters.',
     'validation.emailAddress': 'Enter a valid email address.',
     'validation.tlsRequiredForAuthentication':
@@ -2223,6 +2237,7 @@ const translations = {
     'errors.CON-1002': 'The limit parameter must be a positive integer.',
     'errors.CON-1003': 'The offset parameter must be a non-negative integer.',
     'errors.CON-1005': 'The selected authentication method is not supported by this deployment.',
+    'errors.CON-1014': 'The PDP endpoint changed. Enter fresh credentials before saving.',
     'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
     'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
     'errors.IDP-1003': 'The identity provider name is invalid or missing.',
