@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // A version is read document by document, and a document that is not yet YAML, because its
@@ -318,4 +319,17 @@ func TestEnclosingKeyIsEmptyWhenNoKeyEnclosesTheItem(t *testing.T) {
 	assert.Equal(t, []ValueReference{{Name: "TOP_LEVEL_ITEM", Kind: ReferenceVariable,
 		ResourceType: "application", List: true}}, references)
 	assert.Empty(t, enclosingKey([]string{"- var:X"}, 0, 0))
+}
+
+// A translation has neither an id nor a name, so each language is its own resource, named by it.
+func TestATranslationIsNamedByItsLanguage(t *testing.T) {
+	resources := parseBundle(joinBundle([]string{
+		"resource_type: translation\nlanguage: en\ntranslations: {}",
+		"resource_type: translation\nlanguage: fr\ntranslations: {}",
+	}))
+
+	require.Len(t, resources, 2)
+	assert.Equal(t, "translation/en", resources[0].key())
+	assert.Equal(t, "translation/fr", resources[1].key())
+	assert.Equal(t, "fr", resources[1].Name)
 }

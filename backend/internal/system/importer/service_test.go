@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
@@ -3069,6 +3070,8 @@ func TestGetAgentOAuthConfigForImport_NilRequest(t *testing.T) {
 type fakeResourceServerService struct {
 	created []providers.ResourceServer
 	updated []providers.ResourceServer
+	// resources are the resources created under a server, in the order they were written.
+	resources []providers.Resource
 }
 
 func (f *fakeResourceServerService) CreateResourceServer(
@@ -3096,9 +3099,10 @@ func (f *fakeResourceServerService) UpdateResourceServer(
 }
 
 func (f *fakeResourceServerService) CreateResource(
-	_ context.Context, _ string, _ providers.Resource,
+	_ context.Context, _ string, res providers.Resource,
 ) (*providers.Resource, *tidcommon.ServiceError) {
-	return &providers.Resource{}, nil
+	f.resources = append(f.resources, res)
+	return &providers.Resource{ID: "id-" + res.Handle}, nil
 }
 
 func (f *fakeResourceServerService) GetResourceList(
@@ -3396,6 +3400,71 @@ func TestImportResourceServer_OUHandleResolved(t *testing.T) {
 	assert.Equal(t, statusSuccess, resp.Results[0].Status)
 	require.Len(t, rsSvc.created, 1)
 	assert.Equal(t, "ou-default", rsSvc.created[0].OUID)
+}
+
+// TestParentsFirstEndsWithADuplicateHandle verifies that two resources sharing a handle are both
+// ordered, and that the ordering ends rather than waiting for the second to be placed.
+func TestParentsFirstEndsWithADuplicateHandle(t *testing.T) {
+	resources := []providers.Resource{
+		{Handle: "orders", ParentHandle: "shop"},
+		{Handle: "shop"},
+		{Handle: "orders"},
+	}
+
+	done := make(chan []providers.Resource, 1)
+	go func() { done <- parentsFirst(resources) }()
+
+	select {
+	case ordered := <-done:
+		require.Len(t, ordered, 3)
+		assert.Equal(t, "shop", ordered[0].Handle)
+		assert.Equal(t, "orders", ordered[1].Handle)
+		assert.Equal(t, "orders", ordered[2].Handle)
+	case <-time.After(2 * time.Second):
+		t.Fatal("parentsFirst did not end with two resources sharing a handle")
+	}
+}
+
+// TestImportResourceServer_ChildBeforeParent verifies that a resource listed before its parent,
+// as an export lists them newest first, is still created under that parent rather than at the top
+// level: the parent is written first, whatever the document's order.
+func TestImportResourceServer_ChildBeforeParent(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{
+		"ou-default": {ID: "ou-default", Handle: "default"},
+	}}
+	rsSvc := &fakeResourceServerService{}
+	svc := newImportService(
+		nil, nil, nil, nil, ouSvc, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"resource_type: resource_server",
+		"id: rs-new",
+		"name: Test RS",
+		"handle: test-rs",
+		"identifier: test-rs",
+		"ouHandle: default",
+		"resources:",
+		"  - name: Drafts",
+		"    handle: drafts",
+		"    parent: docs",
+		"  - name: Documents",
+		"    handle: docs",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, rsSvc.resources, 2)
+	assert.Equal(t, "docs", rsSvc.resources[0].Handle)
+	assert.Equal(t, "drafts", rsSvc.resources[1].Handle)
+	require.NotNil(t, rsSvc.resources[1].Parent)
+	assert.Equal(t, "id-docs", *rsSvc.resources[1].Parent)
 }
 
 // TestImportResourceServer_OUHandleNotFound verifies that an unknown ou_handle on a resource

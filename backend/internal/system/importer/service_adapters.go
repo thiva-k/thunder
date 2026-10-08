@@ -865,8 +865,12 @@ func (s *importService) importResourceServerChildren(
 	// handleToID maps resource handle → created/resolved ID for parent resolution.
 	handleToID := make(map[string]string)
 
-	for i := range rs.Resources {
-		res := rs.Resources[i]
+	// A child is written after its parent, whichever order the document lists them in, so its
+	// parent handle always resolves to an id already created or found. An export lists resources
+	// newest first, which puts a child before its parent.
+	ordered := parentsFirst(rs.Resources)
+	for i := range ordered {
+		res := ordered[i]
 
 		// Resolve ParentHandle to the parent ID using handles seen so far in this import.
 		if res.ParentHandle != "" {
@@ -916,6 +920,44 @@ func (s *importService) importResourceServerChildren(
 	}
 
 	return nil
+}
+
+// parentsFirst orders resources so each comes after the resource its parent handle names. A parent
+// the document does not hold, or a cycle, which ProcessResourceServer refuses before this, leaves
+// the resource where it is rather than dropping it. Resources are tracked by position rather than by
+// handle, so two sharing a handle, which ProcessResourceServer also refuses, are both kept and the
+// ordering still ends.
+func parentsFirst(resources []providers.Resource) []providers.Resource {
+	held := make(map[string]bool, len(resources))
+	for _, res := range resources {
+		held[res.Handle] = true
+	}
+	ordered := make([]providers.Resource, 0, len(resources))
+	placed := make([]bool, len(resources))
+	placedHandles := make(map[string]bool, len(resources))
+	for len(ordered) < len(resources) {
+		progressed := false
+		for i, res := range resources {
+			if placed[i] {
+				continue
+			}
+			if res.ParentHandle == "" || placedHandles[res.ParentHandle] || !held[res.ParentHandle] {
+				ordered = append(ordered, res)
+				placed[i] = true
+				placedHandles[res.Handle] = true
+				progressed = true
+			}
+		}
+		if !progressed {
+			for i, res := range resources {
+				if !placed[i] {
+					ordered = append(ordered, res)
+					placed[i] = true
+				}
+			}
+		}
+	}
+	return ordered
 }
 
 func (s *importService) importAgent(
