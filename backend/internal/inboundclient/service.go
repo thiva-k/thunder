@@ -1758,7 +1758,9 @@ func isComputedAttribute(attr string) bool {
 		oauth2const.ClaimOUID,
 		oauth2const.ClaimOUName,
 		oauth2const.ClaimOUHandle,
-		oauth2const.ClaimUserType:
+		oauth2const.ClaimUserType,
+		oauth2const.ClaimUserTypeHandle,
+		oauth2const.ClaimUserTypeName:
 		return true
 	}
 	return false
