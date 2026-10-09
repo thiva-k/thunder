@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -1784,7 +1785,7 @@ func (p *parameterizer) renderMappingValue(buf *bytes.Buffer, valueNode *yaml.No
 	} else {
 		// Regular scalar value
 		buf.WriteString(" ")
-		buf.WriteString(valueNode.Value)
+		buf.WriteString(scalarText(valueNode))
 		buf.WriteString("\n")
 	}
 	return nil
@@ -1818,7 +1819,7 @@ func (p *parameterizer) renderSequenceItemMapping(buf *bytes.Buffer, item *yaml.
 				buf.WriteString(strings.ReplaceAll(val, `'`, `''`))
 				buf.WriteString(`'`)
 			} else {
-				buf.WriteString(val)
+				buf.WriteString(scalarText(valueNode))
 			}
 			buf.WriteString("\n")
 		} else if p.isTemplateSequence(valueNode) {
@@ -1868,7 +1869,7 @@ func (p *parameterizer) renderSequenceNode(buf *bytes.Buffer, node *yaml.Node, i
 			}
 		} else {
 			// Scalar value
-			buf.WriteString(item.Value)
+			buf.WriteString(scalarText(item))
 			buf.WriteString("\n")
 		}
 	}
@@ -1894,6 +1895,58 @@ func (p *parameterizer) renderNode(buf *bytes.Buffer, node *yaml.Node, indent in
 		buf.WriteString(node.Value)
 	}
 	return nil
+}
+
+// scalarText returns a scalar as it is written after its key or dash: as it is, unless its field is
+// tagged yamlfmt:"quoted" or plain YAML could not read it back whole, a lone ":", a value holding
+// ": " or one holding " #" for instance, in which case it is double-quoted. A value that reads back
+// whole is left as it is, whatever it reads as, and so is a JSON string literal, since some are
+// written as YAML on purpose, such as a user's JSON-encoded attributes.
+func scalarText(node *yaml.Node) string {
+	if node.Style == yaml.DoubleQuotedStyle {
+		return strconv.Quote(node.Value)
+	}
+	if node.Tag != "!!str" || node.Value == "" || templateVariablePattern.MatchString(node.Value) {
+		return node.Value
+	}
+	var read yaml.Node
+	if err := yaml.Unmarshal([]byte("value: "+node.Value), &read); err == nil && len(read.Content) == 1 &&
+		len(read.Content[0].Content) == 2 {
+		// The text is compared as the parser keeps it, so what it dropped as a comment shows up
+		// whatever the rest reads as: "true # archived" reads as true and would lose its tail. A
+		// value that reads as a mapping or a list is written as YAML on purpose and kept, unless the
+		// parser dropped a comment from it: "[draft] # pending" reads as a list and loses its tail
+		// just the same. A JSON string literal, which a user's attributes hold, reads as the same
+		// string and is kept too.
+		value := read.Content[0].Content[1]
+		if hasComment(&read) {
+			return strconv.Quote(node.Value)
+		}
+		if value.Kind != yaml.ScalarNode || value.Value == node.Value || isJSONString(node.Value) {
+			return node.Value
+		}
+	}
+	return strconv.Quote(node.Value)
+}
+
+// hasComment says whether the parser kept a comment anywhere in a node, which is text it dropped from
+// the values.
+func hasComment(node *yaml.Node) bool {
+	if node.HeadComment != "" || node.LineComment != "" || node.FootComment != "" {
+		return true
+	}
+	for _, child := range node.Content {
+		if hasComment(child) {
+			return true
+		}
+	}
+	return false
+}
+
+// isJSONString says whether a value is a JSON string literal, quotes included.
+func isJSONString(value string) bool {
+	var text string
+	return strings.HasPrefix(value, `"`) && json.Unmarshal([]byte(value), &text) == nil
 }
 
 // storedPropertyValue reads a dynamic property's stored value, empty when it cannot be read.
