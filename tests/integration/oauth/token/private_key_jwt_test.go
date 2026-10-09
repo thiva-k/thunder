@@ -5,6 +5,8 @@ package token
 
 import (
 	"bytes"
+	"crypto/mldsa"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,9 +40,31 @@ type PrivateKeyJWTTestSuite struct {
 	rsaAppID         string
 	ecAppID          string
 	psAppID          string
+	mldsaAppIDs      []string
 	rsaKey           *testutils.DPoPKey
 	ecKey            *testutils.DPoPKey
 	psKey            *testutils.DPoPKey
+	// mldsaKeys holds one key per ML-DSA parameter set, keyed by its JWS alg.
+	mldsaKeys map[string]*mldsa.PrivateKey
+}
+
+// mldsaParameterSets maps each ML-DSA JWS alg (RFC 9964) to its parameter set.
+var mldsaParameterSets = map[string]mldsa.Parameters{
+	"ML-DSA-44": mldsa.MLDSA44(),
+	"ML-DSA-65": mldsa.MLDSA65(),
+	"ML-DSA-87": mldsa.MLDSA87(),
+}
+
+// mldsaClientID returns the client ID registered with an AKP key for the given ML-DSA alg. Each
+// alg gets its own client because an inline JWKS is limited to 4096 characters, and ML-DSA public
+// keys are large.
+func mldsaClientID(alg string) string {
+	return "pkj_" + alg + "_client"
+}
+
+// mldsaKid returns the kid of the AKP key registered for the given ML-DSA alg.
+func mldsaKid(alg string) string {
+	return "pkj-" + alg + "-kid"
 }
 
 func TestPrivateKeyJWTTestSuite(t *testing.T) {
@@ -86,6 +110,34 @@ func (ts *PrivateKeyJWTTestSuite) SetupSuite() {
 		ts.ecKey.JWKS(pkjECKid))
 	ts.psAppID = ts.createPrivateKeyJWTApp(pkjPSClientID, "PrivateKeyJWTPSApp",
 		ts.psKey.JWKS(pkjPSKid))
+
+	ts.mldsaKeys = make(map[string]*mldsa.PrivateKey, len(mldsaParameterSets))
+	for alg, params := range mldsaParameterSets {
+		key, err := mldsa.GenerateKey(params)
+		ts.Require().NoError(err)
+		ts.mldsaKeys[alg] = key
+		ts.mldsaAppIDs = append(ts.mldsaAppIDs, ts.createPrivateKeyJWTApp(mldsaClientID(alg),
+			"PrivateKeyJWT"+alg+"App", akpJWKS(key, mldsaKid(alg), alg)))
+	}
+	ts.mldsaAppIDs = append(ts.mldsaAppIDs, ts.createPrivateKeyJWTApp(pkjMLDSABadAlgClientID,
+		"PrivateKeyJWTMLDSABadAlgApp", akpJWKS(ts.mldsaKeys["ML-DSA-44"], mldsaKid("ML-DSA-44"), "ML-DSA-99")))
+}
+
+// pkjMLDSABadAlgClientID names a client whose AKP key carries an alg that is not ML-DSA.
+const pkjMLDSABadAlgClientID = "pkj_mldsa_bad_alg_client"
+
+// akpJWKS builds an inline JWKS JSON document holding one AKP public key (RFC 9964) for an ML-DSA
+// key, tagged with the given kid and alg.
+func akpJWKS(key *mldsa.PrivateKey, kid, alg string) string {
+	jwk := map[string]any{
+		"kty": "AKP",
+		"use": "sig",
+		"kid": kid,
+		"alg": alg,
+		"pub": base64.RawURLEncoding.EncodeToString(key.PublicKey().Bytes()),
+	}
+	jwksJSON, _ := json.Marshal(map[string]any{"keys": []map[string]any{jwk}})
+	return string(jwksJSON)
 }
 
 func (ts *PrivateKeyJWTTestSuite) TearDownSuite() {
@@ -97,6 +149,9 @@ func (ts *PrivateKeyJWTTestSuite) TearDownSuite() {
 	}
 	if ts.psAppID != "" {
 		ts.deleteApplication(ts.psAppID)
+	}
+	for _, appID := range ts.mldsaAppIDs {
+		ts.deleteApplication(appID)
 	}
 	if ts.resourceServerID != "" {
 		if err := testutils.DeleteResourceServer(ts.resourceServerID); err != nil {
@@ -291,6 +346,62 @@ func (ts *PrivateKeyJWTTestSuite) TestSuccess_PS256() {
 	defer resp.Body.Close()
 
 	ts.assertTokenSuccess(resp)
+}
+
+// TestSuccess_MLDSA authenticates with a client assertion signed with each ML-DSA parameter set,
+// verified against the client's AKP key in its inline JWKS.
+func (ts *PrivateKeyJWTTestSuite) TestSuccess_MLDSA() {
+	for alg := range mldsaParameterSets {
+		ts.Run(alg, func() {
+			assertion := testutils.CreateClientAssertion(testutils.ClientAssertionOptions{
+				Sub: mldsaClientID(alg),
+				Aud: pkjIssuer,
+				Kid: mldsaKid(alg),
+				Alg: alg,
+				Key: ts.mldsaKeys[alg],
+			})
+
+			req, err := makeTokenRequest(map[string]string{
+				"grant_type":            "client_credentials",
+				"resource":              pkjResourceIdentifier,
+				"client_assertion_type": testutils.ClientAssertionTypeJWTBearer,
+				"client_assertion":      assertion,
+			})
+			ts.Require().NoError(err)
+
+			resp, err := ts.rawClient.Do(req)
+			ts.Require().NoError(err)
+			defer resp.Body.Close()
+
+			ts.assertTokenSuccess(resp)
+		})
+	}
+}
+
+// TestMLDSAUnsupportedAKPAlg rejects an assertion whose AKP key carries an alg that is not an
+// ML-DSA parameter set, even though the signature itself is valid.
+func (ts *PrivateKeyJWTTestSuite) TestMLDSAUnsupportedAKPAlg() {
+	assertion := testutils.CreateClientAssertion(testutils.ClientAssertionOptions{
+		Sub: pkjMLDSABadAlgClientID,
+		Aud: pkjIssuer,
+		Kid: mldsaKid("ML-DSA-44"),
+		Alg: "ML-DSA-44",
+		Key: ts.mldsaKeys["ML-DSA-44"],
+	})
+
+	req, err := makeTokenRequest(map[string]string{
+		"grant_type":            "client_credentials",
+		"resource":              pkjResourceIdentifier,
+		"client_assertion_type": testutils.ClientAssertionTypeJWTBearer,
+		"client_assertion":      assertion,
+	})
+	ts.Require().NoError(err)
+
+	resp, err := ts.rawClient.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.assertTokenError(resp, http.StatusUnauthorized, "invalid_client")
 }
 
 func (ts *PrivateKeyJWTTestSuite) TestSuccess_WithClientIDInBody() {
