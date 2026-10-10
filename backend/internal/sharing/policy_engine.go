@@ -5,6 +5,7 @@ package sharing
 
 import (
 	"errors"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -710,6 +711,71 @@ func requestFromPolicy(p Policy) PolicyRequest {
 	}
 
 	return req
+}
+
+// sameSections reports whether two requests state the same sections, in the same modes, reaching
+// the same organization units on the same terms.
+//
+// Order is not part of what a section says, and neither is the difference between a list left out
+// and a list left empty, so both are evened out before the two are compared.
+func sameSections(a, b PolicyRequest) bool {
+	return reflect.DeepEqual(normalizeSections(a), normalizeSections(b))
+}
+
+// normalizeSections returns the sections of a request with their lists sorted and their empty
+// lists and rule sets dropped, leaving everything else about the request behind.
+func normalizeSections(r PolicyRequest) PolicyRequest {
+	sorted := func(ouIDs []string) []string {
+		if len(ouIDs) == 0 {
+			return nil
+		}
+		out := slices.Clone(ouIDs)
+		slices.Sort(out)
+		return out
+	}
+	rules := func(in map[string]OverlayRule) map[string]OverlayRule {
+		if len(in) == 0 {
+			return nil
+		}
+		return in
+	}
+
+	var out PolicyRequest
+	if r.AllUnits != nil {
+		out.AllUnits = &AllUnitsRequest{
+			ExcludedOUIDs: sorted(r.AllUnits.ExcludedOUIDs),
+			OverlayRules:  rules(r.AllUnits.OverlayRules),
+		}
+	}
+	if c := r.ChildUnits; c != nil {
+		out.ChildUnits = &ChildUnitsRequest{
+			Mode:          c.Mode,
+			ExcludedOUIDs: sorted(c.ExcludedOUIDs),
+			OverlayRules:  rules(c.OverlayRules),
+		}
+		for _, u := range c.Units {
+			u.OverlayRules = rules(u.OverlayRules)
+			out.ChildUnits.Units = append(out.ChildUnits.Units, u)
+		}
+		slices.SortFunc(out.ChildUnits.Units, func(x, y ChildUnitRequest) int {
+			return strings.Compare(x.OUID, y.OUID)
+		})
+	}
+	if t := r.OtherTreeRoots; t != nil {
+		out.OtherTreeRoots = &OtherTreeRootsRequest{
+			Mode:          t.Mode,
+			ExcludedOUIDs: sorted(t.ExcludedOUIDs),
+			OverlayRules:  rules(t.OverlayRules),
+		}
+		for _, u := range t.Units {
+			u.OverlayRules = rules(u.OverlayRules)
+			out.OtherTreeRoots.Units = append(out.OtherTreeRoots.Units, u)
+		}
+		slices.SortFunc(out.OtherTreeRoots.Units, func(x, y RootUnitRequest) int {
+			return strings.Compare(x.OUID, y.OUID)
+		})
+	}
+	return out
 }
 
 // mapEngineError turns a narrowing failure into the service error naming the offending field.

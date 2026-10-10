@@ -20,6 +20,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -1107,6 +1108,46 @@ func normalizeAgentOAuthConfigForImport(ctx context.Context, req *agentmodel.Age
 			log.String("clientID", oauthConfig.ClientID))
 		oauthConfig.ClientSecret = ""
 	}
+}
+
+// applySharingPolicies replays the sharing policies a document carries for one resource, the way
+// role assignments and resource server children are applied: by the importer, after the resource
+// itself is written, rather than by the resource's own create and update.
+func (s *importService) applySharingPolicies(
+	ctx context.Context, rt sharing.ResourceType, resourceType, resourceID, resourceName, owningOUID string,
+	policies []sharing.PolicyRequest, operation string,
+) *ImportItemOutcome {
+	if len(policies) == 0 {
+		return nil
+	}
+	if s.sharingService == nil {
+		outcome := unsupportedAdapterOutcome(resourceType, "sharing")
+		return &outcome
+	}
+
+	replay, replayErr := s.sharingService.ReplacePoliciesForResource(ctx, rt, resourceID, owningOUID, policies)
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ImportService"))
+	for _, skipped := range replay.Skipped {
+		logger.Warn(ctx, "Sharing policy in the document was skipped; a declared policy governs this unit",
+			log.String("resourceType", resourceType), log.String("resourceID", resourceID),
+			log.Int("policyIndex", skipped.Index+1),
+			log.String("initiatingOUID", skipped.InitiatingOUID),
+			log.String("declaredPolicyID", skipped.DeclaredPolicyID))
+	}
+	if replayErr == nil {
+		return nil
+	}
+
+	// A document names its policies only by position, so the refusal says which one.
+	detail := tidcommon.CustomServiceError(*replayErr.Err, tidcommon.I18nMessage{
+		Key: replayErr.Err.ErrorDescription.Key,
+		DefaultValue: fmt.Sprintf("sharing policy %d (organization unit %s): %s",
+			replayErr.Index+1, replayErr.InitiatingOUID, replayErr.Err.ErrorDescription.DefaultValue),
+	})
+	outcome := serviceErrorOutcome(resourceType, resourceID, resourceName, operation, detail)
+	// The title alone says what kind of refusal it was; the description is what names the entry.
+	outcome.Message = detail.ErrorDescription.DefaultValue
+	return &outcome
 }
 
 func unsupportedAdapterOutcome(resourceType, name string) ImportItemOutcome {

@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
+
+	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
 // ModelTestSuite covers the wire encodings of the request and export types.
@@ -261,4 +263,138 @@ func keysOf(m map[string]interface{}) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// A policy comes back with its sections in the shape a request states them in, so what a caller
+// reads is what it sends back to edit the policy. A section the policy does not state is left out.
+func (s *ModelTestSuite) TestPolicyResponseStatesTheSectionsAsARequestDoes() {
+	response := ToPolicyResponse(Policy{
+		ID: "p1", InitiatingOUID: "root", OwningOUID: "root", Stage: stageShare, Version: 2,
+		ChildUnits: &ChildUnits{Mode: ChildUnitsAll, ExcludedOUIDs: []string{"child-b"}},
+		OtherTreeRoots: &OtherTreeRoots{
+			Mode: OtherTreeRootsSelected, Units: []string{"other-root"},
+		},
+	})
+
+	s.Equal(&ChildUnitsRequest{Mode: ChildUnitsAll, ExcludedOUIDs: []string{"child-b"}}, response.ChildUnits)
+	s.Equal(&OtherTreeRootsRequest{
+		Mode: OtherTreeRootsSelected, Units: []RootUnitRequest{{OUID: "other-root"}},
+	}, response.OtherTreeRoots)
+	s.Nil(response.AllUnits)
+	s.Equal("share", response.Stage)
+	s.Equal(2, response.Version)
+	s.Equal("p1", response.ID)
+
+	encoded, err := json.Marshal(response)
+	s.Require().NoError(err)
+	var decoded map[string]interface{}
+	s.Require().NoError(json.Unmarshal(encoded, &decoded))
+	s.NotContains(decoded, "allUnits", "a section the policy does not state is left off the wire")
+	s.Contains(decoded, "childUnits")
+	s.Contains(decoded, "otherTreeRoots")
+}
+
+// A named child keeps its reach, and a policy reaching every organization unit names none.
+func (s *ModelTestSuite) TestPolicyResponseKeepsNamedUnitsAndTheirReach() {
+	named := ToPolicyResponse(Policy{
+		ID: "p1",
+		ChildUnits: &ChildUnits{Mode: ChildUnitsSelected, Units: []ChildUnit{
+			{OUID: "child-a", Reach: ReachUnit}, {OUID: "child-b", Reach: ReachSubtree},
+		}},
+	})
+	s.Equal([]ChildUnitRequest{
+		{OUID: "child-a", Reach: ReachUnit}, {OUID: "child-b", Reach: ReachSubtree},
+	}, named.ChildUnits.Units)
+
+	everyone := ToPolicyResponse(Policy{ID: "p2", AllUnits: &AllUnits{ExcludedOUIDs: []string{"child-a"}}})
+	s.Equal(&AllUnitsRequest{ExcludedOUIDs: []string{"child-a"}}, everyone.AllUnits)
+	s.Nil(everyone.ChildUnits)
+	s.Nil(everyone.OtherTreeRoots)
+}
+
+// A policy a resource file declares is answered as read-only, in the name the rest of the API uses
+// for the same idea. What the caller can act on is that it cannot be changed, not where it came
+// from.
+func (s *ModelTestSuite) TestADeclaredPolicyIsAnsweredAsReadOnly() {
+	declared, err := json.Marshal(ToPolicyResponse(Policy{ID: "p1", Declared: true}))
+	s.Require().NoError(err)
+	stored, err := json.Marshal(ToPolicyResponse(Policy{ID: "p2", Declared: false}))
+	s.Require().NoError(err)
+
+	var asDeclared, asStored map[string]interface{}
+	s.Require().NoError(json.Unmarshal(declared, &asDeclared))
+	s.Require().NoError(json.Unmarshal(stored, &asStored))
+
+	s.Equal(true, asDeclared["isReadOnly"])
+	s.Equal(false, asStored["isReadOnly"])
+	s.NotContains(asDeclared, "declared", "the framework's own word stays inside the framework")
+}
+
+// The owning organization unit is the resource's own, identical on every one of its policies, and
+// these endpoints are mounted under the resource that states it. Repeating it on each policy of a
+// page says nothing the caller did not already supply.
+func (s *ModelTestSuite) TestPolicyResponseDoesNotRepeatTheOwningUnit() {
+	encoded, err := json.Marshal(ToPolicyResponse(Policy{
+		ID: "p1", OwningOUID: "acme-root", InitiatingOUID: "acme-customer-a",
+	}))
+	s.Require().NoError(err)
+
+	var decoded map[string]interface{}
+	s.Require().NoError(json.Unmarshal(encoded, &decoded))
+	s.NotContains(decoded, "owningOuId")
+	s.Equal("acme-customer-a", decoded["initiatingOuId"],
+		"whose decision it is does vary, and is carried")
+}
+
+// A page keeps its counts, and every policy in it is shaped the same way.
+func (s *ModelTestSuite) TestPolicyListResponseShapesEveryPolicy() {
+	response := ToPolicyListResponse(PolicyList{
+		TotalResults: 7, StartIndex: 1, Count: 1,
+		Policies: []Policy{{ID: "p1", ChildUnits: &ChildUnits{Mode: ChildUnitsAll}}},
+	}, "/things/t1/sharing-policies", 1, 0)
+
+	s.Equal(7, response.TotalResults)
+	s.Equal(1, response.StartIndex)
+	s.Require().Len(response.Policies, 1)
+	s.Equal(&ChildUnitsRequest{Mode: ChildUnitsAll}, response.Policies[0].ChildUnits)
+}
+
+// The page links point at the resource type's own listing, the way every other paginated list
+// in the API does.
+func (s *ModelTestSuite) TestPolicyListResponseLinksThePages() {
+	response := ToPolicyListResponse(PolicyList{TotalResults: 5, StartIndex: 3, Count: 2},
+		"/things/t1/sharing-policies", 2, 2)
+
+	s.Equal([]utils.Link{
+		{Href: "/things/t1/sharing-policies?offset=0&limit=2", Rel: "first"},
+		{Href: "/things/t1/sharing-policies?offset=0&limit=2", Rel: "prev"},
+		{Href: "/things/t1/sharing-policies?offset=4&limit=2", Rel: "next"},
+		{Href: "/things/t1/sharing-policies?offset=4&limit=2", Rel: "last"},
+	}, response.Links)
+}
+
+// A single page has nowhere to link to, and says so with an empty list rather than null.
+func (s *ModelTestSuite) TestPolicyListResponseOnOnePageHasNoLinks() {
+	encoded, err := json.Marshal(ToPolicyListResponse(PolicyList{TotalResults: 1, StartIndex: 1, Count: 1},
+		"/things/t1/sharing-policies", 30, 0))
+	s.Require().NoError(err)
+
+	var decoded map[string]interface{}
+	s.Require().NoError(json.Unmarshal(encoded, &decoded))
+	s.Equal([]interface{}{}, decoded["links"])
+}
+
+// The empty collections come back as collections rather than as null, so a caller reads them
+// without guarding against two different shapes.
+func (s *ModelTestSuite) TestResolvedOverlayResponseIsNeverNull() {
+	encoded, err := json.Marshal(ToResolvedOverlayResponse(ResolvedOverlay{
+		OUID: "child-a", Visible: true,
+	}))
+	s.Require().NoError(err)
+
+	var decoded map[string]interface{}
+	s.Require().NoError(json.Unmarshal(encoded, &decoded))
+	s.NotNil(decoded["rules"], "an absent rule set is an empty object")
+	s.NotNil(decoded["policyIds"], "an absent policy list is an empty array")
+	s.Equal(true, decoded["visible"])
 }

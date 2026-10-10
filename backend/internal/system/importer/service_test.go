@@ -33,6 +33,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
@@ -168,7 +169,9 @@ func (f *fakeApplicationService) UpdateApplication(
 	}
 	app.ID = appID
 	f.updated = append(f.updated, app)
-	f.existing[appID] = &providers.Application{ID: app.ID, Name: app.Name}
+	// An update never moves an application between organization units, so the stored owner stays
+	// as it was however the document names it.
+	f.existing[appID] = &providers.Application{ID: app.ID, Name: app.Name, OUID: f.existing[appID].OUID}
 	f.sequence = append(f.sequence, "update:"+appID)
 	return app, nil
 }
@@ -884,6 +887,39 @@ func (f *fakeFlowService) UpdateFlow(
 	f.byID[flowID] = updated
 	f.byKey[string(flowDef.FlowType)+":"+flowDef.Handle] = updated
 	return updated, nil
+}
+
+// fakeSharingService records what the importer asked it to replay.
+type fakeSharingService struct {
+	calls   []sharingReplayCall
+	replay  sharing.PolicyReplay
+	failure *sharing.PolicyReplayError
+}
+
+type sharingReplayCall struct {
+	resourceType sharing.ResourceType
+	resourceID   string
+	owningOUID   string
+	policies     []sharing.PolicyRequest
+}
+
+func (f *fakeSharingService) ReplacePoliciesForResource(
+	_ context.Context, rt sharing.ResourceType, resourceID, owningOUID string,
+	requests []sharing.PolicyRequest,
+) (sharing.PolicyReplay, *sharing.PolicyReplayError) {
+	f.calls = append(f.calls, sharingReplayCall{
+		resourceType: rt, resourceID: resourceID, owningOUID: owningOUID, policies: requests})
+	return f.replay, f.failure
+}
+
+// newTestImportServiceWithSharing is newTestImportService with a sharing adapter installed, the way
+// Initialize installs the real one after construction.
+func newTestImportServiceWithSharing(
+	appSvc *fakeApplicationService, sharingSvc *fakeSharingService,
+) ImportServiceInterface {
+	svc := newTestImportService(appSvc)
+	svc.(*importService).sharingService = sharingSvc
+	return svc
 }
 
 func newTestImportService(appSvc *fakeApplicationService) ImportServiceInterface {
@@ -3874,4 +3910,127 @@ func (s *ImportNotificationTemplateTestSuite) TestImportResourcesCreatesTemplate
 	s.Equal(statusSuccess, resp.Results[0].Status)
 	s.Equal(operationCreate, resp.Results[0].Operation)
 	s.Equal(resourceTypeNotificationTemplate, resp.Results[0].ResourceType)
+}
+
+// appDocWithPolicies is one application document carrying sharing policies.
+func appDocWithPolicies(id, ouID string) string {
+	return strings.Join([]string{
+		"resource_type: application",
+		"id: " + id,
+		"name: App " + id,
+		"type: m2m",
+		"ouId: " + ouID,
+		"sharingPolicies:",
+		"  - childUnits:",
+		"      mode: all",
+		"",
+	}, "\n")
+}
+
+// The importer applies the policies a document carries, the way it applies role assignments and
+// resource server children: itself, after the resource is written.
+func TestImportApplicationAppliesSharingPolicies(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
+	sharingSvc := &fakeSharingService{}
+	svc := newTestImportServiceWithSharing(appSvc, sharingSvc)
+
+	resp, err := svc.ImportResources(context.Background(),
+		&ImportRequest{Content: appDocWithPolicies("app-1", "owner-ou")})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, sharingSvc.calls, 1, "the importer replayed the document's policies")
+	assert.Equal(t, application.ApplicationSharingType, sharingSvc.calls[0].resourceType)
+	assert.Equal(t, "app-1", sharingSvc.calls[0].resourceID)
+	assert.Equal(t, "owner-ou", sharingSvc.calls[0].owningOUID)
+	assert.Len(t, sharingSvc.calls[0].policies, 1)
+}
+
+// A document carrying no policies asks the sharing adapter nothing.
+func TestImportApplicationWithoutPoliciesAsksTheAdapterNothing(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
+	sharingSvc := &fakeSharingService{}
+	svc := newTestImportServiceWithSharing(appSvc, sharingSvc)
+
+	content := strings.Join([]string{
+		"resource_type: application", "id: app-2", "name: App Two", "type: m2m", "ouId: owner-ou", "",
+	}, "\n")
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Empty(t, sharingSvc.calls)
+}
+
+// An update never moves an application between organization units, so the replay uses the stored
+// owner. A document naming a different one would otherwise share it from an organization unit that
+// does not own it.
+func TestImportApplicationReplaysAgainstTheStoredOwner(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{
+		"app-3": {ID: "app-3", Name: "App Three", OUID: "stored-owner-ou"},
+	}}
+	sharingSvc := &fakeSharingService{}
+	svc := newTestImportServiceWithSharing(appSvc, sharingSvc)
+
+	upsert := true
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: appDocWithPolicies("app-3", "an-ou-the-document-named"),
+		Options: &ImportOptions{Upsert: &upsert},
+	})
+
+	require.Nil(t, err)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, sharingSvc.calls, 1)
+	assert.Equal(t, "stored-owner-ou", sharingSvc.calls[0].owningOUID)
+}
+
+// A refused policy has to undo the create: the caller is told the document failed and gets no id
+// back, so an application left behind would hold the name and client id a retry needs.
+func TestImportApplicationUndoesTheCreateWhenPoliciesAreRefused(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
+	sharingSvc := &fakeSharingService{failure: &sharing.PolicyReplayError{
+		Index: 1, InitiatingOUID: "child-ou", Err: &sharing.ErrorInvalidRequestFormat}}
+	svc := newTestImportServiceWithSharing(appSvc, sharingSvc)
+
+	resp, err := svc.ImportResources(context.Background(),
+		&ImportRequest{Content: appDocWithPolicies("app-4", "owner-ou")})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Equal(t, []string{"create:app-4", "delete:app-4"}, appSvc.sequence,
+		"the application the refused document created was removed again")
+}
+
+// A document names its policies only by position, so the refusal says which one and whose it was.
+func TestImportApplicationNamesTheRefusedPolicy(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
+	sharingSvc := &fakeSharingService{failure: &sharing.PolicyReplayError{
+		Index: 1, InitiatingOUID: "child-ou", Err: &sharing.ErrorInvalidRequestFormat}}
+	svc := newTestImportServiceWithSharing(appSvc, sharingSvc)
+
+	resp, _ := svc.ImportResources(context.Background(),
+		&ImportRequest{Content: appDocWithPolicies("app-5", "owner-ou")})
+
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, sharing.ErrorInvalidRequestFormat.Code, resp.Results[0].Code)
+	assert.Contains(t, resp.Results[0].Message, "sharing policy 2 (organization unit child-ou)",
+		"the result names the entry by position and issuing unit")
+	assert.Contains(t, resp.Results[0].Message, sharing.ErrorInvalidRequestFormat.ErrorDescription.DefaultValue,
+		"and carries why it was refused")
+}
+
+// A deployment with no sharing adapter says so rather than importing the document and dropping the
+// policies it carries.
+func TestImportApplicationRefusesPoliciesWithoutASharingAdapter(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
+	svc := newTestImportService(appSvc)
+
+	resp, _ := svc.ImportResources(context.Background(),
+		&ImportRequest{Content: appDocWithPolicies("app-6", "owner-ou")})
+
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Contains(t, resp.Results[0].Message, "sharing")
 }

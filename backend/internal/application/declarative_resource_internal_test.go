@@ -15,6 +15,8 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/sharing"
+	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
+	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -630,4 +632,65 @@ func (s *ParseToApplicationDTOTestSuite) TestSharingParserReportsMalformedYAML()
 
 	s.Require().Error(err)
 	s.Contains(err.Error(), "failed to parse application YAML")
+}
+
+// An export writes the application as a read returns it, and leaves the sharing out when the
+// application holds no policy, so the document does not declare an empty list.
+func TestExportWritesTheApplicationWithoutSharingWhenItHoldsNone(t *testing.T) {
+	app := &providers.Application{ID: "app1", Name: "Test App"}
+	mockAppService := NewApplicationServiceInterfaceMock(t)
+	mockAppService.EXPECT().GetApplication(mock.Anything, "app1").Return(app, nil)
+	mockAppService.EXPECT().ExportSharingPolicies(mock.Anything, "app1").Return(nil, nil)
+
+	resource, _, err := NewApplicationExporterForTest(mockAppService).
+		GetResourceByID(context.Background(), "app1")
+
+	require.Nil(t, err)
+	assert.Equal(t, &applicationDeclarativeResource{Application: *app}, resource)
+}
+
+// An export carries the sharing alongside the application, so a re-import records the same
+// policies rather than producing an application no organization unit can act for.
+func TestExportCarriesTheSharingPolicies(t *testing.T) {
+	app := &providers.Application{ID: "app1", Name: "Test App"}
+	replayable := []sharing.ReplayablePolicy{{
+		InitiatingOUID: "acme-root",
+		Request: sharing.PolicyRequest{
+			ID:             "policy-1",
+			InitiatingOUID: "acme-root",
+			ChildUnits:     &sharing.ChildUnitsRequest{Mode: sharing.ChildUnitsAll},
+		},
+	}}
+	mockAppService := NewApplicationServiceInterfaceMock(t)
+	mockAppService.EXPECT().GetApplication(mock.Anything, "app1").Return(app, nil)
+	mockAppService.EXPECT().ExportSharingPolicies(mock.Anything, "app1").Return(replayable, nil)
+
+	resource, _, err := NewApplicationExporterForTest(mockAppService).
+		GetResourceByID(context.Background(), "app1")
+
+	require.Nil(t, err)
+	exported, ok := resource.(*applicationDeclarativeResource)
+	require.True(t, ok)
+	assert.Equal(t, []sharing.PolicyRequest{replayable[0].Request}, exported.SharingPolicies)
+}
+
+// The export pipeline hands the exporter back what GetResourceByID returned, so validation and the
+// per-resource rules read the application out of the document rather than refusing its type.
+func TestExporterReadsTheApplicationOutOfTheDocument(t *testing.T) {
+	exporter := NewApplicationExporterForTest(NewApplicationServiceInterfaceMock(t))
+	document := &applicationDeclarativeResource{Application: providers.Application{
+		ID: "app1", Name: "Public App",
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{{
+			OAuthConfig: &providers.OAuthConfigWithSecret{ClientID: "client-id-1", PublicClient: true},
+		}},
+	}}
+
+	name, validationErr := exporter.ValidateResource(context.Background(), document, "app1", log.GetLogger())
+	require.Nil(t, validationErr)
+	assert.Equal(t, "Public App", name)
+
+	var ruler declarativeresource.PerResourceRuler = exporter
+	rules := ruler.GetResourceRulesForResource(document)
+	require.NotNil(t, rules)
+	assert.Contains(t, rules.Variables, "InboundAuthConfig[].OAuthConfig.ClientID")
 }

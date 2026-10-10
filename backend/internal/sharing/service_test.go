@@ -15,8 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	oupkg "github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/tests/mocks/cachemock"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
@@ -109,6 +111,7 @@ func newMockStore(t interface {
 	e.GetPolicyByInitiator(a, a, a, a).RunAndReturn(st.GetPolicyByInitiator).Maybe()
 	e.ListPoliciesForResource(a, a, a, a, a).RunAndReturn(st.ListPoliciesForResource).Maybe()
 	e.ListAllPoliciesForResource(a, a, a).RunAndReturn(st.ListAllPoliciesForResource).Maybe()
+	e.ListPoliciesIssuedBy(a, a).RunAndReturn(st.ListPoliciesIssuedBy).Maybe()
 	e.CountPoliciesForResource(a, a, a).RunAndReturn(st.CountPoliciesForResource).Maybe()
 	e.ListPoliciesRelevantToChain(a, a, a, a).RunAndReturn(st.ListPoliciesRelevantToChain).Maybe()
 	e.ReplacePolicyContents(a, a, a).RunAndReturn(st.ReplacePolicyContents).Maybe()
@@ -178,6 +181,22 @@ func (f *storeState) ListAllPoliciesForResource(
 		return nil, err
 	}
 	return f.forResource(rt, resourceID), nil
+}
+
+// ListPoliciesIssuedBy returns every policy one organization unit issued, in creation order.
+func (f *storeState) ListPoliciesIssuedBy(_ context.Context, ouID string) ([]Policy, error) {
+	if f.failNext != nil {
+		err := f.failNext
+		f.failNext = nil
+		return nil, err
+	}
+	out := []Policy{}
+	for _, id := range f.order {
+		if p, ok := f.policies[id]; ok && p.InitiatingOUID == ouID {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }
 
 // ListPoliciesForResource cuts a page from the ordered set, which is what LIMIT and OFFSET do to
@@ -342,9 +361,15 @@ func (d *unresolvedOwnerDeclaration) OwningOUID(
 // the service walks the same tree upwards and downwards and the two directions have to agree.
 type ouTree struct{ ancestors map[string][]string }
 
-// GetAncestorOUIDs returns the fixed ancestor chain for an organization unit.
+// GetAncestorOUIDs returns the fixed ancestor chain for an organization unit. An organization unit
+// the tree does not hold answers the way the real resolver does, with a not-found error, so a test
+// cannot pass on a walk the real one would have stopped.
 func (f *ouTree) GetAncestorOUIDs(_ context.Context, ouID string) ([]string, *tidcommon.ServiceError) {
-	return f.ancestors[ouID], nil
+	chain, known := f.ancestors[ouID]
+	if !known {
+		return nil, &oupkg.ErrorOrganizationUnitNotFound
+	}
+	return chain, nil
 }
 
 // IsAncestor reports whether one organization unit sits above another in the fixed tree.
@@ -395,6 +420,67 @@ func inlineTx(t interface {
 	tx.EXPECT().Transact(mock.Anything, mock.Anything).RunAndReturn(
 		func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }).Maybe()
 	return tx
+}
+
+// rollbackTx is inlineTx with the half that matters for a multi-write operation: the database
+// transactioner joins a call made inside another and rolls back to where the outermost one
+// started, so a fake that only ran the function would let a test pass on writes the real one would
+// have undone.
+func rollbackTx(t interface {
+	mock.TestingT
+	Cleanup(func())
+}, st *storeState) *transactionmock.TransactionerMock {
+	tx := transactionmock.NewTransactionerMock(t)
+	depth := 0
+	var snapshot storeState
+	tx.EXPECT().Transact(mock.Anything, mock.Anything).RunAndReturn(
+		func(ctx context.Context, fn func(context.Context) error) error {
+			if depth == 0 {
+				snapshot = st.clone()
+			}
+			depth++
+			err := fn(ctx)
+			depth--
+			if err != nil && depth == 0 {
+				*st = snapshot
+			}
+			return err
+		}).Maybe()
+	return tx
+}
+
+// clone copies the rows a transaction could change, deeply enough that restoring the copy undoes
+// every write made inside it. A policy's sections are built fresh by every write and never changed
+// in place afterwards, so the copy shares them.
+func (f *storeState) clone() storeState {
+	out := storeState{
+		policies: make(map[string]Policy, len(f.policies)),
+		order:    slices.Clone(f.order),
+		values:   make(map[string]map[string][]string, len(f.values)),
+		replaced: slices.Clone(f.replaced),
+	}
+	for id, p := range f.policies {
+		p.Rules = slices.Clone(p.Rules)
+		out.policies[id] = p
+	}
+	for k, inner := range f.values {
+		copied := make(map[string][]string, len(inner))
+		for field, vals := range inner {
+			copied[field] = slices.Clone(vals)
+		}
+		out.values[k] = copied
+	}
+	return out
+}
+
+// importCreate replays one policy the way a document does. The create that keeps the document's id
+// is private, because only this package replays documents, so a test reaches it through the
+// concrete service.
+func (s *ServiceTestSuite) importCreate(
+	ctx context.Context, resourceID, owningOUID string, req PolicyRequest,
+) (Policy, *tidcommon.ServiceError) {
+	return s.svc.(*sharingService).createPolicy(
+		ctx, testType, resourceID, owningOUID, req, false)
 }
 
 // testDeclaration is a resource type with one editable reference-set field and one non-editable
@@ -516,7 +602,12 @@ func testResolver(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) (*sysauthzmock.OUHierarchyResolverMock, *oumock.HierarchyEnumeratorInterfaceMock) {
-	tree := &ouTree{ancestors: map[string][]string{
+	return resolverOver(t, fixtureTree())
+}
+
+// fixtureTree is the organization unit tree every service test runs against.
+func fixtureTree() *ouTree {
+	return &ouTree{ancestors: map[string][]string{
 		rootOU:        {},
 		childOU:       {rootOU},
 		grandOU:       {childOU, rootOU},
@@ -525,6 +616,13 @@ func testResolver(t interface {
 		nestedOwnerOU: {rootOU},
 		greatOU:       {grandOU, childOU, rootOU},
 	}}
+}
+
+// resolverOver wires the hierarchy and enumerator mocks over one tree.
+func resolverOver(t interface {
+	mock.TestingT
+	Cleanup(func())
+}, tree *ouTree) (*sysauthzmock.OUHierarchyResolverMock, *oumock.HierarchyEnumeratorInterfaceMock) {
 	a := mock.Anything
 	hierarchy := sysauthzmock.NewOUHierarchyResolverMock(t)
 	hierarchy.EXPECT().GetAncestorOUIDs(a, a).RunAndReturn(tree.GetAncestorOUIDs).Maybe()
@@ -540,6 +638,16 @@ func testResolver(t interface {
 // that needs one has to come in through here.
 func (s *ServiceTestSuite) declarative() SharingServiceInterface {
 	return s.svc
+}
+
+// withRollback rebuilds the suite's service over the same store with a transactioner that rolls
+// back, which is what a multi-write operation has to be judged against.
+func (s *ServiceTestSuite) withRollback() {
+	hierarchy, enumerator := testResolver(s.T())
+	s.svc = newSharingService(s.storeMock, s.declStore, hierarchy, enumerator,
+		rollbackTx(s.T(), s.store), nil, nil, false)
+	s.svc.RegisterResourceType(s.decl)
+	s.svc.RegisterResourceType(&fieldlessDeclaration{})
 }
 
 // storedAllChildren issues the one blanket policy an API can create: the owner reaching its own
@@ -772,27 +880,16 @@ func (s *ServiceTestSuite) TestCreateRejectsAllChildUnitsExcludingTheirOwnIssuer
 	s.Equal(ErrorExclusionNotADirectChild.Code, svcErr.Code)
 }
 
-// Deployment-wide reach is not bounded by where the initiator sits, and every organization unit
-// owns what it creates, so owner-only is no bound at all for these two. Declaring one in a resource
-// file is reviewed; issuing one over the API is not.
-func (s *ServiceTestSuite) TestCreateRejectsDeploymentWideGrantsFromTheAPI() {
-	tests := []struct {
-		name   string
-		req    PolicyRequest
-		detail string
-	}{
-		{"every organization unit", PolicyRequest{AllUnits: allUnits()}, "allUnits"},
-		{"every tree", PolicyRequest{OtherTreeRoots: allRoots()}, "otherTreeRoots with mode all"},
-	}
-	for _, tt := range tests {
-		s.Run(tt.name, func() {
-			_, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU, tt.req)
+// The framework accepts deployment-wide reach on every path. Whether a management API may offer
+// it is that API's decision, so the refusal lives there rather than here.
+func (s *ServiceTestSuite) TestCreateAcceptsDeploymentWideGrants() {
+	for _, req := range deploymentWideRequests() {
+		s.SetupTest()
 
-			s.Require().NotNil(svcErr)
-			s.Equal(ErrorDeploymentWideScopeDeclarativeOnly.Code, svcErr.Code)
-			s.Contains(svcErr.ErrorDescription.DefaultValue, tt.detail,
-				"the refusal names which grant was asked for")
-		})
+		p, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU, req)
+
+		s.Require().Nil(svcErr)
+		s.Require().Len(p.grants(), 1)
 	}
 }
 
@@ -810,17 +907,18 @@ func (s *ServiceTestSuite) TestCreateDeclarativeAllowsDeploymentWideGrants() {
 	}
 }
 
-// The restriction covers the two standing grants and nothing else. Naming roots individually is a
-// snapshot of the roots that exist today, and it still answers to the cross-tree gate.
-func (s *ServiceTestSuite) TestCreateStillAllowsNamedRootsFromTheAPI() {
+// Naming roots individually is a snapshot of the roots that exist today, and it still answers to
+// the cross-tree gate.
+func (s *ServiceTestSuite) TestCreateAllowsNamedRoots() {
 	_, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU,
 		PolicyRequest{OtherTreeRoots: roots(root(rootOU), root(otherOU))})
 
 	s.Require().Nil(svcErr)
 }
 
-// An edit cannot smuggle in what a create refuses. Every route into a deployment-wide scope is shut
-// by the scope-family and blanket rules, so the create-time check needs no counterpart here.
+// An edit cannot widen a policy into a deployment-wide scope: the scope-family and blanket rules
+// shut every route into one. That is what lets an API that refuses these grants do so on create
+// alone.
 func (s *ServiceTestSuite) TestUpdateCannotIntroduceADeploymentWideScope() {
 	// The policy being edited names one root, so it is refused for changing how broadly it reaches.
 	// Telling its author that a blanket policy may only be narrowed would describe a policy they are
@@ -4005,4 +4103,801 @@ func (s *ServiceTestSuite) TestRedeclaringForTheSameInitiatorReplacesIt() {
 	reachedAfter, svcErr := s.svc.IsVisible(ctx, fieldlessType, testResource, otherOU)
 	s.Require().Nil(svcErr)
 	s.False(reachedAfter, "and the reach it replaced is gone with it")
+}
+
+// What a create may not introduce, an edit may still carry. A policy imported with a
+// deployment-wide reach is an ordinary stored policy: its exclusions are rewritten, and it is
+// deleted, through the same API as any other. Only widening is out of reach, which is what keeps
+// the create-time refusal from being walked around by editing a narrower policy into one of these
+// grants.
+func (s *ServiceTestSuite) TestImportedDeploymentWidePolicyIsEditableAndDeletable() {
+	ctx := context.Background()
+
+	imported, svcErr := s.importCreate(ctx, testResource, ownerOU,
+		PolicyRequest{AllUnits: allUnits()})
+	s.Require().Nil(svcErr)
+	s.Require().False(imported.Declared, "an imported policy is stored, not declared")
+
+	edited, svcErr := s.svc.UpdatePolicy(ctx, imported.ID, PolicyRequest{
+		Version:  imported.Version,
+		AllUnits: allUnits(childOU),
+	})
+	s.Require().Nil(svcErr, "restating the section carries its exclusions")
+	s.Require().NotNil(edited.AllUnits)
+	s.Equal([]string{childOU}, edited.AllUnits.ExcludedOUIDs)
+	s.Equal(imported.Version+1, edited.Version)
+
+	// Handing the unit back is the same edit in the other direction.
+	handedBack, svcErr := s.svc.UpdatePolicy(ctx, imported.ID, PolicyRequest{
+		Version:  edited.Version,
+		AllUnits: allUnits(),
+	})
+	s.Require().Nil(svcErr)
+	s.Empty(handedBack.AllUnits.ExcludedOUIDs)
+
+	s.Nil(s.svc.DeletePolicy(ctx, imported.ID))
+}
+
+// The row answers to two constraints, and a replay that brings its own id can lose on either. Here
+// the winner holds the id but belongs to a different organization unit, so the lookup by initiator
+// finds nothing and only the id names it. Without that second lookup this is a server error, which
+// describes neither constraint.
+func (s *ServiceTestSuite) TestCreateNamesTheWinnerWhenTwoReplaysShareAnID() {
+	const replayedID = "01900000-0000-7000-8000-00000000beef"
+	winner := Policy{
+		ID:             replayedID,
+		ResourceType:   testType,
+		ResourceID:     testResource,
+		OwningOUID:     ownerOU,
+		InitiatingOUID: childOU,
+		Stage:          stageShare,
+		Version:        1,
+	}
+	s.store.beforeCreate = func() {
+		s.store.policies[winner.ID] = winner
+		s.store.failNext = errors.New("duplicate key value violates unique constraint")
+		s.store.beforeCreate = nil
+	}
+
+	_, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+		PolicyRequest{ID: replayedID, OtherTreeRoots: roots(root(rootOU))})
+
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorPolicyExists.Code, svcErr.Code)
+	s.Contains(svcErr.ErrorDescription.DefaultValue, replayedID,
+		"the refusal names the id that was taken rather than reporting a server error")
+}
+
+// An id has to be free in both stores, not only among declarations. A lookup by id answers from
+// the database first, so a declaration keeping an id a stored policy holds would be unreachable by
+// that id while still listed under its own resource, and a reshare naming it as its parent would
+// resolve to the other policy.
+func (s *ServiceTestSuite) TestADeclarationCannotTakeAStoredPolicysID() {
+	ctx := context.Background()
+	stored, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ID: declaredID, ChildUnits: allChildren()})
+	s.Require().Nil(svcErr)
+
+	_, svcErr = s.svc.CreateDeclarativePolicy(ctx, testType, "another-resource", ownerOU,
+		PolicyRequest{ID: declaredID, AllUnits: allUnits()})
+
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorDeclaredPolicyIDConflict.Code, svcErr.Code)
+
+	// The stored policy keeps the id, and keeps answering by it.
+	got, svcErr := s.svc.GetPolicy(ctx, declaredID)
+	s.Require().Nil(svcErr)
+	s.Equal(stored.ResourceID, got.ResourceID)
+}
+
+// A request carrying an id is a replay of a policy that already existed, so it keeps that id. An
+// export writes it into the document, and a reshare beneath it points at it, so minting a new one
+// on the way back in would orphan the reference.
+func (s *ServiceTestSuite) TestReplayKeepsAnIDTheDocumentCarries() {
+	p, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+		PolicyRequest{
+			ID:             "0195a2c0-6f3e-7a21-9f2a-2c4f8f1d9a10",
+			OtherTreeRoots: roots(root(rootOU)),
+		})
+
+	s.Require().Nil(svcErr)
+	s.Equal("0195a2c0-6f3e-7a21-9f2a-2c4f8f1d9a10", p.ID)
+}
+
+// The version a policy was exported at travels with it, so an export of the replayed policy
+// matches the document it came from rather than resetting to a first version.
+func (s *ServiceTestSuite) TestReplayKeepsTheVersionTheDocumentCarries() {
+	p, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+		PolicyRequest{Version: 7, OtherTreeRoots: roots(root(rootOU))})
+
+	s.Require().Nil(svcErr)
+	s.Equal(7, p.Version)
+}
+
+// A fresh create starts at the first version, whether the request says nothing or says zero.
+func (s *ServiceTestSuite) TestCreateStartsAtTheFirstVersionWithoutOne() {
+	for _, version := range []int{0, -3} {
+		s.SetupTest()
+		p, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU,
+			PolicyRequest{Version: version, OtherTreeRoots: roots(root(rootOU))})
+
+		s.Require().Nil(svcErr)
+		s.Equal(1, p.Version)
+	}
+}
+
+// A request carrying none is a fresh create and is given one.
+func (s *ServiceTestSuite) TestCreateMintsAnIDWhenTheRequestCarriesNone() {
+	p, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU,
+		PolicyRequest{OtherTreeRoots: roots(root(rootOU))})
+
+	s.Require().Nil(svcErr)
+	s.NotEmpty(p.ID)
+}
+
+// An id another policy already holds is answered as a conflict rather than left to fail as a
+// duplicate key deep in the store.
+func (s *ServiceTestSuite) TestReplayRefusesAnIDAnotherPolicyHolds() {
+	first, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+		PolicyRequest{ID: "taken", OtherTreeRoots: roots(root(rootOU))})
+	s.Require().Nil(svcErr)
+
+	_, svcErr = s.importCreate(context.Background(), "another-resource", ownerOU,
+		PolicyRequest{ID: first.ID, OtherTreeRoots: roots(root(rootOU))})
+
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorPolicyExists.Code, svcErr.Code)
+}
+
+// An export replayed through the create path reproduces the policy it was taken from, id included,
+// which is what makes export and import a round trip rather than a copy.
+func (s *ServiceTestSuite) TestAnExportedPolicyReplaysUnderItsOwnID() {
+	original := s.share(nil)
+
+	exported, svcErr := s.svc.ExportPolicies(context.Background(), testType, testResource)
+	s.Require().Nil(svcErr)
+	s.Require().Len(exported, 1)
+	s.Require().Equal(original.ID, exported[0].Request.ID)
+
+	s.Require().Nil(s.svc.DeletePolicy(context.Background(), original.ID))
+
+	replayed, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+		exported[0].Request)
+
+	s.Require().Nil(svcErr)
+	s.Equal(original.ID, replayed.ID, "a replay reproduces the policy, id included")
+	s.Equal(original.Version, replayed.Version, "and at the version it was exported at")
+}
+
+// Every path into the framework records a deployment-wide grant the same way. Only where the policy
+// is kept differs: a resource file's in memory, the others stored.
+func (s *ServiceTestSuite) TestDeploymentWideGrantIsAcceptedOnEveryPath() {
+	for _, tc := range []struct {
+		name string
+		req  PolicyRequest
+	}{
+		{"allUnits", PolicyRequest{AllUnits: allUnits()}},
+		{"otherTreeRoots with mode all", PolicyRequest{OtherTreeRoots: allRoots()}},
+	} {
+		req := func() PolicyRequest {
+			out := tc.req
+			out.ID = declaredID
+			return out
+		}
+
+		s.Run(tc.name+" through the public create", func() {
+			s.SetupTest()
+
+			p, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU,
+				req())
+
+			s.Require().Nil(svcErr)
+			s.Require().Len(p.grants(), 1)
+			s.False(p.Declared)
+		})
+
+		s.Run(tc.name+" imported from a document", func() {
+			s.SetupTest()
+
+			p, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+				req())
+
+			s.Require().Nil(svcErr)
+			s.Require().Len(p.grants(), 1)
+			s.Equal(tc.req.AllUnits != nil, p.AllUnits != nil)
+			s.Equal(tc.req.OtherTreeRoots != nil, p.OtherTreeRoots != nil)
+			s.False(p.Declared, "an import is stored, not held in memory")
+		})
+
+		s.Run(tc.name+" declared in a resource file", func() {
+			s.SetupTest()
+
+			p, svcErr := s.declarative().CreateDeclarativePolicy(context.Background(), testType,
+				testResource, ownerOU, req())
+
+			s.Require().Nil(svcErr)
+			s.True(p.Declared)
+		})
+	}
+}
+
+// Everything else an import is held to is unchanged: it is stored like any other policy, and the
+// one-hop rule still bounds what it may name.
+func (s *ServiceTestSuite) TestImportIsStillHeldToEveryOtherRule() {
+	_, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+		PolicyRequest{ChildUnits: children(unit(grandOU))})
+
+	s.Require().NotNil(svcErr, "a grandchild is not a direct child, imported or not")
+	s.Equal(ErrorInvalidTargetOU.Code, svcErr.Code)
+}
+
+// The public create supplies the id and the version itself. Keeping a document's own is what a
+// replay does, and only this package replays documents.
+func (s *ServiceTestSuite) TestThePublicCreateIgnoresACallersIDAndVersion() {
+	created, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU,
+		PolicyRequest{
+			ID:         "an-id-the-caller-chose",
+			Version:    7,
+			ChildUnits: allChildren(),
+		})
+
+	s.Require().Nil(svcErr)
+	s.NotEqual("an-id-the-caller-chose", created.ID, "the framework mints the id")
+	s.Equal(1, created.Version, "a create starts at version one")
+}
+
+// A policy created either way is stored, so neither can be mistaken for a declaration and so
+// escape an edit or a delete.
+func (s *ServiceTestSuite) TestNeitherPathProducesADeclaredPolicy() {
+	s.Run("request", func() {
+		s.SetupTest()
+		p, svcErr := s.svc.CreatePolicy(context.Background(), testType, testResource, ownerOU,
+			PolicyRequest{OtherTreeRoots: roots(root(rootOU))})
+		s.Require().Nil(svcErr)
+		s.False(p.Declared)
+	})
+
+	s.Run("replay", func() {
+		s.SetupTest()
+		p, svcErr := s.importCreate(context.Background(), testResource, ownerOU,
+			PolicyRequest{OtherTreeRoots: roots(root(rootOU))})
+		s.Require().Nil(svcErr)
+		s.False(p.Declared)
+	})
+}
+
+// A document whose organization unit holds no policy yet records a new one, with the id the
+// document carries: a replay that minted its own would orphan anything pointing at the old one.
+func (s *ServiceTestSuite) TestReplayCreatesWhatIsMissing() {
+	replay, replayErr := s.svc.ReplacePoliciesForResource(context.Background(), testType,
+		testResource, rootOU, []PolicyRequest{{
+			ID:         declaredID,
+			ChildUnits: allChildren(),
+		}})
+
+	s.Require().Nil(replayErr)
+	s.Empty(replay.Skipped)
+	stored, svcErr := s.svc.GetPolicy(context.Background(), declaredID)
+	s.Require().Nil(svcErr)
+	s.Equal(rootOU, stored.InitiatingOUID)
+	s.False(stored.Declared, "a replay stores its policies rather than declaring them")
+}
+
+// A replay matches on the organization unit that issues the policy, not on the id the document
+// carries, which is what makes re-importing a rewritten document an edit rather than a collision.
+func (s *ServiceTestSuite) TestReplayReplacesWhatTheUnitAlreadyHolds() {
+	ctx := context.Background()
+	first, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: allChildren()})
+	s.Require().Nil(svcErr)
+
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{{
+			ID:         "an-id-the-document-made-up",
+			ChildUnits: allChildren(childOU),
+		}})
+
+	s.Require().Nil(replayErr)
+	all, _ := s.svc.ListPolicies(ctx, testType, testResource)
+	s.Require().Len(all, 1, "the unit's one policy was replaced, not joined by a second")
+	s.Equal(first.ID, all[0].ID, "matched on the initiating unit, not the document's id")
+	s.Equal([]string{childOU}, all[0].ChildUnits.ExcludedOUIDs)
+}
+
+// A declared policy belongs to the file that declares it, so the document's policy for that unit is
+// dropped and reported rather than applied.
+func (s *ServiceTestSuite) TestReplaySkipsADeclaredPolicy() {
+	declared := s.declaredBlanket(PolicyRequest{AllUnits: allUnits()})
+
+	replay, replayErr := s.svc.ReplacePoliciesForResource(context.Background(), testType,
+		testResource, ownerOU, []PolicyRequest{{ChildUnits: allChildren()}})
+
+	s.Require().Nil(replayErr)
+	s.Require().Len(replay.Skipped, 1)
+	s.Equal(0, replay.Skipped[0].Index)
+	s.Equal(ownerOU, replay.Skipped[0].InitiatingOUID)
+	s.Equal(declared.ID, replay.Skipped[0].DeclaredPolicyID)
+}
+
+// A document is one decision, so a refusal partway leaves none of it applied. The whole replay is
+// one transaction, so this is a rollback rather than a compensating write.
+func (s *ServiceTestSuite) TestReplayUndoesWhatItCreatedWhenALaterPolicyFails() {
+	ctx := context.Background()
+	s.withRollback()
+
+	replay, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{
+			{InitiatingOUID: rootOU, ChildUnits: allChildren()},
+			{InitiatingOUID: childOU, ChildUnits: &ChildUnitsRequest{Mode: "sideways"}},
+		})
+
+	s.Require().NotNil(replayErr)
+	s.Equal(1, replayErr.Index, "the refusal names where in the document the policy sat")
+	s.Equal(childOU, replayErr.InitiatingOUID)
+	s.Empty(replay.Skipped)
+
+	all, _ := s.svc.ListPolicies(ctx, testType, testResource)
+	s.Empty(all, "the policy the replay created before the refusal was removed")
+}
+
+// The same holds for a policy the replay replaced: its previous contents go back.
+func (s *ServiceTestSuite) TestReplayRestoresWhatItReplacedWhenALaterPolicyFails() {
+	ctx := context.Background()
+	s.withRollback()
+	original, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: allChildren()})
+	s.Require().Nil(svcErr)
+
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{
+			{InitiatingOUID: rootOU, ChildUnits: allChildren(childOU)},
+			{InitiatingOUID: childOU, ChildUnits: &ChildUnitsRequest{Mode: "sideways"}},
+		})
+
+	s.Require().NotNil(replayErr)
+	restored, svcErr := s.svc.GetPolicy(ctx, original.ID)
+	s.Require().Nil(svcErr)
+	s.Empty(restored.ChildUnits.ExcludedOUIDs, "the exclusion the document added was taken back off")
+}
+
+// The reason the replay is one transaction rather than a compensating write: a narrowing edit
+// deletes the reshares its sharees issued, and the document cannot recreate those. Rolling back is
+// the only thing that brings them back.
+func (s *ServiceTestSuite) TestReplayRestoresReshareslostToANarrowingEdit() {
+	ctx := context.Background()
+	s.withRollback()
+
+	// The owner's policy stops at the child, so the child may reshare below it.
+	owner, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: children(unit(childOU))})
+	s.Require().Nil(svcErr)
+	reshare, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{InitiatingOUID: childOU, ChildUnits: children(unit(grandOU))})
+	s.Require().Nil(svcErr)
+
+	// A document that drops the child, then names a policy the framework refuses. Dropping the
+	// child takes its reshare with it, and the refusal has to bring both back.
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{
+			{InitiatingOUID: rootOU, OtherTreeRoots: roots(root(otherOU))},
+			{InitiatingOUID: rootOU, ChildUnits: &ChildUnitsRequest{Mode: "sideways"}},
+		})
+	s.Require().NotNil(replayErr)
+
+	stillOwner, svcErr := s.svc.GetPolicy(ctx, owner.ID)
+	s.Require().Nil(svcErr, "the owner's policy is back")
+	s.Require().NotNil(stillOwner.ChildUnits)
+	s.Equal([]ChildUnit{{OUID: childOU, Reach: ReachUnit}}, stillOwner.ChildUnits.Units)
+
+	stillReshare, svcErr := s.svc.GetPolicy(ctx, reshare.ID)
+	s.Require().Nil(svcErr, "the child's reshare is back, which no compensating write could do")
+	s.Equal([]ChildUnit{{OUID: grandOU, Reach: ReachUnit}}, stillReshare.ChildUnits.Units)
+}
+
+// A policy for an organization unit the document does not name is left alone: the document says
+// nothing about it, so a replay is not a reconciliation.
+func (s *ServiceTestSuite) TestReplayLeavesPoliciesTheDocumentDoesNotName() {
+	ctx := context.Background()
+	// The owner's policy stops at the child, which is what leaves the child free to reshare below
+	// it: a policy already reaching past it would set those terms itself.
+	_, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: children(unit(childOU))})
+	s.Require().Nil(svcErr)
+	untouched, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{InitiatingOUID: childOU, ChildUnits: children(unit(grandOU))})
+	s.Require().Nil(svcErr)
+
+	// A document carrying only the owner's policy.
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{{InitiatingOUID: rootOU, ChildUnits: children(unit(childOU))}})
+
+	s.Require().Nil(replayErr)
+	all, _ := s.svc.ListPolicies(ctx, testType, testResource)
+	s.Require().Len(all, 2, "the child's own policy is still there")
+	still, svcErr := s.svc.GetPolicy(ctx, untouched.ID)
+	s.Require().Nil(svcErr)
+	s.Equal([]ChildUnit{{OUID: grandOU, Reach: ReachUnit}}, still.ChildUnits.Units)
+}
+
+// Exporting, replaying and exporting again has to agree with itself. Every edit bumps the version,
+// so a replay that rewrote identical contents would hand back a different document each round.
+func (s *ServiceTestSuite) TestReplayOfAnUnchangedDocumentIsAFixedPoint() {
+	ctx := context.Background()
+	original, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: allChildren(childOU)})
+	s.Require().Nil(svcErr)
+
+	for range 3 {
+		exported, svcErr := s.svc.ExportPolicies(ctx, testType, testResource)
+		s.Require().Nil(svcErr)
+		s.Require().Len(exported, 1)
+		s.Equal(original.Version, exported[0].Request.Version,
+			"the export says the same version every time")
+
+		_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+			[]PolicyRequest{exported[0].Request})
+		s.Require().Nil(replayErr)
+	}
+
+	settled, svcErr := s.svc.GetPolicy(ctx, original.ID)
+	s.Require().Nil(svcErr)
+	s.Equal(original.Version, settled.Version, "replaying what was exported changed nothing")
+
+	// A document that does differ is still applied, so the comparison is not swallowing edits.
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{{InitiatingOUID: rootOU, ChildUnits: allChildren()}})
+	s.Require().Nil(replayErr)
+	edited, svcErr := s.svc.GetPolicy(ctx, original.ID)
+	s.Require().Nil(svcErr)
+	s.Equal(original.Version+1, edited.Version)
+	s.Empty(edited.ChildUnits.ExcludedOUIDs, "the exclusion the document dropped was taken off")
+}
+
+// A document carrying no policies asks the framework nothing.
+func (s *ServiceTestSuite) TestReplayWithoutPoliciesDoesNothing() {
+	replay, replayErr := s.svc.ReplacePoliciesForResource(context.Background(), testType,
+		testResource, rootOU, nil)
+
+	s.Nil(replayErr)
+	s.Empty(replay.Skipped)
+}
+
+// A resource's delete has to take its policies with it, reshares included, because nothing else
+// removes the rows and a resource later created with the same id would come back already shared.
+func (s *ServiceTestSuite) TestDeletePoliciesForResourceRemovesEverythingIncludingReshares() {
+	ctx := context.Background()
+	// The owner's policy stops at the child, so the child may reshare below it.
+	owner, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: children(unit(childOU))})
+	s.Require().Nil(svcErr)
+	reshare, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{InitiatingOUID: childOU, ChildUnits: children(unit(grandOU))})
+	s.Require().Nil(svcErr)
+
+	s.Require().Nil(s.svc.DeletePoliciesForResource(ctx, testType, testResource))
+
+	remaining, svcErr := s.svc.ListPolicies(ctx, testType, testResource)
+	s.Require().Nil(svcErr)
+	s.Empty(remaining, "the resource holds no policy afterwards")
+	_, svcErr = s.svc.GetPolicy(ctx, owner.ID)
+	s.Require().NotNil(svcErr)
+	_, svcErr = s.svc.GetPolicy(ctx, reshare.ID)
+	s.Require().NotNil(svcErr, "the reshare went with the policy that carried it")
+}
+
+// A resource holding no policy is the ordinary case for every resource nobody shared, so the purge
+// asks the framework nothing and succeeds.
+func (s *ServiceTestSuite) TestDeletePoliciesForResourceIsFineWithNone() {
+	s.Nil(s.svc.DeletePoliciesForResource(context.Background(), testType, "a-resource-nobody-shared"))
+}
+
+// A declaration is its file, so a resource delete leaves it alone rather than failing on it.
+func (s *ServiceTestSuite) TestDeletePoliciesForResourceLeavesADeclarationAlone() {
+	declared := s.declaredBlanket(PolicyRequest{AllUnits: allUnits()})
+
+	s.Require().Nil(s.svc.DeletePoliciesForResource(context.Background(), testType, testResource))
+
+	still, svcErr := s.svc.GetPolicy(context.Background(), declared.ID)
+	s.Require().Nil(svcErr)
+	s.True(still.Declared)
+}
+
+// A document is read entry by entry against the state the replay has reached, not against a list
+// taken before it started. An earlier entry that narrows the owner's policy takes the reshare
+// beneath it, and the entry describing that reshare must not be read as unchanged and skipped.
+func (s *ServiceTestSuite) TestReplayDoesNotSkipAReshareAnEarlierEntryRemoved() {
+	ctx := context.Background()
+	s.withRollback()
+
+	// The owner stops at the child, so the child may reshare below it.
+	_, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: children(unit(childOU))})
+	s.Require().Nil(svcErr)
+	reshare, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{InitiatingOUID: childOU, ChildUnits: children(unit(grandOU))})
+	s.Require().Nil(svcErr)
+
+	// The document narrows the owner's policy away from the child, then restates the child's
+	// reshare unchanged. The first entry takes the reshare with it, so the second describes a
+	// policy that no longer exists and whose issuer can no longer see the resource.
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{
+			{InitiatingOUID: rootOU, OtherTreeRoots: roots(root(otherOU))},
+			{InitiatingOUID: childOU, ChildUnits: children(unit(grandOU))},
+		})
+
+	s.Require().NotNil(replayErr, "the document is refused rather than reporting success")
+	s.Equal(1, replayErr.Index, "the refusal names the entry that can no longer be applied")
+	s.Equal(childOU, replayErr.InitiatingOUID)
+
+	// The refusal rolls the whole document back, so the reshare is still there.
+	still, svcErr := s.svc.GetPolicy(ctx, reshare.ID)
+	s.Require().Nil(svcErr)
+	s.Equal([]ChildUnit{{OUID: grandOU, Reach: ReachUnit}}, still.ChildUnits.Units)
+}
+
+// An organization unit a policy names can be deleted while the policy still names it. Cleanup has
+// nothing to do for that unit, so the policy must still be removable: failing on the missing unit
+// would make every retry stop at the same place and leave the policy permanently undeletable.
+func (s *ServiceTestSuite) TestDeletePolicyToleratesANamedOUThatIsGone() {
+	// Each case is a policy naming an organization unit the tree does not hold, which is what a
+	// policy looks like after its named unit is deleted. A subtree or root reach also walks down
+	// from the missing unit, so the walk has to come back empty rather than fail.
+	cases := []struct {
+		name   string
+		id     string
+		policy func(id string) Policy
+	}{
+		{"a child unit alone", "01900000-0000-7000-8000-0000000000d1", func(id string) Policy {
+			return goneUnitPolicy(id, &ChildUnits{Mode: ChildUnitsSelected,
+				Units: []ChildUnit{{OUID: "an-ou-since-deleted", Reach: ReachUnit}}}, nil)
+		}},
+		{"a child unit and its subtree", "01900000-0000-7000-8000-0000000000d2", func(id string) Policy {
+			return goneUnitPolicy(id, &ChildUnits{Mode: ChildUnitsSelected,
+				Units: []ChildUnit{{OUID: "an-ou-since-deleted", Reach: ReachSubtree}}}, nil)
+		}},
+		{"the root of another tree", "01900000-0000-7000-8000-0000000000d3", func(id string) Policy {
+			return goneUnitPolicy(id, nil, &OtherTreeRoots{Mode: OtherTreeRootsSelected,
+				Units: []string{"an-ou-since-deleted"}})
+		}},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			ctx := context.Background()
+			stored := tc.policy(tc.id)
+			s.store.policies[stored.ID] = stored
+			s.store.order = append(s.store.order, stored.ID)
+
+			s.Require().Nil(s.svc.DeletePolicy(ctx, stored.ID), "the policy is removable")
+
+			_, svcErr := s.svc.GetPolicy(ctx, stored.ID)
+			s.Require().NotNil(svcErr, "and it is gone")
+		})
+	}
+}
+
+// goneUnitPolicy is the owner's policy for the test resource, stored as is.
+func goneUnitPolicy(id string, childUnits *ChildUnits, otherTreeRoots *OtherTreeRoots) Policy {
+	return Policy{
+		ID:             id,
+		ResourceType:   testType,
+		ResourceID:     testResource,
+		OwningOUID:     rootOU,
+		InitiatingOUID: rootOU,
+		Stage:          stageShare,
+		Version:        1,
+		ChildUnits:     childUnits,
+		OtherTreeRoots: otherTreeRoots,
+	}
+}
+
+// forgetOU points the service at a tree that no longer holds ouID, which is what it sees once that
+// organization unit is deleted.
+func (s *ServiceTestSuite) forgetOU(ouID string) {
+	tree := fixtureTree()
+	delete(tree.ancestors, ouID)
+	hierarchy, enumerator := resolverOver(s.T(), tree)
+	svc := s.svc.(*sharingService)
+	svc.ouHierarchyResolver = hierarchy
+	svc.ouEnumerator = enumerator
+}
+
+// seedLeafReshare shares the resource with a unit that has no children of its own, stopping there,
+// and has that unit share it on to every child it may later have. A leaf is the unit an
+// organization unit delete reaches first.
+func (s *ServiceTestSuite) seedLeafReshare() (owner, reshare Policy) {
+	ctx := context.Background()
+	owner, svcErr := s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{ChildUnits: children(unit(nestedOwnerOU), unit(childOU))})
+	s.Require().Nil(svcErr)
+	reshare, svcErr = s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{InitiatingOUID: nestedOwnerOU, ChildUnits: allChildren()})
+	s.Require().Nil(svcErr)
+	return owner, reshare
+}
+
+// The owner's own policy is exported without an issuer, so a replay gives it to whichever unit owns
+// the resource where the document lands. A reshare keeps its issuer, which is what tells it apart.
+func (s *ServiceTestSuite) TestExportLeavesTheIssuerOffTheOwnersPolicy() {
+	ctx := context.Background()
+	_, svcErr := s.importCreate(ctx, testResource, rootOU, PolicyRequest{ChildUnits: children(unit(childOU))})
+	s.Require().Nil(svcErr)
+	_, svcErr = s.importCreate(ctx, testResource, rootOU,
+		PolicyRequest{InitiatingOUID: childOU, ChildUnits: children(unit(grandOU))})
+	s.Require().Nil(svcErr)
+
+	exported, svcErr := s.svc.ExportPolicies(ctx, testType, testResource)
+
+	s.Require().Nil(svcErr)
+	s.Require().Len(exported, 2)
+	s.Empty(exported[0].Request.InitiatingOUID, "the owner's policy names no issuer")
+	s.Equal(rootOU, exported[0].InitiatingOUID, "though the export still says whose it was")
+	s.Equal(childOU, exported[1].Request.InitiatingOUID, "a reshare keeps its issuer")
+}
+
+// Replayed onto a resource with a different owner, the exported owner's policy is issued by that
+// owner. Read under the unit the document came from, it would be someone else's reshare.
+func (s *ServiceTestSuite) TestAnExportedOwnerPolicyReplaysUnderTheStoredOwner() {
+	ctx := context.Background()
+	original, svcErr := s.importCreate(ctx, testResource, rootOU, PolicyRequest{ChildUnits: allChildren()})
+	s.Require().Nil(svcErr)
+	exported, svcErr := s.svc.ExportPolicies(ctx, testType, testResource)
+	s.Require().Nil(svcErr)
+	s.Require().Nil(s.svc.DeletePolicy(ctx, original.ID))
+
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, "resource-2", ownerOU,
+		[]PolicyRequest{exported[0].Request})
+
+	s.Require().Nil(replayErr)
+	held, svcErr := s.svc.ListPolicies(ctx, testType, "resource-2")
+	s.Require().Nil(svcErr)
+	s.Require().Len(held, 1)
+	s.Equal(ownerOU, held[0].InitiatingOUID)
+	s.Equal(stageShare, held[0].Stage)
+}
+
+// A unit that issued a policy can be deleted while the policy stays. Edits of the resource then
+// still go through, and the cleanup after the edit takes the policy of the unit that is gone.
+func (s *ServiceTestSuite) TestAnEditStillWorksAfterAReshareIssuerIsDeleted() {
+	ctx := context.Background()
+	s.withRollback()
+	owner, reshare := s.seedLeafReshare()
+	s.forgetOU(nestedOwnerOU)
+
+	_, svcErr := s.svc.UpdatePolicy(ctx, owner.ID,
+		PolicyRequest{ChildUnits: children(unit(childOU)), Version: owner.Version})
+
+	s.Require().Nil(svcErr, "the unit that is gone neither blocks the edit nor needs re-narrowing")
+	_, svcErr = s.svc.GetPolicy(ctx, reshare.ID)
+	s.Require().NotNil(svcErr, "and its reshare goes with the cleanup")
+	s.Equal(ErrorPolicyNotFound.Code, svcErr.Code)
+}
+
+// The same holds for an import that changes the owner's policy.
+func (s *ServiceTestSuite) TestAReplayStillWorksAfterAReshareIssuerIsDeleted() {
+	ctx := context.Background()
+	s.withRollback()
+	_, reshare := s.seedLeafReshare()
+	s.forgetOU(nestedOwnerOU)
+
+	_, replayErr := s.svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU,
+		[]PolicyRequest{{InitiatingOUID: rootOU, ChildUnits: children(unit(childOU))}})
+
+	s.Require().Nil(replayErr)
+	_, svcErr := s.svc.GetPolicy(ctx, reshare.ID)
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorPolicyNotFound.Code, svcErr.Code)
+}
+
+// Deleting the policy that reached a unit that is gone takes that unit's own policy too, rather
+// than leaving it behind with no issuer and no parent.
+func (s *ServiceTestSuite) TestDeletingAPolicyTakesTheReshareOfAUnitThatIsGone() {
+	ctx := context.Background()
+	s.withRollback()
+	owner, reshare := s.seedLeafReshare()
+	s.forgetOU(nestedOwnerOU)
+
+	s.Require().Nil(s.svc.DeletePolicy(ctx, owner.ID))
+
+	all, svcErr := s.svc.ListPolicies(ctx, testType, testResource)
+	s.Require().Nil(svcErr)
+	s.Empty(all, "nothing is left behind")
+	_, svcErr = s.svc.GetPolicy(ctx, reshare.ID)
+	s.Require().NotNil(svcErr)
+}
+
+// A unit that issued a policy is reported as depended on, so it cannot be deleted while the policy
+// stands. A unit that is only named by a policy is not: cleanup already handles a named unit that
+// is gone.
+func (s *ServiceTestSuite) TestAnIssuingUnitIsReportedAsDependedOn() {
+	ctx := context.Background()
+	_, reshare := s.seedLeafReshare()
+
+	deps, err := s.svc.GetResourceDependencies(ctx, resourcedependency.ResourceTypeOU, nestedOwnerOU)
+
+	s.Require().NoError(err)
+	s.Require().Len(deps, 1)
+	s.Equal(resourcedependency.ResourceDependency{
+		ResourceType:     resourcedependency.ResourceTypeSharingPolicy,
+		ID:               reshare.ID,
+		DisplayName:      string(testType) + " " + testResource,
+		BehaviorOnDelete: resourcedependency.BehaviorRestrict,
+	}, deps[0])
+
+	named, err := s.svc.GetResourceDependencies(ctx, resourcedependency.ResourceTypeOU, childOU)
+	s.Require().NoError(err)
+	s.Empty(named, "being named by a policy does not block a delete")
+
+	other, err := s.svc.GetResourceDependencies(ctx, resourcedependency.ResourceTypeUser, nestedOwnerOU)
+	s.Require().NoError(err)
+	s.Empty(other, "only organization units are asked about")
+}
+
+// A failed read is reported rather than read as a unit nobody depends on, so the delete fails
+// closed.
+func (s *ServiceTestSuite) TestAFailedIssuedByReadIsReported() {
+	s.store.failNext = errors.New("query error")
+
+	_, err := s.svc.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeOU, rootOU)
+
+	s.Error(err)
+}
+
+// peekingDeclaration reads visibility through the service while it is being told a unit lost the
+// resource, the way a resource type's own cleanup might. That read runs inside the transaction, so
+// it sees, and caches, a state a rollback can still undo.
+type peekingDeclaration struct {
+	*testDeclaration
+	svc  SharingServiceInterface
+	fail error
+}
+
+// OnVisibilityLost reads the unit's visibility, then reports the configured failure.
+func (d *peekingDeclaration) OnVisibilityLost(ctx context.Context, resourceID, ouID string) error {
+	_, _ = d.svc.IsVisible(ctx, testType, resourceID, ouID)
+	return d.fail
+}
+
+// cachingServiceWithPeekingHook builds a rolling-back service with a visibility cache, where the
+// resource type's hook reads visibility mid-transaction, and shares the resource with childOU.
+func (s *ServiceTestSuite) cachingServiceWithPeekingHook(hookFailure error) SharingServiceInterface {
+	visibilityMock, _ := newMockCache[bool](s.T())
+	hierarchy, enumerator := testResolver(s.T())
+	svc := newSharingService(s.storeMock, s.declStore, hierarchy, enumerator,
+		rollbackTx(s.T(), s.store), visibilityMock, nil, false)
+	svc.RegisterResourceType(&peekingDeclaration{testDeclaration: &testDeclaration{}, svc: svc, fail: hookFailure})
+	_, svcErr := svc.CreatePolicy(context.Background(), testType, testResource, rootOU,
+		PolicyRequest{ChildUnits: children(unit(childOU))})
+	s.Require().Nil(svcErr)
+	return svc
+}
+
+// A refused purge rolls its deletes back, so a visibility answer cached while they were in flight
+// describes a state that never committed. The caches are cleared whichever way the purge ends.
+func (s *ServiceTestSuite) TestARefusedPurgeLeavesNoStaleVisibility() {
+	ctx := context.Background()
+	svc := s.cachingServiceWithPeekingHook(errors.New("hook failed"))
+
+	s.Require().NotNil(svc.DeletePoliciesForResource(ctx, testType, testResource))
+
+	visible, svcErr := svc.IsVisible(ctx, testType, testResource, childOU)
+	s.Require().Nil(svcErr)
+	s.True(visible, "the rolled-back purge took nothing away")
+}
+
+// The same for a refused replay: its entry narrows the owner's policy away from childOU, the
+// resource type's cleanup fails after reading childOU's visibility, and the document rolls back.
+func (s *ServiceTestSuite) TestARefusedReplayLeavesNoStaleVisibility() {
+	ctx := context.Background()
+	svc := s.cachingServiceWithPeekingHook(errors.New("hook failed"))
+
+	_, replayErr := svc.ReplacePoliciesForResource(ctx, testType, testResource, rootOU, []PolicyRequest{
+		{InitiatingOUID: rootOU, OtherTreeRoots: roots(root(otherOU))},
+	})
+	s.Require().NotNil(replayErr)
+
+	visible, svcErr := svc.IsVisible(ctx, testType, testResource, childOU)
+	s.Require().Nil(svcErr)
+	s.True(visible, "the rolled-back replay took nothing away")
 }

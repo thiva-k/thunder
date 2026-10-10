@@ -1151,3 +1151,34 @@ func (s *StoreTestSuite) TestACountThatIsNotANumberIsAFailure() {
 	s.Require().Error(err)
 	s.Contains(err.Error(), "failed to read sharing policy count")
 }
+
+// The issued-by lookup backs the check that keeps an issuing organization unit from being deleted,
+// so it reads every resource type and hydrates like any other read.
+func (s *StoreTestSuite) TestListPoliciesIssuedByHydrates() {
+	s.clientAvailable()
+	s.client.On("QueryContext", mock.Anything, queryListPoliciesIssuedBy, rootOU, storeDeploymentID).
+		Return([]map[string]interface{}{sectionsRow(`{"childUnits":{"mode":"all"}}`)}, nil).Once()
+	s.expectHydrate("p1", nil, nil)
+
+	got, err := s.store.ListPoliciesIssuedBy(context.Background(), rootOU)
+
+	s.Require().NoError(err)
+	s.Require().Len(got, 1)
+	s.Equal(rootOU, got[0].InitiatingOUID)
+	s.Require().NotNil(got[0].ChildUnits)
+	s.Equal(ChildUnitsAll, got[0].ChildUnits.Mode)
+}
+
+// A failed read is reported, not read as an organization unit that issued nothing, which would let
+// the unit be deleted out from under its policies.
+func (s *StoreTestSuite) TestListPoliciesIssuedByWrapsAQueryFailure() {
+	s.clientAvailable()
+	failure := errors.New("query error")
+	s.client.On("QueryContext", mock.Anything, queryListPoliciesIssuedBy, rootOU, storeDeploymentID).
+		Return(nil, failure).Once()
+
+	got, err := s.store.ListPoliciesIssuedBy(context.Background(), rootOU)
+
+	s.ErrorIs(err, failure)
+	s.Nil(got)
+}

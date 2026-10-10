@@ -3,6 +3,11 @@
 
 package sharing
 
+import (
+	"github.com/thunder-id/thunderid/internal/system/utils"
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+)
+
 // ResourceType identifies a resource type registered with the sharing framework.
 type ResourceType string
 
@@ -585,3 +590,117 @@ const (
 	// it has chosen nothing or because the field is not its to choose.
 	SourceRule = "rule"
 )
+
+// The types below are the wire shape a management API serves, shared by every resource type that
+// mounts sharing endpoints of its own.
+
+// PolicyResponse is one recorded policy as an API returns it. Its sections come back in the shape
+// a request states them in, so what a caller reads is what it sends back to edit the policy.
+type PolicyResponse struct {
+	ID string `json:"id"`
+	// InitiatingOUID is whose decision this policy is. The owning unit is not carried: it belongs
+	// to the resource, which these endpoints are already mounted under.
+	InitiatingOUID string `json:"initiatingOuId"`
+	Stage          string `json:"stage"`
+	ParentPolicyID string `json:"parentPolicyId,omitempty"`
+	IsReadOnly     bool   `json:"isReadOnly"`
+	Version        int    `json:"version"`
+	// AllUnits, ChildUnits and OtherTreeRoots are the sections the policy states. One it does not
+	// state is left out.
+	AllUnits       *AllUnitsRequest       `json:"allUnits,omitempty"`
+	ChildUnits     *ChildUnitsRequest     `json:"childUnits,omitempty"`
+	OtherTreeRoots *OtherTreeRootsRequest `json:"otherTreeRoots,omitempty"`
+}
+
+// PolicyListResponse is one page of a resource's policies.
+type PolicyListResponse struct {
+	TotalResults int              `json:"totalResults"`
+	StartIndex   int              `json:"startIndex"`
+	Count        int              `json:"count"`
+	Policies     []PolicyResponse `json:"policies"`
+	Links        []utils.Link     `json:"links"`
+}
+
+// ResolvedOverlayResponse is what one organization unit may do with a resource. A type that
+// declares no overlay fields answers with empty rules.
+type ResolvedOverlayResponse struct {
+	OUID      string                 `json:"ouId"`
+	Owned     bool                   `json:"owned"`
+	Visible   bool                   `json:"visible"`
+	PolicyIDs []string               `json:"policyIds"`
+	Rules     map[string]OverlayRule `json:"rules"`
+}
+
+// ToPolicyResponse shapes a stored policy for an API.
+func ToPolicyResponse(p Policy) PolicyResponse {
+	sections := requestFromPolicy(p)
+	return PolicyResponse{
+		ID:             p.ID,
+		InitiatingOUID: p.InitiatingOUID,
+		Stage:          string(p.Stage),
+		ParentPolicyID: p.ParentPolicyID,
+		IsReadOnly:     p.Declared,
+		Version:        p.Version,
+		AllUnits:       sections.AllUnits,
+		ChildUnits:     sections.ChildUnits,
+		OtherTreeRoots: sections.OtherTreeRoots,
+	}
+}
+
+// ToPolicyListResponse shapes one page of policies for an API. basePath is where the resource type
+// mounts its policy listing, which the framework does not know; the page links are built on it.
+func ToPolicyListResponse(list PolicyList, basePath string, limit, offset int) PolicyListResponse {
+	policies := make([]PolicyResponse, 0, len(list.Policies))
+	for _, p := range list.Policies {
+		policies = append(policies, ToPolicyResponse(p))
+	}
+	return PolicyListResponse{
+		TotalResults: list.TotalResults,
+		StartIndex:   list.StartIndex,
+		Count:        list.Count,
+		Policies:     policies,
+		Links:        utils.BuildPaginationLinks(basePath, limit, offset, list.TotalResults, ""),
+	}
+}
+
+// ToResolvedOverlayResponse shapes a resolved overlay for an API. The empty collections are built
+// rather than left nil, so a caller reads them without guarding against null.
+func ToResolvedOverlayResponse(overlay ResolvedOverlay) ResolvedOverlayResponse {
+	rules := overlay.Rules
+	if rules == nil {
+		rules = map[string]OverlayRule{}
+	}
+	policyIDs := overlay.PolicyIDs
+	if policyIDs == nil {
+		policyIDs = []string{}
+	}
+	return ResolvedOverlayResponse{
+		OUID:      overlay.OUID,
+		Owned:     overlay.Owned,
+		Visible:   overlay.Visible,
+		PolicyIDs: policyIDs,
+		Rules:     rules,
+	}
+}
+
+// PolicyReplay reports what a replay did that its caller has to say something about. A policy the
+// document carries for an organization unit a declaration already governs is dropped, and the
+// replay still succeeds, so the caller is told which ones lost rather than discovering it later.
+type PolicyReplay struct {
+	Skipped []SkippedPolicy
+}
+
+// SkippedPolicy is one policy a replay left out, named the way a document names it: by position.
+type SkippedPolicy struct {
+	Index            int
+	InitiatingOUID   string
+	DeclaredPolicyID string
+}
+
+// PolicyReplayError is a refusal of one of the document's policies, carrying where in the document
+// it sat so the caller can say which one, because a document names them only by position.
+type PolicyReplayError struct {
+	Index          int
+	InitiatingOUID string
+	Err            *tidcommon.ServiceError
+}

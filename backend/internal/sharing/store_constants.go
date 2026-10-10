@@ -144,6 +144,16 @@ var (
 			WHERE RESOURCE_TYPE = $1 AND RESOURCE_ID = $2 AND DEPLOYMENT_ID = $3
 			ORDER BY CREATED_AT, ID`,
 	}
+
+	// queryListPoliciesIssuedBy returns every policy one organization unit issued, for any
+	// resource. It backs the check that keeps an issuing unit from being deleted out from under its
+	// policies, which runs only when an organization unit is deleted.
+	queryListPoliciesIssuedBy = dbmodel.DBQuery{
+		ID: "SHQ-SHARING_MGT-20",
+		Query: `SELECT ` + policyColumns + ` FROM "RESOURCE_SHARING_POLICY"
+			WHERE INITIATING_OU_ID = $1 AND DEPLOYMENT_ID = $2
+			ORDER BY CREATED_AT, ID`,
+	}
 )
 
 // buildRelevantPoliciesQuery returns every policy of resourceType that could plausibly cover any
