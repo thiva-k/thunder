@@ -8,6 +8,7 @@ import {
   ResourceAvatar,
   UnsavedChangesBar,
 } from '@thunderid/components';
+import {useOrganizationAccess} from '@thunderid/configure-resource-sharing';
 import {useLogger} from '@thunderid/logger/react';
 import {isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -42,6 +43,7 @@ import EditCustomizationSettings from '../components/edit-application/customizat
 import EditFlowsSettings from '../components/edit-application/flows-settings/EditFlowsSettings';
 import IntegrationGuides from '../components/edit-application/integration-guides/IntegrationGuides';
 import McpConnectTab from '../components/edit-application/mcp/McpConnectTab';
+import EditOrganizationAccessSettings from '../components/edit-application/organization-access/EditOrganizationAccessSettings';
 import EditTokenSettings from '../components/edit-application/token-settings/EditTokenSettings';
 import EditTokenSettingsTabs from '../components/edit-application/token-settings/EditTokenSettingsTabs';
 import ApplicationConstants from '../constants/application-constants';
@@ -57,7 +59,7 @@ import getTemplateCapabilities from '../utils/getTemplateCapabilities';
 import getTemplateFieldConstraints from '../utils/getTemplateFieldConstraints';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
 import isValidRedirectUriFormat from '../utils/isValidRedirectUriFormat';
-import {hasUserAccess} from '../utils/oauth2Rules';
+import {hasClientAccess, hasUserAccess} from '../utils/oauth2Rules';
 import validateBackchannelLogoutUri from '../utils/validateBackchannelLogoutUri';
 
 interface TabConfig {
@@ -104,6 +106,21 @@ export default function ApplicationEditPage() {
 
   const {data: application, isLoading, error, refetch} = useGetApplication(applicationId ?? '');
   const updateApplication = useUpdateApplication();
+  // TODO: Offer Organization Access to every application once sharing an application that signs
+  // users in is supported, by removing this check. Until then a granted unit can only request tokens
+  // through the application, so only applications with the client credentials grant get the tab,
+  // whatever other grants they also have. Read from the saved application, so the tab does not
+  // appear or vanish while grant types are being edited.
+  const offersOrganizationAccess = useMemo(
+    () =>
+      hasClientAccess(application?.inboundAuthConfig?.find((config) => config.type === 'oauth2')?.config.grantTypes),
+    [application],
+  );
+  // Held here rather than in its tab, because inactive tabs unmount and the draft must survive them.
+  const organizationAccess = useOrganizationAccess({
+    resourcePath: `applications/${applicationId}`,
+    enabled: Boolean(applicationId) && offersOrganizationAccess,
+  });
 
   // Resolves an error through the `applications` catalog. `t` defaults to the `common` namespace,
   // so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `applications:`,
@@ -180,6 +197,15 @@ export default function ApplicationEditPage() {
     [handleFieldChange],
   );
 
+  const hasApplicationChanges = useMemo(
+    () =>
+      Object.entries(editedApp).some(
+        ([key, value]) => !isEqualIgnoringEmpty(value, application?.[key as keyof Application]),
+      ),
+    [editedApp, application],
+  );
+  const hasChanges = hasApplicationChanges || organizationAccess.hasChanges;
+
   const handleSave = useCallback(async () => {
     if (!application || !applicationId) return;
 
@@ -189,27 +215,35 @@ export default function ApplicationEditPage() {
     };
     void certificate;
 
+    // The application is saved first, so a refused organization access change leaves the
+    // application's own settings saved and only the access draft waiting to be retried.
     try {
-      await updateApplication.mutateAsync({
-        applicationId,
-        data: updatedData,
-      });
-      setEditedApp({});
-      await refetch();
-      // Bumped only after refetch resolves to prevent stale data being passed to the remounted sections.
-      setSectionResetKey((key) => key + 1);
+      if (hasApplicationChanges) {
+        await updateApplication.mutateAsync({
+          applicationId,
+          data: updatedData,
+        });
+        setEditedApp({});
+        await refetch();
+        // Bumped only after refetch resolves to prevent stale data being passed to the remounted sections.
+        setSectionResetKey((key) => key + 1);
+      }
+      if (organizationAccess.hasChanges) {
+        await organizationAccess.save();
+      }
     } catch {
       logger.error('Failed to update application');
     }
-  }, [application, applicationId, editedApp, updateApplication, refetch, logger]);
-
-  const hasChanges = useMemo(
-    () =>
-      Object.entries(editedApp).some(
-        ([key, value]) => !isEqualIgnoringEmpty(value, application?.[key as keyof Application]),
-      ),
-    [editedApp, application],
-  );
+  }, [
+    application,
+    applicationId,
+    editedApp,
+    hasApplicationChanges,
+    updateApplication,
+    organizationAccess,
+    refetch,
+    logger,
+  ]);
 
   const resourceTypeTitle = t('navigation:pages.applications', 'Applications');
 
@@ -374,6 +408,12 @@ export default function ApplicationEditPage() {
             ),
           },
           {
+            key: 'organizationAccess',
+            label: t('applications:edit.page.tabs.organizationAccess', 'Organization Access'),
+            panel: <EditOrganizationAccessSettings application={application} access={organizationAccess} />,
+            hidden: !offersOrganizationAccess,
+          },
+          {
             key: 'advanced',
             label: t('applications:edit.page.tabs.advanced'),
             panel: (
@@ -528,6 +568,12 @@ export default function ApplicationEditPage() {
           ),
         },
         {
+          key: 'organizationAccess',
+          label: t('applications:edit.page.tabs.organizationAccess', 'Organization Access'),
+          panel: <EditOrganizationAccessSettings application={application} access={organizationAccess} />,
+          hidden: !offersOrganizationAccess,
+        },
+        {
           key: 'advanced',
           label: t('applications:edit.page.tabs.advanced'),
           panel: (
@@ -546,7 +592,7 @@ export default function ApplicationEditPage() {
             />
           ),
         },
-      ]
+      ].filter((tab) => !tab.hidden)
     : [];
 
   const activeTabs = isMcpClient ? mcpTabs : standardTabs;
@@ -744,7 +790,7 @@ export default function ApplicationEditPage() {
           resetLabel={t('applications:edit.page.reset')}
           saveLabel={t('applications:edit.page.save')}
           savingLabel={t('applications:edit.page.saving')}
-          isSaving={updateApplication.isPending}
+          isSaving={updateApplication.isPending || organizationAccess.isSaving}
           saveDisabled={
             hasValidationErrors ||
             mcpAccessInvalid ||
@@ -758,17 +804,26 @@ export default function ApplicationEditPage() {
             application.isReadOnly === true
           }
           error={
-            updateApplication.error
+            (updateApplication.error
               ? getApplicationErrorMessage(
                   updateApplication.error,
-                  (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
+                  tForErrors,
                   'update.error',
                   'Failed to update application. Please try again.',
                 )
-              : undefined
+              : undefined) ??
+            (organizationAccess.saveError
+              ? getApplicationErrorMessage(
+                  organizationAccess.saveError,
+                  tForErrors,
+                  'edit.organizationAccess.save.error',
+                  'Failed to update organization access. Please try again.',
+                )
+              : undefined)
           }
           onReset={() => {
             updateApplication.reset();
+            organizationAccess.reset();
             setEditedApp({});
             setHasValidationErrors(false);
             setMcpAccessInvalid(false);
