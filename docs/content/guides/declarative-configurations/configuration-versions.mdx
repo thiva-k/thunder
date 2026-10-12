@@ -280,6 +280,29 @@ curl -X PUT https://localhost:8090/gateways/<gateway_id>/secrets/APPLICATION_ORD
   -d '{"value": "<client_secret>"}'
 ```
 
+## Deploy From the Console
+
+The console does all of the above from one full-screen page. The **Deploy** button in the console's
+header opens it: the captured versions on the left, newest first, each marked with the gateways that
+run it, and a card for every registered gateway with the version it runs and when and by whom it was
+deployed. The newest version is marked **Latest**. The control plane keeps it up to date as the
+configuration changes, so nothing has to be captured by hand.
+
+**Deploy** on a version's row opens a dialog for one gateway. It lists the resources the write would
+add, change, or remove, each with a checkbox to leave it out this time, and an input for every value
+the gateway lacks. One button sets the values and applies the version. **Rollback** on a gateway's
+card previews the changes that returning the gateway to its previous version would make, and rolls it
+back only when you confirm.
+
+**Explore** on a gateway's card, or a click on the card itself, opens the gateway's explorer: a map of
+every resource the gateway runs, in lanes by type, with a line for each relationship between them,
+such as an application and the flow it signs users in with. Hovering a line names the relationship.
+Selecting a resource opens a panel with the variables and secrets the gateway holds for it, which can
+be set there; a secret is replaced, never shown. Changes apply to that gateway alone.
+
+**Configure** on a gateway's card opens the variables and secrets the gateway holds, in one tab each,
+and names the values the version it runs refers to but the gateway does not hold.
+
 ## Next Steps
 
 - [Value References](./value-references.mdx)

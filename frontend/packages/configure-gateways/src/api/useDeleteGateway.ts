@@ -6,6 +6,7 @@ import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import GatewayQueryKeys from '../constants/gateway-query-keys';
+import DeployQueryKeys from '../constants/query-keys';
 
 export default function useDeleteGateway(): UseMutationResult<void, Error, string> {
   const {http} = useThunderID();
@@ -24,6 +25,7 @@ export default function useDeleteGateway(): UseMutationResult<void, Error, strin
     onSuccess: (_result, id) => {
       queryClient.removeQueries({queryKey: [GatewayQueryKeys.GATEWAY, id]});
       void queryClient.invalidateQueries({queryKey: [GatewayQueryKeys.GATEWAYS]});
+      void queryClient.invalidateQueries({queryKey: [DeployQueryKeys.GATEWAYS]});
       showToast(t('gateways:delete.success', 'Gateway removed.'), 'success');
     },
   });

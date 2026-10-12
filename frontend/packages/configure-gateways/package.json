@@ -2,11 +2,12 @@
   "private": true,
   "name": "@thunderid/configure-gateways",
   "version": "0.0.0",
-  "description": "Gateway management feature for ⚡️ ThunderID applications",
+  "description": "Gateway management, deploy and gateway explorer feature for ⚡️ ThunderID applications",
   "keywords": [
     "thunderid",
     "admin",
     "gateways",
+    "deploy",
     "react",
     "feature"
   ],
