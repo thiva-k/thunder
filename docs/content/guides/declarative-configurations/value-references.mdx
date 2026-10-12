@@ -62,6 +62,17 @@ unaffected. The reference text is never written in place of the value: a client 
 
 Set the missing values in the store, then import again.
 
+## A Reference Is Not a Value
+
+The store holds what a reference stands for, so it does not accept a reference as a value. Setting a
+variable or a secret to `var:NAME` or `sec:NAME`, or to a JSON list of strings with such an item in
+it, is refused with the code `VAR-1011`. A value that only begins with `var:` but is not a
+reference name, such as a URL carrying one in its query, is stored as it is, and so is a list that is
+not one of strings.
+
+A placeholder copied into the store in place of a value would otherwise be handed to a resource at
+import, or, when it names the variable it is stored under, resolve without end.
+
 ## On a Control Plane
 
 A control plane keeps configuration as references and holds no values, so an import there leaves

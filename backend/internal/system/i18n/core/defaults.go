@@ -1437,6 +1437,8 @@ var defaultMessages = map[string]string{
 	"error.variablestore.invalid_value_description": "A value is required and must be at most 8192 characters",
 	"error.variablestore.not_found": "Not found",
 	"error.variablestore.not_found_description": "Nothing of that name is stored",
+	"error.variablestore.reference_value": "A reference is not a value",
+	"error.variablestore.reference_value_description": "The store holds what a var: or sec: reference stands for, so a value cannot be a reference or a list holding one",
 	"error.variablestore.too_many_names": "Too many names",
 	"error.variablestore.too_many_names_description": "At most 100 names may be requested at once",
 	"error.variablestore.unknown_parameter": "Unknown query parameter",
