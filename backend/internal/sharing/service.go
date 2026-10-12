@@ -209,7 +209,7 @@ func (s *sharingService) createPolicy(
 		return Policy{}, withDetail(ErrorInvalidRequestFormat, "the resource has no owning organization unit")
 	}
 	if !declared {
-		if svcErr := requireDeclarativeForDeploymentWideScope(req.Targets); svcErr != nil {
+		if svcErr := requireDeclarativeForDeploymentWideGrant(req); svcErr != nil {
 			return Policy{}, svcErr
 		}
 	}
@@ -320,14 +320,15 @@ func (s *sharingService) requireUsableDeclaredID(
 	return withDetail(ErrorDeclaredPolicyIDConflict, id)
 }
 
-// requireDeclarativeForDeploymentWideScope refuses the two scopes whose reach is not bounded by the
+// requireDeclarativeForDeploymentWideGrant refuses the two grants whose reach is not bounded by the
 // initiator's own position in the tree, unless the policy comes from a resource file.
-func requireDeclarativeForDeploymentWideScope(targets []TargetRequest) *tidcommon.ServiceError {
-	for _, t := range targets {
-		switch t.Scope {
-		case ScopeAllOUs, ScopeAllRoots:
-			return withDetail(ErrorDeploymentWideScopeDeclarativeOnly, string(t.Scope))
-		}
+func requireDeclarativeForDeploymentWideGrant(req PolicyRequest) *tidcommon.ServiceError {
+	if req.AllUnits != nil {
+		return withDetail(ErrorDeploymentWideScopeDeclarativeOnly, string(SectionAllUnits))
+	}
+	if req.OtherTreeRoots != nil && req.OtherTreeRoots.Mode == OtherTreeRootsAll {
+		return withDetail(ErrorDeploymentWideScopeDeclarativeOnly,
+			fmt.Sprintf("%s with mode %s", SectionOtherTreeRoots, OtherTreeRootsAll))
 	}
 	return nil
 }
@@ -357,15 +358,6 @@ func (s *sharingService) buildPolicy(
 		parentPolicyID = canonicalParentID(covering)
 	}
 
-	targets, svcErr := s.buildTargets(ctx, req.Targets, initiatingOUID, owningOUID, stage)
-	if svcErr != nil {
-		return Policy{}, svcErr
-	}
-
-	if svcErr := s.requireExclusionsInReach(ctx, targets, initiatingOUID); svcErr != nil {
-		return Policy{}, svcErr
-	}
-
 	// A declaration carries its own id; an API create mints one.
 	id := req.ID
 	if !declared {
@@ -387,10 +379,17 @@ func (s *sharingService) buildPolicy(
 		ParentPolicyID: parentPolicyID,
 		Declared:       declared,
 		Version:        1,
-		Targets:        targets,
 	}
 
-	rules, svcErr := s.materializeRules(ctx, rt, resourceID, owningOUID, initiatingOUID, req, targets)
+	if svcErr := s.buildSections(ctx, req, &policy); svcErr != nil {
+		return Policy{}, svcErr
+	}
+
+	if svcErr := s.requireExclusionsInReach(ctx, policy.grants(), initiatingOUID); svcErr != nil {
+		return Policy{}, svcErr
+	}
+
+	rules, svcErr := s.materializeRules(ctx, rt, resourceID, owningOUID, initiatingOUID, req)
 	if svcErr != nil {
 		return Policy{}, svcErr
 	}
@@ -401,9 +400,10 @@ func (s *sharingService) buildPolicy(
 // requireEditLeavesFrontiersIntact refuses an edit that would reach past a unit which has already
 // handed the resource on.
 //
-// Widening a target from one unit to that unit and its subtree is the case: the unit below stops
-// being a frontier, and everything it granted would then be covered twice, by its own policy and
-// by this one. The unit has to withdraw what it granted before the reach above it can be widened.
+// Widening a named unit's reach from the unit alone to the unit and its subtree is the case: the
+// unit below stops being a frontier, and everything it granted would then be covered twice, by its
+// own policy and by this one. The unit has to withdraw what it granted before the reach above it
+// can be widened.
 func (s *sharingService) requireEditLeavesFrontiersIntact(
 	ctx context.Context, proposed Policy,
 ) *tidcommon.ServiceError {
@@ -413,6 +413,7 @@ func (s *sharingService) requireEditLeavesFrontiersIntact(
 		return &tidcommon.InternalServerError
 	}
 
+	grants := proposed.grants()
 	for _, p := range policies {
 		if p.ID == proposed.ID || p.InitiatingOUID == proposed.InitiatingOUID {
 			continue
@@ -421,51 +422,49 @@ func (s *sharingService) requireEditLeavesFrontiersIntact(
 		if svcErr != nil {
 			return svcErr
 		}
-		if reachedByCascadingTarget(proposed.Targets, p.InitiatingOUID, chain) {
+		if reachedByCascadingGrant(grants, p.InitiatingOUID, chain) {
 			return withDetail(ErrorReshareNotPermitted, p.InitiatingOUID+" has shared this resource on")
 		}
 	}
 	return nil
 }
 
-// reachedByCascadingTarget reports whether a target that carries on past the unit it names reaches
+// reachedByCascadingGrant reports whether a grant that carries on past the unit it names reaches
 // ouID, which is what would strip ouID of a frontier unit's standing.
-func reachedByCascadingTarget(targets []Target, ouID string, chain []string) bool {
-	cascading := make([]Target, 0, len(targets))
-	for _, t := range targets {
-		if cascadingScope(t.Scope) {
-			cascading = append(cascading, t)
+//
+// A grant that excludes ouID, or a unit above it, does not reach it: an exclusion takes everything
+// beneath it out of reach, exactly as the chain walk reads it.
+func reachedByCascadingGrant(grants []grant, ouID string, chain []string) bool {
+	cascading := make([]grant, 0, len(grants))
+	for _, g := range grants {
+		if cascadingScope(g.scope) && !excludedAnywhere(chain, g.excludedOUIDs) {
+			cascading = append(cascading, g)
 		}
 	}
-	return reachedByAnyTarget(cascading, ouID, chain)
+	return reachedByAnyGrant(cascading, ouID, chain)
 }
 
-// requireExclusionsInReach refuses an exclusion naming an organization unit none of the policy's
-// own targets reach. Nothing would apply it, and accepting it would read as a withholding that
-// never happened.
+// requireExclusionsInReach refuses an exclusion naming an organization unit its own grant does not
+// reach. Nothing would apply it, and accepting it would read as a withholding that never happened.
+//
+// Only a blanket grant carries exclusions, so there is no named unit here for one to cancel out.
 func (s *sharingService) requireExclusionsInReach(
-	ctx context.Context, targets []Target, initiatingOUID string,
+	ctx context.Context, grants []grant, initiatingOUID string,
 ) *tidcommon.ServiceError {
-	for _, t := range targets {
-		for _, ouID := range t.ExcludedOUIDs {
-			// Carving out the unit a target anchors on cancels the target rather than narrowing
-			// it: root and child stop at the unit they name, and childSubtree starts from it, so
-			// in every case nothing is left for the target to reach.
-			if ouID == t.OUID && anchoredScope(t.Scope) {
-				return withDetail(ErrorExclusionEmptiesTarget, ouID)
-			}
+	for _, g := range grants {
+		for _, ouID := range g.excludedOUIDs {
 			chain, svcErr := s.buildChain(ctx, ouID)
 			if svcErr != nil {
 				return svcErr
 			}
-			// A target reaching down the initiator's own tree names organization units the way
-			// its targets do, one hop below the issuer. Carving out a grandchild would decide for
-			// the child over its head, and under a cascading target that child holds no policy of
-			// its own to reverse it with.
-			if ownTreeScope(t.Scope) && (len(chain) < 2 || chain[len(chain)-2] != initiatingOUID) {
+			// Reaching every child unit names organization units the way a selected section does,
+			// one hop below the issuer. Carving out a grandchild would decide for the child over
+			// its head, and beneath a cascading grant that child holds no policy of its own to
+			// reverse it with.
+			if g.scope == scopeAllChildren && (len(chain) < 2 || chain[len(chain)-2] != initiatingOUID) {
 				return withDetail(ErrorExclusionNotADirectChild, ouID)
 			}
-			if !reachedByAnyTarget([]Target{t}, ouID, chain) {
+			if !reachedByAnyGrant([]grant{g}, ouID, chain) {
 				return withDetail(ErrorExclusionOutOfReach, ouID)
 			}
 		}
@@ -473,29 +472,29 @@ func (s *sharingService) requireExclusionsInReach(
 	return nil
 }
 
-// reachedByAnyTarget reports whether a target covers ouID, given the chain from its tree's root
-// down to it. A cascading target reaches anything below its anchor; every other scope reaches
+// reachedByAnyGrant reports whether a grant covers ouID, given the chain from its tree's root
+// down to it. A cascading grant reaches anything below its anchor; every other scope reaches
 // only the unit it names.
-func reachedByAnyTarget(targets []Target, ouID string, chain []string) bool {
-	for _, t := range targets {
-		switch t.Scope {
-		case ScopeAllOUs:
+func reachedByAnyGrant(grants []grant, ouID string, chain []string) bool {
+	for _, g := range grants {
+		switch g.scope {
+		case scopeAllOUs:
 			return true
-		case ScopeAllRoots:
+		case scopeAllRoots:
 			if len(chain) > 0 && chain[0] == ouID {
 				return true
 			}
-		case ScopeAllChildren, ScopeChildSubtree:
+		case scopeAllChildren, scopeChildSubtree:
 			for _, ancestor := range chain {
-				if ancestor == t.OUID && ancestor != ouID {
+				if ancestor == g.ouID && ancestor != ouID {
 					return true
 				}
 			}
-			if t.Scope == ScopeChildSubtree && t.OUID == ouID {
+			if g.scope == scopeChildSubtree && g.ouID == ouID {
 				return true
 			}
-		case ScopeRoot, ScopeChild:
-			if t.OUID == ouID {
+		case scopeRoot, scopeChild:
+			if g.ouID == ouID {
 				return true
 			}
 		}
@@ -503,47 +502,25 @@ func reachedByAnyTarget(targets []Target, ouID string, chain []string) bool {
 	return false
 }
 
-// ownTreeScope reports whether a target reaches down the initiating organization unit's own tree.
-// The deployment-wide and root scopes are not bounded by where the initiator sits, so the one-hop
-// rule has nothing to say about what they may carve out.
-func ownTreeScope(scope TargetScope) bool {
-	switch scope {
-	case ScopeChild, ScopeChildSubtree, ScopeAllChildren:
-		return true
-	}
-	return false
-}
-
-// anchoredScope reports whether a target's reach is defined by the organization unit it names,
-// rather than by a family of units. allChildren is not one: it carries the issuing unit so the row
-// has an anchor, but it reaches below that unit and never the unit itself.
-func anchoredScope(scope TargetScope) bool {
-	switch scope {
-	case ScopeRoot, ScopeChild, ScopeChildSubtree:
-		return true
-	}
-	return false
-}
-
-// cascadingScope reports whether a target reaches below the organization unit it names, which is
+// cascadingScope reports whether a grant reaches below the organization unit it names, which is
 // what leaves that unit nothing of its own to grant.
-func cascadingScope(scope TargetScope) bool {
+func cascadingScope(scope grantScope) bool {
 	switch scope {
-	case ScopeAllOUs,
-		ScopeAllChildren,
-		ScopeChildSubtree:
+	case scopeAllOUs,
+		scopeAllChildren,
+		scopeChildSubtree:
 		return true
 	}
 	return false
 }
 
-// requireFrontierUnit refuses a reshare when every target covering the initiator carries on past
-// it. One target that stops at the initiator is enough, since that reach is the initiator's to
+// requireFrontierUnit refuses a reshare when every grant covering the initiator carries on past
+// it. One grant that stops at the initiator is enough, since that reach is the initiator's to
 // hand on.
 func requireFrontierUnit(covering []Coverage) *tidcommon.ServiceError {
 	for _, c := range covering {
-		for _, t := range c.Policy.Targets {
-			if t.ID == c.TargetID && !cascadingScope(t.Scope) {
+		for _, g := range c.Policy.grants() {
+			if g.ref == c.Grant && !cascadingScope(g.scope) {
 				return nil
 			}
 		}
@@ -551,164 +528,199 @@ func requireFrontierUnit(covering []Coverage) *tidcommon.ServiceError {
 	return &ErrorReshareNotPermitted
 }
 
-// newTargetID mints one target row's identifier. Five branches below need one, and a failure has to
-// reach the caller rather than being swallowed: a target row with no id is not a target.
-func (s *sharingService) newTargetID(ctx context.Context) (string, *tidcommon.ServiceError) {
-	id, err := utils.GenerateUUIDv7()
-	if err != nil {
-		s.logger.Error(ctx, "Failed to generate a target identifier", log.Error(err))
-		return "", &tidcommon.InternalServerError
-	}
-	return id, nil
-}
-
-// buildTargets turns a request's targets into stored target rows, enforcing the stage, ownership
-// and one-hop rules along the way.
+// buildSections turns the decisions a request states into their stored form on the policy,
+// enforcing the stage, ownership and one-hop rules along the way.
 //
-// The list is flat and may mix breadths: a broad target carving one organization unit out, beside
-// a target naming that unit on terms of its own, is the whole point of letting it. Each entry is
-// checked on its own, and then the set is checked for a unit named twice.
-func (s *sharingService) buildTargets(
-	ctx context.Context, requested []TargetRequest, initiatingOUID, owningOUID string, stage policyStage,
-) ([]Target, *tidcommon.ServiceError) {
-	if len(requested) == 0 {
-		return nil, withDetail(ErrorInvalidRequestFormat, "the policy names no target")
+// Each section is either one blanket grant or a list of named units, never both. That is what
+// keeps a unit from being reached twice by one policy: a blanket grant has one set of terms for
+// everything it reaches, and a unit wanting terms of its own is named in a selected section.
+func (s *sharingService) buildSections(
+	ctx context.Context, req PolicyRequest, policy *Policy,
+) *tidcommon.ServiceError {
+	if req.AllUnits == nil && req.ChildUnits == nil && req.OtherTreeRoots == nil {
+		return withDetail(ErrorInvalidRequestFormat, "the policy reaches no organization unit")
 	}
 
-	isOwner := initiatingOUID == owningOUID
-	out := make([]Target, 0, len(requested))
+	initiatingOUID := policy.InitiatingOUID
+	isOwner := initiatingOUID == policy.OwningOUID
+
+	if req.AllUnits != nil {
+		// Every organization unit already includes whatever the other two sections could reach,
+		// and a unit reached twice has no basis for deciding whose terms it holds the resource on.
+		if req.ChildUnits != nil || req.OtherTreeRoots != nil {
+			return withDetail(ErrorInvalidRequestFormat, fmt.Sprintf(
+				"%s cannot be combined with %s or %s",
+				SectionAllUnits, SectionChildUnits, SectionOtherTreeRoots))
+		}
+		// Reaching every organization unit is the owner's call alone, and only as a first hop.
+		if !isOwner || policy.Stage != stageShare {
+			return withDetail(ErrorInvalidTargetOU, string(SectionAllUnits)+" is owner-only")
+		}
+		// Reaching every organization unit necessarily leaves the initiator's own tree.
+		if svcErr := s.requireCrossTreeAllowed(ctx, initiatingOUID); svcErr != nil {
+			return svcErr
+		}
+		policy.AllUnits = &AllUnits{ExcludedOUIDs: utils.UniqueStrings(req.AllUnits.ExcludedOUIDs)}
+		return nil
+	}
+
 	// Naming one organization unit twice is rejected rather than deduplicated, because the two
-	// entries carry their own overlay rules and there is no basis for picking a winner. A unit
-	// named by child and by childSubtree is the same clash: the rows differ, so the database
-	// would accept both while the rules attached to one of them alone.
-	seen := make(map[string]struct{}, len(requested))
+	// entries carry their own overlay rules and there is no basis for picking a winner.
+	seen := make(map[string]struct{})
 
-	for _, t := range requested {
-		ouID := t.OUID
-		switch t.Scope {
-		case ScopeAllOUs:
-			// Reaching every organization unit is the owner's call alone, and only as a first hop.
-			if !isOwner || stage != stageShare {
-				return nil, withDetail(ErrorInvalidTargetOU, "allOus is owner-only")
-			}
-			if ouID != "" {
-				return nil, targetTakesNoOU(t.Scope)
-			}
-			// Reaching every organization unit necessarily leaves the initiator's own tree.
-			if svcErr := s.requireCrossTreeAllowed(ctx, initiatingOUID); svcErr != nil {
-				return nil, svcErr
-			}
-
-		case ScopeAllRoots:
-			if !isOwner {
-				return nil, withDetail(ErrorInvalidTargetOU, "root targeting is owner-only")
-			}
-			if ouID != "" {
-				return nil, targetTakesNoOU(t.Scope)
-			}
-			if svcErr := s.requireCrossTreeAllowed(ctx, initiatingOUID); svcErr != nil {
-				return nil, svcErr
-			}
-
-		case ScopeRoot:
-			if !isOwner {
-				return nil, withDetail(ErrorInvalidTargetOU, "root targeting is owner-only")
-			}
-			if ouID == "" {
-				return nil, targetNeedsOU(t.Scope)
-			}
-			if svcErr := s.validateRootTarget(ctx, ouID, initiatingOUID); svcErr != nil {
-				return nil, svcErr
-			}
-
-		case ScopeAllChildren:
-			if ouID != "" {
-				return nil, targetTakesNoOU(t.Scope)
-			}
-			// The subtree target anchors on the unit issuing it, which the row has to carry.
-			ouID = initiatingOUID
-
-		case ScopeChild, ScopeChildSubtree:
-			if ouID == "" {
-				return nil, targetNeedsOU(t.Scope)
-			}
-			if svcErr := s.validateChildTarget(ctx, ouID, initiatingOUID); svcErr != nil {
-				return nil, svcErr
-			}
-
-		default:
-			return nil, withDetail(ErrorInvalidRequestFormat, fmt.Sprintf("unknown target scope %q", t.Scope))
-		}
-
-		key := ouID
-		if key == "" {
-			key = string(t.Scope)
-		}
-		if _, repeated := seen[key]; repeated {
-			return nil, withDetail(ErrorInvalidTargetOU, key+" is named more than once")
-		}
-		seen[key] = struct{}{}
-
-		id, svcErr := s.newTargetID(ctx)
+	if req.ChildUnits != nil {
+		childUnits, svcErr := s.buildChildUnits(ctx, *req.ChildUnits, initiatingOUID, seen)
 		if svcErr != nil {
-			return nil, svcErr
+			return svcErr
 		}
-		out = append(out, Target{
-			ID:            id,
-			Scope:         t.Scope,
-			OUID:          ouID,
-			ExcludedOUIDs: utils.UniqueStrings(t.ExcludedOUIDs),
-		})
+		policy.ChildUnits = childUnits
 	}
 
-	if svcErr := requireDisjointTargets(out); svcErr != nil {
-		return nil, svcErr
-	}
-	return out, nil
-}
-
-// requireDisjointTargets refuses a policy whose targets reach the same organization unit twice.
-//
-// Only three pairings can overlap at all. Every selective target names a direct child of the
-// initiator or a tree root, so two of them are disjoint unless they name the same unit, which is
-// refused earlier as a repeat.
-func requireDisjointTargets(targets []Target) *tidcommon.ServiceError {
-	for i, broad := range targets {
-		for j, narrow := range targets {
-			if i == j || !swallows(broad.Scope, narrow.Scope) {
-				continue
-			}
-			// The unit the narrower target anchors on, which is what the broader one has to carve
-			// out. An exclusion takes the subtree with it, so carving out the anchor is enough.
-			// A target reaching a whole family anchors on nothing and cannot be made room for.
-			anchor := narrow.OUID
-			if anchor == "" {
-				return withDetail(ErrorOverlappingTargets,
-					string(broad.Scope)+" already reaches everything "+string(narrow.Scope)+" names")
-			}
-			if !slices.Contains(broad.ExcludedOUIDs, anchor) {
-				// The unit is named, because a policy may hold several targets of the narrower
-				// scope and the caller has to know which one to carve out.
-				return withDetail(ErrorOverlappingTargets,
-					anchor+" is already reached by "+string(broad.Scope))
-			}
+	if req.OtherTreeRoots != nil {
+		// Another tree is reached by the resource's owner and by nobody else: a unit the resource
+		// was shared to hands it on beneath itself, never sideways.
+		if !isOwner {
+			return withDetail(ErrorInvalidTargetOU, string(SectionOtherTreeRoots)+" is owner-only")
 		}
+		otherTreeRoots, svcErr := s.buildOtherTreeRoots(ctx, *req.OtherTreeRoots, initiatingOUID, seen)
+		if svcErr != nil {
+			return svcErr
+		}
+		policy.OtherTreeRoots = otherTreeRoots
 	}
 	return nil
 }
 
-// swallows reports whether a target of the broader scope reaches everything one of the narrower
-// scope does, before exclusions are taken into account.
-func swallows(broad, narrow TargetScope) bool {
-	switch broad {
-	case ScopeAllOUs:
-		return narrow != ScopeAllOUs
-	case ScopeAllRoots:
-		return narrow == ScopeRoot
-	case ScopeAllChildren:
-		return narrow == ScopeChild || narrow == ScopeChildSubtree
+// buildChildUnits validates the decision about the units beneath the initiator.
+func (s *sharingService) buildChildUnits(
+	ctx context.Context, req ChildUnitsRequest, initiatingOUID string, seen map[string]struct{},
+) (*ChildUnits, *tidcommon.ServiceError) {
+	switch req.Mode {
+	case ChildUnitsAll:
+		if len(req.Units) > 0 {
+			return nil, modeTakesNo(SectionChildUnits, string(req.Mode), "units")
+		}
+		return &ChildUnits{
+			Mode:          ChildUnitsAll,
+			ExcludedOUIDs: utils.UniqueStrings(req.ExcludedOUIDs),
+		}, nil
+
+	case ChildUnitsSelected:
+		// A named unit is either reached or left out of the list, and it holds the resource on
+		// the terms stated beside it, so neither blanket field has anything to apply to.
+		if len(req.ExcludedOUIDs) > 0 {
+			return nil, modeTakesNo(SectionChildUnits, string(req.Mode), "excludedOuIds")
+		}
+		if len(req.OverlayRules) > 0 {
+			return nil, modeTakesNo(SectionChildUnits, string(req.Mode), "overlayRules of its own")
+		}
+		if len(req.Units) == 0 {
+			return nil, modeNamesNothing(SectionChildUnits, string(req.Mode))
+		}
+
+		out := &ChildUnits{Mode: ChildUnitsSelected, Units: make([]ChildUnit, 0, len(req.Units))}
+		for _, u := range req.Units {
+			if u.OUID == "" {
+				return nil, withDetail(ErrorInvalidRequestFormat, "a child unit needs an ouId")
+			}
+			if u.Reach != ReachUnit && u.Reach != ReachSubtree {
+				return nil, withDetail(ErrorInvalidRequestFormat,
+					fmt.Sprintf("unknown reach %q for %s", u.Reach, u.OUID))
+			}
+			if svcErr := s.validateChildTarget(ctx, u.OUID, initiatingOUID); svcErr != nil {
+				return nil, svcErr
+			}
+			if svcErr := nameOnce(seen, u.OUID); svcErr != nil {
+				return nil, svcErr
+			}
+			out.Units = append(out.Units, ChildUnit{OUID: u.OUID, Reach: u.Reach})
+		}
+		return out, nil
+
+	default:
+		return nil, withDetail(ErrorInvalidRequestFormat,
+			fmt.Sprintf("unknown %s mode %q", SectionChildUnits, req.Mode))
 	}
-	return false
+}
+
+// buildOtherTreeRoots validates the decision about the roots of other trees. The caller has already
+// established that the initiator owns the resource.
+func (s *sharingService) buildOtherTreeRoots(
+	ctx context.Context, req OtherTreeRootsRequest, initiatingOUID string, seen map[string]struct{},
+) (*OtherTreeRoots, *tidcommon.ServiceError) {
+	switch req.Mode {
+	case OtherTreeRootsAll:
+		if len(req.Units) > 0 {
+			return nil, modeTakesNo(SectionOtherTreeRoots, string(req.Mode), "units")
+		}
+		if svcErr := s.requireCrossTreeAllowed(ctx, initiatingOUID); svcErr != nil {
+			return nil, svcErr
+		}
+		// The initiator's own tree is not another tree, so its root is withheld whether or not
+		// the request says so. A unit inside a tree handing the resource up to its own root would
+		// let that root hand it back down over the unit's head.
+		excluded := utils.UniqueStrings(req.ExcludedOUIDs)
+		ownRoot, svcErr := s.treeRootOf(ctx, initiatingOUID)
+		if svcErr != nil {
+			return nil, svcErr
+		}
+		if ownRoot != initiatingOUID && !slices.Contains(excluded, ownRoot) {
+			excluded = append(excluded, ownRoot)
+		}
+		return &OtherTreeRoots{Mode: OtherTreeRootsAll, ExcludedOUIDs: excluded}, nil
+
+	case OtherTreeRootsSelected:
+		if len(req.ExcludedOUIDs) > 0 {
+			return nil, modeTakesNo(SectionOtherTreeRoots, string(req.Mode), "excludedOuIds")
+		}
+		if len(req.OverlayRules) > 0 {
+			return nil, modeTakesNo(SectionOtherTreeRoots, string(req.Mode), "overlayRules of its own")
+		}
+		if len(req.Units) == 0 {
+			return nil, modeNamesNothing(SectionOtherTreeRoots, string(req.Mode))
+		}
+
+		out := &OtherTreeRoots{Mode: OtherTreeRootsSelected, Units: make([]string, 0, len(req.Units))}
+		for _, root := range req.Units {
+			if root.OUID == "" {
+				return nil, withDetail(ErrorInvalidRequestFormat, "a root unit needs an ouId")
+			}
+			if svcErr := s.validateRootTarget(ctx, root.OUID, initiatingOUID); svcErr != nil {
+				return nil, svcErr
+			}
+			if svcErr := nameOnce(seen, root.OUID); svcErr != nil {
+				return nil, svcErr
+			}
+			out.Units = append(out.Units, root.OUID)
+		}
+		return out, nil
+
+	default:
+		return nil, withDetail(ErrorInvalidRequestFormat,
+			fmt.Sprintf("unknown %s mode %q", SectionOtherTreeRoots, req.Mode))
+	}
+}
+
+// nameOnce records an organization unit a policy names, refusing one it has named already.
+func nameOnce(seen map[string]struct{}, ouID string) *tidcommon.ServiceError {
+	if _, repeated := seen[ouID]; repeated {
+		return withDetail(ErrorInvalidTargetOU, ouID+" is named more than once")
+	}
+	seen[ouID] = struct{}{}
+	return nil
+}
+
+// modeTakesNo reports a section carrying a field its mode has no use for.
+func modeTakesNo(section Section, mode, field string) *tidcommon.ServiceError {
+	return withDetail(ErrorInvalidRequestFormat,
+		fmt.Sprintf("%s with mode %s takes no %s", section, mode, field))
+}
+
+// modeNamesNothing reports a selected section naming no organization unit, which states a decision
+// to reach nobody. Leaving the section out says that.
+func modeNamesNothing(section Section, mode string) *tidcommon.ServiceError {
+	return withDetail(ErrorInvalidRequestFormat,
+		fmt.Sprintf("%s with mode %s names no organization unit", section, mode))
 }
 
 // validateChildTarget enforces the one-hop rule: a policy may only name organization units directly
@@ -730,8 +742,8 @@ func (s *sharingService) validateChildTarget(
 	return nil
 }
 
-// validateRootTarget checks a named root target really is a root, and that reaching it does not
-// leave the initiator's own tree unless that is allowed.
+// validateRootTarget checks a named root really is a root, that it is the root of another tree, and
+// that the initiator may reach outside its own.
 func (s *sharingService) validateRootTarget(
 	ctx context.Context, targetOUID, initiatingOUID string,
 ) *tidcommon.ServiceError {
@@ -747,8 +759,11 @@ func (s *sharingService) validateRootTarget(
 	if svcErr != nil {
 		return svcErr
 	}
+	// The initiator's own tree is not another tree. A unit inside a tree handing the resource up to
+	// its own root would let that root hand it back down over the unit's head, and a root naming
+	// itself reaches nobody.
 	if targetOUID == initiatorRoot {
-		return nil
+		return withDetail(ErrorInvalidTargetOU, targetOUID+" is the root of the initiator's own tree")
 	}
 	return s.requireCrossTreeAllowed(ctx, initiatingOUID)
 }
@@ -773,17 +788,6 @@ func (s *sharingService) requireCrossTreeAllowed(
 	return nil
 }
 
-// targetTakesNoOU reports a target naming an organization unit its scope already decides: every
-// unit, every root, or the initiator's own subtree.
-func targetTakesNoOU(scope TargetScope) *tidcommon.ServiceError {
-	return withDetail(ErrorInvalidRequestFormat, fmt.Sprintf("scope %s takes no ouId", scope))
-}
-
-// targetNeedsOU reports a target leaving out the organization unit its scope anchors on.
-func targetNeedsOU(scope TargetScope) *tidcommon.ServiceError {
-	return withDetail(ErrorInvalidRequestFormat, fmt.Sprintf("scope %s needs an ouId", scope))
-}
-
 // treeRootOf returns the root of the tree an organization unit belongs to, which is the unit itself
 // when it is already a root.
 func (s *sharingService) treeRootOf(ctx context.Context, ouID string) (string, *tidcommon.ServiceError) {
@@ -800,21 +804,18 @@ func (s *sharingService) treeRootOf(ctx context.Context, ouID string) (string, *
 // materializeRules folds every requested rule against what the initiating organization unit itself
 // holds, and stores the result. Resolving at write means a read is one lookup rather than a walk.
 func (s *sharingService) materializeRules(
-	ctx context.Context, rt ResourceType, resourceID, owningOUID, initiatingOUID string,
-	req PolicyRequest, targets []Target,
+	ctx context.Context, rt ResourceType, resourceID, owningOUID, initiatingOUID string, req PolicyRequest,
 ) ([]StoredRule, *tidcommon.ServiceError) {
 	initiatorRules, _, svcErr := s.initiatorEffectiveRules(ctx, rt, resourceID, owningOUID, initiatingOUID)
 	if svcErr != nil {
 		return nil, svcErr
 	}
 
-	// buildTargets preserved the request's order, so the two lists line up entry for entry and the
-	// rules can be attached to the row that was built from the entry carrying them.
-	out := make([]StoredRule, 0, len(targets))
-	for i, t := range targets {
-		for fieldKey, requested := range req.Targets[i].OverlayRules {
+	var out []StoredRule
+	for _, g := range req.requestedGrants() {
+		for fieldKey, requested := range g.rules {
 			stored, svcErr := s.narrowOne(
-				ctx, rt, resourceID, fieldKey, t.ID, initiatingOUID, initiatorRules, requested)
+				ctx, rt, resourceID, fieldKey, g.ref, initiatingOUID, initiatorRules, requested)
 			if svcErr != nil {
 				return nil, svcErr
 			}
@@ -869,7 +870,7 @@ func (s *sharingService) containmentFor(
 // tightening its own resource. The type's member check is not repeated: the clamped result cannot
 // exceed the ceiling, and that ceiling's own members were validated when it was written.
 func (s *sharingService) clampOne(
-	ctx context.Context, rt ResourceType, resourceID, fieldKey, targetID string,
+	ctx context.Context, rt ResourceType, resourceID, fieldKey string, ref GrantRef,
 	initiatorRules map[string]OverlayRule, requested OverlayRule,
 ) (StoredRule, *tidcommon.ServiceError) {
 	decl, ok := s.registry.field(rt, fieldKey)
@@ -884,7 +885,7 @@ func (s *sharingService) clampOne(
 
 	return StoredRule{
 		FieldKey:  fieldKey,
-		TargetID:  targetID,
+		Grant:     ref,
 		Resolved:  copyRule(c.clamp(parent, requested)),
 		Requested: requested,
 	}, nil
@@ -892,7 +893,7 @@ func (s *sharingService) clampOne(
 
 // narrowOne folds one requested rule and reports the offending field on rejection.
 func (s *sharingService) narrowOne(
-	ctx context.Context, rt ResourceType, resourceID, fieldKey, targetID, initiatingOUID string,
+	ctx context.Context, rt ResourceType, resourceID, fieldKey string, ref GrantRef, initiatingOUID string,
 	initiatorRules map[string]OverlayRule, requested OverlayRule,
 ) (StoredRule, *tidcommon.ServiceError) {
 	decl, ok := s.registry.field(rt, fieldKey)
@@ -916,7 +917,7 @@ func (s *sharingService) narrowOne(
 
 	return StoredRule{
 		FieldKey:  fieldKey,
-		TargetID:  targetID,
+		Grant:     ref,
 		Resolved:  copyRule(resolved),
 		Requested: requested,
 	}, nil
@@ -1100,47 +1101,30 @@ func canonicalParentID(covering []Coverage) string {
 	return out
 }
 
-// blanketRulesNarrowOnly reports whether an edit keeps every restriction a blanket policy's rules
+// blanketRulesNarrowOnly reports whether an edit keeps every restriction a blanket grant's rules
 // currently carry.
 func (s *sharingService) blanketRulesNarrowOnly(
 	ctx context.Context, current, proposed Policy,
 ) *tidcommon.ServiceError {
-	if policyFamily(current) != familyBlanket {
-		return nil
-	}
-
-	// ruleKey identifies one stored rule: a field and the target carrying it. The target is keyed
-	// by what it selects rather than by its row id, because an edit mints fresh target rows and
-	// the ids would never line up across the two policies.
+	// ruleKey identifies one stored rule: a field and the grant carrying it. A grant is named by
+	// what it selects, so the same grant carries the same key on both sides of an edit.
 	type ruleKey struct {
 		fieldKey string
-		scope    TargetScope
-		ouID     string
-	}
-	keyOf := func(p Policy, r StoredRule) (ruleKey, bool) {
-		for _, t := range p.Targets {
-			if t.ID == r.TargetID {
-				return ruleKey{r.FieldKey, t.Scope, t.OUID}, familyOf(t.Scope) == familyBlanket
-			}
-		}
-		return ruleKey{fieldKey: r.FieldKey}, false
+		grant    GrantRef
 	}
 
 	next := make(map[ruleKey]OverlayRule, len(proposed.Rules))
 	for _, r := range proposed.Rules {
-		k, _ := keyOf(proposed, r)
-		next[k] = r.Resolved
+		next[ruleKey{r.FieldKey, r.Grant}] = r.Resolved
 	}
 
 	for _, stored := range current.Rules {
-		// A policy may hold a selective target beside a blanket one. Only the blanket target has
-		// nothing to expand toward; the named one is bounded by the one-hop rule wherever it
-		// appears, so its terms stay editable in both directions.
-		k, blanket := keyOf(current, stored)
-		if !blanket {
+		// Only a blanket grant has nothing to expand toward. A named unit is bounded by the
+		// one-hop rule wherever it appears, so its terms stay editable in both directions.
+		if stored.Grant.OUID != "" {
 			continue
 		}
-		proposedRule, kept := next[k]
+		proposedRule, kept := next[ruleKey{stored.FieldKey, stored.Grant}]
 		if !kept {
 			return withDetail(ErrorBlanketNarrowOnly, stored.FieldKey)
 		}
@@ -1206,7 +1190,7 @@ func (s *sharingService) rematerializeDependents(ctx context.Context, edited Pol
 			// Re-narrowing starts from the original request, so an ancestor that later widens
 			// again restores what it had clamped rather than ratcheting permanently downward.
 			next, svcErr := s.clampOne(ctx, descendant.ResourceType, descendant.ResourceID,
-				stored.FieldKey, stored.TargetID, initiatorRules, stored.Requested)
+				stored.FieldKey, stored.Grant, initiatorRules, stored.Requested)
 			if svcErr != nil {
 				return fmt.Errorf("failed to re-materialize policy %s: %s", descendant.ID, svcErr.Code)
 			}
@@ -1359,7 +1343,7 @@ func (s *sharingService) cleanUpLostVisibility(ctx context.Context, changed Poli
 	return nil
 }
 
-// candidatesFrom expands one policy's targets into the organization units it reached, which are the
+// candidatesFrom expands one policy's grants into the organization units it reached, which are the
 // ones worth re-checking after it changed.
 func (s *sharingService) candidatesFrom(ctx context.Context, p Policy) ([]string, error) {
 	return s.ousReachedBy(ctx, p)
@@ -1403,11 +1387,11 @@ func (s *sharingService) notifyVisibilityLost(
 	return hooks.OnVisibilityLost(ctx, resourceID, ouID)
 }
 
-// ousReachedBy enumerates every organization unit a policy's targets could have reached.
+// ousReachedBy enumerates every organization unit a policy's grants could have reached.
 //
-// A target records an anchor rather than the set it covers, so the units that may have just lost
-// visibility are almost never the ones named on the targets: a subtree or root target reaches
-// everything below its anchor, an all-children target reaches everything below its initiator but
+// A grant records an anchor rather than the set it covers, so the units that may have just lost
+// visibility are almost never the ones the policy names: a subtree or root grant reaches
+// everything below its anchor, an all-children grant reaches everything below its initiator but
 // not the initiator itself, and the blanket scopes reach the deployment.
 func (s *sharingService) ousReachedBy(ctx context.Context, p Policy) ([]string, error) {
 	var out []string
@@ -1435,9 +1419,9 @@ func (s *sharingService) ousReachedBy(ctx context.Context, p Policy) ([]string, 
 			log.String("policyID", p.ID))
 	}
 
-	for _, t := range p.Targets {
-		switch t.Scope {
-		case ScopeAllOUs, ScopeAllRoots:
+	for _, g := range p.grants() {
+		switch g.scope {
+		case scopeAllOUs, scopeAllRoots:
 			// Losing a root cuts off everything below it, so the whole deployment is in scope.
 			if s.ouEnumerator == nil {
 				continue
@@ -1447,18 +1431,18 @@ func (s *sharingService) ousReachedBy(ctx context.Context, p Policy) ([]string, 
 				return nil, fmt.Errorf("failed to enumerate organization units: %s", svcErr.Code)
 			}
 			out = append(out, all...)
-		case ScopeAllChildren:
+		case scopeAllChildren:
 			// The anchor is the initiator, which keeps its own visibility; only what lies beneath
 			// it was reached by this policy.
-			if err := appendSubtree(t.OUID, false); err != nil {
+			if err := appendSubtree(g.ouID, false); err != nil {
 				return nil, err
 			}
-		case ScopeChildSubtree, ScopeRoot:
-			if err := appendSubtree(t.OUID, true); err != nil {
+		case scopeChildSubtree, scopeRoot:
+			if err := appendSubtree(g.ouID, true); err != nil {
 				return nil, err
 			}
-		case ScopeChild:
-			out = append(out, t.OUID)
+		case scopeChild:
+			out = append(out, g.ouID)
 		}
 	}
 
@@ -2055,18 +2039,18 @@ func contributingRules(
 		if !ok {
 			continue
 		}
-		if r, found := ruleFor(p, c.TargetID, fieldKey); found {
+		if r, found := ruleFor(p, c.Grant, fieldKey); found {
 			out = append(out, r)
 		}
 	}
 	return out
 }
 
-// ruleFor returns the rule the covering target carries for one field. Terms travel with the
-// target, so the target that reached the organization unit is the one whose terms apply.
-func ruleFor(p Policy, targetID, fieldKey string) (OverlayRule, bool) {
+// ruleFor returns the rule the covering grant carries for one field. Terms travel with the
+// grant, so the grant that reached the organization unit is the one whose terms apply.
+func ruleFor(p Policy, ref GrantRef, fieldKey string) (OverlayRule, bool) {
 	for _, r := range p.Rules {
-		if r.FieldKey == fieldKey && r.TargetID == targetID {
+		if r.FieldKey == fieldKey && r.Grant == ref {
 			return r.Resolved, true
 		}
 	}

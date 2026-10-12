@@ -27,22 +27,34 @@ func members(v ...string) *[]string {
 }
 
 // fullRequest exercises every tagged field, so a missing or misspelled tag shows up as a name the
-// expectations below do not contain.
+// expectations below do not contain. It is not a request the service would accept: every section is
+// stated, with the fields of both modes, because the wire names are all this is here to pin.
 func fullRequest() PolicyRequest {
+	rules := map[string]OverlayRule{
+		"permissions": {
+			Value:          members("billing"),
+			AllowedValues:  members("billing", "bookings"),
+			ExcludedValues: members("billing:refunds"),
+		},
+	}
 	return PolicyRequest{
+		ID:             "policy-1",
 		InitiatingOUID: "ou-1",
-		Targets: []TargetRequest{
-			{Scope: ScopeAllOUs, ExcludedOUIDs: []string{"ou-3"}, OverlayRules: map[string]OverlayRule{
-				"permissions": {
-					Value:          members("billing"),
-					AllowedValues:  members("billing", "bookings"),
-					ExcludedValues: members("billing:refunds"),
-				},
+		AllUnits:       &AllUnitsRequest{ExcludedOUIDs: []string{"ou-3"}, OverlayRules: rules},
+		ChildUnits: &ChildUnitsRequest{
+			Mode:          ChildUnitsSelected,
+			ExcludedOUIDs: []string{"ou-4"},
+			OverlayRules:  rules,
+			Units: []ChildUnitRequest{{
+				OUID: "ou-2", Reach: ReachSubtree,
+				OverlayRules: map[string]OverlayRule{"assignments": {Editable: true}},
 			}},
-			{Scope: ScopeRoot, OUID: "root-1"},
-			{Scope: ScopeChildSubtree, OUID: "ou-2", OverlayRules: map[string]OverlayRule{
-				"assignments": {Editable: true},
-			}},
+		},
+		OtherTreeRoots: &OtherTreeRootsRequest{
+			Mode:          OtherTreeRootsSelected,
+			ExcludedOUIDs: []string{"root-2"},
+			OverlayRules:  rules,
+			Units:         []RootUnitRequest{{OUID: "root-1", OverlayRules: rules}},
 		},
 		Version: 3,
 	}
@@ -65,20 +77,102 @@ func (s *ModelTestSuite) TestPolicyRequestUsesTheSameCamelCaseNamesInBothEncodin
 	s.Equal(fromJSON, s.normalize(asYAML),
 		"the two encodings disagree, so some field is missing a matching tag")
 
-	targets, ok := fromJSON["targets"].([]interface{})
-	s.Require().True(ok, "targets is absent, so the field is untagged")
+	s.ElementsMatch(
+		[]string{"id", "initiatingOuId", "allUnits", "childUnits", "otherTreeRoots", "version"},
+		keysOf(fromJSON))
 
-	broad, ok := targets[0].(map[string]interface{})
+	allUnits, ok := fromJSON["allUnits"].(map[string]interface{})
+	s.Require().True(ok, "allUnits is absent, so the field is untagged")
+	s.ElementsMatch([]string{"excludedOuIds", "overlayRules"}, keysOf(allUnits))
+
+	childUnits, ok := fromJSON["childUnits"].(map[string]interface{})
+	s.Require().True(ok, "childUnits is absent, so the field is untagged")
+	s.ElementsMatch([]string{"mode", "excludedOuIds", "overlayRules", "units"}, keysOf(childUnits))
+	s.Equal("selected", childUnits["mode"])
+
+	unit, ok := childUnits["units"].([]interface{})[0].(map[string]interface{})
 	s.Require().True(ok)
-	s.ElementsMatch([]string{"scope", "excludedOuIds", "overlayRules"}, keysOf(broad))
+	s.ElementsMatch([]string{"ouId", "reach", "overlayRules"}, keysOf(unit))
+	s.Equal("subtree", unit["reach"])
 
-	named, ok := targets[2].(map[string]interface{})
+	// The roots of other trees are stated the way child units are: the same modes, and a list
+	// called units.
+	roots, ok := fromJSON["otherTreeRoots"].(map[string]interface{})
+	s.Require().True(ok, "otherTreeRoots is absent, so the field is untagged")
+	s.ElementsMatch([]string{"mode", "excludedOuIds", "overlayRules", "units"}, keysOf(roots))
+	s.Equal("selected", roots["mode"])
+
+	root, ok := roots["units"].([]interface{})[0].(map[string]interface{})
 	s.Require().True(ok)
-	s.ElementsMatch([]string{"scope", "ouId", "overlayRules"}, keysOf(named))
+	s.ElementsMatch([]string{"ouId", "overlayRules"}, keysOf(root))
 
-	rule, ok := broad["overlayRules"].(map[string]interface{})["permissions"].(map[string]interface{})
+	rule, ok := allUnits["overlayRules"].(map[string]interface{})["permissions"].(map[string]interface{})
 	s.Require().True(ok)
 	s.ElementsMatch([]string{"editable", "value", "allowedValues", "excludedValues"}, keysOf(rule))
+}
+
+// A section the policy does not state is left off the wire altogether, which is what tells a reader
+// "not decided" apart from "decided, with nothing to add".
+func (s *ModelTestSuite) TestPolicyRequestLeavesAnUnstatedSectionOffTheWire() {
+	req := PolicyRequest{ChildUnits: &ChildUnitsRequest{Mode: ChildUnitsAll}}
+
+	asJSON, err := json.Marshal(req)
+	s.Require().NoError(err)
+	s.JSONEq(`{"childUnits":{"mode":"all"}}`, string(asJSON))
+
+	asYAML, err := yaml.Marshal(req)
+	s.Require().NoError(err)
+	s.YAMLEq("childUnits:\n  mode: all\n", string(asYAML))
+}
+
+// A resource file states a section the way it reads, and each one lands in its own field.
+func (s *ModelTestSuite) TestPolicyRequestReadsTheSectionsOfAResourceFile() {
+	document := []byte(`
+id: storefront-policy
+childUnits:
+  mode: selected
+  units:
+    - ouId: acme-retail
+      reach: subtree
+      overlayRules:
+        tokenValidity:
+          editable: false
+          value: ["900"]
+    - ouId: acme-wholesale
+      reach: unit
+otherTreeRoots:
+  mode: all
+  excludedOuIds: [contoso]
+`)
+
+	var req PolicyRequest
+	s.Require().NoError(yaml.Unmarshal(document, &req))
+
+	s.Equal("storefront-policy", req.ID)
+	s.Nil(req.AllUnits)
+	s.Require().NotNil(req.ChildUnits)
+	s.Equal(ChildUnitsSelected, req.ChildUnits.Mode)
+	s.Require().Len(req.ChildUnits.Units, 2)
+	s.Equal(ChildUnitRequest{
+		OUID: "acme-retail", Reach: ReachSubtree,
+		OverlayRules: map[string]OverlayRule{"tokenValidity": {Value: members("900")}},
+	}, req.ChildUnits.Units[0])
+	s.Equal(ChildUnitRequest{OUID: "acme-wholesale", Reach: ReachUnit}, req.ChildUnits.Units[1])
+	s.Require().NotNil(req.OtherTreeRoots)
+	s.Equal(OtherTreeRootsAll, req.OtherTreeRoots.Mode)
+	s.Equal([]string{"contoso"}, req.OtherTreeRoots.ExcludedOUIDs)
+}
+
+// A bare "allUnits: {}" states the section with nothing to exclude, which is the whole of the
+// decision for a resource shared with everyone.
+func (s *ModelTestSuite) TestPolicyRequestReadsAnEmptyAllUnitsSectionAsStated() {
+	var fromYAML PolicyRequest
+	s.Require().NoError(yaml.Unmarshal([]byte("allUnits: {}\n"), &fromYAML))
+	s.NotNil(fromYAML.AllUnits)
+
+	var fromJSON PolicyRequest
+	s.Require().NoError(json.Unmarshal([]byte(`{"allUnits":{}}`), &fromJSON))
+	s.NotNil(fromJSON.AllUnits)
 }
 
 // An export is written as YAML and served as JSON, so a field named differently by the two

@@ -562,8 +562,8 @@ name: Sharing App
 ouHandle: acme-root
 sharingPolicies:
   - id: p1
-    targets:
-      - scope: allChildren
+    childUnits:
+      mode: all
 `)
 	mockAppService := NewApplicationServiceInterfaceMock(s.T())
 	mockAppService.EXPECT().ValidateApplication(mock.Anything, mock.Anything).Return(
@@ -577,8 +577,8 @@ sharingPolicies:
 	s.Equal("Sharing App", declared.ResourceName)
 	s.Equal("resolved-ou-id", declared.OwningOUID, "the handle is resolved before the policy is declared")
 	s.Require().Len(declared.Policies, 1)
-	s.Require().Len(declared.Policies[0].Targets, 1)
-	s.Equal(sharing.ScopeAllChildren, declared.Policies[0].Targets[0].Scope)
+	s.Require().NotNil(declared.Policies[0].ChildUnits)
+	s.Equal(sharing.ChildUnitsAll, declared.Policies[0].ChildUnits.Mode)
 }
 
 // Most documents declare no policy. That answer costs nothing: the parser returns the resource id
@@ -609,8 +609,8 @@ name: Sharing App
 ouId: acme-root
 sharingPolicies:
   - id: p1
-    targets:
-      - scope: allChildren
+    childUnits:
+      mode: all
 `)
 	mockAppService := NewApplicationServiceInterfaceMock(s.T())
 	mockAppService.EXPECT().ValidateApplication(mock.Anything, mock.Anything).Return(
