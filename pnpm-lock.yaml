@@ -2081,6 +2081,9 @@ importers:
       '@thunderid/components':
         specifier: workspace:^
         version: link:../components
+      '@thunderid/configure-agent-types':
+        specifier: workspace:^
+        version: link:../configure-agent-types
       '@thunderid/contexts':
         specifier: workspace:^
         version: link:../contexts
