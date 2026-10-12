@@ -59,7 +59,6 @@ const NotificationTemplateCreatePage = lazy(() =>
   import('@thunderid/configure-notification-templates').then((m) => ({default: m.NotificationTemplateCreatePage})),
 );
 const UserAddPage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserAddPage})));
-const UserCreatePage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserCreatePage})));
 const UserEditPage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserEditPage})));
 const UsersListPage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UsersListPage})));
 const ResourceServersListPage = lazy(() =>
@@ -290,16 +289,6 @@ export default function App(): JSX.Element {
                 }
               >
                 <Route index element={<UserAddPage />} />
-              </Route>
-              <Route
-                path={RouteConfig.users.addCreate()}
-                element={
-                  <ProtectedRoute>
-                    <FullScreenLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<UserCreatePage />} />
               </Route>
               <Route
                 path={RouteConfig.userTypes.create()}
