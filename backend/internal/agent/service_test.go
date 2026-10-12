@@ -83,7 +83,7 @@ func (suite *AgentServiceTestSuite) setupService() (
 	// Permissive defaults — tests narrow these as needed.
 	mockEntity.On("GetEntity", mock.Anything, mock.Anything).
 		Maybe().Return((*providers.Entity)(nil), entity.ErrEntityNotFound)
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Maybe().Return(&providers.Entity{ID: testAgentID}, nil)
 	mockEntity.On("DeleteEntity", mock.Anything, mock.Anything).
 		Maybe().Return(nil)
@@ -374,7 +374,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_OUNotFound() {
 func (suite *AgentServiceTestSuite) TestCreateAgent_NameAlreadyExists() {
 	svc, mockEntity, _, _, _ := suite.setupService()
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return((*providers.Entity)(nil), entity.ErrAttributeConflict)
 
 	req := &providers.Agent{
@@ -391,7 +391,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_EntityOnly_Success() {
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	req := &providers.Agent{
@@ -415,7 +415,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_GeneratesUUIDWhenNoID() {
 	clearMockCalls(mockEntity, "CreateEntity")
 	mockEntity.On("CreateEntity", mock.Anything, mock.MatchedBy(func(e *providers.Entity) bool {
 		return e.ID != ""
-	}), mock.Anything).Return(createdEntity, nil)
+	}), mock.Anything, mock.Anything).Return(createdEntity, nil)
 
 	req := &providers.Agent{Type: testAgentType, OUID: testOUID}
 	resp, svcErr := svc.CreateAgent(context.Background(), req)
@@ -435,7 +435,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_PresetIDSkipsGeneration() {
 	clearMockCalls(mockEntity, "CreateEntity")
 	mockEntity.On("CreateEntity", mock.Anything, mock.MatchedBy(func(e *providers.Entity) bool {
 		return e.ID == presetID
-	}), mock.Anything).Return(createdEntity, nil)
+	}), mock.Anything, mock.Anything).Return(createdEntity, nil)
 
 	req := &providers.Agent{ID: presetID, Type: testAgentType, OUID: testOUID}
 	resp, svcErr := svc.CreateAgent(context.Background(), req)
@@ -450,7 +450,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_WithInboundAuth_Success() {
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	clearMockCalls(mockInbound, "CreateInboundClient")
@@ -475,7 +475,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_WithLogo_PersistsLogoPropert
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	var capturedClient *inboundmodel.InboundClient
@@ -519,7 +519,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_FlowIDResolvedToDefault() {
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	clearMockCalls(mockInbound, "CreateInboundClient")
@@ -556,7 +556,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_WithOAuth_Success() {
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "cid-xxx")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	clearMockCalls(mockInbound, "CreateInboundClient")
@@ -590,7 +590,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_EntityCreationFails() {
 	svc, mockEntity, _, _, _ := suite.setupService()
 
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return((*providers.Entity)(nil), entity.ErrSchemaValidationFailed)
 
 	req := &providers.Agent{Type: testAgentType, OUID: testOUID}
@@ -605,7 +605,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_InboundCreationFails_Compens
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	clearMockCalls(mockInbound, "CreateInboundClient")
@@ -2593,7 +2593,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_EntityCreationFails_NonMappa
 	svc, mockEntity, _, _, _ := suite.setupService()
 
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return((*providers.Entity)(nil), errors.New("db error"))
 
 	req := &providers.Agent{Type: testAgentType, OUID: testOUID}
@@ -2608,7 +2608,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_InboundCreationFails_NonTran
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	clearMockCalls(mockInbound, "CreateInboundClient")
@@ -2636,7 +2636,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_InboundFails_CompensationDel
 
 	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(createdEntity, nil)
 
 	clearMockCalls(mockInbound, "CreateInboundClient")
@@ -3018,7 +3018,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_AuthzDenied() {
 	assert.Nil(suite.T(), resp)
 	suite.Require().NotNil(svcErr)
 	assert.Equal(suite.T(), tidcommon.ErrorUnauthorized.Code, svcErr.Code)
-	mockEntity.AssertNotCalled(suite.T(), "CreateEntity", mock.Anything, mock.Anything, mock.Anything)
+	mockEntity.AssertNotCalled(suite.T(), "CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func (suite *AgentServiceTestSuite) TestGetAgent_AuthzDenied() {

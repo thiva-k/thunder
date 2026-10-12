@@ -131,7 +131,7 @@ func (s *agentService) CreateAgent(ctx context.Context, agent *providers.Agent) 
 		return nil, &tidcommon.InternalServerError
 	}
 
-	createdEntity, entErr := s.entityService.CreateEntity(ctx, e, sysCredsJSON)
+	createdEntity, entErr := s.entityService.CreateEntity(ctx, e, sysCredsJSON, nil)
 	if entErr != nil {
 		if mapped := mapEntityError(entErr); mapped != nil {
 			return nil, mapped

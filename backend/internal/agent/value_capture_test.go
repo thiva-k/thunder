@@ -42,7 +42,7 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_CapturesTheGeneratedSecret()
 	svc.valueCapturer = capturer
 	suite.withDisplayPaths(svc, "name")
 	clearMockCalls(mockEntity, "CreateEntity")
-	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(buildAgentEntityFixture(testAgentName, "", "", "cid-xxx"), nil)
 	clearMockCalls(mockInbound, "CreateInboundClient")
 	mockInbound.On("CreateInboundClient",
