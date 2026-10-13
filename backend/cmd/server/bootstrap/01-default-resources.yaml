@@ -14,6 +14,8 @@ ouHandle: default
 allowSelfRegistration: true
 systemAttributes:
   display: username
+  primaryEmail: email
+  primaryMobile: mobile_number
 schema:
   username:
     type: string
@@ -21,7 +23,7 @@ schema:
     required: true
     unique: true
   email:
-    type: string
+    type: email
     displayName: Email
     required: true
     unique: true
@@ -35,7 +37,7 @@ schema:
     displayName: Last Name
     required: false
   mobile_number:
-    type: string
+    type: mobile
     displayName: Mobile Number
     required: false
     regex: "^\\+[1-9]\\d{1,14}$"
