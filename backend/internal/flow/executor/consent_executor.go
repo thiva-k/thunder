@@ -372,6 +372,8 @@ func (e *consentExecutor) buildAugmentedAvailableAttributes(
 	// can be obtained from the authenticated user context if needed
 	if entityRef.EntityType != "" {
 		augmented[oauth2const.ClaimUserType] = &providers.AttributeResponse{}
+		augmented[oauth2const.ClaimUserTypeHandle] = &providers.AttributeResponse{}
+		augmented[oauth2const.ClaimUserTypeName] = &providers.AttributeResponse{}
 	}
 	if entityRef.OUID != "" {
 		augmented[oauth2const.ClaimOUID] = &providers.AttributeResponse{}

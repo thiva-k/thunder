@@ -260,10 +260,15 @@ const (
 
 // Custom JWT claim names.
 const (
-	ClaimUserType string = "userType"
-	ClaimOUID     string = "ouId"
-	ClaimOUName   string = "ouName"
-	ClaimOUHandle string = "ouHandle"
+	// ClaimUserType is retained so apps that already list "userType" in their configured user
+	// attributes keep receiving the user type's display name on tokens and userinfo.
+	// TODO: Remove with the next major version bump. Use ClaimUserTypeHandle or ClaimUserTypeName instead.
+	ClaimUserType       string = "userType"
+	ClaimUserTypeHandle string = "userTypeHandle"
+	ClaimUserTypeName   string = "userTypeName"
+	ClaimOUID           string = "ouId"
+	ClaimOUName         string = "ouName"
+	ClaimOUHandle       string = "ouHandle"
 	// ClaimOwner carries an agent's system-attribute owner on its client token.
 	ClaimOwner                  string = "owner"
 	ClaimClaimsRequest          string = "claims_req"
