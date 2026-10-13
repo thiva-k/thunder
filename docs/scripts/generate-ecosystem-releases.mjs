@@ -9,16 +9,22 @@ import {createLogger} from '@thunderid/logger';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const OUTPUT_FILE = join(__dirname, '..', 'static', 'data', 'sdk-releases.json');
+const OUTPUT_FILE = join(__dirname, '..', 'static', 'data', 'ecosystem-releases.json');
 
-const logger = createLogger('generate-sdk-releases');
+const logger = createLogger('generate-ecosystem-releases');
 
+// Releases of everything built around the product (SDKs, samples), as opposed to the product
+// itself, which `generate-changelog.mjs` covers in `releases.json`. Each entry carries a `type`.
+//
 // javascript-sdks is a monorepo where each package is tagged independently, e.g. `sdk/react/v0.3.3`.
 // The other SDK repos each publish a single package, so they're keyed off the repo's own releases.
-const SDK_REPOS = [
+// The samples repo tags each sample independently, e.g. `sample/self-care/account/v1.0.1`, and
+// samples are picked up from their tags as they're released rather than listed up front.
+const RELEASE_SOURCES = [
   {
     id: 'javascript',
     name: 'JavaScript SDKs',
+    type: 'sdk',
     fullName: 'thunder-id/javascript-sdks',
     strategy: 'monorepo',
     tagPattern: /^sdk\/([a-z0-9-]+)\/v(.+)$/,
@@ -40,6 +46,7 @@ const SDK_REPOS = [
   {
     id: 'ios',
     name: 'iOS SDK',
+    type: 'sdk',
     fullName: 'thunder-id/ios-sdks',
     strategy: 'single',
     packageId: 'ios',
@@ -48,6 +55,7 @@ const SDK_REPOS = [
   {
     id: 'android',
     name: 'Android SDK',
+    type: 'sdk',
     fullName: 'thunder-id/android-sdks',
     strategy: 'single',
     packageId: 'android',
@@ -56,16 +64,25 @@ const SDK_REPOS = [
   {
     id: 'flutter',
     name: 'Flutter SDK',
+    type: 'sdk',
     fullName: 'thunder-id/flutter-sdks',
     strategy: 'single',
     packageId: 'flutter',
     packageName: 'thunderid_flutter',
   },
+  {
+    id: 'samples',
+    name: 'Samples',
+    type: 'sample',
+    fullName: 'thunder-id/samples',
+    strategy: 'monorepo',
+    tagPattern: /^sample\/([a-z0-9-]+\/[a-z0-9-]+)\/v(.+)$/,
+  },
 ];
 
 function getGitHubHeaders() {
   return {
-    'User-Agent': 'ThunderID-Docs-SDK-Releases-Generator',
+    'User-Agent': 'ThunderID-Docs-Ecosystem-Releases-Generator',
     ...(process.env.GITHUB_TOKEN ? {Authorization: `token ${process.env.GITHUB_TOKEN}`} : {}),
   };
 }
@@ -255,9 +272,10 @@ function buildMissingPackageEntry(config, packageId, packageName) {
     publishedAt: null,
     publishedDateLabel: null,
     repository: buildRepositoryInfo(config),
-    sdkId: config.id,
-    sdkName: config.name,
+    sourceId: config.id,
+    sourceName: config.name,
     tagName: null,
+    type: config.type,
   };
 }
 
@@ -281,10 +299,21 @@ function buildPackageEntryFromRelease(config, release, packageId, packageName, v
       year: 'numeric',
     }),
     repository: buildRepositoryInfo(config),
-    sdkId: config.id,
-    sdkName: config.name,
+    sourceId: config.id,
+    sourceName: config.name,
     tagName: release.tag_name,
+    type: config.type,
   };
+}
+
+// npm packages are named from the shared prefix (e.g. `@thunderid/react`). Anything else (e.g. a
+// sample) takes its release title without the version, e.g. `ThunderID Self-Care Account Sample`.
+function getMonorepoPackageName(config, packageId, release) {
+  if (config.packageNamePrefix) {
+    return `${config.packageNamePrefix}${packageId}`;
+  }
+
+  return release?.name?.replace(/\s+v\d\S*$/i, '').trim() || packageId;
 }
 
 function buildMonorepoPackages(config, releases) {
@@ -305,9 +334,12 @@ function buildMonorepoPackages(config, releases) {
     }
   }
 
-  return config.knownPackages.map((packageId) => {
-    const packageName = `${config.packageNamePrefix}${packageId}`;
+  // Sources without a `knownPackages` list (e.g. samples) only report what has been released.
+  const packageIds = config.knownPackages ?? [...latestByPackage.keys()].sort();
+
+  return packageIds.map((packageId) => {
     const entry = latestByPackage.get(packageId);
+    const packageName = getMonorepoPackageName(config, packageId, entry?.release);
 
     if (!entry) {
       return buildMissingPackageEntry(config, packageId, packageName);
@@ -332,8 +364,8 @@ function buildSinglePackage(config, releases) {
 
 function buildFallbackPackages(config) {
   return config.strategy === 'monorepo'
-    ? config.knownPackages.map((packageId) =>
-        buildMissingPackageEntry(config, packageId, `${config.packageNamePrefix}${packageId}`),
+    ? (config.knownPackages ?? []).map((packageId) =>
+        buildMissingPackageEntry(config, packageId, getMonorepoPackageName(config, packageId)),
       )
     : [buildMissingPackageEntry(config, config.packageId, config.packageName)];
 }
@@ -346,41 +378,41 @@ async function buildPackageRows(config) {
       ? buildMonorepoPackages(config, releases)
       : buildSinglePackage(config, releases);
   } catch (error) {
-    // Keep the other SDK repos generating even if one is unreachable (e.g. rate-limited or not public yet).
+    // Keep the other repos generating even if one is unreachable (e.g. rate-limited or not public yet).
     logger.warn(`Failed to fetch releases for ${config.fullName}: ${error.message}`);
 
     return buildFallbackPackages(config);
   }
 }
 
-function buildFallbackSdkReleasesData() {
+function buildFallbackEcosystemReleasesData() {
   return {
     generatedAt: new Date().toISOString(),
-    releases: SDK_REPOS.flatMap((config) => buildFallbackPackages(config)),
+    releases: RELEASE_SOURCES.flatMap((config) => buildFallbackPackages(config)),
   };
 }
 
-function writeSdkReleasesData(data) {
+function writeEcosystemReleasesData(data) {
   mkdirSync(dirname(OUTPUT_FILE), {recursive: true});
   writeFileSync(OUTPUT_FILE, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
 async function generate() {
   try {
-    const releases = (await Promise.all(SDK_REPOS.map(buildPackageRows))).flat();
+    const releases = (await Promise.all(RELEASE_SOURCES.map(buildPackageRows))).flat();
 
-    writeSdkReleasesData({generatedAt: new Date().toISOString(), releases});
-    logger.info(`SDK release data generated at ${OUTPUT_FILE}`);
+    writeEcosystemReleasesData({generatedAt: new Date().toISOString(), releases});
+    logger.info(`ecosystem release data generated at ${OUTPUT_FILE}`);
   } catch (error) {
     if (existsSync(OUTPUT_FILE)) {
-      logger.error('❌ Failed to generate SDK release data — keeping existing file:', error);
+      logger.error('❌ Failed to generate ecosystem release data — keeping existing file:', error);
 
       return;
     }
 
-    logger.error('❌ Failed to generate SDK release data — writing fallback data:', error);
-    writeSdkReleasesData(buildFallbackSdkReleasesData());
-    logger.info(`Fallback SDK release data generated at ${OUTPUT_FILE}`);
+    logger.error('❌ Failed to generate ecosystem release data — writing fallback data:', error);
+    writeEcosystemReleasesData(buildFallbackEcosystemReleasesData());
+    logger.info(`Fallback ecosystem release data generated at ${OUTPUT_FILE}`);
   }
 }
 
