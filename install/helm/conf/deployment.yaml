@@ -431,6 +431,13 @@ log:
   store: {{ include "thunderid.validateStoreMode" (dict "value" $mode "field" (printf "configuration.stores.%s" $section)) | quote }}
 {{- end }}
 {{- end }}
+{{- /* Notification template store lives under the nested notification.template path. */}}
+{{- if $stores.notification_template }}
+
+notification:
+  template:
+    store: {{ include "thunderid.validateStoreMode" (dict "value" $stores.notification_template "field" "configuration.stores.notification_template") | quote }}
+{{- end }}
 
 declarative_resources:
   enabled: {{ .Values.declarativeResources.enabled }}

@@ -94,7 +94,18 @@ type DatabaseConfig struct {
 
 // NotificationConfig holds the notification configuration details.
 type NotificationConfig struct {
-	OTP OTPConfig `yaml:"otp" json:"otp"`
+	OTP      OTPConfig                  `yaml:"otp"      json:"otp"`
+	Template NotificationTemplateConfig `yaml:"template" json:"template"`
+}
+
+// NotificationTemplateConfig holds the storage mode for notification templates.
+type NotificationTemplateConfig struct {
+	// Store defines the storage mode for notification templates.
+	// Valid values: "mutable", "declarative", "composite" (hybrid mode).
+	// If not specified, falls back to the global declarative_resources.enabled setting:
+	//   - enabled = true: behaves as "declarative"
+	//   - enabled = false: behaves as "mutable"
+	Store string `yaml:"store" json:"store"`
 }
 
 // Validate checks the notification configuration for correctness.

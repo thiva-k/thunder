@@ -24,6 +24,7 @@ type ExportRequest struct {
 	ServerConfigs            []string `json:"serverConfigs,omitempty"`
 	CredentialConfigurations []string `json:"credentialConfigurations,omitempty"`
 	PresentationDefinitions  []string `json:"presentationDefinitions,omitempty"`
+	NotificationTemplates    []string `json:"notificationTemplates,omitempty"`
 
 	Options *ExportOptions `json:"options,omitempty"`
 }
