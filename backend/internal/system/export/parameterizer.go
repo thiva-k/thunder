@@ -228,12 +228,17 @@ func (p *parameterizer) ToParameterizedYAML(ctx context.Context, obj interface{}
 // because only that style reads them at all: a reference-style export writes no value beside the
 // document. The names are the same in either style, so they are the ones a reference names.
 //
+// A list is reported as the JSON list of its items, which is what the reference a reference-style
+// export writes for it expands from on import. A list is never a credential.
+//
 // Three kinds of value are left out, as no reference would find them:
-//   - an empty one, which there is nothing to keep for;
+//   - an empty one, a list with no items included, which there is nothing to keep for and which the
+//     export leaves as it is;
 //   - one that is already a well-formed reference, which the export keeps as it stands rather than
 //     naming it again, so storing it would put a reference where its value belongs;
-//   - a list, since no reference expands into list items and a reference-style export leaves
-//     a list as it is.
+//   - a list holding a reference among its items, which the export keeps item by item rather than
+//     referring to, so nothing is stored under the list's name and the reference is not copied into
+//     a store that holds values.
 func (p *parameterizer) PlaceholderValues(ctx context.Context, obj interface{},
 	resourceType string, resourceName string,
 	rules *declarativeresource.ResourceRules) (map[string]string, map[string]string, error) {
@@ -257,7 +262,13 @@ func (p *parameterizer) PlaceholderValues(ctx context.Context, obj interface{},
 		lists[named.pathToVariableName(resourceName, path)] = true
 	}
 	for name, value := range values {
-		if value == "" || valueref.IsWellFormedReference(value) || lists[name] {
+		if lists[name] {
+			if items, ok := listItems(value); ok && len(items) > 0 && !holdsReference(items) {
+				variables[name] = value
+			}
+			continue
+		}
+		if value == "" || valueref.IsWellFormedReference(value) {
 			continue
 		}
 		if credentials[name] {
@@ -273,6 +284,25 @@ func (p *parameterizer) PlaceholderValues(ctx context.Context, obj interface{},
 		}
 	}
 	return variables, secrets, nil
+}
+
+// listItems reads a list's value, the JSON list of its items, and reports false for anything else.
+func listItems(value string) ([]string, bool) {
+	var items []string
+	if err := json.Unmarshal([]byte(value), &items); err != nil {
+		return nil, false
+	}
+	return items, true
+}
+
+// holdsReference reports whether a list holds a reference among its items.
+func holdsReference(items []string) bool {
+	for _, item := range items {
+		if valueref.IsWellFormedReference(item) {
+			return true
+		}
+	}
+	return false
 }
 
 // mappedCredentials reads the string entries of a map named as a dynamic property field, each under
@@ -1434,12 +1464,9 @@ func (p *parameterizer) parameterizeNode(node *yaml.Node, rules *resourceRules, 
 
 	// Process array variables.
 	//
-	// A reference names one held value, and there is no form of it that expands into list items, so
-	// in reference style the list is left as it is rather than written as something that cannot be
-	// resolved. Nothing here is a credential: what is parameterized as an array is an address list.
-	if p.style == ValueReferences {
-		return nil
-	}
+	// In reference style a list becomes a list of one reference, which the importing deployment
+	// expands into the items its variable holds. Nothing here is a credential: what is parameterized
+	// as an array is an address list.
 	for _, path := range rules.ArrayVariables {
 		varName := p.pathToVariableName(resourceName, path)
 		if err := p.replaceArrayNode(root, path, varName); err != nil {
@@ -1448,6 +1475,26 @@ func (p *parameterizer) parameterizeNode(node *yaml.Node, rules *resourceRules, 
 	}
 
 	return nil
+}
+
+// referToList replaces a list's items with one reference to the variable holding them. A list that
+// already holds a reference, a variable's or a secret's, keeps its items as they are, literal ones
+// beside the reference included, so a resource written from an import exports what it read and an
+// import keeps the literal items beside the ones the reference resolves to. That is the test
+// PlaceholderValues makes too, so a list it leaves out is never one this rewrites into a reference to
+// a variable no gateway is given. An empty list is left empty: there is nothing for
+// a gateway to hold in its place, and referring to it would ask every gateway for a value that is
+// nothing, such as the redirect URIs of a client that signs no user in.
+func (p *parameterizer) referToList(list *yaml.Node, varName string) {
+	if len(list.Content) == 0 {
+		return
+	}
+	for _, item := range list.Content {
+		if valueref.IsWellFormedReference(item.Value) {
+			return
+		}
+	}
+	list.Content = []*yaml.Node{{Kind: yaml.ScalarNode, Tag: "!!str", Value: valueref.VariableReference(varName)}}
 }
 
 // pathToVariableName converts path to uppercase variable name with app name prefix
@@ -1622,6 +1669,10 @@ func (p *parameterizer) replaceArrayNode(node *yaml.Node, path string, varName s
 						return nil
 					}
 				} else if i == len(parts)-1 {
+					if valueNode.Kind == yaml.SequenceNode && p.style == ValueReferences {
+						p.referToList(valueNode, varName)
+						return nil
+					}
 					// Replace array with template range syntax
 					if valueNode.Kind == yaml.SequenceNode {
 						// Create a new sequence node with template content

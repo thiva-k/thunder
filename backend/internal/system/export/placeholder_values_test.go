@@ -52,7 +52,8 @@ func TestPlaceholderValuesNameWhatTheReferenceExportWrites(t *testing.T) {
 		confidentialApp("the-id", "the-secret"))
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]string{"APPLICATION_MY_APP_CLIENT_ID": "the-id"}, variables)
+	assert.Equal(t, map[string]string{"APPLICATION_MY_APP_CLIENT_ID": "the-id",
+		"APPLICATION_MY_APP_REDIRECT_URIS": `["https://app.test/callback"]`}, variables)
 	assert.Equal(t, map[string]string{"APPLICATION_MY_APP_CLIENT_SECRET": "the-secret"}, secrets)
 
 	exported, svcErr := svc.ExportResources(context.Background(),
@@ -67,16 +68,63 @@ func TestPlaceholderValuesNameWhatTheReferenceExportWrites(t *testing.T) {
 	}
 }
 
-// A list stays literal in a reference export, so there is nothing to keep for it.
-func TestPlaceholderValuesLeaveOutAList(t *testing.T) {
+// A list is kept as the JSON list of its items, which the reference the export writes for it expands
+// from on import, and it is never a credential.
+func TestPlaceholderValuesReportAListAsAJSONList(t *testing.T) {
 	svc := referenceExportService(t, application.NewApplicationExporterForTest(nil))
+	app := confidentialApp("the-id", "the-secret")
+	app.InboundAuthConfig[0].OAuthConfig.RedirectURIs = []string{"https://app.test/callback", "https://app.test/alt"}
 
-	variables, secrets, err := svc.PlaceholderValues(context.Background(), resourceTypeApplication,
-		confidentialApp("the-id", "the-secret"))
+	variables, secrets, err := svc.PlaceholderValues(context.Background(), resourceTypeApplication, app)
 	require.NoError(t, err)
 
-	assert.NotContains(t, variables, "APPLICATION_MY_APP_REDIRECT_URIS")
+	assert.Equal(t, `["https://app.test/callback","https://app.test/alt"]`,
+		variables["APPLICATION_MY_APP_REDIRECT_URIS"])
 	assert.NotContains(t, secrets, "APPLICATION_MY_APP_REDIRECT_URIS")
+}
+
+// An empty list, or none at all, as a client that signs no user in has, holds nothing a gateway
+// could vary, so the export leaves it as it is and nothing is kept for it.
+func TestPlaceholderValuesLeaveOutAnEmptyList(t *testing.T) {
+	for _, list := range [][]string{{}, nil} {
+		appService := applicationmock.NewApplicationServiceInterfaceMock(t)
+		app := confidentialApp("the-id", "")
+		app.InboundAuthConfig[0].OAuthConfig.RedirectURIs = list
+		appService.On("GetApplication", context.Background(), "app-1").Return(app, nil)
+		svc := referenceExportService(t, application.NewApplicationExporterForTest(appService))
+
+		variables, _, err := svc.PlaceholderValues(context.Background(), resourceTypeApplication, app)
+		require.NoError(t, err)
+
+		assert.NotContains(t, variables, "APPLICATION_MY_APP_REDIRECT_URIS")
+		exported, svcErr := svc.ExportResources(context.Background(), &ExportRequest{Applications: []string{"app-1"}})
+		require.Nil(t, svcErr)
+		require.Len(t, exported.Files, 1)
+		assert.NotContains(t, exported.Files[0].Content, "APPLICATION_MY_APP_REDIRECT_URIS")
+	}
+}
+
+// A list holding a reference is exported item by item rather than referred to, so nothing is kept
+// under its name, and no reference is copied into a store that holds values. That holds for a list
+// of references alone, for one mixing a reference with literal items, and for a secret reference.
+func TestPlaceholderValuesLeaveOutAListHoldingAReference(t *testing.T) {
+	svc := referenceExportService(t, application.NewApplicationExporterForTest(nil))
+	lists := map[string][]string{
+		"a reference":                 {"var:APPLICATION_MY_APP_REDIRECT_URIS"},
+		"a reference beside literals": {"https://app.test/callback", "var:APPLICATION_OTHER_REDIRECT_URIS"},
+		"a secret reference":          {"sec:APPLICATION_MY_APP_REDIRECT_URIS"},
+	}
+	for holding, list := range lists {
+		app := confidentialApp("the-id", "the-secret")
+		app.InboundAuthConfig[0].OAuthConfig.RedirectURIs = list
+
+		variables, secrets, err := svc.PlaceholderValues(context.Background(), resourceTypeApplication, app)
+		require.NoError(t, err)
+
+		assert.NotContains(t, variables, "APPLICATION_MY_APP_REDIRECT_URIS", "a list holding %s was kept", holding)
+		assert.NotContains(t, secrets, "APPLICATION_MY_APP_REDIRECT_URIS", "a list holding %s was kept", holding)
+		assert.Equal(t, "the-id", variables["APPLICATION_MY_APP_CLIENT_ID"])
+	}
 }
 
 // A public client has no secret, and its export names none.
@@ -88,7 +136,8 @@ func TestPlaceholderValuesOfAPublicClientCarryNoSecret(t *testing.T) {
 	variables, secrets, err := svc.PlaceholderValues(context.Background(), resourceTypeApplication, app)
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]string{"APPLICATION_MY_APP_CLIENT_ID": "the-id"}, variables)
+	assert.Equal(t, map[string]string{"APPLICATION_MY_APP_CLIENT_ID": "the-id",
+		"APPLICATION_MY_APP_REDIRECT_URIS": `["https://app.test/callback"]`}, variables)
 	assert.Empty(t, secrets)
 }
 
@@ -100,7 +149,7 @@ func TestPlaceholderValuesLeaveOutAnEmptyValue(t *testing.T) {
 		confidentialApp("", ""))
 	require.NoError(t, err)
 
-	assert.Empty(t, variables)
+	assert.NotContains(t, variables, "APPLICATION_MY_APP_CLIENT_ID")
 	assert.Empty(t, secrets)
 }
 
@@ -113,7 +162,7 @@ func TestPlaceholderValuesLeaveOutAStoredReference(t *testing.T) {
 		confidentialApp("var:APPLICATION_OLD_NAME_CLIENT_ID", "sec:APPLICATION_OLD_NAME_CLIENT_SECRET"))
 	require.NoError(t, err)
 
-	assert.Empty(t, variables)
+	assert.NotContains(t, variables, "APPLICATION_MY_APP_CLIENT_ID")
 	assert.Empty(t, secrets)
 }
 

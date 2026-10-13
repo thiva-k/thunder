@@ -127,6 +127,48 @@ func (ts *ControlPlaneTestSuite) TestAWrittenApplicationsValuesReachTheDefaultGa
 	held, ok = g.held("secrets", variableName("APPLICATION", name, "CLIENT_SECRET"))
 	ts.True(ok, "the client secret was not captured")
 	ts.Equal(clientSecret, held)
+	held, ok = g.held("variables", variableName("APPLICATION", name, "REDIRECT_URIS"))
+	ts.True(ok, "the redirect URIs were not captured")
+	ts.JSONEq(`["https://cp-capture.example.com/callback"]`, held)
+}
+
+// An application that signs no user in has no redirect URIs. Its export leaves the empty list as it
+// is, so no gateway is asked for a value, and nothing is captured for it.
+func (ts *ControlPlaneTestSuite) TestAnApplicationWithoutRedirectURIsAsksNoGatewayForThem() {
+	g := ts.withDefaultGateway()
+	name := unique("CP Machine App")
+	clientID := unique("cp-machine-client")
+
+	appID, err := testutils.CreateApplication(testutils.Application{
+		OUID: ts.ouID,
+		Name: name,
+		Type: "m2m",
+		InboundAuthConfig: []map[string]interface{}{{
+			"type": "oauth2",
+			"config": map[string]interface{}{
+				"clientId":                clientID,
+				"clientSecret":            unique("cp-machine-secret"),
+				"grantTypes":              []string{"client_credentials"},
+				"tokenEndpointAuthMethod": "client_secret_basic",
+			},
+		}},
+	})
+	ts.Require().NoError(err)
+	defer func() { _ = testutils.DeleteApplication(appID) }()
+
+	held, ok := g.held("variables", variableName("APPLICATION", name, "CLIENT_ID"))
+	ts.True(ok, "the client ID was not captured")
+	ts.Equal(clientID, held)
+	_, ok = g.held("variables", variableName("APPLICATION", name, "REDIRECT_URIS"))
+	ts.False(ok, "a value was captured for redirect URIs the application does not have")
+
+	var exported struct {
+		Resources string `json:"resources"`
+	}
+	status, raw := ts.call(http.MethodPost, "/export", map[string]any{"applications": []string{appID}}, &exported)
+	ts.Require().Equal(http.StatusOK, status, string(raw))
+	ts.NotContains(exported.Resources, variableName("APPLICATION", name, "REDIRECT_URIS"),
+		"the export refers to redirect URIs the application does not have")
 }
 
 // A user written with a password leaves the password in the default gateway's secrets, never in its
