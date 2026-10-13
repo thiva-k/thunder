@@ -1112,6 +1112,11 @@ const sidebars: SidebarsConfig = {
           label: 'Tokens',
         },
         {
+          type: 'doc',
+          id: 'key-concepts/resource-sharing',
+          label: 'Resource Sharing',
+        },
+        {
           type: 'category',
           label: 'Import and Export',
           collapsible: true,
