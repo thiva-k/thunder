@@ -1175,7 +1175,7 @@ func (s *agentService) buildListResponse(ctx context.Context, entities []provide
 		displayPaths := s.resolveDisplayPaths(ctx, entityTypes(entities))
 		for i := range agents {
 			agents[i].Display = sysutils.ResolveDisplay(
-				entities[i].ID, entities[i].Type, entities[i].Attributes, displayPaths)
+				agents[i].ID, agents[i].Type, agents[i].Attributes, displayPaths)
 		}
 		s.populateOUHandlesForList(ctx, agents)
 	}
