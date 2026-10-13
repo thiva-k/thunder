@@ -46,6 +46,7 @@ func (a *BearerAuthenticator) Authenticate(ctx context.Context, token string) (*
 		JTI:           securityCtx.revocationID,
 		TokenFamilyID: securityCtx.tokenFamilyID,
 		Subject:       securityCtx.revocationSubject,
+		AppKey:        securityCtx.revocationAppKey,
 		EstablishedAt: securityCtx.establishedAt,
 	}); err != nil {
 		return nil, errInvalidToken
