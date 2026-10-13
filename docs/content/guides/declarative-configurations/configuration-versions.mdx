@@ -173,6 +173,44 @@ A revert takes `dryRun` and follows the same rules as an apply. It leaves the re
 leave alone, and it is refused with `409` while the gateway lacks a value that version refers to. A
 gateway with no earlier version answers `400` (`GTW-1016`).
 
+## Read What a Gateway Runs
+
+`GET /gateways/{id}/applied-configuration` returns every resource of the version the gateway holds, each
+in the shape the resource's own read returns, such as what `GET /applications/{id}` returns for an
+application. A console shows the configuration as the gateway runs it from this one read, rather than as
+the control plane holds it now, which may have moved on since the apply.
+
+```bash
+curl -k https://localhost:8095/gateways/{id}/applied-configuration \
+  -H "Authorization: Bearer <token>"
+```
+
+```json
+{
+  "gatewayId": "...",
+  "version": "9f3c...",
+  "appliedAt": "2026-10-09T10:00:00Z",
+  "resources": [
+    {"resourceType": "application", "id": "...", "resource": {"name": "Orders", "...": "..."}},
+    {"resourceType": "group", "id": "...", "resource": {"name": "Admins"}, "parts": {"members": {"...": "..."}}}
+  ],
+  "skipped": []
+}
+```
+
+- A value the version refers to, such as `var:APPLICATION_ORDERS_CLIENT_ID`, is returned as the reference:
+  the version does not hold the value. A secret the resource's own read masks is masked the same way, and
+  user credentials are never returned.
+- `parts` carries the collections a resource's own API serves apart from it, as one page holding every
+  item: a group's `members`, a role's `assignments`, a resource server's `resources` and `actions`, and a
+  translation's namespaces under `ns/{namespace}`.
+- `skipped` lists the version's documents that cannot be shown as their resource: `GTW-1021` when the
+  resource type cannot be shown from a version, `GTW-1022` when the document does not read as its resource,
+  for instance one captured with a template range whose values are not filled in.
+- A gateway nothing was applied to runs nothing: `resources` is empty and there is no `version`. The version
+  shown is the one recorded as applied, whole, even when the gateway refused some of its resources on the
+  last apply; the apply's own result names what it refused.
+
 ## Manage a Gateway's Values
 
 The control plane passes requests to the gateway's own variable store, presenting the gateway's key,
