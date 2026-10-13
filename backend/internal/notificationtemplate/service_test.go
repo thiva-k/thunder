@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/tests/mocks/resourcedependencymock"
@@ -44,7 +45,21 @@ func TestNotificationTemplateServiceTestSuite(t *testing.T) {
 	suite.Run(t, new(NotificationTemplateServiceTestSuite))
 }
 
+// initMutableTestRuntime initializes the server runtime in mutable mode (no store set, declarative
+// resources off) so service calls that read it (e.g. isDeclarativeModeEnabled) work. Tests that need
+// declarative mode re-initialize it themselves.
+func initMutableTestRuntime(t interface {
+	TempDir() string
+	Fatalf(string, ...interface{})
+}) {
+	config.ResetServerRuntime()
+	if err := config.InitializeServerRuntime(t.TempDir(), &config.Config{}); err != nil {
+		t.Fatalf("init server runtime: %v", err)
+	}
+}
+
 func (s *NotificationTemplateServiceTestSuite) SetupTest() {
+	initMutableTestRuntime(s.T())
 	s.mockStore = newNotificationTemplateStoreInterfaceMock(s.T())
 	s.svc = newNotificationTemplateService(s.mockStore, executingTransactioner(s.T()))
 	s.ctx = context.Background()
@@ -69,6 +84,24 @@ func (s *NotificationTemplateServiceTestSuite) TestCreateTemplate_Email() {
 	s.Require().Equal("s.key", tmpl.Content.Subject)
 	s.Require().NotNil(tmpl.Design)
 	s.Require().Equal(colorSchemeLight, tmpl.Design.ColorScheme)
+}
+
+// TestCreateTemplate_DeclarativeModeRejected verifies that in declarative-only mode a create is refused
+// with the dedicated create-not-allowed error (NTM-1024), not the misleading read-only error, and
+// without reaching the store.
+func (s *NotificationTemplateServiceTestSuite) TestCreateTemplate_DeclarativeModeRejected() {
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(),
+		&config.Config{DeclarativeResources: config.DeclarativeResources{Enabled: true}}))
+	defer config.ResetServerRuntime()
+
+	_, err := s.svc.CreateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle:      "new-handle",
+		DisplayName: "New",
+		Content:     TemplateContent{Subject: "s", Body: "b"},
+	})
+	s.Require().NotNil(err)
+	s.Require().Equal(ErrorDeclarativeModeCreateNotAllowed.Code, err.Code)
 }
 
 // TestCreateTemplate_ContentRoundTrip stores realistic content for both channels and confirms the
@@ -560,4 +593,96 @@ func (s *NotificationTemplateServiceTestSuite) TestDeleteTemplate_UnhappyPaths()
 
 	err = s.svc.DeleteTemplate(s.ctx, ChannelTypeEmail, "")
 	s.Require().Equal(ErrorInvalidTemplateID.Code, err.Code)
+}
+
+// TestValidateTemplate_Valid verifies the dry-run validator accepts a well-formed request without
+// touching the store.
+func (s *NotificationTemplateServiceTestSuite) TestValidateTemplate_Valid() {
+	svcErr := s.svc.ValidateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle:      "welcome",
+		DisplayName: "Welcome",
+		Content:     TemplateContent{Subject: "Hi", Body: "Hello"},
+	})
+	s.Require().Nil(svcErr)
+}
+
+// TestValidateTemplate_Rejections exercises the validator's channel, handle, and content checks. It
+// mirrors CreateTemplate's validation without persisting, so no store calls are expected.
+func (s *NotificationTemplateServiceTestSuite) TestValidateTemplate_Rejections() {
+	// Unsupported channel.
+	svcErr := s.svc.ValidateTemplate(s.ctx, "push", CreateTemplateRequest{
+		Handle: "welcome", DisplayName: "W", Content: TemplateContent{Subject: "Hi", Body: "Hello"}})
+	s.Require().Equal(ErrorInvalidChannel.Code, svcErr.Code)
+
+	// Invalid handle.
+	svcErr = s.svc.ValidateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle: "Invalid Handle", DisplayName: "W", Content: TemplateContent{Subject: "Hi", Body: "Hello"}})
+	s.Require().Equal(ErrorInvalidHandle.Code, svcErr.Code)
+
+	// Invalid content: an email with no subject.
+	svcErr = s.svc.ValidateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle: "welcome", DisplayName: "W", Content: TemplateContent{Body: "Hello"}})
+	s.Require().Equal(ErrorMissingSubject.Code, svcErr.Code)
+}
+
+// TestUpdateTemplate_ReadOnlyWhenDeclared verifies an update refused by the store for a declared
+// template surfaces ErrorTemplateReadOnly.
+func (s *NotificationTemplateServiceTestSuite) TestUpdateTemplate_ReadOnlyWhenDeclared() {
+	s.mockStore.On("GetTemplate", mock.Anything, ChannelTypeEmail, "declared-id").Return(templateDAO{
+		ID: "declared-id", Channel: ChannelTypeEmail, Handle: "welcome", DisplayName: "Welcome",
+		Content: TemplateContent{Subject: "s", Body: "b"},
+	}, nil)
+	s.mockStore.On("UpdateTemplate", mock.Anything, mock.Anything).Return(errDeclarativeTemplate)
+
+	_, err := s.svc.UpdateTemplate(s.ctx, ChannelTypeEmail, "declared-id", UpdateTemplateRequest{
+		DisplayName: "Renamed", Content: TemplateContent{Subject: "s", Body: "b2"}})
+	s.Require().Equal(ErrorTemplateReadOnly.Code, err.Code)
+}
+
+// TestDeleteTemplate_ReadOnlyWhenDeclared verifies a delete refused by the store for a declared
+// template surfaces ErrorTemplateReadOnly.
+func (s *NotificationTemplateServiceTestSuite) TestDeleteTemplate_ReadOnlyWhenDeclared() {
+	s.mockStore.On("GetTemplate", mock.Anything, ChannelTypeEmail, "declared-id").Return(templateDAO{
+		ID: "declared-id", Channel: ChannelTypeEmail, Handle: "welcome", DisplayName: "Welcome",
+		Content: TemplateContent{Subject: "s", Body: "b"},
+	}, nil)
+	s.mockStore.On("DeleteTemplate", mock.Anything, ChannelTypeEmail, "declared-id").
+		Return(errDeclarativeTemplate)
+
+	err := s.svc.DeleteTemplate(s.ctx, ChannelTypeEmail, "declared-id")
+	s.Require().Equal(ErrorTemplateReadOnly.Code, err.Code)
+}
+
+// TestDeleteTemplate_ReadOnlyTakesPrecedenceOverInUse verifies a declared template is refused as
+// read-only (403) before the flow-dependency check, so a declared template a flow references does not
+// return in-use (409). The dependency registry is therefore never consulted.
+func (s *NotificationTemplateServiceTestSuite) TestDeleteTemplate_ReadOnlyTakesPrecedenceOverInUse() {
+	s.mockStore.On("GetTemplate", mock.Anything, ChannelTypeEmail, "declared-id").Return(templateDAO{
+		ID: "declared-id", Channel: ChannelTypeEmail, Handle: "welcome", IsReadOnly: true}, nil)
+
+	total := 1
+	reg := resourcedependencymock.NewRegistryMock(s.T())
+	reg.EXPECT().GetDependencies(mock.Anything, mock.Anything, mock.Anything).Return(
+		&resourcedependency.DependenciesResponse{
+			TotalResults: &total,
+			Usages: []resourcedependency.ResourceDependency{
+				{BehaviorOnDelete: resourcedependency.BehaviorRestrict},
+			},
+		}, nil).Maybe()
+	s.svc.SetDependencyRegistry(reg)
+
+	err := s.svc.DeleteTemplate(s.ctx, ChannelTypeEmail, "declared-id")
+	s.Require().Equal(ErrorTemplateReadOnly.Code, err.Code)
+}
+
+// TestUpdateTemplate_ReadOnlyShortCircuits verifies an update on a declared template is refused as
+// read-only before the store write is attempted (no UpdateTemplate call).
+func (s *NotificationTemplateServiceTestSuite) TestUpdateTemplate_ReadOnlyShortCircuits() {
+	s.mockStore.On("GetTemplate", mock.Anything, ChannelTypeEmail, "declared-id").Return(templateDAO{
+		ID: "declared-id", Channel: ChannelTypeEmail, Handle: "welcome", IsReadOnly: true,
+		Content: TemplateContent{Subject: "s", Body: "b"}}, nil)
+
+	_, err := s.svc.UpdateTemplate(s.ctx, ChannelTypeEmail, "declared-id", UpdateTemplateRequest{
+		DisplayName: "Renamed", Content: TemplateContent{Subject: "s", Body: "b2"}})
+	s.Require().Equal(ErrorTemplateReadOnly.Code, err.Code)
 }
