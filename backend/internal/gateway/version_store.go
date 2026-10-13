@@ -22,8 +22,9 @@ var (
 	queryInsertVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-01",
 		Query: `INSERT INTO "CONFIGURATION_VERSION" (ID, SEQ, HASH, NAME, RESOURCES, VARIABLES, NOTE, IS_CURRENT, ` +
-			`DEPLOYMENT_ID) SELECT $1, COALESCE(MAX(SEQ), 0) + 1, $2, $3, $4, $5, $6, $7, $8 ` +
-			`FROM "CONFIGURATION_VERSION" WHERE DEPLOYMENT_ID = $9 RETURNING SEQ, CREATED_AT`,
+			`CREATED_BY, DEPLOYMENT_ID) ` +
+			`SELECT $1, COALESCE(MAX(SEQ), 0) + 1, $2, $3, $4, $5, $6, $7, $8, $9 ` +
+			`FROM "CONFIGURATION_VERSION" WHERE DEPLOYMENT_ID = $10 RETURNING SEQ, CREATED_AT`,
 	}
 	// queryReplaceCurrentVersion puts a configuration in place of the current version: the newest one,
 	// when it was captured as current and no gateway holds it or could be reverted to it. The checks
@@ -33,17 +34,19 @@ var (
 	queryReplaceCurrentVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-14",
 		Query: `UPDATE "CONFIGURATION_VERSION" SET HASH = $1, NAME = $2, RESOURCES = $3, VARIABLES = $4, ` +
-			`NOTE = $5, CREATED_AT = NOW() WHERE DEPLOYMENT_ID = $6 AND IS_CURRENT = '1' ` +
-			`AND SEQ = (SELECT MAX(SEQ) FROM "CONFIGURATION_VERSION" WHERE DEPLOYMENT_ID = $7) ` +
-			`AND SEQ NOT IN (SELECT APPLIED_SEQ FROM "GATEWAY_APPLIED_VERSION" WHERE DEPLOYMENT_ID = $8) ` +
+			`NOTE = $5, CREATED_BY = $6, CREATED_AT = NOW() ` +
+			`WHERE DEPLOYMENT_ID = $7 AND IS_CURRENT = '1' ` +
+			`AND SEQ = (SELECT MAX(SEQ) FROM "CONFIGURATION_VERSION" WHERE DEPLOYMENT_ID = $8) ` +
+			`AND SEQ NOT IN (SELECT APPLIED_SEQ FROM "GATEWAY_APPLIED_VERSION" WHERE DEPLOYMENT_ID = $9) ` +
 			`AND SEQ NOT IN (SELECT PREVIOUS_SEQ FROM "GATEWAY_APPLIED_VERSION" ` +
-			`WHERE PREVIOUS_SEQ IS NOT NULL AND DEPLOYMENT_ID = $9) RETURNING SEQ, CREATED_AT`,
+			`WHERE PREVIOUS_SEQ IS NOT NULL AND DEPLOYMENT_ID = $10) RETURNING SEQ, CREATED_AT`,
 		SQLiteQuery: `UPDATE "CONFIGURATION_VERSION" SET HASH = $1, NAME = $2, RESOURCES = $3, VARIABLES = $4, ` +
-			`NOTE = $5, CREATED_AT = datetime('now') WHERE DEPLOYMENT_ID = $6 AND IS_CURRENT = '1' ` +
-			`AND SEQ = (SELECT MAX(SEQ) FROM "CONFIGURATION_VERSION" WHERE DEPLOYMENT_ID = $7) ` +
-			`AND SEQ NOT IN (SELECT APPLIED_SEQ FROM "GATEWAY_APPLIED_VERSION" WHERE DEPLOYMENT_ID = $8) ` +
+			`NOTE = $5, CREATED_BY = $6, CREATED_AT = datetime('now') ` +
+			`WHERE DEPLOYMENT_ID = $7 AND IS_CURRENT = '1' ` +
+			`AND SEQ = (SELECT MAX(SEQ) FROM "CONFIGURATION_VERSION" WHERE DEPLOYMENT_ID = $8) ` +
+			`AND SEQ NOT IN (SELECT APPLIED_SEQ FROM "GATEWAY_APPLIED_VERSION" WHERE DEPLOYMENT_ID = $9) ` +
 			`AND SEQ NOT IN (SELECT PREVIOUS_SEQ FROM "GATEWAY_APPLIED_VERSION" ` +
-			`WHERE PREVIOUS_SEQ IS NOT NULL AND DEPLOYMENT_ID = $9) RETURNING SEQ, CREATED_AT`,
+			`WHERE PREVIOUS_SEQ IS NOT NULL AND DEPLOYMENT_ID = $10) RETURNING SEQ, CREATED_AT`,
 	}
 	// querySettleVersion keeps a version as it is from now on. A current version stays current, marked
 	// kept, until a later capture, but a capture no longer replaces it in place. It matches the hash an
@@ -57,14 +60,14 @@ var (
 	// queryListVersions lists the deployment's versions, newest first, without their content.
 	queryListVersions = dbmodel.DBQuery{
 		ID: "GTV_MGT-02",
-		Query: `SELECT SEQ, HASH, NAME, NOTE, IS_CURRENT, CREATED_AT FROM "CONFIGURATION_VERSION" ` +
+		Query: `SELECT SEQ, HASH, NAME, NOTE, IS_CURRENT, CREATED_AT, CREATED_BY FROM "CONFIGURATION_VERSION" ` +
 			`WHERE DEPLOYMENT_ID = $1 ORDER BY SEQ DESC`,
 	}
 	// queryGetVersion reads one version with its content.
 	queryGetVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-03",
-		Query: `SELECT SEQ, HASH, NAME, RESOURCES, VARIABLES, NOTE, CREATED_AT FROM "CONFIGURATION_VERSION" ` +
-			`WHERE SEQ = $1 AND DEPLOYMENT_ID = $2`,
+		Query: `SELECT SEQ, HASH, NAME, RESOURCES, VARIABLES, NOTE, CREATED_AT, CREATED_BY ` +
+			`FROM "CONFIGURATION_VERSION" WHERE SEQ = $1 AND DEPLOYMENT_ID = $2`,
 	}
 	// queryLatestVersion reads the deployment's newest version number.
 	queryLatestVersion = dbmodel.DBQuery{
@@ -97,7 +100,7 @@ var (
 	// queryGetAppliedVersion reads what a gateway holds.
 	queryGetAppliedVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-06",
-		Query: `SELECT A.APPLIED_SEQ, A.PREVIOUS_SEQ, A.APPLIED_AT, V.HASH AS APPLIED_HASH, ` +
+		Query: `SELECT A.APPLIED_SEQ, A.PREVIOUS_SEQ, A.APPLIED_AT, A.APPLIED_BY, V.HASH AS APPLIED_HASH, ` +
 			`P.HASH AS PREVIOUS_HASH FROM "GATEWAY_APPLIED_VERSION" A ` +
 			`LEFT JOIN "CONFIGURATION_VERSION" V ON V.SEQ = A.APPLIED_SEQ AND V.DEPLOYMENT_ID = A.DEPLOYMENT_ID ` +
 			`LEFT JOIN "CONFIGURATION_VERSION" P ON P.SEQ = A.PREVIOUS_SEQ AND P.DEPLOYMENT_ID = A.DEPLOYMENT_ID ` +
@@ -113,19 +116,23 @@ var (
 	// refused rather than recording a state its own import did not leave.
 	queryUpsertAppliedVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-07",
-		Query: `INSERT INTO "GATEWAY_APPLIED_VERSION" (GATEWAY_ID, APPLIED_SEQ, PREVIOUS_SEQ, DEPLOYMENT_ID) ` +
+		Query: `INSERT INTO "GATEWAY_APPLIED_VERSION" (GATEWAY_ID, APPLIED_SEQ, PREVIOUS_SEQ, APPLIED_BY, ` +
+			`DEPLOYMENT_ID) ` +
 			`SELECT CAST($1 AS VARCHAR(36)), CAST($2 AS INTEGER), CAST($3 AS INTEGER), ` +
-			`CAST($4 AS VARCHAR(255)) WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
-			`WHERE SEQ = $5 AND HASH = $6 AND DEPLOYMENT_ID = $7) ` +
+			`CAST($4 AS VARCHAR(255)), CAST($5 AS VARCHAR(255)) ` +
+			`WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
+			`WHERE SEQ = $6 AND HASH = $7 AND DEPLOYMENT_ID = $8) ` +
 			`ON CONFLICT (GATEWAY_ID, DEPLOYMENT_ID) DO UPDATE SET ` +
-			`APPLIED_SEQ = excluded.APPLIED_SEQ, PREVIOUS_SEQ = excluded.PREVIOUS_SEQ, APPLIED_AT = NOW() ` +
-			`WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $8`,
-		SQLiteQuery: `INSERT INTO "GATEWAY_APPLIED_VERSION" (GATEWAY_ID, APPLIED_SEQ, PREVIOUS_SEQ, DEPLOYMENT_ID) ` +
-			`SELECT $1, $2, $3, $4 WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
-			`WHERE SEQ = $5 AND HASH = $6 AND DEPLOYMENT_ID = $7) ` +
+			`APPLIED_SEQ = excluded.APPLIED_SEQ, PREVIOUS_SEQ = excluded.PREVIOUS_SEQ, APPLIED_AT = NOW(), ` +
+			`APPLIED_BY = excluded.APPLIED_BY WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $9`,
+		SQLiteQuery: `INSERT INTO "GATEWAY_APPLIED_VERSION" (GATEWAY_ID, APPLIED_SEQ, PREVIOUS_SEQ, APPLIED_BY, ` +
+			`DEPLOYMENT_ID) ` +
+			`SELECT $1, $2, $3, $4, $5 WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
+			`WHERE SEQ = $6 AND HASH = $7 AND DEPLOYMENT_ID = $8) ` +
 			`ON CONFLICT (GATEWAY_ID, DEPLOYMENT_ID) DO UPDATE SET ` +
 			`APPLIED_SEQ = excluded.APPLIED_SEQ, PREVIOUS_SEQ = excluded.PREVIOUS_SEQ, ` +
-			`APPLIED_AT = datetime('now') WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $8`,
+			`APPLIED_AT = datetime('now'), APPLIED_BY = excluded.APPLIED_BY ` +
+			`WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $9`,
 	}
 	// queryFindVersions finds the versions whose hash starts with a prefix, newest first. Two are enough
 	// to tell a prefix that names one version from one that names several.
@@ -192,8 +199,9 @@ type versionStoreInterface interface {
 	GetApplied(ctx context.Context, gatewayID string) (*AppliedVersion, error)
 	// SetApplied records what a gateway now holds, provided the applied version still has the hash the
 	// apply wrote and the gateway still holds held, the version the apply worked out its deletions from
-	// (0 for none).
-	SetApplied(ctx context.Context, gatewayID string, applied int, hash string, previous, held int) error
+	// (0 for none). By is who applied it.
+	SetApplied(ctx context.Context, gatewayID string, applied int, hash string, previous, held int,
+		by *Actor) error
 	DeleteApplied(ctx context.Context, gatewayID string) error
 	// GetExcluded reads the resources a gateway is set to leave alone, sorted by key.
 	GetExcluded(ctx context.Context, gatewayID string) ([]excludedResource, error)
@@ -235,8 +243,8 @@ func (s *versionStore) execute(ctx context.Context, q dbmodel.DBQuery, args ...i
 
 func (s *versionStore) Add(ctx context.Context, version Version) (*Version, error) {
 	rows, err := s.query(ctx, queryInsertVersion, uuid.New().String(), version.Hash, version.Name,
-		version.Resources, version.variables, version.Note, flag(version.Current), deployment.Resolve(ctx),
-		deployment.Resolve(ctx))
+		version.Resources, version.variables, version.Note, flag(version.Current), actorColumn(version.CreatedBy),
+		deployment.Resolve(ctx), deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to capture the version: %w", err)
 	}
@@ -253,7 +261,8 @@ func (s *versionStore) Add(ctx context.Context, version Version) (*Version, erro
 func (s *versionStore) ReplaceCurrent(ctx context.Context, version Version) (*Version, error) {
 	deploymentID := deployment.Resolve(ctx)
 	rows, err := s.query(ctx, queryReplaceCurrentVersion, version.Hash, version.Name, version.Resources,
-		version.variables, version.Note, deploymentID, deploymentID, deploymentID, deploymentID)
+		version.variables, version.Note, actorColumn(version.CreatedBy), deploymentID, deploymentID,
+		deploymentID, deploymentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to replace the current version: %w", err)
 	}
@@ -330,6 +339,7 @@ func (s *versionStore) List(ctx context.Context) ([]Version, error) {
 			Note:      asString(row["note"]),
 			Current:   isCurrent(asString(row["is_current"])),
 			CreatedAt: asTime(row["created_at"]),
+			CreatedBy: actorFrom(row["created_by"]),
 		})
 	}
 	return versions, nil
@@ -351,6 +361,7 @@ func (s *versionStore) Get(ctx context.Context, seq int) (*Version, error) {
 		variables: asString(rows[0]["variables"]),
 		Note:      asString(rows[0]["note"]),
 		CreatedAt: asTime(rows[0]["created_at"]),
+		CreatedBy: actorFrom(rows[0]["created_by"]),
 	}, nil
 }
 
@@ -404,11 +415,12 @@ func (s *versionStore) GetApplied(ctx context.Context, gatewayID string) (*Appli
 		Applied:         asString(rows[0]["applied_hash"]),
 		Previous:        asString(rows[0]["previous_hash"]),
 		AppliedAt:       &appliedAt,
+		AppliedBy:       actorFrom(rows[0]["applied_by"]),
 	}, nil
 }
 
 func (s *versionStore) SetApplied(ctx context.Context, gatewayID string, applied int, hash string,
-	previous, held int) error {
+	previous, held int, by *Actor) error {
 	var previousSeq interface{}
 	if previous > 0 {
 		previousSeq = previous
@@ -420,7 +432,8 @@ func (s *versionStore) SetApplied(ctx context.Context, gatewayID string, applied
 	// A held version of 0 never matches a recorded one, since versions are numbered from 1, so a
 	// first apply is refused when another apply recorded the gateway first.
 	recorded, err := dbClient.ExecuteContext(ctx, queryUpsertAppliedVersion,
-		gatewayID, applied, previousSeq, deployment.Resolve(ctx), applied, hash, deployment.Resolve(ctx), held)
+		gatewayID, applied, previousSeq, actorColumn(by), deployment.Resolve(ctx), applied, hash,
+		deployment.Resolve(ctx), held)
 	if err != nil {
 		return fmt.Errorf("failed to record what the gateway holds: %w", err)
 	}

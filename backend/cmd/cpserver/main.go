@@ -246,17 +246,17 @@ func accessLogExcludePaths(configured []string) []string {
 // createHTTPServer creates and configures an HTTP server with common settings.
 func createHTTPServer(ctx context.Context, logger *log.Logger, cfg *config.Config, mux *http.ServeMux,
 	jwtService jwt.JWTServiceInterface, revocationEnforcer revocationcache.EnforcerInterface) *http.Server {
-	securityMiddleware := createSecurityMiddleware(ctx, logger, cfg, mux, jwtService, revocationEnforcer)
+	// A successful change to the configuration is captured as the current version once it is answered,
+	// for the user the security middleware authenticated.
+	securityMiddleware := createSecurityMiddleware(ctx, logger, cfg, changeCapture.Middleware(mux), jwtService,
+		revocationEnforcer)
 
 	// Build the middleware chain with proper execution order.
 	// Request flow: CorrelationID (outermost) -> SecurityHeaders -> AccessLog -> Security -> Route Handler (innermost)
 	// Note: Middlewares are wrapped in reverse order - the last added will execute first.
 	// The Console frontend path is always excluded from the access log to keep it
 	// focused on API traffic. Additional prefixes can be excluded via log.access.exclude_paths.
-	// A successful change to the configuration is captured as the current version, once the request
-	// is through the security middleware and answered.
-	handler := log.AccessLogHandler(logger, accessLogExcludePaths(cfg.Log.Access.ExcludePaths),
-		changeCapture.Middleware(securityMiddleware))
+	handler := log.AccessLogHandler(logger, accessLogExcludePaths(cfg.Log.Access.ExcludePaths), securityMiddleware)
 	handler = middleware.SecurityHeadersMiddleware()(handler)
 	handler = middleware.CorrelationIDMiddleware(handler)
 
@@ -295,7 +295,7 @@ func createTLSListener(ctx context.Context, logger *log.Logger, server *http.Ser
 }
 
 func createSecurityMiddleware(ctx context.Context, logger *log.Logger, cfg *config.Config,
-	mux *http.ServeMux, jwtService jwt.JWTServiceInterface,
+	mux http.Handler, jwtService jwt.JWTServiceInterface,
 	revocationEnforcer revocationcache.EnforcerInterface) http.Handler {
 	// Record which posture is in force, so it is not inferred from a missing config key. Info, not
 	// Warn: leaving the audience unchecked is the documented default, and config validation already

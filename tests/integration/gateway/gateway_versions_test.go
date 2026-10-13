@@ -132,6 +132,32 @@ func (ts *GatewayVersionsTestSuite) TestApplyAddsAndRemovesWhatTheVersionsDiffer
 	ts.Equal(http.StatusOK, ts.unitStatus(ouID), "a refused revert changed the gateway")
 }
 
+// Without a user lookup at a trusted issuer, a version names no one and neither does the gateway that
+// holds it: the caller's id alone is not given out, though it is recorded.
+func (ts *GatewayVersionsTestSuite) TestWithoutALookupNoUserIsNamed() {
+	id, err := testutils.CreateOrganizationUnit(testutils.OrganizationUnit{
+		Handle: fmt.Sprintf("actor-%d", time.Now().UnixNano()), Name: "actor",
+	})
+	ts.Require().NoError(err)
+	defer func() { _ = testutils.DeleteOrganizationUnit(id) }()
+
+	var captured struct {
+		Version   string          `json:"version"`
+		CreatedBy json.RawMessage `json:"createdBy"`
+	}
+	ts.Require().Contains([]int{http.StatusCreated, http.StatusOK},
+		ts.call(http.MethodPost, "/configuration-versions", map[string]any{"note": "who"}, &captured))
+	ts.Nil(captured.CreatedBy, "the version gave out a user with no name to show")
+
+	ts.True(ts.apply(captured.Version, false).Recorded)
+	var held struct {
+		AppliedBy json.RawMessage `json:"appliedBy"`
+	}
+	ts.Require().Equal(http.StatusOK,
+		ts.call(http.MethodGet, "/gateways/"+ts.gatewayID+"/applied-version", nil, &held))
+	ts.Nil(held.AppliedBy, "the gateway gave out a user with no name to show")
+}
+
 // A change left out of an apply is left alone on the gateway, and stays left alone in later applies
 // until one selects it again.
 func (ts *GatewayVersionsTestSuite) TestAChangeLeftOutIsLeftAloneUntilSelected() {

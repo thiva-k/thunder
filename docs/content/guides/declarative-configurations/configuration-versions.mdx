@@ -56,6 +56,13 @@ shares also names it, and so does `latest`.
   other field, such as a description or a redirect URI, is refused with `400` (`GTW-1026`), naming each
   place the secret stands, because every gateway would refuse that resource on import. See
   [Where a Secret May Stand](./value-references.mdx#where-a-secret-may-stand).
+- **A version names who it was captured for.** `createdBy` holds the user's `id`, from the token's
+  `sub` claim or the claim `server.security.trusted_issuer.user_id_claim` names, and their `name`, read
+  from the trusted issuer's user API when the version is read and never stored. It is given out only
+  when `server.security.trusted_issuer.user_lookup` is configured and the issuer knows the user: the id
+  alone is an identifier of the issuer's that says nothing to a viewer, so otherwise the field is left
+  out. The id is recorded either way, so a lookup configured later names the versions already captured.
+  A capture after a change names the user who made the last change before it.
 - **Only `gateway.max_versions` versions are kept.** The oldest goes first, except a version some gateway
   holds or can revert to. Those are kept even when that leaves more versions than the number. See
   [Configuration](../../deployment/configuration.mdx).
@@ -98,7 +105,8 @@ resource's document compared line by line. The documents hold references, so a d
 secret value.
 
 `GET /gateways/{id}/applied-version` reports the version the gateway holds and the one a revert returns
-it to.
+it to, with when it was applied and who applied it (`appliedAt`, `appliedBy`, the latter under the same
+rule as `createdBy`).
 
 A version captured before captures refused a misplaced secret may still refer to one from a field that
 holds no credential. The diff lists each such place under `misplacedSecrets`, in the same shape as

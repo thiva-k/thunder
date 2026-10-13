@@ -19,6 +19,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/export"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
 
@@ -84,6 +85,7 @@ func (f *fakeVersionStore) ReplaceCurrent(_ context.Context, version Version) (*
 	}
 	newest.Hash, newest.Name, newest.Note = version.Hash, version.Name, version.Note
 	newest.Resources, newest.variables = version.Resources, version.variables
+	newest.CreatedBy = version.CreatedBy
 	answer := *newest
 	answer.variables = ""
 	return &answer, nil
@@ -139,7 +141,7 @@ func (f *fakeVersionStore) List(context.Context) ([]Version, error) {
 	listed := make([]Version, 0, len(f.versions))
 	for i := len(f.versions) - 1; i >= 0; i-- {
 		listed = append(listed, Version{Seq: f.versions[i].Seq, Hash: f.versions[i].Hash, Name: f.versions[i].Name,
-			Note: f.versions[i].Note, Current: f.versions[i].Current})
+			Note: f.versions[i].Note, Current: f.versions[i].Current, CreatedBy: f.versions[i].CreatedBy})
 	}
 	return listed, nil
 }
@@ -202,7 +204,7 @@ func (f *fakeVersionStore) GetApplied(_ context.Context, gatewayID string) (*App
 }
 
 func (f *fakeVersionStore) SetApplied(_ context.Context, gatewayID string, applied int, hash string,
-	previous, _ int) error {
+	previous, _ int, by *Actor) error {
 	if f.setErr != nil {
 		return f.setErr
 	}
@@ -213,7 +215,7 @@ func (f *fakeVersionStore) SetApplied(_ context.Context, gatewayID string, appli
 		f.applied = map[string]*AppliedVersion{}
 	}
 	f.applied[gatewayID] = &AppliedVersion{GatewayID: gatewayID, AppliedVersion: applied,
-		PreviousVersion: previous}
+		PreviousVersion: previous, AppliedBy: by}
 	return nil
 }
 
@@ -360,6 +362,7 @@ type versionFixture struct {
 	versions *fakeVersionStore
 	exporter *fakeExporter
 	client   *fakeGatewayClient
+	names    *fakeActorNames
 }
 
 // newVersionFixture builds a service administering one registered gateway, gw-1, whose key is sealed.
@@ -377,9 +380,10 @@ func newVersionFixture(t *testing.T) *versionFixture {
 		versions: &fakeVersionStore{},
 		exporter: &fakeExporter{response: exportOf("", "ou-a")},
 		client:   &fakeGatewayClient{},
+		names:    &fakeActorNames{names: map[string]string{"u-1": "alice"}},
 	}
 	gateways := &fakeStore{gateways: []Gateway{{ID: "gw-1", Name: "dev", BaseURL: "https://dp.test", Key: sealedKey}}}
-	f.svc = newVersionService(gateways, f.versions, f.exporter, f.client, testSecretFields)
+	f.svc = newVersionService(gateways, f.versions, f.exporter, f.client, testSecretFields, f.names)
 	return f
 }
 
@@ -425,6 +429,47 @@ func TestACaptureSealsTheValuesItCarries(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"HOST":"https://app.test","SECRET":"s3cret"}`, opened)
 	assert.Empty(t, v.variables, "a capture answer carried the values")
+}
+
+// signedIn is a request's context for a user signed in with the given claims.
+// fakeActorNames names the users a lookup at the issuer would, from a fixed map.
+type fakeActorNames struct {
+	names map[string]string
+	fills int
+}
+
+func (f *fakeActorNames) fill(_ context.Context, actors ...*Actor) {
+	f.fills++
+	for _, actor := range actors {
+		if actor != nil && actor.Name == "" {
+			actor.Name = f.names[actor.ID]
+		}
+	}
+}
+
+func signedIn(id string, claims map[string]interface{}) context.Context {
+	return security.WithSecurityContextTest(context.Background(),
+		security.NewSecurityContextForTest(id, "", "", nil, claims))
+}
+
+// A capture is kept for the user who asked for it, and a current version replaced in place for the
+// user whose change replaced it.
+func TestACaptureIsKeptForWhoAskedForIt(t *testing.T) {
+	f := newVersionFixture(t)
+
+	v, svcErr := f.svc.Capture(signedIn("u-1", map[string]interface{}{"username": "alice"}),
+		CaptureRequest{Current: true})
+	require.Nil(t, svcErr)
+	assert.Equal(t, &Actor{ID: "u-1", Name: "alice"}, v.CreatedBy)
+
+	f.exporter.response = exportOf("", "ou-b")
+	replaced, svcErr := f.svc.Capture(withActor(context.Background(), &Actor{ID: "u-2", Name: "bob"}),
+		CaptureRequest{Current: true})
+	require.Nil(t, svcErr)
+	assert.Equal(t, 1, replaced.Seq)
+	assert.Equal(t, &Actor{ID: "u-2", Name: "bob"}, replaced.CreatedBy)
+	listed, _ := f.svc.ListVersions(context.Background())
+	assert.Equal(t, &Actor{ID: "u-2", Name: "bob"}, listed[0].CreatedBy)
 }
 
 // A capture keeps only the configured number of versions.
@@ -718,6 +763,25 @@ func TestApplySendsTheVersionAndRecordsIt(t *testing.T) {
 	assert.Zero(t, held.PreviousVersion)
 }
 
+// An apply and a revert record who made them.
+func TestAnApplyRecordsWhoMadeIt(t *testing.T) {
+	f := newVersionFixture(t)
+	f.capture(t, "ou-a")
+	f.capture(t, "ou-b")
+
+	alice := signedIn("u-1", map[string]interface{}{"username": "alice", "email": "alice@example.com"})
+	_, svcErr := f.svc.Apply(alice, "gw-1", ApplyRequest{Version: f.hash(1)})
+	require.Nil(t, svcErr)
+	held, _ := f.svc.GetApplied(context.Background(), "gw-1")
+	assert.Equal(t, &Actor{ID: "u-1", Name: "alice"}, held.AppliedBy)
+
+	_, _ = f.svc.Apply(context.Background(), "gw-1", ApplyRequest{Version: f.hash(2)})
+	_, svcErr = f.svc.Revert(signedIn("u-2", nil), "gw-1", RevertRequest{})
+	require.Nil(t, svcErr)
+	held, _ = f.svc.GetApplied(context.Background(), "gw-1")
+	assert.Nil(t, held.AppliedBy, "a user the issuer does not name was given out by id")
+}
+
 // A later version that no longer has a resource removes it from the gateway, and the version it held
 // becomes the one a revert returns to.
 func TestApplyRemovesWhatTheNewVersionDropped(t *testing.T) {
@@ -920,7 +984,7 @@ func TestApplySendsTheVersionsValues(t *testing.T) {
 func TestADeclaredGatewaysKeyIsPresentedAsWritten(t *testing.T) {
 	f := newVersionFixture(t)
 	declared := &fakeStore{gateways: []Gateway{{ID: "gw-d", BaseURL: "https://dp.test", Key: "plain-key"}}}
-	svc := newVersionService(declared, f.versions, f.exporter, f.client, testSecretFields)
+	svc := newVersionService(declared, f.versions, f.exporter, f.client, testSecretFields, &fakeActorNames{})
 	f.capture(t, "ou-a")
 
 	_, svcErr := svc.Apply(context.Background(), "gw-d", ApplyRequest{})
