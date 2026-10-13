@@ -18,6 +18,7 @@ import (
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
+	"github.com/thunder-id/thunderid/internal/ou"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
@@ -44,17 +45,21 @@ type NotificationTemplateServiceInterface interface {
 type notificationTemplateService struct {
 	store              notificationTemplateStoreInterface
 	transactioner      providers.Transactioner
+	ouService          ou.OrganizationUnitServiceInterface
 	dependencyRegistry resourcedependency.Registry
 	logger             *log.Logger
 }
 
-// newNotificationTemplateService creates a new service with the given store and transactioner.
+// newNotificationTemplateService creates a new service with the given store, transactioner, and OU
+// service. The OU service verifies the ouId at creation; a nil ouService skips that check.
 func newNotificationTemplateService(store notificationTemplateStoreInterface,
-	transactioner providers.Transactioner) NotificationTemplateServiceInterface {
+	transactioner providers.Transactioner,
+	ouService ou.OrganizationUnitServiceInterface) NotificationTemplateServiceInterface {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "NotificationTemplateService"))
 	return &notificationTemplateService{
 		store:         store,
 		transactioner: transactioner,
+		ouService:     ouService,
 		logger:        logger,
 	}
 }
@@ -121,6 +126,9 @@ func (ts *notificationTemplateService) CreateTemplate(ctx context.Context, chann
 	if svcErr := validateHandle(request.Handle); svcErr != nil {
 		return nil, svcErr
 	}
+	if svcErr := ts.resolveOU(ctx, request.OUID); svcErr != nil {
+		return nil, svcErr
+	}
 
 	dao, svcErr := buildValidatedDAO(channel, "", request.DisplayName, request.Description,
 		request.Content, request.Design)
@@ -128,6 +136,7 @@ func (ts *notificationTemplateService) CreateTemplate(ctx context.Context, chann
 		return nil, svcErr
 	}
 	dao.Handle = request.Handle
+	dao.OUID = request.OUID
 
 	id, err := utils.GenerateUUIDv7()
 	if err != nil {
@@ -191,7 +200,7 @@ func (ts *notificationTemplateService) GetTemplateByHandle(ctx context.Context, 
 	return daoToTemplate(dao), nil
 }
 
-// ValidateTemplate runs the same channel, handle, and content validation CreateTemplate performs,
+// ValidateTemplate runs the same channel, handle, OU, and content validation CreateTemplate performs,
 // without persisting. The importer uses it so a dry run predicts the validation failures a real apply
 // would hit, reusing the per-channel rules instead of duplicating them.
 func (ts *notificationTemplateService) ValidateTemplate(ctx context.Context, channel ChannelType,
@@ -200,6 +209,10 @@ func (ts *notificationTemplateService) ValidateTemplate(ctx context.Context, cha
 		return svcErr
 	}
 	if svcErr := validateHandle(request.Handle); svcErr != nil {
+		return svcErr
+	}
+
+	if svcErr := ts.resolveOU(ctx, request.OUID); svcErr != nil {
 		return svcErr
 	}
 	_, svcErr := buildValidatedDAO(channel, "", request.DisplayName, request.Description,
@@ -234,13 +247,16 @@ func (ts *notificationTemplateService) UpdateTemplate(ctx context.Context, chann
 			}
 			return err
 		}
+
 		// A file-declared template is read-only: refuse before the store write. Mapped to
 		// ErrorTemplateReadOnly below.
 		if existing.IsReadOnly {
 			return errDeclarativeTemplate
 		}
-		// The handle is immutable; carry the stored value so the response reflects it.
+
+		// The handle and ouId are immutable; carry the stored values so the response reflects them.
 		dao.Handle = existing.Handle
+		dao.OUID = existing.OUID
 		return ts.store.UpdateTemplate(txCtx, dao)
 	})
 	if txErr != nil {
@@ -426,6 +442,7 @@ func validatePagination(limit, offset int) *tidcommon.ServiceError {
 func daoToTemplate(dao templateDAO) *Template {
 	return &Template{
 		ID:          dao.ID,
+		OUID:        dao.OUID,
 		Handle:      dao.Handle,
 		DisplayName: dao.DisplayName,
 		Description: dao.Description,
@@ -433,6 +450,27 @@ func daoToTemplate(dao templateDAO) *Template {
 		Content:     dao.Content,
 		IsReadOnly:  dao.IsReadOnly,
 	}
+}
+
+// resolveOU verifies that ouID is present and references an existing organization unit. A nil ouService
+// skips the check (e.g. in tests or a bootstrap context that has no OU service wired).
+func (ts *notificationTemplateService) resolveOU(ctx context.Context, ouID string) *tidcommon.ServiceError {
+	if ts.ouService == nil {
+		return nil
+	}
+	if strings.TrimSpace(ouID) == "" {
+		return &ErrorInvalidOU
+	}
+	exists, svcErr := ts.ouService.IsOrganizationUnitExists(ctx, ouID)
+	if svcErr != nil {
+		ts.logger.Error(ctx, "Failed to verify organization unit", log.String("ouId", ouID),
+			log.Any("error", svcErr))
+		return &tidcommon.InternalServerError
+	}
+	if !exists {
+		return &ErrorInvalidOU
+	}
+	return nil
 }
 
 // buildSelf builds the relative URL of a template resource.

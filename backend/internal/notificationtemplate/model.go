@@ -24,6 +24,7 @@ type TemplateDesign struct {
 // Template is the full representation of a notification template.
 type Template struct {
 	ID          string          `json:"id"`
+	OUID        string          `json:"ouId"`
 	Handle      string          `json:"handle"`
 	IsReadOnly  bool            `json:"isReadOnly"`
 	DisplayName string          `json:"displayName"`
@@ -42,9 +43,10 @@ type TemplateSummary struct {
 }
 
 // CreateTemplateRequest is the request body for creating a template. The channel is taken from the
-// path, not the body. The handle is immutable and unique per channel.
+// path, not the body. The handle and ouId are immutable, set only at creation.
 type CreateTemplateRequest struct {
 	Handle      string          `json:"handle"`
+	OUID        string          `json:"ouId"`
 	DisplayName string          `json:"displayName"`
 	Description string          `json:"description"`
 	Design      *TemplateDesign `json:"design,omitempty"`
@@ -112,6 +114,7 @@ type templateDAO struct {
 	ID          string
 	Channel     ChannelType
 	Handle      string
+	OUID        string
 	DisplayName string
 	Description string
 	Content     TemplateContent

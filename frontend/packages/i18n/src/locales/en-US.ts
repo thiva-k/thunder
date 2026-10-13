@@ -5099,9 +5099,14 @@ const translations = {
     'delete.messageNamed': 'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
     'delete.success': 'Template deleted successfully.',
     'delete.error': 'Failed to delete template. Please try again.',
+    'create.steps.organizationUnit': 'Organization Unit',
     'create.steps.template': 'Template',
     'create.steps.identity': 'Details',
     'create.steps.content': 'Content',
+    'create.organizationUnit.fieldLabel': 'Organization Unit',
+    'create.organizationUnit.title': 'Where should this template belong?',
+    'create.organizationUnit.subtitle':
+      "Choose the organization unit that will own this template. You can't change this once created.",
     'create.template.title': 'Choose a starting template',
     'create.template.blank.title': 'Start from scratch',
     'create.template.blank.description': 'Build the template from an empty subject and body.',
@@ -5128,6 +5133,7 @@ const translations = {
     'errors.NTM-1016': 'The handle is too long.',
     'errors.NTM-1017': 'The color scheme must be light or dark.',
     'errors.NTM-1020': 'The content contains an unsupported placeholder. Use the ctx, t, or design token syntax.',
+    'errors.NTM-1022': 'Select a valid organization unit.',
   },
   resourceServers: {
     'listing.title': 'Resource Servers',

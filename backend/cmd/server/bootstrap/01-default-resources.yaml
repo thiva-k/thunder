@@ -5991,6 +5991,7 @@ translations:
 resource_type: notification_template
 channel: email
 handle: user-invite
+ouHandle: default
 displayName: User Invitation Email
 description: Sent to invite a new user to complete their registration.
 content:
@@ -6013,6 +6014,7 @@ content:
 resource_type: notification_template
 channel: sms
 handle: user-invite
+ouHandle: default
 displayName: User Invitation SMS
 description: Sent to invite a new user to complete their registration.
 content:
@@ -6021,6 +6023,7 @@ content:
 resource_type: notification_template
 channel: email
 handle: self-registration
+ouHandle: default
 displayName: Self Registration Invite Email
 description: Sent to complete a self-service registration.
 content:
@@ -6043,6 +6046,7 @@ content:
 resource_type: notification_template
 channel: sms
 handle: self-registration
+ouHandle: default
 displayName: Self Registration Invite SMS
 description: Sent to complete a self-service registration.
 content:
@@ -6051,6 +6055,7 @@ content:
 resource_type: notification_template
 channel: email
 handle: magic-link
+ouHandle: default
 displayName: Magic Link Sign-In Email
 description: Sent to let a user sign in through a secure link.
 content:
@@ -6074,6 +6079,7 @@ content:
 resource_type: notification_template
 channel: email
 handle: password-recovery
+ouHandle: default
 displayName: Password Recovery Email
 description: Sent to let a user reset their account password.
 content:
@@ -6104,6 +6110,7 @@ content:
 resource_type: notification_template
 channel: email
 handle: ciba-notification
+ouHandle: default
 displayName: CIBA Authentication Notification Email
 description: Sent to approve a backchannel authentication request.
 content:
@@ -6129,6 +6136,7 @@ content:
 resource_type: notification_template
 channel: sms
 handle: ciba-notification
+ouHandle: default
 displayName: CIBA Authentication Notification SMS
 description: Sent to approve a backchannel authentication request.
 content:
@@ -6137,6 +6145,7 @@ content:
 resource_type: notification_template
 channel: email
 handle: otp
+ouHandle: default
 displayName: Email OTP Verification
 description: Sent to verify a user's email address with a one-time passcode.
 content:
@@ -6160,6 +6169,7 @@ content:
 resource_type: notification_template
 channel: sms
 handle: otp
+ouHandle: default
 displayName: SMS OTP Verification
 description: Sent to verify a user's phone number with a one-time passcode.
 content:

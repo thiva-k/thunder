@@ -28,6 +28,7 @@ const declaredEmailYAML = `resource_type: notification_template
 id: welcome-email
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome
 description: Greeting
 content:
@@ -60,6 +61,7 @@ func (s *DeclarativeResourceTestSuite) TestValidationRejectsBadDoc() {
 id: otp-sms
 channel: sms
 handle: otp
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: OTP
 content:
   subject: nope
@@ -71,11 +73,28 @@ content:
 	s.Require().Error(validate(dto), "expected validation to reject an SMS template with a subject")
 }
 
+func (s *DeclarativeResourceTestSuite) TestValidatorRejectsMissingOU() {
+	const noOU = `resource_type: notification_template
+id: welcome-email
+channel: email
+handle: welcome
+displayName: Welcome
+content:
+  subject: Hi
+  body: Hello
+`
+	dto, err := parseDeclaredTemplate([]byte(noOU))
+	s.Require().NoError(err)
+	validate := newDeclaredTemplateValidator(nil)
+	s.Require().ErrorContains(validate(dto), "missing the required ouId")
+}
+
 func (s *DeclarativeResourceTestSuite) TestValidatorRejectsDuplicateID() {
 	const first = `resource_type: notification_template
 id: dup-id
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome
 content:
   subject: Hi
@@ -85,6 +104,7 @@ content:
 id: dup-id
 channel: email
 handle: goodbye
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Goodbye
 content:
   subject: Bye
@@ -105,6 +125,7 @@ func (s *DeclarativeResourceTestSuite) TestValidatorRejectsDuplicateChannelHandl
 id: id-1
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome
 content:
   subject: Hi
@@ -114,6 +135,7 @@ content:
 id: id-2
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome Again
 content:
   subject: Hi
@@ -139,6 +161,7 @@ const declaredForDBCheck = `resource_type: notification_template
 id: welcome-email
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome
 content:
   subject: Hi
@@ -216,6 +239,7 @@ func (s *DeclarativeResourceTestSuite) TestLoadDeclarativeTemplatesReadsFromDisk
 	got, err := fileStore.GetTemplateByHandle(context.Background(), ChannelTypeEmail, "welcome")
 	s.Require().NoError(err)
 	s.Require().Equal("welcome-email", got.ID)
+	s.Require().Equal("01900000-0000-7000-8000-000000000001", got.OUID)
 	s.Require().Equal("Hello", got.Content.Body)
 }
 
@@ -226,6 +250,7 @@ func (s *DeclarativeResourceTestSuite) TestLoadDeclarativeTemplatesRejectsInvali
 id: otp-sms
 channel: sms
 handle: otp
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: OTP
 content:
   subject: nope
@@ -269,6 +294,7 @@ func (s *DeclarativeResourceTestSuite) TestLoadResolvesEnvVarAndKeepsPlaceholder
 id: welcome-email
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome
 content:
   subject: "{{.WELCOME_SUBJECT}}"
@@ -291,6 +317,7 @@ func (s *DeclarativeResourceTestSuite) TestLoadFailsOnMissingEnvVar() {
 id: welcome-email
 channel: email
 handle: welcome
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Welcome
 content:
   subject: "{{.MISSING_ENV_VAR}}"
@@ -306,6 +333,7 @@ func (s *DeclarativeResourceTestSuite) TestLoadAcceptsRuntimePlaceholders() {
 id: otp-email
 channel: email
 handle: otp
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: OTP
 content:
   subject: "Your code"

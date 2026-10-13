@@ -211,7 +211,7 @@ func RestoreAgentType(snapshot *AgentTypeSnapshot) error {
 
 	ouID := snapshot.OUID
 	if _, err := GetOrganizationUnit(ouID); err != nil {
-		bootstrapOUID, lookupErr := findBootstrapOUID()
+		bootstrapOUID, lookupErr := FindBootstrapOUID()
 		if lookupErr != nil {
 			return fmt.Errorf("snapshot OU %s is gone and the bootstrap OU is unavailable: %w",
 				ouID, lookupErr)
@@ -271,8 +271,8 @@ func RestoreAgentType(snapshot *AgentTypeSnapshot) error {
 	return nil
 }
 
-// findBootstrapOUID resolves the long-lived `default` organization unit seeded at bootstrap.
-func findBootstrapOUID() (string, error) {
+// FindBootstrapOUID resolves the long-lived `default` organization unit seeded at bootstrap.
+func FindBootstrapOUID() (string, error) {
 	req, err := http.NewRequest("GET", TestServerURL+"/organization-units?limit=100", nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create OU list request: %w", err)
