@@ -16,7 +16,7 @@ description: >-
   sign Flutter users in to {{ProductName}} with authorization code and PKCE.
 links:
   external: https://pub.dev/packages/flutter_appauth
-  samples: https://github.com/thunder-id/thunderid/tree/main/samples/apps/flutter-appauth-sample
+  samples: https://github.com/thunder-id/samples/tree/main/samples/integrations/flutter-app-auth
 
 hero:
   description: >-
@@ -297,8 +297,8 @@ sections:
     id: sample
     title: Sample app
     intro: >-
-      A ready-made Flutter application that runs the code above, from the {{ProductName}} repository at
-      samples/apps/flutter-appauth-sample. Register it in the Console, pass its client ID, and run it.
+      A ready-made Flutter application that runs the code above, from the {{ProductName}} samples repository at
+      samples/integrations/flutter-app-auth. Register it in the Console, pass its client ID, and run it.
     items: [try-the-sample-app]
 
   - type: table
@@ -392,10 +392,10 @@ guides:
       Run the ready-made sample to see sign-in, token refresh, session restore, and sign-out against
       {{ProductName}} end to end.
     intro: >-
-      The {{ProductName}} repository ships a sample in samples/apps/flutter-appauth-sample that runs the code from
-      the Flutter AppAuth guide: sign-in with authorization code and PKCE in the system browser, token refresh
-      with rotation, session restore when the application restarts, and sign-out through the end session
-      endpoint, on Android and iOS.
+      The {{ProductName}} samples repository ships a sample in samples/integrations/flutter-app-auth that runs
+      the code from the Flutter AppAuth guide: sign-in with authorization code and PKCE in the system browser,
+      token refresh with rotation, session restore when the application restarts, and sign-out through the end
+      session endpoint, on Android and iOS.
     sections:
       - type: steps
         id: steps
@@ -407,15 +407,15 @@ guides:
               {{ProductName}} instance. The steps use https://localhost:8090, the default for a local install.
           - title: Get the sample
             description: >-
-              The sample lives in the {{ProductName}} repository. A sparse checkout downloads only the sample
-              directory rather than the whole repository.
+              The sample lives in the {{ProductName}} samples repository. A sparse checkout downloads only the
+              sample directory rather than the whole repository.
             code:
               lang: bash
               content: |-
-                git clone --depth 1 --filter=blob:none --sparse https://github.com/thunder-id/thunderid.git
-                cd thunderid
-                git sparse-checkout set samples/apps/flutter-appauth-sample
-                cd samples/apps/flutter-appauth-sample
+                git clone --depth 1 --filter=blob:none --sparse https://github.com/thunder-id/samples.git
+                cd samples
+                git sparse-checkout set samples/integrations/flutter-app-auth
+                cd samples/integrations/flutter-app-auth
                 flutter pub get
           - title: Create the application in {{ProductName}}
             description: >-
@@ -489,10 +489,10 @@ guides:
         title: Sample source
         items:
           - label: Sample on GitHub
-            href: https://github.com/thunder-id/thunderid/tree/main/samples/apps/flutter-appauth-sample
+            href: https://github.com/thunder-id/samples/tree/main/samples/integrations/flutter-app-auth
             external: true
           - label: Sample README
-            href: https://github.com/thunder-id/thunderid/blob/main/samples/apps/flutter-appauth-sample/README.md
+            href: https://github.com/thunder-id/samples/blob/main/samples/integrations/flutter-app-auth/README.md
             external: true
 
 rail:
