@@ -242,11 +242,18 @@ func (f *fakeVersionStore) SetExcluded(_ context.Context, gatewayID string, excl
 	if f.excluded[gatewayID] == nil {
 		f.excluded[gatewayID] = map[string]excludedResource{}
 	}
-	for _, resource := range exclude {
-		f.excluded[gatewayID][resource.Key] = resource
-	}
+	// As the store does: the include keys come off first, then each exclude is written, and one
+	// already held keeps its row with ONCE = held ONCE AND new ONCE, as the upsert's conflict clause.
 	for _, key := range include {
 		delete(f.excluded[gatewayID], key)
+	}
+	for _, resource := range exclude {
+		if held, ok := f.excluded[gatewayID][resource.Key]; ok {
+			held.Once = held.Once && resource.Once
+			f.excluded[gatewayID][resource.Key] = held
+			continue
+		}
+		f.excluded[gatewayID][resource.Key] = resource
 	}
 	return nil
 }

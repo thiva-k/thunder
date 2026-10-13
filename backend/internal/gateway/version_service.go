@@ -380,11 +380,11 @@ func (s *versionService) Diff(ctx context.Context, gatewayID, ref string) (*Diff
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	excluded, svcErr := s.excluded(ctx, gatewayID)
+	excluded, owed, svcErr := s.excluded(ctx, gatewayID)
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	_, diff, svcErr := s.plan(ctx, gatewayID, target, excluded)
+	_, diff, svcErr := s.plan(ctx, gatewayID, target, excluded, owed)
 	return diff, svcErr
 }
 
@@ -398,7 +398,7 @@ func (s *versionService) Apply(ctx context.Context, gatewayID string,
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	return s.write(ctx, gw, target, req.DryRun, false, req.Selection)
+	return s.write(ctx, gw, target, req.DryRun, false, req.Selection, req.Skip)
 }
 
 func (s *versionService) Revert(ctx context.Context, gatewayID string,
@@ -419,7 +419,7 @@ func (s *versionService) Revert(ctx context.Context, gatewayID string,
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	return s.write(ctx, gw, target, req.DryRun, true, nil)
+	return s.write(ctx, gw, target, req.DryRun, true, nil, nil)
 }
 
 func (s *versionService) Forget(ctx context.Context, gatewayID string) {
@@ -437,10 +437,12 @@ func (s *versionService) Forget(ctx context.Context, gatewayID string) {
 // the gateway has no revert target until a later apply.
 //
 // A selection, when given, replaces the gateway's standing choice for the changes it was offered,
-// and an apply that is not a dry run keeps it for the next. Either way the resources left out are
-// neither written nor removed.
+// and an apply that is not a dry run keeps it for the next. The skipped changes are left out of this
+// apply alone: the choice is neither made nor cleared for them, and they are kept as owed to the
+// gateway, so the next diff offers them again. Either way the resources left out are neither written
+// nor removed.
 func (s *versionService) write(ctx context.Context, gw *Gateway, target *Version,
-	dryRun, isRevert bool, selection *[]string) (*ApplyResult, *tidcommon.ServiceError) {
+	dryRun, isRevert bool, selection *[]string, skip []string) (*ApplyResult, *tidcommon.ServiceError) {
 	// Settled before anything is sent, the version is given back its place as the current one on
 	// every way out on which the gateway received nothing: a value it lacks, a store it could not
 	// answer for, or an import that never reached it.
@@ -460,26 +462,28 @@ func (s *versionService) write(ctx context.Context, gw *Gateway, target *Version
 			}
 		}()
 	}
-	excluded, svcErr := s.excluded(ctx, gw.ID)
+	excluded, owed, svcErr := s.excluded(ctx, gw.ID)
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	applied, diff, svcErr := s.plan(ctx, gw.ID, target, excluded)
+	applied, diff, svcErr := s.plan(ctx, gw.ID, target, excluded, owed)
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	before := excluded
-	var exclude []excludedResource
-	var include []string
-	if selection != nil {
-		if !validSelection(diff.Changes, excluded, *selection) {
-			return nil, &ErrorInvalidSelection
-		}
-		excluded, exclude, include = nextExclusions(excluded, diff.Changes, *selection)
-		diff.Changes = markExcluded(diff.Changes, excluded)
+	before := append(append([]excludedResource{}, excluded...), owed...)
+	choice, ok := choose(diff.Changes, excluded, selection, skip)
+	if !ok {
+		return nil, &ErrorInvalidSelection
+	}
+	exclude, include := choice.exclude, choice.include
+	// What is skipped is kept with the choice, as owed rather than left alone, unless the gateway
+	// already owes it or leaves it alone.
+	exclude = append(exclude, newlyOwed(choice.skipped, before)...)
+	if selection != nil || len(skip) > 0 {
+		diff.Changes = markExcluded(diff.Changes, choice.leftAlone)
 		diff.Summary = summarize(diff.Changes)
 	}
-	content := contentWithout(target.Resources, excluded)
+	content := contentWithout(target.Resources, choice.leftAlone)
 
 	key, svcErr := s.reveal(ctx, gw.Key)
 	if svcErr != nil {
@@ -552,6 +556,25 @@ func (s *versionService) write(ctx context.Context, gw *Gateway, target *Version
 		}
 	}
 
+	if svcErr := s.record(ctx, gw, target, applied, isRevert); svcErr != nil {
+		return nil, svcErr
+	}
+	result.Recorded = true
+	// What was owed from a skip and went to the gateway in this apply is owed no longer. Cleared only
+	// now that the version is recorded: cleared sooner and the apply failing, a removal owed would be
+	// in neither version and never offered again. A failure here leaves it owed, to be sent once more.
+	if taken := owedTaken(owed, choice.leftAlone); len(taken) > 0 {
+		if err := s.versions.SetExcluded(ctx, gw.ID, nil, taken); err != nil {
+			s.logger.Error(ctx, "Failed to clear what the gateway was owed after it was applied",
+				log.String("gatewayId", gw.ID), log.Error(err))
+		}
+	}
+	return result, nil
+}
+
+// record keeps the version a gateway now holds, with the one a revert returns it to.
+func (s *versionService) record(ctx context.Context, gw *Gateway, target *Version, applied *AppliedVersion,
+	isRevert bool) *tidcommon.ServiceError {
 	held, previous := 0, 0
 	if applied != nil {
 		held, previous = applied.AppliedVersion, applied.PreviousVersion
@@ -569,20 +592,19 @@ func (s *versionService) write(ctx context.Context, gw *Gateway, target *Version
 		if errors.Is(err, errVersionRemoved) {
 			s.logger.Warn(ctx, "A version was removed or replaced while it was applied to a gateway",
 				log.String("gatewayId", gw.ID), log.Int("version", target.Seq))
-			return nil, &ErrorVersionRemoved
+			return &ErrorVersionRemoved
 		}
 		if errors.Is(err, errAppliedChanged) {
 			s.logger.Warn(ctx, "Another apply to the gateway finished first", log.String("gatewayId", gw.ID),
 				log.Int("version", target.Seq))
-			return nil, &ErrorAppliedChanged
+			return &ErrorAppliedChanged
 		}
 		s.logger.Error(ctx, "Failed to record what the gateway holds", log.Error(err))
-		return nil, &tidcommon.InternalServerError
+		return &tidcommon.InternalServerError
 	}
-	result.Recorded = true
 	s.logger.Info(ctx, "Applied a configuration version to a gateway", log.String("gatewayId", gw.ID),
 		log.Int("version", target.Seq))
-	return result, nil
+	return nil
 }
 
 // settle keeps the version an apply sends as it is from now on, before anything is sent, so a change
@@ -640,23 +662,29 @@ func (s *versionService) unsettle(ctx context.Context, target *Version) {
 	}
 }
 
-// restoreExclusions undoes a kept choice when its import wrote nothing: what it began leaving alone is
-// offered again, and what it took back is left alone again. A failure is logged and left; the apply
-// it belonged to is already failing, and the next apply with a selection sets the choice afresh.
+// restoreExclusions undoes a kept choice when its import wrote nothing: what it began leaving alone or
+// owing is offered again, what it took back is left alone again, and what it turned from owed into
+// left alone is owed again. Every row the apply touched is removed and the ones held before written
+// back as they were, since writing over a row would keep a standing choice standing. A failure is
+// logged and left; the apply it belonged to is already failing, and the next apply with a selection
+// sets the choice afresh.
 func (s *versionService) restoreExclusions(ctx context.Context, gatewayID string, before []excludedResource,
 	exclude []excludedResource, include []string) {
-	takenBack := toSet(include)
-	reexclude := make([]excludedResource, 0, len(include))
+	touched := append([]string{}, include...)
+	changed := toSet(include)
+	for _, resource := range exclude {
+		if !changed[resource.Key] {
+			changed[resource.Key] = true
+			touched = append(touched, resource.Key)
+		}
+	}
+	reexclude := make([]excludedResource, 0, len(touched))
 	for _, resource := range before {
-		if takenBack[resource.Key] {
+		if changed[resource.Key] {
 			reexclude = append(reexclude, resource)
 		}
 	}
-	offerAgain := make([]string, 0, len(exclude))
-	for _, resource := range exclude {
-		offerAgain = append(offerAgain, resource.Key)
-	}
-	if err := s.versions.SetExcluded(ctx, gatewayID, reexclude, offerAgain); err != nil {
+	if err := s.versions.SetExcluded(ctx, gatewayID, reexclude, touched); err != nil {
 		s.logger.Error(ctx, "Failed to put back what the gateway leaves alone after a failed apply",
 			log.String("gatewayId", gatewayID), log.Error(err))
 	}
@@ -679,9 +707,10 @@ func (s *versionService) missingValues(ctx context.Context, gw *Gateway, key str
 	return missing, nil
 }
 
-// plan diffs a version against what a gateway holds, flagging the changes it is set to leave alone.
+// plan diffs a version against what a gateway holds, flagging the changes it is set to leave alone
+// and offering again what an earlier apply skipped.
 func (s *versionService) plan(ctx context.Context, gatewayID string, target *Version,
-	excluded []excludedResource) (*AppliedVersion, *Diff, *tidcommon.ServiceError) {
+	excluded, owed []excludedResource) (*AppliedVersion, *Diff, *tidcommon.ServiceError) {
 	applied, err := s.versions.GetApplied(ctx, gatewayID)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to read what the gateway holds", log.Error(err))
@@ -708,6 +737,7 @@ func (s *versionService) plan(ctx context.Context, gatewayID string, target *Ver
 		diff.FromVersion = heldVersion.Hash
 	}
 	diff.Changes = markExcluded(diffBundles(held, parseBundle(target.Resources)), excluded)
+	diff.Changes = markOwed(diff.Changes, owed)
 	diff.Summary = summarize(diff.Changes)
 	// A version captured before captures refused one may still refer to a secret from a field that
 	// holds no credential; the diff says so, since the gateway will refuse that resource.
@@ -715,15 +745,17 @@ func (s *versionService) plan(ctx context.Context, gatewayID string, target *Ver
 	return applied, diff, nil
 }
 
-// excluded reads the resources a gateway is set to leave alone.
+// excluded reads the resources a gateway is set to leave alone, and those owed to it from a skipped
+// apply.
 func (s *versionService) excluded(ctx context.Context,
-	gatewayID string) ([]excludedResource, *tidcommon.ServiceError) {
-	excluded, err := s.versions.GetExcluded(ctx, gatewayID)
+	gatewayID string) (standing, owed []excludedResource, svcErr *tidcommon.ServiceError) {
+	all, err := s.versions.GetExcluded(ctx, gatewayID)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to read what the gateway leaves alone", log.Error(err))
-		return nil, &tidcommon.InternalServerError
+		return nil, nil, &tidcommon.InternalServerError
 	}
-	return excluded, nil
+	standing, owed = splitExclusions(all)
+	return standing, owed, nil
 }
 
 // gateway reads a gateway with its stored key.
