@@ -31,6 +31,7 @@ const declaredZebraYAML = `resource_type: notification_template
 id: zebra-email
 channel: email
 handle: zebra
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Zebra
 content:
   subject: Z
@@ -41,6 +42,7 @@ const declaredAlphaYAML = `resource_type: notification_template
 id: alpha-email
 channel: email
 handle: alpha
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: Alpha
 content:
   subject: A

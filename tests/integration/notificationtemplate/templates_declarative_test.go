@@ -29,6 +29,7 @@ const (
 type DeclarativeTemplatesTestSuite struct {
 	suite.Suite
 	client     *http.Client
+	ouID       string
 	createdIDs []channelID
 }
 
@@ -38,6 +39,9 @@ func TestDeclarativeTemplatesTestSuite(t *testing.T) {
 
 func (ts *DeclarativeTemplatesTestSuite) SetupSuite() {
 	ts.client = testutils.GetHTTPClient()
+	ouID, err := testutils.FindBootstrapOUID()
+	ts.Require().NoError(err)
+	ts.ouID = ouID
 }
 
 // TearDownSuite removes any database templates the suite created so re-runs do not hit conflicts.
@@ -95,6 +99,7 @@ func (ts *DeclarativeTemplatesTestSuite) TestListMergesDeclarativeAndDatabaseTem
 	status, body := ts.do(http.MethodPost,
 		"/notification-templates/"+declTemplateChannel+"/templates", map[string]interface{}{
 			"handle":      "it-declarative-merge-probe",
+			"ouId":        ts.ouID,
 			"displayName": "Merge Probe",
 			"content":     map[string]string{"subject": "Probe", "body": "<p>b</p>"},
 		})
@@ -158,6 +163,7 @@ func (ts *DeclarativeTemplatesTestSuite) TestCreateWithDeclarativeHandleIsReject
 	status, body := ts.do(http.MethodPost,
 		"/notification-templates/"+declTemplateChannel+"/templates", map[string]interface{}{
 			"handle":      declTemplateHandle,
+			"ouId":        ts.ouID,
 			"displayName": "Shadow Attempt",
 			"content":     map[string]string{"subject": "Shadow", "body": "<p>b</p>"},
 		})

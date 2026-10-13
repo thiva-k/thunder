@@ -373,4 +373,34 @@ var (
 				"Templates must be defined in declarative configuration files",
 		},
 	}
+
+	// ErrorInvalidOU is returned when the ouId is missing or does not reference an existing organization
+	// unit.
+	ErrorInvalidOU = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "NTM-1025",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.notificationtemplateservice.invalid_ou",
+			DefaultValue: "Invalid organization unit",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.notificationtemplateservice.invalid_ou_description",
+			DefaultValue: "A valid ouId is required",
+		},
+	}
+
+	// ErrorOUImmutable is returned when an update (for example a declarative re-import) tries to change
+	// the ouId of an existing template. The ouId is set at creation and cannot be changed.
+	ErrorOUImmutable = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "NTM-1026",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.notificationtemplateservice.ou_immutable",
+			DefaultValue: "Organization unit cannot be changed",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.notificationtemplateservice.ou_immutable_description",
+			DefaultValue: "The ouId is set at creation and cannot be changed for an existing template",
+		},
+	}
 )

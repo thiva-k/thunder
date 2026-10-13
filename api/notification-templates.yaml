@@ -85,6 +85,7 @@ paths:
                 summary: Email template
                 value:
                   handle: otp-verification
+                  ouId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
                   displayName: OTP Verification
                   description: One-time passcode sent to verify a user's email address.
                   design:
@@ -96,6 +97,7 @@ paths:
                 summary: SMS template
                 value:
                   handle: otp-verification
+                  ouId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
                   displayName: OTP Verification
                   description: One-time passcode sent to verify a user's phone number.
                   content:
@@ -339,6 +341,7 @@ components:
       summary: Email template
       value:
         id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        ouId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         handle: otp-verification
         isReadOnly: false
         displayName: OTP Verification
@@ -352,6 +355,7 @@ components:
       summary: SMS template
       value:
         id: 0db4e64e-57aa-49cb-9b8e-1f3044ed5e17
+        ouId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         handle: otp-verification
         isReadOnly: false
         displayName: OTP Verification
@@ -487,13 +491,18 @@ components:
     EmailTemplate:
       description: Email template with content and optional design references.
       type: object
-      required: [id, handle, isReadOnly, displayName, content]
+      required: [id, ouId, handle, isReadOnly, displayName, content]
       properties:
         id:
           type: string
           format: uuid
           description: Unique identifier of the template. Used as the {id} path parameter.
           example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        ouId:
+          type: string
+          format: uuid
+          description: The ID of the organization unit this template belongs to. Set at creation and immutable thereafter.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         handle:
           type: string
           maxLength: 255
@@ -527,13 +536,18 @@ components:
     SmsTemplate:
       description: SMS template.
       type: object
-      required: [id, handle, isReadOnly, displayName, content]
+      required: [id, ouId, handle, isReadOnly, displayName, content]
       properties:
         id:
           type: string
           format: uuid
           description: Unique identifier of the template. Used as the {id} path parameter.
           example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        ouId:
+          type: string
+          format: uuid
+          description: The ID of the organization unit this template belongs to. Set at creation and immutable thereafter.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         handle:
           type: string
           maxLength: 255
@@ -583,7 +597,7 @@ components:
     CreateEmailTemplateRequest:
       type: object
       description: Create payload for an email template.
-      required: [handle, displayName, content]
+      required: [handle, ouId, displayName, content]
       additionalProperties: false
       properties:
         handle:
@@ -592,6 +606,11 @@ components:
           pattern: "^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$"
           description: Immutable, unique kebab-case identifier for the template within its channel. Set at creation and used to reference the template (for example from a flow).
           example: otp-verification
+        ouId:
+          type: string
+          format: uuid
+          description: The ID of the organization unit this template belongs to. Set at creation and immutable thereafter.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         displayName:
           type: string
           maxLength: 255
@@ -639,7 +658,7 @@ components:
     CreateSmsTemplateRequest:
       type: object
       description: Create payload for an SMS template.
-      required: [handle, displayName, content]
+      required: [handle, ouId, displayName, content]
       additionalProperties: false
       properties:
         handle:
@@ -648,6 +667,11 @@ components:
           pattern: "^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$"
           description: Immutable, unique kebab-case identifier for the template within its channel. Set at creation and used to reference the template (for example from a flow).
           example: otp-verification
+        ouId:
+          type: string
+          format: uuid
+          description: The ID of the organization unit this template belongs to. Set at creation and immutable thereafter.
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         displayName:
           type: string
           maxLength: 255

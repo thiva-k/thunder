@@ -213,7 +213,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	notifSenderMgtSvc, _, _, err := notification.Initialize(jwtService)
 	fatalOnError(ctx, logger, err, "Failed to initialize NotificationService")
 
-	notifTemplateSvc, _, notifTemplateExporter, err := notificationtemplate.Initialize(mux, cacheManager, i18nService)
+	notifTemplateSvc, _, notifTemplateExporter, err := notificationtemplate.Initialize(
+		mux, cacheManager, ouService, i18nService)
 	fatalOnError(ctx, logger, err, "Failed to initialize NotificationTemplateService")
 	exporters = append(exporters, notifTemplateExporter)
 

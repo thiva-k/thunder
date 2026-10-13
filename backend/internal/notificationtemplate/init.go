@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
@@ -14,10 +15,11 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 )
 
-// Initialize wires the store, service, handler, and runtime renderer, and registers HTTP routes.
+// Initialize wires up the notification template service, renderer, and exporter and registers routes.
 // Only the DB store is wrapped with a read cache for the runtime hot path; the file store is already
 // in memory.
 func Initialize(mux *http.ServeMux, cacheManager cache.CacheManagerInterface,
+	ouService ou.OrganizationUnitServiceInterface,
 	translation translationResolver) (NotificationTemplateServiceInterface, TemplateRendererInterface,
 	declarativeresource.ResourceExporter, error) {
 	transactioner, err := provider.GetDBProvider().GetConfigDBTransactioner()
@@ -31,7 +33,7 @@ func Initialize(mux *http.ServeMux, cacheManager cache.CacheManagerInterface,
 		return nil, nil, nil, err
 	}
 
-	service := newNotificationTemplateService(store, transactioner)
+	service := newNotificationTemplateService(store, transactioner, ouService)
 	handler := newNotificationTemplateHandler(service)
 	registerRoutes(mux, handler)
 

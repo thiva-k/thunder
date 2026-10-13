@@ -106,6 +106,8 @@ type layoutDeclarativeYAML struct {
 type notificationTemplateDeclarativeYAML struct {
 	Channel     string `yaml:"channel"`
 	Handle      string `yaml:"handle"`
+	OUID        string `yaml:"ouId,omitempty"`
+	OUHandle    string `yaml:"ouHandle,omitempty"`
 	DisplayName string `yaml:"displayName"`
 	Description string `yaml:"description"`
 	Content     struct {
@@ -1249,6 +1251,13 @@ func (s *importService) importNotificationTemplate(
 		return decodeErrorOutcome(resourceTypeNotificationTemplate, "", raw.Handle, err)
 	}
 
+	resolvedOUID, svcErr := s.resolveImportOUHandle(
+		ctx, resourceTypeNotificationTemplate, "", raw.Handle, raw.OUID, raw.OUHandle)
+	if svcErr != nil {
+		return serviceErrorOutcome(resourceTypeNotificationTemplate, "", raw.Handle, operationCreate, svcErr)
+	}
+	raw.OUID = resolvedOUID
+
 	channel := notificationtemplate.ChannelType(raw.Channel)
 	content := notificationtemplate.TemplateContent{Subject: raw.Content.Subject, Body: raw.Content.Body}
 	var design *notificationtemplate.TemplateDesign
@@ -1257,6 +1266,7 @@ func (s *importService) importNotificationTemplate(
 	}
 	createReq := notificationtemplate.CreateTemplateRequest{
 		Handle:      raw.Handle,
+		OUID:        raw.OUID,
 		DisplayName: raw.DisplayName,
 		Description: raw.Description,
 		Design:      design,
@@ -1274,6 +1284,7 @@ func (s *importService) importNotificationTemplate(
 	// upsert can target the existing template. For a real non-upsert apply the create path surfaces any
 	// conflict, so the lookup is only needed for a dry run or an upsert.
 	existingID := ""
+	existingOUID := ""
 	if dryRun || options.IsUpsertEnabled() {
 		existing, lookupErr := s.notifTemplateService.GetTemplateByHandle(ctx, channel, raw.Handle)
 		if lookupErr != nil && !isNotFoundServiceError(lookupErr) {
@@ -1281,8 +1292,14 @@ func (s *importService) importNotificationTemplate(
 		}
 		if existing != nil {
 			existingID = existing.ID
+			existingOUID = existing.OUID
 		}
 	}
+
+	// The ouId is immutable; an update that moves an existing template to a different OU is rejected
+	// rather than silently ignored (UpdateTemplate preserves the stored OU). Checked for both the dry
+	// run and the real apply so the prediction matches.
+	ouMismatch := func() bool { return existingID != "" && raw.OUID != "" && raw.OUID != existingOUID }
 
 	if dryRun {
 		op := operationCreate
@@ -1293,6 +1310,10 @@ func (s *importService) importNotificationTemplate(
 		if existingID != "" && !options.IsUpsertEnabled() {
 			return serviceErrorOutcome(resourceTypeNotificationTemplate, existingID, raw.Handle,
 				operationCreate, &notificationtemplate.ErrorTemplateHandleConflict)
+		}
+		if op == operationUpdate && ouMismatch() {
+			return serviceErrorOutcome(resourceTypeNotificationTemplate, existingID, raw.Handle,
+				operationUpdate, &notificationtemplate.ErrorOUImmutable)
 		}
 		return successOutcome(resourceTypeNotificationTemplate, existingID, raw.Handle, op)
 	}
@@ -1315,6 +1336,13 @@ func (s *importService) importNotificationTemplate(
 			return serviceErrorOutcome(resourceTypeNotificationTemplate, "", raw.Handle, operationCreate, svcErr)
 		}
 		existingID = existing.ID
+		existingOUID = existing.OUID
+	}
+
+	// Reject an attempt to move an existing template to a different OU (ouId is immutable).
+	if ouMismatch() {
+		return serviceErrorOutcome(resourceTypeNotificationTemplate, existingID, raw.Handle,
+			operationUpdate, &notificationtemplate.ErrorOUImmutable)
 	}
 
 	updated, updErr := s.notifTemplateService.UpdateTemplate(ctx, channel, existingID,

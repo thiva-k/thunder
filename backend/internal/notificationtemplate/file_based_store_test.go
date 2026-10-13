@@ -81,6 +81,7 @@ const declaredSMSYAML = `resource_type: notification_template
 id: otp-sms
 channel: sms
 handle: otp
+ouId: 01900000-0000-7000-8000-000000000001
 displayName: OTP
 content:
   body: Your code is {{ctx(code)}}

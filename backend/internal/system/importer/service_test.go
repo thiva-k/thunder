@@ -3594,6 +3594,28 @@ func parseFirstDoc(t *testing.T) parsedDocument {
 	return docs[0]
 }
 
+// emailTemplateDocWithOU carries an explicit ouId, used to exercise the immutable-OU rejection on the
+// update path.
+const emailTemplateDocWithOU = `
+resource_type: notification_template
+channel: email
+handle: user-invite
+ouId: ou-b
+displayName: User Invitation Email
+description: Invite.
+content:
+  subject: Welcome
+  body: "<p>{{ctx(inviteLink)}}</p>"
+`
+
+func parseFirstDocWithOU(t *testing.T) parsedDocument {
+	t.Helper()
+	docs, err := parseDocuments(emailTemplateDocWithOU)
+	require.NoError(t, err)
+	require.Len(t, docs, 1)
+	return docs[0]
+}
+
 func (s *ImportNotificationTemplateTestSuite) TestCreate() {
 	// Empty options default to upsert enabled, so the importer looks the handle up (a miss) before creating.
 	s.expectValidateSucceeds()
@@ -3628,6 +3650,37 @@ func (s *ImportNotificationTemplateTestSuite) TestUpsertUpdatesExisting() {
 
 	s.Equal(statusSuccess, outcome.Status)
 	s.Equal(operationUpdate, outcome.Operation)
+}
+
+func (s *ImportNotificationTemplateTestSuite) TestUpsertRejectsOUChange() {
+	// The YAML moves the template to ou-b, but the stored template belongs to ou-a; ouId is immutable,
+	// so the update is rejected rather than silently keeping ou-a.
+	s.expectValidateSucceeds()
+	s.mockAdapter.EXPECT().
+		GetTemplateByHandle(mock.Anything, notificationtemplate.ChannelTypeEmail, "user-invite").
+		Return(&notificationtemplate.Template{ID: "existing-id", Handle: "user-invite", OUID: "ou-a"}, nil).Once()
+
+	outcome := s.svc.importNotificationTemplate(
+		s.ctx, parseFirstDocWithOU(s.T()), &ImportOptions{Upsert: boolPtr(true)}, false)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(operationUpdate, outcome.Operation)
+	s.Equal(notificationtemplate.ErrorOUImmutable.Code, outcome.Code)
+}
+
+func (s *ImportNotificationTemplateTestSuite) TestDryRunRejectsOUChange() {
+	// A dry run predicts the same immutable-OU rejection the real apply would hit.
+	s.expectValidateSucceeds()
+	s.mockAdapter.EXPECT().
+		GetTemplateByHandle(mock.Anything, notificationtemplate.ChannelTypeEmail, "user-invite").
+		Return(&notificationtemplate.Template{ID: "existing-id", Handle: "user-invite", OUID: "ou-a"}, nil).Once()
+
+	outcome := s.svc.importNotificationTemplate(
+		s.ctx, parseFirstDocWithOU(s.T()), &ImportOptions{Upsert: boolPtr(true)}, true)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(operationUpdate, outcome.Operation)
+	s.Equal(notificationtemplate.ErrorOUImmutable.Code, outcome.Code)
 }
 
 func (s *ImportNotificationTemplateTestSuite) TestConflictWithoutUpsertFails() {

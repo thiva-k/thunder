@@ -34,6 +34,7 @@ type declaredNotificationTemplate struct {
 	ID          string          `yaml:"id"`
 	Channel     string          `yaml:"channel"`
 	Handle      string          `yaml:"handle"`
+	OUID        string          `yaml:"ouId"`
 	DisplayName string          `yaml:"displayName"`
 	Description string          `yaml:"description"`
 	Content     TemplateContent `yaml:"content"`
@@ -65,6 +66,9 @@ func declaredToDAO(declared *declaredNotificationTemplate) (templateDAO, error) 
 	if strings.TrimSpace(declared.ID) == "" {
 		return templateDAO{}, fmt.Errorf("notification template declaration is missing the required id")
 	}
+	if strings.TrimSpace(declared.OUID) == "" {
+		return templateDAO{}, fmt.Errorf("notification template declaration is missing the required ouId")
+	}
 	if svcErr := validateHandle(declared.Handle); svcErr != nil {
 		return templateDAO{}, fmt.Errorf("invalid notification template handle %q: %s", declared.Handle,
 			svcErrReason(svcErr))
@@ -76,6 +80,7 @@ func declaredToDAO(declared *declaredNotificationTemplate) (templateDAO, error) 
 			svcErrReason(svcErr))
 	}
 	dao.Handle = declared.Handle
+	dao.OUID = declared.OUID
 	return dao, nil
 }
 
@@ -296,6 +301,7 @@ func templateToDeclared(channel ChannelType, t *Template) *declaredNotificationT
 		ID:          t.ID,
 		Channel:     string(channel),
 		Handle:      t.Handle,
+		OUID:        t.OUID,
 		DisplayName: t.DisplayName,
 		Description: t.Description,
 		Content:     t.Content,

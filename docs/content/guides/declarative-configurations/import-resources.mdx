@@ -200,6 +200,7 @@ The following handle fields are supported:
 | Agent | `authFlowHandle` | `authFlowId` |
 | Agent | `registrationFlowHandle` | `registrationFlowId` |
 | User type | `ouHandle` | `ouId` |
+| Notification template | `ouHandle` | `ouId` |
 
 If you provide both a handle field and the corresponding ID field, the ID takes precedence and the handle is ignored.
 
@@ -248,6 +249,7 @@ Channel rules are enforced on both apply and dry-run:
 resource_type: notification_template
 channel: email
 handle: user-invite
+ouHandle: default
 displayName: User Invitation Email
 description: Sent when a user is invited.
 content:
@@ -263,6 +265,7 @@ design:
 resource_type: notification_template
 channel: sms
 handle: otp-verification
+ouHandle: default
 displayName: OTP Verification SMS
 content:
   body: "Your verification code is {{ctx(otpCode)}}"

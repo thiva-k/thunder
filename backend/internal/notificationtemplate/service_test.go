@@ -16,6 +16,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 	"github.com/thunder-id/thunderid/tests/mocks/resourcedependencymock"
 	"github.com/thunder-id/thunderid/tests/mocks/transactionmock"
 )
@@ -61,7 +62,7 @@ func initMutableTestRuntime(t interface {
 func (s *NotificationTemplateServiceTestSuite) SetupTest() {
 	initMutableTestRuntime(s.T())
 	s.mockStore = newNotificationTemplateStoreInterfaceMock(s.T())
-	s.svc = newNotificationTemplateService(s.mockStore, executingTransactioner(s.T()))
+	s.svc = newNotificationTemplateService(s.mockStore, executingTransactioner(s.T()), nil)
 	s.ctx = context.Background()
 }
 
@@ -84,6 +85,96 @@ func (s *NotificationTemplateServiceTestSuite) TestCreateTemplate_Email() {
 	s.Require().Equal("s.key", tmpl.Content.Subject)
 	s.Require().NotNil(tmpl.Design)
 	s.Require().Equal(colorSchemeLight, tmpl.Design.ColorScheme)
+}
+
+// svcWithOU builds a service whose OU service is the given mock, so the create-path ouId validation is
+// exercised (the shared SetupTest service has a nil OU service that skips the check).
+func (s *NotificationTemplateServiceTestSuite) svcWithOU(
+	ouMock *oumock.OrganizationUnitServiceInterfaceMock) NotificationTemplateServiceInterface {
+	return newNotificationTemplateService(s.mockStore, executingTransactioner(s.T()), ouMock)
+}
+
+// TestCreateTemplate_StoresOU verifies a valid ouId is checked against the OU service and persisted on
+// the DAO and echoed on the response.
+func (s *NotificationTemplateServiceTestSuite) TestCreateTemplate_StoresOU() {
+	ouMock := oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
+	ouMock.EXPECT().IsOrganizationUnitExists(mock.Anything, "ou-1").Return(true, nil)
+	s.mockStore.On("IsHandleExists", mock.Anything, ChannelTypeEmail, "otp-verification").Return(false, nil)
+	s.mockStore.On("CreateTemplate", mock.Anything, mock.MatchedBy(func(d templateDAO) bool {
+		return d.OUID == "ou-1"
+	})).Return(nil)
+
+	tmpl, err := s.svcWithOU(ouMock).CreateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle:      "otp-verification",
+		OUID:        "ou-1",
+		DisplayName: "OTP Verification",
+		Content:     TemplateContent{Subject: "s.key", Body: "b.key"},
+	})
+	s.Require().Nil(err)
+	s.Require().Equal("ou-1", tmpl.OUID)
+}
+
+// TestCreateTemplate_MissingOU rejects a create with no ouId when an OU service is wired.
+func (s *NotificationTemplateServiceTestSuite) TestCreateTemplate_MissingOU() {
+	ouMock := oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
+
+	_, err := s.svcWithOU(ouMock).CreateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle:      "otp-verification",
+		DisplayName: "OTP Verification",
+		Content:     TemplateContent{Subject: "s.key", Body: "b.key"},
+	})
+	s.Require().NotNil(err)
+	s.Require().Equal(ErrorInvalidOU.Code, err.Code)
+}
+
+// TestCreateTemplate_UnknownOU rejects a create whose ouId does not reference an existing OU.
+func (s *NotificationTemplateServiceTestSuite) TestCreateTemplate_UnknownOU() {
+	ouMock := oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
+	ouMock.EXPECT().IsOrganizationUnitExists(mock.Anything, "ghost").Return(false, nil)
+
+	_, err := s.svcWithOU(ouMock).CreateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle:      "otp-verification",
+		OUID:        "ghost",
+		DisplayName: "OTP Verification",
+		Content:     TemplateContent{Subject: "s.key", Body: "b.key"},
+	})
+	s.Require().NotNil(err)
+	s.Require().Equal(ErrorInvalidOU.Code, err.Code)
+}
+
+// TestUpdateTemplate_OUImmutable confirms update preserves the stored ouId (it is not part of the
+// update request) and echoes it on the response.
+func (s *NotificationTemplateServiceTestSuite) TestUpdateTemplate_OUImmutable() {
+	s.mockStore.On("GetTemplate", mock.Anything, ChannelTypeEmail, "id-1").Return(templateDAO{
+		ID: "id-1", Channel: ChannelTypeEmail, Handle: "otp-verification", OUID: "ou-1",
+		Content: TemplateContent{Subject: "s", Body: "b"},
+	}, nil)
+	s.mockStore.On("UpdateTemplate", mock.Anything, mock.MatchedBy(func(d templateDAO) bool {
+		return d.OUID == "ou-1"
+	})).Return(nil)
+
+	tmpl, err := s.svc.UpdateTemplate(s.ctx, ChannelTypeEmail, "id-1", UpdateTemplateRequest{
+		DisplayName: "OTP Verification",
+		Content:     TemplateContent{Subject: "s.key", Body: "b.key"},
+	})
+	s.Require().Nil(err)
+	s.Require().Equal("ou-1", tmpl.OUID)
+}
+
+// TestValidateTemplate_UnknownOU proves a dry run predicts the real apply's OU rejection: an invalid
+// ouId fails ValidateTemplate just as it fails CreateTemplate.
+func (s *NotificationTemplateServiceTestSuite) TestValidateTemplate_UnknownOU() {
+	ouMock := oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
+	ouMock.EXPECT().IsOrganizationUnitExists(mock.Anything, "ghost").Return(false, nil)
+
+	svcErr := s.svcWithOU(ouMock).ValidateTemplate(s.ctx, ChannelTypeEmail, CreateTemplateRequest{
+		Handle:      "otp-verification",
+		OUID:        "ghost",
+		DisplayName: "OTP Verification",
+		Content:     TemplateContent{Subject: "s.key", Body: "b.key"},
+	})
+	s.Require().NotNil(svcErr)
+	s.Require().Equal(ErrorInvalidOU.Code, svcErr.Code)
 }
 
 // TestCreateTemplate_DeclarativeModeRejected verifies that in declarative-only mode a create is refused

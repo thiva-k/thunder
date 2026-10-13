@@ -2202,6 +2202,9 @@ importers:
       '@thunderid/configure-design':
         specifier: workspace:^
         version: link:../configure-design
+      '@thunderid/configure-organization-units':
+        specifier: workspace:^
+        version: link:../configure-organization-units
       '@thunderid/contexts':
         specifier: workspace:^
         version: link:../contexts
