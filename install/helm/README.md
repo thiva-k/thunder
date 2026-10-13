@@ -512,6 +512,7 @@ Password fields are available in `configuration.database.config.postgres`, `conf
 | `configuration.oauth.clientAssertion.maxLifetime` | Maximum lifetime of a `private_key_jwt` client assertion in seconds | `300` |
 | `configuration.oauth.clientAssertion.maxIatAge` | Maximum age of a `private_key_jwt` client assertion's `iat` claim in seconds | `60` |
 | `configuration.oauth.cimd.enabled` | Advertise Client ID Metadata Document support (`client_id_metadata_document_supported`) in the authorization server metadata. Turn it off when MCP clients should register through Dynamic Client Registration instead | `true` |
+| `configuration.oauth.revocation.criteria.maxEntriesPerChange` | Maximum revocation entries one role, group or scope change may record; a larger change is refused | `10000` |
 | `configuration.oauth.sendServerErrorsToClient`    | Report an authentication flow failure that maps to the OAuth `server_error` code to the client | `false`                      |
 | `configuration.flow.maxVersionHistory`            | Maximum flow version history to retain                                                                                                                  | `3`                          |
 | `configuration.flow.autoInferRegistration`        | Enable auto-infer registration flow                                                                                                                     | `true`                       |

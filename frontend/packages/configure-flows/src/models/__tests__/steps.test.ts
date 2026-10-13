@@ -195,8 +195,16 @@ describe('steps models', () => {
       expect(ExecutionTypes.AccountLinking).toBe('AccountLinkingExecutor');
     });
 
-    it('should have exactly 33 execution types', () => {
-      expect(Object.keys(ExecutionTypes)).toHaveLength(33);
+    it('should have the administration flow types', () => {
+      expect(ExecutionTypes.AccessChangeValidator).toBe('AccessChangeValidator');
+      expect(ExecutionTypes.RoleExecutor).toBe('RoleExecutor');
+      expect(ExecutionTypes.GroupExecutor).toBe('GroupExecutor');
+      expect(ExecutionTypes.ActionDeletion).toBe('ActionDeletionExecutor');
+      expect(ExecutionTypes.CriteriaRevocation).toBe('CriteriaRevocationExecutor');
+    });
+
+    it('should have exactly 38 execution types', () => {
+      expect(Object.keys(ExecutionTypes)).toHaveLength(38);
     });
   });
 

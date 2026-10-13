@@ -1903,6 +1903,31 @@ describe('ExecutionExtendedProperties', () => {
     });
   });
 
+  describe('Access change executors', () => {
+    const makeResource = (name: string, mode: string): Resource =>
+      ({
+        id: `${name}-1`,
+        data: {
+          action: {
+            executor: {name, mode},
+          },
+        },
+      }) as unknown as Resource;
+
+    it.each([
+      [ExecutionTypes.AccessChangeValidator, 'role_deletion', 'accessChangeValidator'],
+      [ExecutionTypes.RoleExecutor, 'role_deletion', 'roleExecutor'],
+      [ExecutionTypes.GroupExecutor, 'group_membership_removal', 'groupExecutor'],
+      [ExecutionTypes.CriteriaRevocation, 'advance_cutoff', 'criteriaRevocation'],
+    ])('should route %s to its mode selector and hide the inputs editor', (name, mode, namespace) => {
+      render(<ExecutionExtendedProperties resource={makeResource(name, mode)} onChange={mockOnChange} />);
+
+      expect(screen.getByText(`flows:core.executions.${namespace}.description`)).toBeInTheDocument();
+      expect(screen.getByText(`flows:core.executions.${namespace}.mode.label`)).toBeInTheDocument();
+      expect(screen.queryByText('flows:core.executions.inputs.title')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should return null when executor name is not defined', () => {
       const resourceWithoutExecutor = {

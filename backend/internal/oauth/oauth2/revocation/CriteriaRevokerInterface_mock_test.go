@@ -8,6 +8,7 @@ import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
 
 // NewCriteriaRevokerInterfaceMock creates a new instance of CriteriaRevokerInterfaceMock. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -46,44 +47,46 @@ func (_m *CriteriaRevokerInterfaceMock) EXPECT() *CriteriaRevokerInterfaceMock_E
 	return &CriteriaRevokerInterfaceMock_Expecter{mock: &_m.Mock}
 }
 
-// RevokeByCriteria provides a mock function for the type CriteriaRevokerInterfaceMock
-func (_mock *CriteriaRevokerInterfaceMock) RevokeByCriteria(ctx context.Context, revocation CriteriaRevocation) error {
-	ret := _mock.Called(ctx, revocation)
+// RevokeCriteriaBatch provides a mock function for the type CriteriaRevokerInterfaceMock
+func (_mock *CriteriaRevokerInterfaceMock) RevokeCriteriaBatch(ctx context.Context, revocations []CriteriaRevocation) *common.ServiceError {
+	ret := _mock.Called(ctx, revocations)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RevokeByCriteria")
+		panic("no return value specified for RevokeCriteriaBatch")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, CriteriaRevocation) error); ok {
-		r0 = returnFunc(ctx, revocation)
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []CriteriaRevocation) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, revocations)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
 	}
 	return r0
 }
 
-// CriteriaRevokerInterfaceMock_RevokeByCriteria_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeByCriteria'
-type CriteriaRevokerInterfaceMock_RevokeByCriteria_Call struct {
+// CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeCriteriaBatch'
+type CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call struct {
 	*mock.Call
 }
 
-// RevokeByCriteria is a helper method to define mock.On call
+// RevokeCriteriaBatch is a helper method to define mock.On call
 //   - ctx context.Context
-//   - revocation CriteriaRevocation
-func (_e *CriteriaRevokerInterfaceMock_Expecter) RevokeByCriteria(ctx any, revocation any) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
-	return &CriteriaRevokerInterfaceMock_RevokeByCriteria_Call{Call: _e.mock.On("RevokeByCriteria", ctx, revocation)}
+//   - revocations []CriteriaRevocation
+func (_e *CriteriaRevokerInterfaceMock_Expecter) RevokeCriteriaBatch(ctx any, revocations any) *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call {
+	return &CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call{Call: _e.mock.On("RevokeCriteriaBatch", ctx, revocations)}
 }
 
-func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) Run(run func(ctx context.Context, revocation CriteriaRevocation)) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
+func (_c *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call) Run(run func(ctx context.Context, revocations []CriteriaRevocation)) *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 CriteriaRevocation
+		var arg1 []CriteriaRevocation
 		if args[1] != nil {
-			arg1 = args[1].(CriteriaRevocation)
+			arg1 = args[1].([]CriteriaRevocation)
 		}
 		run(
 			arg0,
@@ -93,12 +96,12 @@ func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) Run(run func(ctx c
 	return _c
 }
 
-func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) Return(err error) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
-	_c.Call.Return(err)
+func (_c *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call) Return(serviceError *common.ServiceError) *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call {
+	_c.Call.Return(serviceError)
 	return _c
 }
 
-func (_c *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call) RunAndReturn(run func(ctx context.Context, revocation CriteriaRevocation) error) *CriteriaRevokerInterfaceMock_RevokeByCriteria_Call {
+func (_c *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call) RunAndReturn(run func(ctx context.Context, revocations []CriteriaRevocation) *common.ServiceError) *CriteriaRevokerInterfaceMock_RevokeCriteriaBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

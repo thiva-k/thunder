@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 // Package resource implements the resource management service.
@@ -15,6 +15,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
 	oupkg "github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/revocation"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -92,6 +93,9 @@ type ResourceServiceInterface interface {
 	) (*providers.Action, *tidcommon.ServiceError)
 	DeleteAction(ctx context.Context, resourceServerID string, resourceID *string,
 		id string) *tidcommon.ServiceError
+	// ValidateDeleteAction reports whether the action may be deleted and returns the scope it retires.
+	ValidateDeleteAction(ctx context.Context, resourceServerID string, resourceID *string,
+		id string) (*revocation.AccessRevocationTarget, *tidcommon.ServiceError)
 	ValidatePermissions(
 		ctx context.Context, resourceServerID string, permissions []string,
 	) ([]string, *tidcommon.ServiceError)
@@ -1215,21 +1219,8 @@ func (rs *resourceService) DeleteAction(
 	ctx context.Context,
 	resourceServerID string, resourceID *string, id string,
 ) *tidcommon.ServiceError {
-	if id == "" || resourceServerID == "" {
-		return &ErrorMissingID
-	}
-
-	if resourceID != nil && *resourceID == "" {
-		return &ErrorMissingID
-	}
-
-	// Check if resource server is declarative (immutable)
-	if rs.IsResourceServerDeclarative(resourceServerID) {
-		rs.logger.Debug(ctx,
-			"Cannot delete action in declarative resource server",
-			log.String("resource_server_id", resourceServerID),
-		)
-		return ErrorImmutableAction.WithParams(map[string]string{"id": id})
+	if svcErr := rs.validateActionDelete(ctx, resourceServerID, resourceID, id); svcErr != nil {
+		return svcErr
 	}
 
 	// Validate resource server exists
@@ -1276,6 +1267,33 @@ func (rs *resourceService) DeleteAction(
 	}
 
 	return nil
+}
+
+// ValidateDeleteAction runs DeleteAction's checks and returns the action's scope, revoked deployment-wide.
+func (rs *resourceService) ValidateDeleteAction(
+	ctx context.Context,
+	resourceServerID string, resourceID *string, id string,
+) (*revocation.AccessRevocationTarget, *tidcommon.ServiceError) {
+	if svcErr := rs.validateActionDelete(ctx, resourceServerID, resourceID, id); svcErr != nil {
+		return nil, svcErr
+	}
+
+	resourceServer, svcErr := rs.GetResourceServer(ctx, resourceServerID)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	action, svcErr := rs.GetAction(ctx, resourceServerID, resourceID, id)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+
+	// Without an audience no token can carry the scope, so there is nothing to revoke.
+	if resourceServer == nil || resourceServer.Identifier == "" || action == nil || action.Permission == "" {
+		return &revocation.AccessRevocationTarget{}, nil
+	}
+	return &revocation.AccessRevocationTarget{
+		Scopes: []revocation.AudienceScope{{Audience: resourceServer.Identifier, Scope: action.Permission}},
+	}, nil
 }
 
 // ValidatePermissions checks if permissions exist for a given resource server.
@@ -1506,6 +1524,29 @@ func (rs *resourceService) validateActionCreate(action providers.Action, delimit
 func (rs *resourceService) validateActionKind(kind providers.ActionKind) *tidcommon.ServiceError {
 	if kind != "" && !kind.IsValid() {
 		return &ErrorInvalidRequestFormat
+	}
+	return nil
+}
+
+// validateActionDelete runs the request checks DeleteAction and ValidateDeleteAction share.
+func (rs *resourceService) validateActionDelete(
+	ctx context.Context, resourceServerID string, resourceID *string, id string,
+) *tidcommon.ServiceError {
+	if id == "" || resourceServerID == "" {
+		return &ErrorMissingID
+	}
+
+	if resourceID != nil && *resourceID == "" {
+		return &ErrorMissingID
+	}
+
+	// Check if resource server is declarative (immutable)
+	if rs.IsResourceServerDeclarative(resourceServerID) {
+		rs.logger.Debug(ctx,
+			"Cannot delete action in declarative resource server",
+			log.String("resource_server_id", resourceServerID),
+		)
+		return ErrorImmutableAction.WithParams(map[string]string{"id": id})
 	}
 	return nil
 }

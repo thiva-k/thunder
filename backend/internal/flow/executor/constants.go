@@ -58,6 +58,10 @@ const (
 	ExecutorNameApplicationActionValidator   = executormeta.ExecutorNameApplicationActionValidator
 	ExecutorNameApplicationDelete            = executormeta.ExecutorNameApplicationDelete
 	ExecutorNameClientSecret                 = executormeta.ExecutorNameClientSecret
+	ExecutorNameAccessChangeValidator        = executormeta.ExecutorNameAccessChangeValidator
+	ExecutorNameRole                         = executormeta.ExecutorNameRole
+	ExecutorNameGroup                        = executormeta.ExecutorNameGroup
+	ExecutorNameActionDeletion               = executormeta.ExecutorNameActionDeletion
 	ExecutorNameOwnerResolver                = executormeta.ExecutorNameOwnerResolver
 	ExecutorNameAgentTypeResolver            = executormeta.ExecutorNameAgentTypeResolver
 )
@@ -70,6 +74,16 @@ const (
 	ExecutorModeIdentify   = executormeta.ExecutorModeIdentify
 	ExecutorModeResolve    = executormeta.ExecutorModeResolve
 	ExecutorModeCheckState = executormeta.ExecutorModeCheckState
+
+	ExecutorModeRoleAssignmentRemoval  = executormeta.ExecutorModeRoleAssignmentRemoval
+	ExecutorModeRoleDeletion           = executormeta.ExecutorModeRoleDeletion
+	ExecutorModeRolePermissionRemoval  = executormeta.ExecutorModeRolePermissionRemoval
+	ExecutorModeGroupDeletion          = executormeta.ExecutorModeGroupDeletion
+	ExecutorModeGroupMembershipRemoval = executormeta.ExecutorModeGroupMembershipRemoval
+	ExecutorModeActionDeletion         = executormeta.ExecutorModeActionDeletion
+
+	ExecutorModeRevoke        = executormeta.ExecutorModeRevoke
+	ExecutorModeAdvanceCutoff = executormeta.ExecutorModeAdvanceCutoff
 )
 
 // defaultProvisioningCategory is the entity default category a provisioning node provisions into when its
@@ -103,6 +117,15 @@ const (
 	userInputLoginHint         = "login_hint"
 	revocationInputSubject     = "subject"
 	revocationInputApplication = "targetApplicationId"
+
+	revocationInputRole           = "targetRoleId"
+	revocationInputAssignee       = "targetAssigneeId"
+	revocationInputGroup          = "targetGroupId"
+	revocationInputMember         = "targetMemberId"
+	revocationInputPermissions    = "targetPermissions"
+	revocationInputResourceServer = "targetResourceServerId"
+	revocationInputResource       = "targetResourceId"
+	revocationInputAction         = "targetActionId"
 
 	ouIDKey        = "ouId"
 	defaultOUIDKey = "defaultOUID"
