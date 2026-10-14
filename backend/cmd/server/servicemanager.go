@@ -337,7 +337,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	_, directAuthGuard := authn.Initialize(mux, mcpServer, idpService, jwtService, authnProvider, authAssertGen,
 		otpCoreService, notifSenderSvc, notifTemplateRenderer, magicLinkService, oauthAuthnService,
-		oidcAuthnService, googleAuthnService, githubAuthnService, authnconfig.FromServerRuntime())
+		oidcAuthnService, googleAuthnService, githubAuthnService, entityTypeService, authnconfig.FromServerRuntime())
 
 	// AuthZEN access-evaluation endpoints are Direct API endpoints, so they reuse the Direct Auth
 	// guard created by the authn service.
