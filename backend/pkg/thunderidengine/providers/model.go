@@ -1487,6 +1487,9 @@ type Event struct {
 	// Status indicates the outcome of the event (e.g., "success", "failure", "in_progress").
 	Status string `json:"status"`
 
+	// ServerIdentifier is the identifier of the deployment that generated the event.
+	ServerIdentifier string `json:"server_identifier"`
+
 	// Data contains event-specific structured data.
 	// Use this to store any additional information relevant to the event type.
 	// Examples:

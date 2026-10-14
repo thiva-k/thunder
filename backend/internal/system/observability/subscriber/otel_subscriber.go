@@ -194,6 +194,7 @@ func (o *OTelSubscriber) createSpan(evt *providers.Event) error {
 		attribute.String("trace.id", evt.TraceID),
 		attribute.String("component", evt.Component),
 		attribute.String("event.status", evt.Status),
+		attribute.String("server.identifier", evt.ServerIdentifier),
 	}
 
 	// Determine span kind based on component
