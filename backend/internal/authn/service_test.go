@@ -23,6 +23,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/authn/passkey"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
+	"github.com/thunder-id/thunderid/internal/entitytype"
 	notifcommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/notificationtemplate"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -35,6 +36,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/authn/oidcmock"
 	"github.com/thunder-id/thunderid/tests/mocks/authn/otpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
+	"github.com/thunder-id/thunderid/tests/mocks/entitytypemock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
 	"github.com/thunder-id/thunderid/tests/mocks/notification/notificationmock"
@@ -43,6 +45,7 @@ import (
 const (
 	testUserID           = "user123"
 	testUserType         = "person"
+	testUserTypeName     = "Person"
 	testIDPID            = "idp_123"
 	testOrgUnit          = "org_unit_123"
 	testAuthCode         = "auth_code_123"
@@ -72,6 +75,7 @@ type AuthenticationServiceTestSuite struct {
 	mockOIDCService      *oidcmock.OIDCAuthnServiceInterfaceMock
 	mockGoogleService    *googlemock.GoogleOIDCAuthnServiceInterfaceMock
 	mockGithubService    *githubmock.GithubOAuthAuthnServiceInterfaceMock
+	mockEntityTypeSvc    *entitytypemock.EntityTypeServiceInterfaceMock
 	service              *authenticationService
 }
 
@@ -123,6 +127,9 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 	suite.mockOIDCService = &oidcmock.OIDCAuthnServiceInterfaceMock{}
 	suite.mockGoogleService = &googlemock.GoogleOIDCAuthnServiceInterfaceMock{}
 	suite.mockGithubService = &githubmock.GithubOAuthAuthnServiceInterfaceMock{}
+	suite.mockEntityTypeSvc = entitytypemock.NewEntityTypeServiceInterfaceMock(suite.T())
+	suite.mockEntityTypeSvc.On("GetEntityTypeByHandle", mock.Anything, entitytype.TypeCategoryUser, testUserType).
+		Return(&entitytype.EntityType{Handle: testUserType, DisplayName: testUserTypeName}, nil).Maybe()
 
 	suite.service = &authenticationService{
 		idpService:             suite.mockIDPService,
@@ -136,6 +143,7 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 		oidcService:            suite.mockOIDCService,
 		googleService:          suite.mockGoogleService,
 		githubService:          suite.mockGithubService,
+		entityTypeService:      suite.mockEntityTypeSvc,
 	}
 }
 
@@ -1689,6 +1697,7 @@ func (suite *AuthenticationServiceTestSuite) TestValidateAndAppendAuthAssertionG
 	service := &authenticationService{
 		authAssertionGenerator: mockAssertGenerator,
 		jwtService:             suite.mockJWTService,
+		entityTypeService:      suite.mockEntityTypeSvc,
 	}
 
 	err := service.validateAndAppendAuthAssertion(
@@ -1696,6 +1705,83 @@ func (suite *AuthenticationServiceTestSuite) TestValidateAndAppendAuthAssertionG
 
 	suite.NotNil(err)
 	suite.Equal("ASSERTION_ERROR", err.Code)
+}
+
+func (suite *AuthenticationServiceTestSuite) TestValidateAndAppendAuthAssertionUserTypeClaims() {
+	testCases := []struct {
+		name         string
+		category     providers.EntityCategory
+		entityType   string
+		expectHandle interface{}
+		expectName   interface{}
+	}{
+		{"User", providers.EntityCategoryUser, testUserType, testUserType, testUserTypeName},
+		{"UserTypeWithoutDisplayName", providers.EntityCategoryUser, "no-display-type", "no-display-type", nil},
+		{"UnknownCategoryOmitsClaims", "", "external-type", nil, nil},
+		{"AgentOmitsClaims", providers.EntityCategoryAgent, "agent-type", nil, nil},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			suite.SetupTest()
+			suite.mockEntityTypeSvc.On("GetEntityTypeByHandle", mock.Anything, entitytype.TypeCategoryUser,
+				"no-display-type").Return(&entitytype.EntityType{Handle: "no-display-type"}, nil).Maybe()
+			testUser := &providers.Entity{
+				ID:       testUserID,
+				Category: tc.category,
+				Type:     tc.entityType,
+				OUID:     testOrgUnit,
+			}
+			authResponse := &common.AuthenticationResponse{ID: testUserID, Type: tc.entityType, OUID: testOrgUnit}
+
+			suite.mockAssertGenerator.On("GenerateAssertion", mock.Anything, mock.Anything).Return(
+				&assert.AssertionResult{Context: &assert.AssuranceContext{AAL: assert.AALLevel1}}, nil).Once()
+			var capturedClaims map[string]interface{}
+			suite.mockJWTService.On("GenerateJWT", mock.Anything, testUserID, mock.Anything, mock.Anything,
+				mock.MatchedBy(func(claims map[string]interface{}) bool {
+					capturedClaims = claims
+					return true
+				}), mock.Anything, mock.Anything).Return(testJWTToken, int64(3600), nil).Once()
+
+			svcErr := suite.service.validateAndAppendAuthAssertion(context.Background(),
+				authResponse, testUser, common.AuthenticatorCredentials, "", log.GetLogger())
+
+			suite.Nil(svcErr)
+			suite.Equal(tc.expectHandle, capturedClaims["userTypeHandle"])
+			suite.Equal(tc.expectName, capturedClaims["userTypeName"])
+			suite.NotContains(capturedClaims, "userType")
+			if tc.category != providers.EntityCategoryUser {
+				suite.mockEntityTypeSvc.AssertNotCalled(suite.T(), "GetEntityTypeByHandle",
+					mock.Anything, mock.Anything, mock.Anything)
+			}
+		})
+	}
+}
+
+func (suite *AuthenticationServiceTestSuite) TestValidateAndAppendAuthAssertionUserTypeLookupError() {
+	testUser := &providers.Entity{
+		ID:       testUserID,
+		Category: providers.EntityCategoryUser,
+		Type:     "unknown-type",
+		OUID:     testOrgUnit,
+	}
+	authResponse := &common.AuthenticationResponse{
+		ID:   testUserID,
+		Type: testUser.Type,
+		OUID: testUser.OUID,
+	}
+
+	suite.mockEntityTypeSvc.On("GetEntityTypeByHandle", mock.Anything, entitytype.TypeCategoryUser, "unknown-type").
+		Return((*entitytype.EntityType)(nil), &tidcommon.ServiceError{
+			ErrorDescription: tidcommon.I18nMessage{DefaultValue: "not found"},
+		})
+
+	err := suite.service.validateAndAppendAuthAssertion(
+		context.Background(), authResponse, testUser, common.AuthenticatorCredentials, "", log.GetLogger())
+
+	suite.NotNil(err)
+	suite.Equal(tidcommon.InternalServerError.Code, err.Code)
+	suite.Empty(authResponse.Assertion)
 }
 
 func (suite *AuthenticationServiceTestSuite) TestValidateAndAppendAuthAssertionUpdateError() {
@@ -1731,6 +1817,7 @@ func (suite *AuthenticationServiceTestSuite) TestValidateAndAppendAuthAssertionU
 	service := &authenticationService{
 		authAssertionGenerator: mockAssertGenerator,
 		jwtService:             suite.mockJWTService,
+		entityTypeService:      suite.mockEntityTypeSvc,
 	}
 
 	err := service.validateAndAppendAuthAssertion(
@@ -1916,9 +2003,10 @@ func (suite *AuthenticationServiceTestSuite) TestFinishPasskeyRegistration_Succe
 		mock.Anything).Return(providers.AuthUser{}, providers.AuthenticatedClaims{}, nil).Once()
 	suite.mockAuthnProvider.On("GetEntityReference", mock.Anything, mock.Anything).
 		Return(providers.AuthUser{}, &providers.EntityReference{
-			EntityID:   testUserID,
-			EntityType: "person",
-			OUID:       testOrgUnit,
+			EntityID:       testUserID,
+			EntityCategory: string(providers.EntityCategoryUser),
+			EntityType:     "person",
+			OUID:           testOrgUnit,
 		}, nil).Once()
 
 	// Completing enrollment authenticates the user, so an assertion is generated.
@@ -1937,7 +2025,9 @@ func (suite *AuthenticationServiceTestSuite) TestFinishPasskeyRegistration_Succe
 		})).Return(mockAssertionResult, nil).Once()
 	suite.mockJWTService.On("GenerateJWT", mock.Anything, testUserID, mock.Anything, mock.Anything,
 		mock.MatchedBy(func(claims map[string]interface{}) bool {
-			return claims["userType"] == "person" && claims["ouId"] == testOrgUnit
+			_, hasUserType := claims["userType"]
+			return !hasUserType && claims["userTypeHandle"] == testUserType &&
+				claims["userTypeName"] == testUserTypeName && claims["ouId"] == testOrgUnit
 		}), mock.Anything, mock.Anything).Return(testJWTToken, int64(3600), nil).Once()
 
 	result, err := suite.service.FinishPasskeyRegistration(
@@ -2126,9 +2216,10 @@ func (suite *AuthenticationServiceTestSuite) TestFinishPasskeyAuthentication_Suc
 		mock.Anything).Return(providers.AuthUser{}, providers.AuthenticatedClaims{}, nil).Once()
 	suite.mockAuthnProvider.On("GetEntityReference", mock.Anything, mock.Anything).
 		Return(providers.AuthUser{}, &providers.EntityReference{
-			EntityID:   testUserID,
-			EntityType: "person",
-			OUID:       testOrgUnit,
+			EntityID:       testUserID,
+			EntityCategory: string(providers.EntityCategoryUser),
+			EntityType:     "person",
+			OUID:           testOrgUnit,
 		}, nil).Once()
 
 	// Mock assertion generation
@@ -2148,7 +2239,9 @@ func (suite *AuthenticationServiceTestSuite) TestFinishPasskeyAuthentication_Suc
 
 	suite.mockJWTService.On("GenerateJWT", mock.Anything, testUserID, mock.Anything, mock.Anything,
 		mock.MatchedBy(func(claims map[string]interface{}) bool {
-			return claims["userType"] == "person" && claims["ouId"] == testOrgUnit
+			_, hasUserType := claims["userType"]
+			return !hasUserType && claims["userTypeHandle"] == testUserType &&
+				claims["userTypeName"] == testUserTypeName && claims["ouId"] == testOrgUnit
 		}), mock.Anything, mock.Anything).Return(testJWTToken, int64(3600), nil).Once()
 
 	result, err := suite.service.FinishPasskeyAuthentication(
@@ -2607,6 +2700,7 @@ func (suite *AuthenticationServiceTestSuite) TestNewAuthenticationService() {
 		suite.mockOIDCService,
 		suite.mockGoogleService,
 		suite.mockGithubService,
+		suite.mockEntityTypeSvc,
 	)
 	suite.NotNil(svc)
 }
