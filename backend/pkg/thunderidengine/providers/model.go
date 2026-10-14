@@ -1297,10 +1297,18 @@ type InboundAuthConfigWithSecret struct {
 	OAuthConfig *OAuthConfigWithSecret `json:"config,omitempty" yaml:"config,omitempty" jsonschema:"OAuth/OIDC configuration. Required when type is 'oauth2'. Defines OAuth grant types, redirect URIs, client authentication, and PKCE settings."`
 }
 
-// InitiatorRequest holds the original HTTP request data that triggered the flow.
+// InitiatorRequest holds the original HTTP request data that triggered the flow (e.g. the OAuth2
+// authorization request). It is persisted with the flow context for redirect-based flows.
 type InitiatorRequest struct {
 	Headers     map[string][]string `json:"headers,omitempty"     yaml:"headers,omitempty"`
 	QueryParams map[string][]string `json:"queryParams,omitempty" yaml:"queryParams,omitempty"`
+}
+
+// CurrentRequest holds the HTTP request data driving the current flow step. Unlike InitiatorRequest
+// it is transient: it rides on the request context for one execution and is never persisted.
+type CurrentRequest struct {
+	Headers     map[string][]string
+	QueryParams map[string][]string
 }
 
 // NodeContext holds the context for a specific node in the flow execution.
