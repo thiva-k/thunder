@@ -8,15 +8,16 @@ import (
 	"errors"
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
+	systemconst "github.com/thunder-id/thunderid/internal/system/constants"
 )
 
 // OAuth2 request parameters.
 const (
 	RequestParamGrantType           string = "grant_type"
 	RequestParamClientID            string = "client_id"
-	RequestParamClientSecret        string = "client_secret"
-	RequestParamClientAssertion     string = "client_assertion"
-	RequestParamClientAssertionType string = "client_assertion_type"
+	RequestParamClientSecret        string = systemconst.ClientSecretParamName
+	RequestParamClientAssertion     string = systemconst.ClientAssertionParamName
+	RequestParamClientAssertionType string = systemconst.ClientAssertionTypeParamName
 	RequestParamRedirectURI         string = "redirect_uri"
 	RequestParamUsername            string = "username"
 	RequestParamPassword            string = "password"

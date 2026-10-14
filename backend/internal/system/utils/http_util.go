@@ -528,6 +528,22 @@ var sensitiveHeaders = map[string]bool{
 	strings.ToLower(constants.CookieHeaderName):             true,
 	strings.ToLower(constants.SetCookieHeaderName):          true,
 	strings.ToLower(constants.ProxyAuthorizationHeaderName): true,
+	strings.ToLower(constants.FlowSecretHeaderName):         true,
+	strings.ToLower(constants.AttestationTokenHeaderName):   true,
+}
+
+// HeadersWithHost returns a clone of the request headers with the inbound host folded in under the
+// Host key. Go carries the inbound host on r.Host rather than r.Header, so surface it here so
+// {{request(header.Host)}} resolves. The clone keeps the original request untouched.
+func HeadersWithHost(r *http.Request) http.Header {
+	headers := r.Header.Clone()
+	if headers == nil {
+		headers = make(http.Header)
+	}
+	if r.Host != "" {
+		headers.Set(constants.HostHeaderName, r.Host)
+	}
+	return headers
 }
 
 // FilterSensitiveHeaders returns a copy of the header map with credential-bearing headers removed.
@@ -543,6 +559,37 @@ func FilterSensitiveHeaders(h map[string][]string) map[string][]string {
 		}
 	}
 
+	return filtered
+}
+
+// sensitiveQueryParams is the deny-list of client-credential query parameters stripped at capture,
+// so they never reach the flow-context store or a {{request(query.*)}} placeholder. The query-param
+// counterpart of sensitiveHeaders.
+var sensitiveQueryParams = map[string]bool{
+	constants.ClientSecretParamName:        true,
+	constants.ClientAssertionParamName:     true,
+	constants.ClientAssertionTypeParamName: true,
+}
+
+// IsSensitiveQueryParam reports whether a request query parameter carries client credentials and
+// must not be exposed through a captured InitiatorRequest.QueryParams.
+func IsSensitiveQueryParam(name string) bool {
+	return sensitiveQueryParams[name]
+}
+
+// FilterSensitiveQueryParams returns a copy of params with sensitive query parameters removed. It is
+// the query-parameter analog of FilterSensitiveHeaders. A nil or empty map is returned unchanged.
+func FilterSensitiveQueryParams(params map[string][]string) map[string][]string {
+	if len(params) == 0 {
+		return params
+	}
+	filtered := make(map[string][]string, len(params))
+	for name, values := range params {
+		if IsSensitiveQueryParam(name) {
+			continue
+		}
+		filtered[name] = values
+	}
 	return filtered
 }
 

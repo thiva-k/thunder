@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
@@ -127,6 +128,37 @@ func (suite *CIBAServiceTestSuite) TestInitiate_Success() {
 	suite.NotEmpty(resp.AuthReqID)
 	suite.Equal(int64(oauth2const.CIBADefaultExpiresInSeconds), resp.ExpiresIn)
 	suite.Equal(int64(oauth2const.CIBADefaultIntervalSeconds), resp.Interval)
+}
+
+func (suite *CIBAServiceTestSuite) TestInitiate_StripsSensitiveParamsFromInitiatorRequest() {
+	var captured *flowexec.FlowInitContext
+	suite.mockFlowExec.EXPECT().InitiateAndExecute(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, ic *flowexec.FlowInitContext) { captured = ic }).
+		Return(&flowexec.FlowStep{ExecutionID: "exec-1", Status: providers.FlowStatusIncomplete}, nil)
+	suite.expectStoreAddSuccess()
+
+	_, cibaErr := suite.service.InitiateBackchannelAuth(context.Background(), &BackchannelAuthRequest{
+		LoginHint: "alice",
+		Scope:     "openid",
+		Headers: map[string][]string{
+			"User-Agent":    {"curl/8.0"},
+			"Authorization": {"Bearer secret"},
+		},
+		QueryParams: map[string][]string{
+			"client_secret": {"supersecret"},
+			"login_hint":    {"alice"},
+		},
+	}, suite.oauthApp)
+
+	suite.Nil(cibaErr)
+	suite.Require().NotNil(captured)
+	suite.Require().NotNil(captured.InitiatorRequest)
+	// Credential query params and headers must not surface through the captured initiator request.
+	suite.NotContains(captured.InitiatorRequest.QueryParams, "client_secret")
+	suite.Empty(http.Header(captured.InitiatorRequest.Headers).Get("Authorization"))
+	// Non-sensitive values are preserved.
+	suite.Equal("curl/8.0", http.Header(captured.InitiatorRequest.Headers).Get("User-Agent"))
+	suite.Contains(captured.InitiatorRequest.QueryParams, "login_hint")
 }
 
 func (suite *CIBAServiceTestSuite) TestInitiate_ExpirySecondsMatchesResolvedExpiry() {
