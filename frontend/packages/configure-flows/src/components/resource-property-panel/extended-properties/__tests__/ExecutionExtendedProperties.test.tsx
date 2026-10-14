@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, fireEvent} from '@testing-library/react';
@@ -1794,6 +1794,26 @@ describe('ExecutionExtendedProperties', () => {
       await user.click(screen.getByText('flows:core.executions.entityMode.agent'));
 
       expect(mockOnChange).toHaveBeenCalledWith('data.properties.mode', 'agent', attributeUniquenessResource);
+    });
+  });
+
+  describe('Account Linking Executor', () => {
+    const linkingResource = {
+      id: 'linking-1',
+      data: {
+        action: {
+          executor: {
+            name: ExecutionTypes.AccountLinking,
+          },
+        },
+        properties: {},
+      },
+    } as unknown as Resource;
+
+    it('should render NoConfigProperties message', () => {
+      render(<ExecutionExtendedProperties resource={linkingResource} onChange={mockOnChange} />);
+
+      expect(screen.getByText('flows:core.executions.noConfig.description')).toBeInTheDocument();
     });
   });
 
