@@ -273,9 +273,11 @@ func (ts *GatewayVersionsTestSuite) TestAnAppliedResourceServerShowsWithItsResou
 	server := ts.shown(applied, "resource_server", rsID)
 
 	liveServer := ts.read(rsBase)
-	for _, field := range []string{"id", "name", "description", "identifier", "ouId", "delimiter"} {
+	for _, field := range []string{"id", "name", "description", "ouId", "delimiter"} {
 		ts.Equal(liveServer[field], server.Resource[field], field)
 	}
+	// Each gateway holds its own identifier, so it stands as the placeholder the export wrote.
+	ts.Regexp(`^\{\{\.RESOURCE_SERVER_[A-Z0-9_]+_IDENTIFIER\}\}$`, server.Resource["identifier"])
 
 	builtDocsID, builtDraftsID := rsID+"_docs", rsID+"_drafts"
 	ts.ElementsMatch([]string{"resources", "actions",
