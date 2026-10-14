@@ -1611,6 +1611,67 @@ var (
 		},
 	}
 
+	// ErrExtensionCallFailed is returned when an extension's service does not give a usable answer:
+	// it times out, cannot be reached, answers with a non-2xx status, a body outside the contract or
+	// ERROR. It carries nothing from the service's answer.
+	ErrExtensionCallFailed = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1115",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_call_failed",
+			DefaultValue: "Extension call failed",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_call_failed_desc",
+			DefaultValue: "The step could not get a valid answer from the external service",
+		},
+	}
+
+	// ErrExtensionActionFailed is returned when an extension answers FAILED with a reason other than a
+	// credential failure.
+	ErrExtensionActionFailed = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1116",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_action_failed",
+			DefaultValue: "Request rejected",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_action_failed_desc",
+			DefaultValue: "The external service rejected the request",
+		},
+	}
+
+	// ErrExtensionInputRequired is returned when an extension answers INCOMPLETE with a message for
+	// the user.
+	ErrExtensionInputRequired = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1117",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_input_required",
+			DefaultValue: "Additional input required",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_input_required_desc",
+			DefaultValue: "The external service needs more information to continue",
+		},
+	}
+
+	// ErrExtensionAttemptsExceeded is returned when an extension step has had maxAttempts FAILED and
+	// INCOMPLETE answers in this flow execution. No call is made.
+	ErrExtensionAttemptsExceeded = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1118",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_attempts_exceeded",
+			DefaultValue: "Too many attempts",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.extension_attempts_exceeded_desc",
+			DefaultValue: "The maximum number of attempts for this step has been reached",
+		},
+	}
+
 	// ErrFederatedUserSyncFailed is returned when a federated user cannot be updated with
 	// the attributes received from the identity provider.
 	ErrFederatedUserSyncFailed = tidcommon.ServiceError{

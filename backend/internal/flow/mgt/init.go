@@ -41,9 +41,10 @@ func Initialize(
 	serverConfigSvc serverConfigProvider,
 	ouSvc ouProvider,
 	templateResolver notificationTemplateProvider,
+	connectionProvider httpConnectionProvider,
 	configHandler *FlowConfigHandler,
 ) (FlowMgtServiceInterface, declarativeresource.ResourceExporter, error) {
-	flowValidator := newFlowValidator(executorRegistry, interceptorRegistry, graphBuilder)
+	flowValidator := newFlowValidator(executorRegistry, interceptorRegistry, graphBuilder, connectionProvider)
 	store, compositeStore, transactioner, err := initializeStore(cacheManager, flowValidator)
 	if err != nil {
 		return nil, nil, err

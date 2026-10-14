@@ -526,6 +526,15 @@ func (s *service) deleteHTTP(ctx context.Context, id string) *tidcommon.ServiceE
 	return s.httpService.DeleteHTTPConnection(ctx, id)
 }
 
+// usagesHTTP returns the resources that use an HTTP connection.
+func (s *service) usagesHTTP(ctx context.Context, id string) (
+	*resourcedependency.DependenciesResponse, *tidcommon.ServiceError) {
+	if s.httpService == nil {
+		return nil, &tidcommon.InternalServerError
+	}
+	return s.httpService.GetHTTPConnectionUsages(ctx, id)
+}
+
 // usagesByType verifies the instance is of the expected type, then returns the resources that
 // reference it. Drives the pre-delete confirmation dialog.
 func (s *service) usagesByType(ctx context.Context, idpType providers.IDPType, id string) (

@@ -68,6 +68,7 @@ const (
 	ExecutorNameAgentTypeResolver            = executormeta.ExecutorNameAgentTypeResolver
 	ExecutorNameIdentityGovernance           = executormeta.ExecutorNameIdentityGovernance
 	ExecutorNamePreSuspend                   = executormeta.ExecutorNamePreSuspend
+	ExecutorNameExtension                    = executormeta.ExecutorNameExtension
 )
 
 // Executor mode constants
@@ -211,7 +212,6 @@ const (
 	propertyKeyPresentationDefinitionID                = "presentation_definition_id"
 	propertyKeyCallbackType                            = "callbackType"
 	propertyKeyLoginHintAttribute                      = "loginHintAttribute"
-	propertyKeyMaxOTPAttempts                          = "maxAttempts"
 	propertyKeyOTPLength                               = "otpLength"
 	propertyKeyOTPUseNumericOnly                       = "otpUseNumericOnly"
 	propertyKeyOTPValidityPeriodSeconds                = "otpValidityPeriodSeconds"

@@ -85,6 +85,7 @@ vi.mock('@thunderid/configure-connections', async (importOriginal) => ({
   useEmailProviders: () => mockEmailProviders(),
   useIdentityProviders: () => mockIdentityProviders(),
   useSMSProviders: () => mockSMSProviders(),
+  useConnectionInstances: () => ({data: [], isLoading: false, isSuccess: true, error: null, refetch: vi.fn()}),
 }));
 
 // Mock useGetNotificationTemplates, which backs the Email/SMS template pickers.
@@ -1562,6 +1563,38 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByLabelText('flows:core.executions.userTypeResolver.allowedUserTypes.label')).toHaveValue(
         'customer, partner',
       );
+    });
+  });
+
+  describe('Extension Executor', () => {
+    it('should render the extension connection selector and key lists', () => {
+      const extensionResource = {
+        id: 'extension-executor-1',
+        data: {
+          action: {executor: {name: ExecutionTypes.ExtensionExecutor}},
+          properties: {connectionId: '', inputKeys: []},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={extensionResource} onChange={mockOnChange} />);
+
+      expect(screen.getByText('flows:core.executions.extension.description')).toBeInTheDocument();
+      expect(screen.getByText('flows:core.executions.extension.connection.label')).toBeInTheDocument();
+      expect(screen.getByText('flows:core.executions.extension.inputKeys.label')).toBeInTheDocument();
+    });
+
+    it('should hide the inputs editor', () => {
+      const extensionResource = {
+        id: 'extension-executor-1',
+        data: {
+          action: {executor: {name: ExecutionTypes.ExtensionExecutor}},
+          properties: {connectionId: 'conn-1'},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={extensionResource} onChange={mockOnChange} />);
+
+      expect(screen.queryByText('flows:core.executions.inputs.title')).not.toBeInTheDocument();
     });
   });
 

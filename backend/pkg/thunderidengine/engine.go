@@ -185,6 +185,7 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		ResourceService:    engineCtx.resourceProvider,
 		UserMgtProvider:    engineCtx.userMgtProvider,
 		AgentMgtProvider:   engineCtx.agentMgtProvider,
+		ObservabilitySvc:   engineCtx.observabilitySvc,
 		IdentityGovernance: engineCtx.identityGovernance,
 		ArtifactLifetime: func(client *providers.OAuthClient) time.Duration {
 			return tokenservice.ArtifactLifetime(oauthConfig, client)

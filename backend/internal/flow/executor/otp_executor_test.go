@@ -504,7 +504,7 @@ func (suite *OTPExecutorTestSuite) TestExecuteGenerate_MaxAttemptsFromNodeProper
 		FlowType:     providers.FlowTypeAuthentication,
 		ExecutorMode: ExecutorModeGenerate,
 		NodeProperties: map[string]interface{}{
-			propertyKeyMaxOTPAttempts: "2",
+			common.NodePropertyMaxAttempts: "2",
 		},
 		UserInputs: map[string]string{},
 		RuntimeData: map[string]string{
@@ -992,7 +992,7 @@ func (suite *OTPExecutorTestSuite) TestExecuteGenerate_MaxAttemptsFromNodeProper
 		FlowType:     providers.FlowTypeAuthentication,
 		ExecutorMode: ExecutorModeGenerate,
 		NodeProperties: map[string]interface{}{
-			propertyKeyMaxOTPAttempts: 1,
+			common.NodePropertyMaxAttempts: 1,
 		},
 		UserInputs: map[string]string{},
 		RuntimeData: map[string]string{
@@ -1012,7 +1012,7 @@ func (suite *OTPExecutorTestSuite) TestExecuteGenerate_MaxAttemptsFromNodeProper
 		FlowType:     providers.FlowTypeAuthentication,
 		ExecutorMode: ExecutorModeGenerate,
 		NodeProperties: map[string]interface{}{
-			propertyKeyMaxOTPAttempts: float64(1),
+			common.NodePropertyMaxAttempts: float64(1),
 		},
 		UserInputs: map[string]string{},
 		RuntimeData: map[string]string{
@@ -1039,7 +1039,7 @@ func (suite *OTPExecutorTestSuite) TestExecuteGenerate_MaxAttemptsFromNodeProper
 		FlowType:     providers.FlowTypeAuthentication,
 		ExecutorMode: ExecutorModeGenerate,
 		NodeProperties: map[string]interface{}{
-			propertyKeyMaxOTPAttempts: "not-a-number",
+			common.NodePropertyMaxAttempts: "not-a-number",
 		},
 		NodeInputs: []providers.Input{
 			{Ref: "mobile_input", Identifier: common.AttributeMobileNumber,

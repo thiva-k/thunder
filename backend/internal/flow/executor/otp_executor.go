@@ -68,7 +68,7 @@ func newOTPExecutor(
 				ExecutorModeVerify,
 			},
 			SupportedProperties: []providers.ExecutorSupportedProperties{
-				{Property: propertyKeyMaxOTPAttempts},
+				{Property: common.NodePropertyMaxAttempts},
 				{Property: propertyKeyOTPLength},
 				{Property: propertyKeyOTPUseNumericOnly},
 				{Property: propertyKeyOTPValidityPeriodSeconds},
@@ -473,7 +473,7 @@ func isNumericOTP(otpValue string) bool {
 // falling back to 3 if not set or invalid.
 func (e *otpExecutor) getMaxOTPAttempts(ctx *providers.NodeContext) int {
 	const defaultMaxAttempts = 3
-	switch v := ctx.NodeProperties[propertyKeyMaxOTPAttempts].(type) {
+	switch v := ctx.NodeProperties[common.NodePropertyMaxAttempts].(type) {
 	case string:
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			return n

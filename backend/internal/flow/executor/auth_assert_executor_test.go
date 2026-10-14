@@ -1525,6 +1525,23 @@ func (suite *AuthAssertExecutorTestSuite) TestResolveUserAttributes_StoredProfil
 	assert.Equal(suite.T(), "https://example.com/alice.png", attrs["picture"])
 }
 
+func (suite *AuthAssertExecutorTestSuite) TestResolveUserAttributes_ExtensionAnswerDoesNotReplaceProfile() {
+	ctx := &providers.NodeContext{
+		ExecutionID: "flow-123",
+		Context:     context.Background(),
+		RuntimeData: map[string]string{
+			"extension.pin_check.email": "mallory@example.com",
+			"extension.pin_check.pin":   "1234",
+		},
+	}
+
+	attrs, err := suite.executor.resolveUserAttributes(ctx, []string{"email", "pin"},
+		map[string]interface{}{"email": "alice@corp.com"}, "user-123", "", "", "")
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), map[string]interface{}{"email": "alice@corp.com"}, attrs)
+}
+
 func (suite *AuthAssertExecutorTestSuite) TestResolveUserAttributes_WithUserType() {
 	ctx := &providers.NodeContext{
 		ExecutionID: "flow-123",

@@ -2295,6 +2295,14 @@ const translations = {
     'detail.authentication.method.none': 'None',
     'detail.outboundAuthentication.description':
       'Credentials ThunderID uses to sign in to this provider. Secrets are stored write-only.',
+    'detail.usages.title': 'Usages',
+    'detail.usages.description':
+      'Resources that use this connection. A connection cannot be deleted while a resource uses it.',
+    'detail.usages.empty': 'No resources use this connection.',
+    'detail.usages.unavailable': 'The resources that use this connection could not be determined.',
+    'detail.usages.loadError': 'Failed to load the resources that use this connection.',
+    'detail.usages.resourceType.flow': 'Flow',
+    'detail.usages.resourceType.other': 'Resource',
     'detail.dangerZone.title': 'Danger zone',
     'detail.dangerZone.description': 'Actions in this section are irreversible. Proceed with caution.',
     'detail.dangerZone.delete.title': 'Delete connection',
@@ -2643,6 +2651,8 @@ const translations = {
     'errors.CON-1023': 'The selected organization unit no longer exists. Choose another one and try again.',
     'errors.CON-1024': "A connection's organization unit can't be changed once it is created.",
     'errors.CON-1025': 'Choose an organization unit for this connection.',
+    'errors.CON-1026':
+      'This connection is used by one or more resources. Remove it from those resources before deleting it.',
     'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
     'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
     'errors.IDP-1003': 'The identity provider name is invalid or missing.',
@@ -4605,6 +4615,38 @@ const translations = {
     'core.executions.httpRequest.errorHandling.retryDelay.placeholder': '0',
     'core.executions.httpRequest.errorHandling.retryDelay.hint': 'Delay between retries in milliseconds (max 5000).',
 
+    // Extension executor
+    'core.executions.extension.nodeIdPlaceholder': '<node ID>',
+    'core.executions.extension.description':
+      'Calls your service through a service endpoint connection and routes the flow on its answer.',
+    'core.executions.extension.connection.label': 'Connection',
+    'core.executions.extension.connection.placeholder': 'Select a service endpoint connection',
+    'core.executions.extension.connection.hint':
+      'The URL, headers, timeout and authentication come from the connection.',
+    'core.executions.extension.connection.noConnections':
+      'No service endpoint connections exist. Create one under Connections, then select it here.',
+    'core.executions.extension.connection.loadError': 'Failed to load service endpoint connections.',
+    'core.executions.extension.connection.dangling': 'This connection no longer exists. Select another connection.',
+    'core.executions.extension.inputKeys.label': 'Inputs to send',
+    'core.executions.extension.inputKeys.placeholder': 'username',
+    'core.executions.extension.inputKeys.hint':
+      'User inputs to send to the service. None are sent by default. Add a password or code only when the service needs it.',
+    'core.executions.extension.runtimeDataKeys.label': 'Runtime data to send',
+    'core.executions.extension.runtimeDataKeys.placeholder': 'extension.risk_check.riskScore',
+    'core.executions.extension.runtimeDataKeys.hint':
+      'Runtime data keys to send: userID, or data an earlier extension stored, named by its full key such as extension.risk_check.riskScore. When empty, only the user ID is sent.',
+    'core.executions.extension.runtimeDataKeys.invalid':
+      'Only userID and keys that start with "extension." can be sent. Remove {{keys}}.',
+    'core.executions.extension.responseKeys.label': 'Stored response fields',
+    'core.executions.extension.responseKeys.placeholder': 'riskScore',
+    'core.executions.extension.responseKeys.hint':
+      'Top-level response fields to store for later steps, stored under {{prefix}}. Later steps refer to a field by its full key, such as {{prefix}}riskScore. When empty, every top-level field except actionStatus, failureReason, failureDescription, redirectUrl and null values is stored.',
+    'core.executions.extension.maxAttempts.label': 'Max attempts',
+    'core.executions.extension.maxAttempts.hint':
+      'How many FAILED or INCOMPLETE answers this step accepts in one flow execution. After that, the step fails without calling the service, and the flow continues at onFailure, or ends if none is set.',
+    'core.executions.extension.contract.hint':
+      'The service must answer with actionStatus SUCCESS, FAILED, INCOMPLETE or ERROR.',
+
     // Executor input configuration
     'core.executions.inputs.title': 'Executor inputs',
     'core.executions.inputs.typeLabel': 'Type',
@@ -4650,6 +4692,7 @@ const translations = {
     'core.validation.fields.input.idpName': 'Identity provider name is required',
     'core.validation.fields.input.idpId': 'Connection is required',
     'core.validation.fields.input.senderId': 'Notification sender is required',
+    'core.validation.fields.input.connectionId': 'Connection is required',
     'core.validation.fields.input.presentationDefinitionId': 'Presentation definition is required',
     'core.validation.fields.input.label': 'Label is required',
     'core.validation.fields.input.ref': 'Attribute is required',
