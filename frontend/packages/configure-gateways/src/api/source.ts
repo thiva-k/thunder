@@ -49,8 +49,11 @@ export interface DeploySource {
   applyCheck(targetId: string, version: string): Promise<ApplyResult>;
   /** Applies a version to a target, or works out what it would do when `dryRun` is set. */
   apply(targetId: string, request: ApplyRequest): Promise<ApplyResult>;
-  /** Puts a target back on the version it ran before, or works out what that would do. */
-  revert(targetId: string, dryRun: boolean): Promise<ApplyResult>;
+  /**
+   * Puts a target back on the version it ran before, or works out what that would do. A rollback that
+   * removes more resources than the threshold is refused until `confirmRemovals` is set.
+   */
+  revert(targetId: string, dryRun: boolean, confirmRemovals?: boolean): Promise<ApplyResult>;
   /** Every variable or every secret a target holds. A secret's value is never read back. */
   values(targetId: string, kind: ValueKind): Promise<StoredValue[]>;
   /** Sets a variable or a secret on a target, creating it when the target does not hold it. */

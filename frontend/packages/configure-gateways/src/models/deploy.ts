@@ -122,12 +122,21 @@ export interface MissingValues {
   references?: ValueReference[];
 }
 
+/** The values a version refers to that were set on a gateway after the version it runs was deployed. */
+export interface ChangedValues {
+  variables?: string[];
+  secrets?: string[];
+  references?: ValueReference[];
+}
+
 export interface ApplyRequest {
   /** A version's hash, or `latest`. */
   version?: string;
   dryRun?: boolean;
   /** The keys of the changes to apply; absent, every change. */
   selection?: string[];
+  /** Lets the apply remove more resources than the deployment's threshold allows unconfirmed. */
+  confirmRemovals?: boolean;
 }
 
 export interface ApplyResult {
@@ -137,6 +146,7 @@ export interface ApplyResult {
   import?: ImportResult;
   recorded?: boolean;
   missing?: MissingValues;
+  changed?: ChangedValues;
 }
 
 export interface ImportResourceResult {

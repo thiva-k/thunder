@@ -294,6 +294,15 @@ the gateway lacks. One button sets the values and applies the version. **Rollbac
 card previews the changes that returning the gateway to its previous version would make, and rolls it
 back only when you confirm.
 
+The dialog also lists the values set on the gateway since its last deploy, with the resources that
+use them, since they take effect with this deploy though no version carries them. When a deploy or a
+rollback would remove more resources than the control plane allows without asking, it is refused
+and the dialog says how many would go. Clicking again, now labelled **Deploy and remove** or **Roll
+back and remove**, confirms it. Changing which resources are ticked drops the confirmation, so it
+always covers the removals that were pointed out. A deploy or rollback to a gateway that is still
+applying an earlier one is refused once it has waited, and the dialog says another deploy is running,
+so you can try again once it finishes.
+
 **Explore** on a gateway's card, or a click on the card itself, opens the gateway's explorer: a map of
 every resource the gateway runs, in lanes by type, with a line for each relationship between them,
 such as an application and the flow it signs users in with. Hovering a line names the relationship.

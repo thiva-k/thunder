@@ -439,3 +439,218 @@ describe('DeployPage', () => {
     expect(await screen.findByText('The configuration versions could not be read.')).toBeInTheDocument();
   });
 });
+
+const refusal = (code: string, status = 409): Error =>
+  Object.assign(new Error(code), {response: {status, data: {code}}});
+
+describe('DeployPage: apply safety', () => {
+  const dryRunWithRemovals = {
+    gatewayId: 'gw-prod',
+    dryRun: true,
+    diff: {
+      toVersion: versions[0].version,
+      summary: {added: 0, updated: 0, deleted: 2, unchanged: 1},
+      changes: [
+        {key: 'application/app-1', resourceType: 'application', id: 'app-1', name: 'Orders', change: 'deleted'},
+        {key: 'application/app-2', resourceType: 'application', id: 'app-2', name: 'Billing', change: 'deleted'},
+        {key: 'role/r-1', resourceType: 'role', id: 'r-1', name: 'Admin', change: 'unchanged'},
+      ],
+    },
+    changed: {
+      secrets: ['APP_ORDERS_CLIENT_SECRET'],
+      references: [
+        {
+          name: 'APP_ORDERS_CLIENT_SECRET',
+          kind: 'secret',
+          resourceType: 'application',
+          resourceId: 'app-1',
+          resourceName: 'Orders',
+          field: 'clientSecret',
+        },
+      ],
+    },
+  };
+
+  it('points out the values set since the last deploy, and asks before a deploy that removes many', async () => {
+    let applies = 0;
+    routes['POST /gateways/gw-prod/apply'] = (call: Call) => {
+      const data = call.data as {dryRun?: boolean; confirmRemovals?: boolean};
+      if (data.dryRun) return dryRunWithRemovals;
+      applies += 1;
+      if (!data.confirmRemovals) return refusal('GTW-1030');
+      return {gatewayId: 'gw-prod', dryRun: false, diff: {...dryRunWithRemovals.diff}, import: {summary: {failed: 0}}};
+    };
+    render(<DeployPage />);
+
+    const newest = await screen.findByTestId(`deploy-version-${versions[0].version}`);
+    await userEvent.click(within(newest).getByRole('button', {name: 'Deploy'}));
+    const panel = await screen.findByTestId('deploy-apply-panel');
+    await userEvent.click(within(panel).getByRole('combobox', {name: 'Gateway'}));
+    await userEvent.click(await screen.findByRole('option', {name: 'Prod'}));
+    const changed = await within(panel).findByTestId('changed-values');
+    expect(within(changed).getByText('Values set since the last deploy')).toBeInTheDocument();
+    expect(within(changed).getByText('APP_ORDERS_CLIENT_SECRET')).toBeInTheDocument();
+    expect(within(changed).getByText('used by Orders')).toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole('button', {name: 'Deploy'}));
+    const warning = await within(panel).findByTestId('deploy-confirm-removals');
+    expect(warning).toHaveTextContent('Deploying removes 2 resources from Prod.');
+    expect(screen.getByTestId('deploy-apply-panel')).toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole('button', {name: 'Deploy and remove 2'}));
+
+    await waitFor(() => expect(screen.queryByTestId('deploy-apply-panel')).not.toBeInTheDocument());
+    expect(applies).toBe(2);
+    const sent = http.calls
+      .filter((call: Call) => call.url.endsWith('/gw-prod/apply') && !(call.data as {dryRun?: boolean}).dryRun)
+      .map((call: Call) => (call.data as {confirmRemovals?: boolean}).confirmRemovals);
+    expect(sent).toEqual([undefined, true]);
+  });
+
+  it('keeps a confirmation across a refocus, and drops it when what is ticked changes', async () => {
+    routes['POST /gateways/gw-prod/apply'] = (call: Call) => {
+      const data = call.data as {dryRun?: boolean; confirmRemovals?: boolean};
+      if (data.dryRun) return dryRunWithRemovals;
+      if (!data.confirmRemovals) return refusal('GTW-1030');
+      return {gatewayId: 'gw-prod', dryRun: false, diff: {...dryRunWithRemovals.diff}, import: {summary: {failed: 0}}};
+    };
+    render(<DeployPage />);
+
+    const newest = await screen.findByTestId(`deploy-version-${versions[0].version}`);
+    await userEvent.click(within(newest).getByRole('button', {name: 'Deploy'}));
+    const panel = await screen.findByTestId('deploy-apply-panel');
+    await userEvent.click(within(panel).getByRole('combobox', {name: 'Gateway'}));
+    await userEvent.click(await screen.findByRole('option', {name: 'Prod'}));
+    await userEvent.click(await within(panel).findByRole('button', {name: 'Deploy'}));
+    expect(await within(panel).findByTestId('deploy-confirm-removals')).toBeInTheDocument();
+
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    expect(within(panel).getByTestId('deploy-confirm-removals')).toBeInTheDocument();
+    expect(within(panel).getByRole('button', {name: 'Deploy and remove 2'})).toBeInTheDocument();
+
+    // Keeping Orders changes what would be removed, so the warning no longer covers it.
+    await userEvent.click(within(panel).getByRole('checkbox', {name: /Orders/}));
+    expect(within(panel).queryByTestId('deploy-confirm-removals')).not.toBeInTheDocument();
+    expect(within(panel).getByRole('checkbox', {name: /Orders/})).not.toBeChecked();
+    expect(within(panel).getByRole('button', {name: 'Deploy'})).toBeEnabled();
+  });
+
+  it('asks before a rollback that removes many, and sends the confirmation', async () => {
+    routes['POST /gateways/gw-dev/revert'] = (call: Call) => {
+      const data = call.data as {dryRun?: boolean; confirmRemovals?: boolean};
+      if (data.dryRun) {
+        // A deletion the gateway holds back is not sent, so it is not counted as a removal.
+        const heldBack = {
+          key: 'role/r-2',
+          resourceType: 'role',
+          id: 'r-2',
+          name: 'Ops',
+          change: 'deleted',
+          excluded: true,
+        };
+        const diff = {...dryRunWithRemovals.diff, changes: [...dryRunWithRemovals.diff.changes, heldBack]};
+        return {...dryRunWithRemovals, gatewayId: 'gw-dev', diff, changed: undefined};
+      }
+      if (!data.confirmRemovals) return refusal('GTW-1030');
+      return {gatewayId: 'gw-dev', dryRun: false, diff: {...dryRunWithRemovals.diff}};
+    };
+    render(<DeployPage />);
+
+    const dev = await screen.findByTestId('deploy-stage-gw-dev');
+    await userEvent.click(within(dev).getByRole('button', {name: 'Rollback'}));
+    const panel = await screen.findByTestId('deploy-revert-panel');
+    await userEvent.click(await within(panel).findByRole('button', {name: 'Roll back'}));
+    expect(await within(panel).findByTestId('deploy-confirm-removals')).toHaveTextContent(
+      'Rolling back removes 2 resources from Dev.',
+    );
+    await userEvent.click(within(panel).getByRole('button', {name: 'Roll back and remove 2'}));
+
+    await waitFor(() => expect(screen.queryByTestId('deploy-revert-panel')).not.toBeInTheDocument());
+    expect(http.calls.filter((call: Call) => call.url.endsWith('/revert')).map((call: Call) => call.data)).toEqual([
+      {dryRun: true},
+      {dryRun: false},
+      {dryRun: false, confirmRemovals: true},
+    ]);
+  });
+
+  it('says another deploy is running when the gateway is busy, and why any other refusal happened', async () => {
+    let answer: Error = refusal('GTW-1029');
+    routes['POST /gateways/gw-prod/apply'] = (call: Call) =>
+      (call.data as {dryRun?: boolean}).dryRun ? {...dryRunWithRemovals, changed: undefined} : answer;
+    render(<DeployPage />);
+
+    const newest = await screen.findByTestId(`deploy-version-${versions[0].version}`);
+    await userEvent.click(within(newest).getByRole('button', {name: 'Deploy'}));
+    const panel = await screen.findByTestId('deploy-apply-panel');
+    await userEvent.click(within(panel).getByRole('combobox', {name: 'Gateway'}));
+    await userEvent.click(await screen.findByRole('option', {name: 'Prod'}));
+    await userEvent.click(await within(panel).findByRole('button', {name: 'Deploy'}));
+    expect(
+      await within(panel).findByText('Another deploy to this gateway is running. Try again once it finishes.'),
+    ).toBeInTheDocument();
+
+    answer = refusal('GTW-9999', 500);
+    await userEvent.click(within(panel).getByRole('button', {name: 'Deploy'}));
+    expect(await within(panel).findByText('The version could not be deployed.')).toBeInTheDocument();
+    expect(within(panel).queryByText('GTW-9999')).not.toBeInTheDocument();
+
+    answer = refusal('GTW-9999', 403);
+    await userEvent.click(within(panel).getByRole('button', {name: 'Deploy'}));
+    expect(await within(panel).findByText('Your account may not deploy to this gateway.')).toBeInTheDocument();
+  });
+
+  it('says another deploy is running when a rollback finds the gateway busy', async () => {
+    routes['POST /gateways/gw-dev/revert'] = (call: Call) =>
+      (call.data as {dryRun?: boolean}).dryRun
+        ? {...dryRunWithRemovals, gatewayId: 'gw-dev', changed: undefined}
+        : refusal('GTW-1029');
+    render(<DeployPage />);
+
+    const dev = await screen.findByTestId('deploy-stage-gw-dev');
+    await userEvent.click(within(dev).getByRole('button', {name: 'Rollback'}));
+    const panel = await screen.findByTestId('deploy-revert-panel');
+    await userEvent.click(await within(panel).findByRole('button', {name: 'Roll back'}));
+    expect(
+      await within(panel).findByText('Another deploy to this gateway is running. Try again once it finishes.'),
+    ).toBeInTheDocument();
+  });
+
+  it('names the values set since the last deploy before a rollback, as before a deploy', async () => {
+    routes['POST /gateways/gw-dev/revert'] = (call: Call) =>
+      (call.data as {dryRun?: boolean}).dryRun
+        ? {...dryRunWithRemovals, gatewayId: 'gw-dev'}
+        : {gatewayId: 'gw-dev', dryRun: false, diff: {...dryRunWithRemovals.diff}};
+    render(<DeployPage />);
+
+    const dev = await screen.findByTestId('deploy-stage-gw-dev');
+    await userEvent.click(within(dev).getByRole('button', {name: 'Rollback'}));
+    const panel = await screen.findByTestId('deploy-revert-panel');
+    const changed = await within(panel).findByTestId('changed-values');
+    expect(within(changed).getByText('APP_ORDERS_CLIENT_SECRET')).toBeInTheDocument();
+  });
+
+  it('says why the deploy check failed and checks again on request', async () => {
+    let failing = true;
+    routes['POST /gateways/gw-prod/apply'] = () =>
+      failing ? refusal('GTW-1029') : {...dryRunWithRemovals, changed: undefined};
+    render(<DeployPage />);
+
+    const newest = await screen.findByTestId(`deploy-version-${versions[0].version}`);
+    await userEvent.click(within(newest).getByRole('button', {name: 'Deploy'}));
+    const panel = await screen.findByTestId('deploy-apply-panel');
+    await userEvent.click(within(panel).getByRole('combobox', {name: 'Gateway'}));
+    await userEvent.click(await screen.findByRole('option', {name: 'Prod'}));
+    expect(
+      await within(panel).findByText('Another deploy to this gateway is running. Try again once it finishes.'),
+    ).toBeInTheDocument();
+
+    failing = false;
+    await userEvent.click(within(panel).getByRole('button', {name: 'Refresh'}));
+    expect(await within(panel).findByRole('checkbox', {name: /Orders/})).toBeInTheDocument();
+    expect(
+      within(panel).queryByText('Another deploy to this gateway is running. Try again once it finishes.'),
+    ).not.toBeInTheDocument();
+  });
+});
