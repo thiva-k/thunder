@@ -56,9 +56,72 @@ var errImportNotWritten = errors.New("the gateway wrote nothing of the import")
 type gatewayClientInterface interface {
 	// Import posts to the gateway's /import presenting its key, and returns the answer as it came.
 	Import(ctx context.Context, gw *Gateway, key string, req gatewayImportRequest) (json.RawMessage, error)
-	// UnsetValues returns which of the named variables and secrets the gateway's store holds no value
-	// for.
-	UnsetValues(ctx context.Context, gw *Gateway, key string, variables, secrets []string) (*MissingValues, error)
+	// HeldValues reports which of the named variables and secrets the gateway's store holds a value
+	// for, and when each was last set.
+	HeldValues(ctx context.Context, gw *Gateway, key string, variables, secrets []string) (*HeldValues, error)
+}
+
+// HeldValues are the values a gateway's store holds, by name, each with when it was last set, zero
+// when the store did not say.
+type HeldValues struct {
+	Variables map[string]time.Time
+	Secrets   map[string]time.Time
+}
+
+// missing returns the names among those asked for that the store does not hold.
+func (h *HeldValues) missing(variables, secrets []string) *MissingValues {
+	return &MissingValues{Variables: unheld(variables, h.Variables), Secrets: unheld(secrets, h.Secrets)}
+}
+
+// heldTimes is when each held value was last set, by collection and name, as recorded at an apply.
+type heldTimes struct {
+	Variables map[string]time.Time `json:"variables,omitempty"`
+	Secrets   map[string]time.Time `json:"secrets,omitempty"`
+}
+
+// snapshot records when each of the named values the store holds was last set, as the store said.
+func (h *HeldValues) snapshot(variables, secrets []string) string {
+	pick := func(names []string, held map[string]time.Time) map[string]time.Time {
+		out := map[string]time.Time{}
+		for _, name := range names {
+			if set, ok := held[name]; ok && !set.IsZero() {
+				out[name] = set.UTC()
+			}
+		}
+		return out
+	}
+	recorded, err := json.Marshal(heldTimes{Variables: pick(variables, h.Variables), Secrets: pick(secrets, h.Secrets)})
+	if err != nil {
+		return ""
+	}
+	return string(recorded)
+}
+
+// changedFrom returns the names among those asked for whose value the store says was set at another
+// time than the snapshot recorded. Only the store's own times are compared, never with another
+// clock; a value the snapshot did not record, or whose time the store does not say, is not reported.
+func (h *HeldValues) changedFrom(variables, secrets []string, snapshot string) *ChangedValues {
+	changed := &ChangedValues{}
+	var recorded heldTimes
+	if snapshot == "" || json.Unmarshal([]byte(snapshot), &recorded) != nil {
+		return changed
+	}
+	differs := func(name string, held, then map[string]time.Time) bool {
+		set, ok := held[name]
+		was, recordedThen := then[name]
+		return ok && recordedThen && !set.IsZero() && !set.Equal(was)
+	}
+	for _, name := range variables {
+		if differs(name, h.Variables, recorded.Variables) {
+			changed.Variables = append(changed.Variables, name)
+		}
+	}
+	for _, name := range secrets {
+		if differs(name, h.Secrets, recorded.Secrets) {
+			changed.Secrets = append(changed.Secrets, name)
+		}
+	}
+	return changed
 }
 
 // gatewayClient reaches a gateway over HTTPS.

@@ -153,13 +153,14 @@ func (s *VersionStoreTestSuite) TestPruneNamesTheBoundAndTheDeployment() {
 func (s *VersionStoreTestSuite) TestAppliedStateIsReadWrittenAndForgotten() {
 	s.dbClientMock.On("QueryContext", mock.Anything, queryGetAppliedVersion, "gw-1", storeDeploymentID).
 		Return([]map[string]interface{}{{"applied_seq": int64(2), "previous_seq": nil, "applied_hash": "abc123",
-			"previous_hash": nil, "applied_by": "u-1"}}, nil).Once()
+			"previous_hash": nil, "applied_by": "u-1", "held_values": `{"secrets":{}}`}}, nil).Once()
 	s.dbClientMock.On("QueryContext", mock.Anything, queryGetAppliedVersion, "gw-2", storeDeploymentID).
 		Return([]map[string]interface{}{}, nil).Once()
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryUpsertAppliedVersion, "gw-1", 3, 2, "u-2",
-		storeDeploymentID, 3, "abc123", storeDeploymentID, 2).Return(int64(1), nil).Once()
+		storeDeploymentID, 3, "abc123", storeDeploymentID, 2, "tok", `{"variables":{}}`).
+		Return(int64(1), nil).Once()
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryUpsertAppliedVersion, "gw-1", 1, nil, nil,
-		storeDeploymentID, 1, "def456", storeDeploymentID, 0).Return(int64(1), nil).Once()
+		storeDeploymentID, 1, "def456", storeDeploymentID, 0, "tok", nil).Return(int64(1), nil).Once()
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryDeleteAppliedVersion, "gw-1",
 		storeDeploymentID).Return(int64(1), nil).Once()
 
@@ -170,14 +171,16 @@ func (s *VersionStoreTestSuite) TestAppliedStateIsReadWrittenAndForgotten() {
 	s.Zero(held.PreviousVersion, "a NULL previous version reads as none")
 	s.Empty(held.Previous)
 	s.Equal(&Actor{ID: "u-1"}, held.AppliedBy, "the name was stored")
+	s.Equal(`{"secrets":{}}`, held.heldValues, "the values held at the apply were not read")
 
 	nothing, err := s.store.GetApplied(scoped(), "gw-2")
 	s.Require().NoError(err)
 	s.Nil(nothing)
 
-	s.Require().NoError(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, &Actor{ID: "u-2"}),
+	s.Require().NoError(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, &Actor{ID: "u-2"},
+		`{"variables":{}}`, "tok"),
 		"an actor is stored by id")
-	s.Require().NoError(s.store.SetApplied(scoped(), "gw-1", 1, "def456", 0, 0, nil),
+	s.Require().NoError(s.store.SetApplied(scoped(), "gw-1", 1, "def456", 0, 0, nil, "", "tok"),
 		"no previous and no actor are stored as NULL")
 	s.Require().NoError(s.store.DeleteApplied(scoped(), "gw-1"))
 }
@@ -186,7 +189,7 @@ func (s *VersionStoreTestSuite) TestAppliedStateIsReadWrittenAndForgotten() {
 // gateway finished first, and the store says which.
 func (s *VersionStoreTestSuite) TestAnUnrecordedApplySaysWhy() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryUpsertAppliedVersion, "gw-1", 3, 2, nil,
-		storeDeploymentID, 3, "abc123", storeDeploymentID, 2).Return(int64(0), nil).Times(3)
+		storeDeploymentID, 3, "abc123", storeDeploymentID, 2, "tok", nil).Return(int64(0), nil).Times(3)
 	s.dbClientMock.On("QueryContext", mock.Anything, queryGetVersion, 3, storeDeploymentID).
 		Return([]map[string]interface{}{}, nil).Once()
 	s.dbClientMock.On("QueryContext", mock.Anything, queryGetVersion, 3, storeDeploymentID).
@@ -194,9 +197,9 @@ func (s *VersionStoreTestSuite) TestAnUnrecordedApplySaysWhy() {
 	s.dbClientMock.On("QueryContext", mock.Anything, queryGetVersion, 3, storeDeploymentID).
 		Return([]map[string]interface{}{{"seq": int64(3), "hash": "fff999", "resources": "", "note": ""}}, nil).Once()
 
-	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, nil), errVersionRemoved)
-	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, nil), errAppliedChanged)
-	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, nil), errVersionRemoved,
+	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, nil, "", "tok"), errVersionRemoved)
+	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, nil, "", "tok"), errAppliedChanged)
+	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2, nil, "", "tok"), errVersionRemoved,
 		"a version replaced as current while it was applied was recorded")
 }
 
@@ -265,6 +268,12 @@ func (s *VersionStoreTestSuite) TestEveryCallReportsAFailure() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return(int64(0), failure).Maybe()
+	s.dbClientMock.On("ExecuteContext", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything).Return(int64(0), failure).Maybe()
+	s.dbClientMock.On("ExecuteContext", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything).Return(int64(0), failure).Maybe()
 	s.dbClientMock.On("ExecuteContext", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(int64(0), failure).Maybe()
 	s.dbClientMock.On("ExecuteContext", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
@@ -290,7 +299,7 @@ func (s *VersionStoreTestSuite) TestEveryCallReportsAFailure() {
 	_, err = s.store.GetApplied(ctx, "gw-1")
 	s.Error(err)
 	s.Error(s.store.Prune(ctx, 1))
-	s.Error(s.store.SetApplied(ctx, "gw-1", 1, "def456", 0, 0, nil))
+	s.Error(s.store.SetApplied(ctx, "gw-1", 1, "def456", 0, 0, nil, "", "tok"))
 	s.Error(s.store.DeleteApplied(ctx, "gw-1"))
 	_, err = s.store.GetExcluded(ctx, "gw-1")
 	s.Error(err)

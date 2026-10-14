@@ -97,6 +97,9 @@ type AppliedVersion struct {
 	AppliedAt       *time.Time `json:"appliedAt,omitempty"`
 	// AppliedBy is the user who applied the version, or reverted the gateway to it.
 	AppliedBy *Actor `json:"appliedBy,omitempty"`
+	// heldValues is when each value the version refers to was last set, as the gateway's store said
+	// when it was applied, for the next apply to tell which were set again since.
+	heldValues string
 }
 
 // ApplyRequest is the body of an apply. Version is a version's hash, a prefix of at least seven of its
@@ -116,11 +119,16 @@ type ApplyRequest struct {
 	DryRun    bool      `json:"dryRun,omitempty"`
 	Selection *[]string `json:"selection,omitempty"`
 	Skip      []string  `json:"skip,omitempty"`
+	// ConfirmRemovals lets the apply go ahead when it would remove more resources than the
+	// deployment's threshold; without it such an apply is refused, so a rollback that would empty
+	// a gateway is seen before it is sent.
+	ConfirmRemovals bool `json:"confirmRemovals,omitempty"`
 }
 
 // RevertRequest is the body of a revert.
 type RevertRequest struct {
-	DryRun bool `json:"dryRun,omitempty"`
+	DryRun          bool `json:"dryRun,omitempty"`
+	ConfirmRemovals bool `json:"confirmRemovals,omitempty"`
 }
 
 // ChangeKind says how a resource differs between what a gateway holds and what is applied to it.
@@ -193,6 +201,28 @@ type ApplyResult struct {
 	// Missing lists the values the version refers to that the gateway does not hold. Only a dry run
 	// reports them: an apply that would leave one unset is refused instead.
 	Missing *MissingValues `json:"missing,omitempty"`
+	// Changed lists the values the version refers to that were set on the gateway after the version
+	// it holds was applied, so a value that changed outside any version is seen before it takes
+	// effect. Names only, never values.
+	Changed *ChangedValues `json:"changed,omitempty"`
+	// Queued reports that the latest version was not applied now, because another apply to the
+	// gateway runs, and will be applied once that finishes. QueuedVersion is the version it will be.
+	Queued        bool   `json:"queued,omitempty"`
+	QueuedVersion string `json:"queuedVersion,omitempty"`
+}
+
+// ChangedValues are the variables and secrets a version refers to whose values were set on a gateway
+// after the version it holds was applied.
+type ChangedValues struct {
+	Variables []string `json:"variables,omitempty"`
+	Secrets   []string `json:"secrets,omitempty"`
+	// References says where the version refers to each changed value.
+	References []ValueReference `json:"references,omitempty"`
+}
+
+// empty reports whether nothing changed.
+func (c ChangedValues) empty() bool {
+	return len(c.Variables) == 0 && len(c.Secrets) == 0
 }
 
 // MissingValues are the variables and secrets a version refers to that a gateway does not hold.
