@@ -279,7 +279,9 @@ func (ts *GatewayVersionsTestSuite) TestAnAppliedResourceServerShowsWithItsResou
 	// Each gateway holds its own identifier, so it stands as the placeholder the export wrote.
 	ts.Regexp(`^\{\{\.RESOURCE_SERVER_[A-Z0-9_]+_IDENTIFIER\}\}$`, server.Resource["identifier"])
 
-	builtDocsID, builtDraftsID := rsID+"_docs", rsID+"_drafts"
+	delimiter, _ := liveServer["delimiter"].(string)
+	builtDocsID := rsID + delimiter + "docs"
+	builtDraftsID := builtDocsID + delimiter + "drafts"
 	ts.ElementsMatch([]string{"resources", "actions",
 		"resources/" + builtDocsID, "resources/" + builtDocsID + "/resources", "resources/" + builtDocsID + "/actions",
 		"resources/" + builtDraftsID, "resources/" + builtDraftsID + "/resources",
@@ -312,7 +314,7 @@ func (ts *GatewayVersionsTestSuite) TestAnAppliedResourceServerShowsWithItsResou
 	liveEdit := ts.list(ts.read(rsBase + "/resources/" + draftsID + "/actions")["actions"])[0]
 	viewedEdits := ts.list(server.Parts["resources/"+builtDraftsID+"/actions"]["actions"])
 	ts.Require().Len(viewedEdits, 1)
-	ts.Equal(builtDraftsID+"_edit", viewedEdits[0]["id"])
+	ts.Equal(builtDraftsID+delimiter+"edit", viewedEdits[0]["id"])
 	for _, field := range []string{"name", "handle", "permission"} {
 		ts.Equal(liveEdit[field], viewedEdits[0][field], field)
 	}
