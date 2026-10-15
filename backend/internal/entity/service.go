@@ -41,7 +41,8 @@ type EntityServiceInterface interface {
 
 	// Identification
 	IdentifyEntity(ctx context.Context, filters map[string]interface{}) (*string, error)
-	ResolveLinkedAccount(ctx context.Context, idpID, sub string) (*string, error)
+	ResolveLinkedAccounts(ctx context.Context, idpID, sub string) ([]string, error)
+	GetLinkedEntities(ctx context.Context, idpID, sub string) ([]providers.Entity, error)
 	LinkAccount(ctx context.Context, entityID, idpID, sub string) error
 	SearchEntities(ctx context.Context, filters map[string]interface{}) ([]providers.Entity, error)
 
@@ -184,11 +185,6 @@ func (s *entityService) CreateEntity(ctx context.Context, entity *providers.Enti
 
 	var created providers.Entity
 	err = s.transactioner.Transact(ctx, func(txCtx context.Context) error {
-		if link != nil {
-			if err := s.ensureLinkedSubjectUnclaimed(txCtx, entity.ID, link.IdpID, link.Sub); err != nil {
-				return err
-			}
-		}
 		if err := s.store.CreateEntity(txCtx, *entity, schemaCredsJSON, hashedSysCreds); err != nil {
 			return err
 		}
@@ -418,16 +414,32 @@ func (s *entityService) IdentifyEntity(ctx context.Context,
 	return id, nil
 }
 
-// ResolveLinkedAccount resolves the entity linked to an identity provider subject.
-func (s *entityService) ResolveLinkedAccount(ctx context.Context, idpID, sub string) (*string, error) {
+// ResolveLinkedAccounts returns the entities linked to an identity provider subject. A subject no
+// entity is linked to returns an empty list.
+func (s *entityService) ResolveLinkedAccounts(ctx context.Context, idpID, sub string) ([]string, error) {
 	if idpID == "" || sub == "" {
 		return nil, ErrBadAttributesInRequest
 	}
-	return s.store.ResolveLinkedAccount(ctx, idpID, sub)
+	return s.store.ResolveLinkedAccounts(ctx, idpID, sub)
 }
 
-// LinkAccount records that an entity authenticates as the given subject at the given connection,
-// and refuses a pair another entity holds with ErrLinkedAccountConflict.
+// GetLinkedEntities returns the entities linked to an identity provider subject, with their OUHandle
+// populated for disambiguation consumers.
+func (s *entityService) GetLinkedEntities(ctx context.Context, idpID, sub string) ([]providers.Entity, error) {
+	entityIDs, err := s.ResolveLinkedAccounts(ctx, idpID, sub)
+	if err != nil {
+		return nil, err
+	}
+	entities, err := s.store.GetEntitiesByIDs(ctx, entityIDs)
+	if err != nil {
+		return nil, err
+	}
+	s.populateOUHandles(ctx, entities)
+	return entities, nil
+}
+
+// LinkAccount records that an entity authenticates as the given subject at the given connection.
+// Other entities may hold the same subject.
 func (s *entityService) LinkAccount(ctx context.Context, entityID, idpID, sub string) error {
 	if entityID == "" || idpID == "" || sub == "" {
 		return ErrBadAttributesInRequest
@@ -438,10 +450,6 @@ func (s *entityService) LinkAccount(ctx context.Context, entityID, idpID, sub st
 	return s.transactioner.Transact(ctx, func(txCtx context.Context) error {
 		current, err := s.store.LockEntity(txCtx, entityID)
 		if err != nil {
-			return err
-		}
-
-		if err := s.ensureLinkedSubjectUnclaimed(txCtx, entityID, idpID, sub); err != nil {
 			return err
 		}
 
@@ -983,21 +991,6 @@ func withLinkedSubject(systemAttributes json.RawMessage, idpID, sub string) (jso
 		return nil, fmt.Errorf("failed to marshal system attributes: %w", err)
 	}
 	return merged, nil
-}
-
-// ensureLinkedSubjectUnclaimed returns ErrLinkedAccountConflict when an entity other than entityID
-// holds the subject at the connection.
-func (s *entityService) ensureLinkedSubjectUnclaimed(ctx context.Context, entityID, idpID, sub string) error {
-	holder, err := s.store.ResolveLinkedAccount(ctx, idpID, sub)
-	switch {
-	case errors.Is(err, ErrAmbiguousEntity):
-		return ErrLinkedAccountConflict
-	case err != nil && !errors.Is(err, ErrEntityNotFound):
-		return err
-	case holder != nil && *holder != entityID:
-		return ErrLinkedAccountConflict
-	}
-	return nil
 }
 
 // hasLinkedSubject reports whether a subject is already recorded for a connection.

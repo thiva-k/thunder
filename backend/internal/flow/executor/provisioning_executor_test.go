@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/entitytype/model"
@@ -4850,9 +4851,24 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_ProvisionsAndL
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
+// Several users hold the link and no Resolve User node picked one. Provisioning would add another
+// holder on every sign-in, so the node fails instead.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_AmbiguousAuthenticationDoesNotProvision() {
+	ctx := suite.federatedCtx(false)
+	ctx.RuntimeData[common.RuntimeKeyEntityState] = entityStateAmbiguous
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), ErrAmbiguousEntityIdentity.Code, resp.Error.Code)
+	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser", mock.Anything, mock.Anything)
+}
+
 // linkedRegistrationCtx builds a registration context for a returning federated identity whose link
-// is already recorded from the first registration, with a required attribute the claims lack.
-func (suite *ProvisioningExecutorTestSuite) linkedRegistrationCtx() *providers.NodeContext {
+// is already recorded from the first registration, with a required attribute the claims lack. The
+// link is held by the given users, or by one user in the target OU when none are given.
+func (suite *ProvisioningExecutorTestSuite) linkedRegistrationCtx(holders ...*providers.Entity) *providers.NodeContext {
 	ctx := suite.federatedCtx(false)
 	ctx.FlowType = providers.FlowTypeRegistration
 	ctx.NodeInputs = []providers.Input{{Identifier: "nickname", Type: "string", Required: true}}
@@ -4862,6 +4878,11 @@ func (suite *ProvisioningExecutorTestSuite) linkedRegistrationCtx() *providers.N
 		Return(newAuthenticatedAuthUser(),
 			&providers.EntityReference{EntityID: testExistingUser123ID, OUID: testOUID},
 			(*tidcommon.ServiceError)(nil)).Maybe()
+	if len(holders) == 0 {
+		holders = []*providers.Entity{{ID: testExistingUser123ID, OUID: testOUID}}
+	}
+	suite.mockEntityProvider.On("GetLinkedEntities", testFederatedIdpID, testFederatedSub).
+		Return(holders, (*entityprovider.EntityProviderError)(nil)).Maybe()
 	return ctx
 }
 
@@ -4894,21 +4915,64 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationCo
 	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser")
 }
 
-// A link is unique across OUs, so cross-OU provisioning into an OU other than the linked user's could
-// only fail at the create. The node fails before prompting for the missing attribute.
-func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_CrossOURegistrationWithLinkedUserFails() {
-	ctx := suite.linkedRegistrationCtx()
-	ctx.NodeProperties = map[string]interface{}{common.NodePropertyAllowCrossOUProvisioning: true}
-	suite.mockEntityProvider.On("GetEntity", testExistingUser123ID).
-		Return(&providers.Entity{ID: testExistingUser123ID, OUID: "ou-source"}, nil)
+// Without cross-OU provisioning, a user holding the link in another OU still counts as the existing
+// user, as an attribute match in another OU does.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationCountsHolderInOtherOU() {
+	ctx := suite.linkedRegistrationCtx(&providers.Entity{ID: testExistingUser123ID, OUID: "ou-source"})
 
 	resp, err := suite.executor.Execute(ctx)
 
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), providers.ExecFailure, resp.Status)
-	assert.Equal(suite.T(), ErrFederatedIdentityAlreadyLinked.Code, resp.Error.Code)
-	assert.Empty(suite.T(), resp.Inputs)
+	assert.Equal(suite.T(), ErrEntityAlreadyExists.Code, resp.Error.Code)
 	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser")
+}
+
+// With cross-OU provisioning, a user holding the link in another OU does not count, so a new user is
+// created in the target OU with the link. The user the AuthUser resolves to is in another OU, so the
+// existing-user rules let the registration go ahead.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_CrossOURegistrationCreatesSecondHolder() {
+	ctx := suite.linkedRegistrationCtx(&providers.Entity{ID: testExistingUser123ID, OUID: "ou-source"})
+	ctx.NodeProperties = map[string]interface{}{common.NodePropertyAllowCrossOUProvisioning: true}
+	ctx.NodeInputs = []providers.Input{}
+	suite.expectSchemaForProvisioning()
+	suite.mockEntityProvider.On("GetEntity", testExistingUser123ID).
+		Return(&providers.Entity{ID: testExistingUser123ID, OUID: "ou-source"}, nil).Once()
+	suite.mockUserMgtProvider.On("CreateUser", mock.Anything,
+		mock.MatchedBy(func(u *providers.User) bool {
+			return u.OUID == testOUID &&
+				*u.LinkedAccount == providers.LinkedAccount{IdpID: testFederatedIdpID, Sub: testFederatedSub}
+		})).Return(&providers.User{ID: testNewUserID, OUID: testOUID, Type: testUserType},
+		(*tidcommon.ServiceError)(nil)).Once()
+	suite.mockAuthnProvider.On("AuthenticateUser", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything).
+		Return(newAuthenticatedAuthUser(), providers.AuthenticatedClaims{}, (*tidcommon.ServiceError)(nil)).Once()
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	suite.mockUserMgtProvider.AssertExpectations(suite.T())
+}
+
+// A user an earlier node resolved, for example by a verified OTP, is the existing user even when
+// nobody holds the federated identity's link yet, so registration does not create a second one.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationHonorsResolvedUser() {
+	ctx := suite.linkedRegistrationCtx()
+	suite.mockEntityProvider.ExpectedCalls = nil
+	suite.mockEntityProvider.On("GetLinkedEntities", testFederatedIdpID, testFederatedSub).
+		Return([]*providers.Entity{}, (*entityprovider.EntityProviderError)(nil)).Once()
+	ctx.NodeInputs = []providers.Input{}
+	ctx.RuntimeData[userAttributeUserID] = testExistingUser123ID
+	suite.expectSchemaForProvisioning()
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotEqual(suite.T(), providers.ExecComplete, resp.Status)
+	require.NotNil(suite.T(), resp.Error)
+	assert.Equal(suite.T(), ErrEntityAlreadyExists.Code, resp.Error.Code)
+	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser", mock.Anything, mock.Anything)
 }
 
 // With cross-OU provisioning on, a linked user already in the target OU still follows the
@@ -4925,13 +4989,13 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_CrossOURegistr
 	for _, tc := range cases {
 		suite.Run(tc.name, func() {
 			suite.SetupTest()
-			ctx := suite.linkedRegistrationCtx()
+			ctx := suite.linkedRegistrationCtx(
+				&providers.Entity{ID: testExistingUser123ID, OUID: testOUID},
+				&providers.Entity{ID: "holder-elsewhere", OUID: "ou-source"})
 			ctx.NodeProperties = map[string]interface{}{common.NodePropertyAllowCrossOUProvisioning: true}
 			if tc.allowExist {
 				ctx.RuntimeData[common.RuntimeKeyAllowRegistrationWithExistingUser] = dataValueTrue
 			}
-			suite.mockEntityProvider.On("GetEntity", testExistingUser123ID).
-				Return(&providers.Entity{ID: testExistingUser123ID, OUID: testOUID}, nil)
 
 			resp, err := suite.executor.Execute(ctx)
 
@@ -4944,6 +5008,91 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_CrossOURegistr
 			suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser")
 		})
 	}
+}
+
+// Several users holding the link where the registration lands leaves no single user to complete as.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationWithSeveralHoldersFails() {
+	ctx := suite.linkedRegistrationCtx(
+		&providers.Entity{ID: testExistingUser123ID, OUID: testOUID},
+		&providers.Entity{ID: "second-holder", OUID: testOUID})
+	ctx.RuntimeData[common.RuntimeKeyAllowRegistrationWithExistingUser] = dataValueTrue
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), ErrEntityAlreadyExists.Code, resp.Error.Code)
+	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser")
+}
+
+// When several users hold the link, the AuthUser names none of them, so completing as the one in the
+// target OU authenticates it.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_AmbiguousRegistrationBindsTargetOUHolder() {
+	ctx := suite.linkedRegistrationCtx(
+		&providers.Entity{ID: testExistingUser123ID, OUID: testOUID},
+		&providers.Entity{ID: "holder-elsewhere", OUID: "ou-source"})
+	ctx.NodeProperties = map[string]interface{}{common.NodePropertyAllowCrossOUProvisioning: true}
+	ctx.RuntimeData[common.RuntimeKeyAllowRegistrationWithExistingUser] = dataValueTrue
+	ctx.RuntimeData[common.RuntimeKeyEntityState] = entityStateAmbiguous
+	suite.mockAuthnProvider.On("AuthenticateUser", mock.Anything, mock.Anything,
+		map[string]interface{}{authnprovidercm.CredentialTypeProvisionedEntityID: testExistingUser123ID},
+		mock.Anything, mock.Anything, mock.Anything).
+		Return(newAuthenticatedAuthUser(), providers.AuthenticatedClaims{}, (*tidcommon.ServiceError)(nil)).Once()
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	suite.mockAuthnProvider.AssertExpectations(suite.T())
+}
+
+// Accepting an invitation settles the link's holders as registration does, so an invitee who already
+// holds the link in the target OU completes as that user instead of getting a second one there.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_OnboardingBindsTargetOUHolder() {
+	ctx := suite.linkedRegistrationCtx(
+		&providers.Entity{ID: testExistingUser123ID, OUID: testOUID},
+		&providers.Entity{ID: "holder-elsewhere", OUID: "ou-source"})
+	ctx.FlowType = providers.FlowTypeUserOnboarding
+	ctx.NodeProperties = map[string]interface{}{common.NodePropertyAllowCrossOUProvisioning: true}
+	ctx.RuntimeData[common.RuntimeKeyAllowRegistrationWithExistingUser] = dataValueTrue
+	ctx.RuntimeData[common.RuntimeKeyEntityState] = entityStateAmbiguous
+	suite.mockAuthnProvider.On("AuthenticateUser", mock.Anything, mock.Anything,
+		map[string]interface{}{authnprovidercm.CredentialTypeProvisionedEntityID: testExistingUser123ID},
+		mock.Anything, mock.Anything, mock.Anything).
+		Return(newAuthenticatedAuthUser(), providers.AuthenticatedClaims{}, (*tidcommon.ServiceError)(nil)).Once()
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser")
+	suite.mockAuthnProvider.AssertExpectations(suite.T())
+}
+
+// An entity provider that cannot list the link's holders leaves the authentication provider's
+// resolution as the only answer.
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationFallsBackWithoutHolderListing() {
+	ctx := suite.linkedRegistrationCtx()
+	suite.mockEntityProvider.ExpectedCalls = nil
+	suite.mockEntityProvider.On("GetLinkedEntities", testFederatedIdpID, testFederatedSub).
+		Return(nil, entityprovider.NewEntityProviderError(entityprovider.ErrorCodeNotImplemented, "", ""))
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), providers.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), ErrEntityAlreadyExists.Code, resp.Error.Code)
+}
+
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationHolderListingFails() {
+	ctx := suite.linkedRegistrationCtx()
+	suite.mockEntityProvider.ExpectedCalls = nil
+	suite.mockEntityProvider.On("GetLinkedEntities", testFederatedIdpID, testFederatedSub).
+		Return(nil, entityprovider.NewEntityProviderError(entityprovider.ErrorCodeSystemError, "", ""))
+
+	_, err := suite.executor.Execute(ctx)
+
+	assert.Error(suite.T(), err)
 }
 
 // A verification that failed after a candidate signed in leaves that account signed in and the
@@ -4959,21 +5108,6 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_RegistrationWi
 	assert.Equal(suite.T(), providers.ExecFailure, resp.Status)
 	assert.Equal(suite.T(), ErrUnverifiedLinkingCandidate.Code, resp.Error.Code)
 	suite.mockUserMgtProvider.AssertNotCalled(suite.T(), "CreateUser")
-}
-
-// A link another user already holds fails the create, so no user is left behind without its link.
-func (suite *ProvisioningExecutorTestSuite) TestExecute_Federated_LinkConflictFailsNode() {
-	suite.expectSchemaForProvisioning()
-	suite.mockUserMgtProvider.On("CreateUser", mock.Anything, mock.Anything).
-		Return((*providers.User)(nil), &user.ErrorLinkedAccountConflict)
-
-	resp, err := suite.executor.Execute(suite.federatedCtx(false))
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), providers.ExecFailure, resp.Status)
-	assert.Equal(suite.T(), ErrFederatedIdentityAlreadyLinked.Code, resp.Error.Code)
-	suite.mockAuthnProvider.AssertNotCalled(suite.T(), "AuthenticateUser",
-		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 // OpenID4VP marks users eligible for provisioning but sets no connection id, so it must keep
