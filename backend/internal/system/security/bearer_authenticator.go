@@ -42,13 +42,7 @@ func (a *BearerAuthenticator) Authenticate(ctx context.Context, token string) (*
 
 	// Revoked tokens are rejected as invalid, not disclosed as specifically revoked — same as the
 	// REST gate's securityService.Process.
-	if err := a.revocationEnforcer.EnsureNotRevoked(ctx, RevocationIdentity{
-		JTI:           securityCtx.revocationID,
-		TokenFamilyID: securityCtx.tokenFamilyID,
-		Subject:       securityCtx.revocationSubject,
-		AppKey:        securityCtx.revocationAppKey,
-		EstablishedAt: securityCtx.establishedAt,
-	}); err != nil {
+	if err := a.revocationEnforcer.EnsureNotRevoked(ctx, securityCtx.revocationIdentity()); err != nil {
 		return nil, errInvalidToken
 	}
 

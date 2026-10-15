@@ -147,6 +147,26 @@ const translations = {
     'errors.FET-1087': 'The application could not be deleted. Please try again.',
     'errors.FET-1088': 'This application authenticates without a client secret, so there is none to regenerate.',
     'errors.FET-1089': 'The client secret could not be regenerated. Please try again.',
+    'errors.FET-1098': 'This role assignment cannot be removed in its current state.',
+    'errors.FET-1099': 'The role assignment could not be removed. Please try again.',
+    'errors.FET-1100': 'This role cannot be deleted in its current state.',
+    'errors.FET-1101': 'The role could not be deleted. Please try again.',
+    'errors.FET-1102': 'The permissions of this role cannot be changed in its current state.',
+    'errors.FET-1103': 'The permissions of this role could not be changed. Please try again.',
+    'errors.FET-1104': 'This group cannot be deleted in its current state.',
+    'errors.FET-1105': 'The group could not be deleted. Please try again.',
+    'errors.FET-1106': 'This member cannot be removed from the group in its current state.',
+    'errors.FET-1107': 'The member could not be removed from the group. Please try again.',
+    'errors.FET-1108': 'This action cannot be deleted in its current state.',
+    'errors.FET-1109': 'The action could not be deleted. Please try again.',
+    'errors.FET-1110': 'The permissions supplied for this role are not valid. Refresh the page and try again.',
+    'errors.FET-1111': 'A required value for this change is missing. Refresh the page and try again.',
+    'errors.RVS-1001':
+      'This change would revoke access through {{entries}} entries, more than the {{max}} allowed for one change.',
+
+    // Shared, since role changes expand a group's members and raise it too.
+    'errors.GRP-1017':
+      "This group's members are nested more than {{max}} levels deep, so the change cannot be applied.",
 
     // External links
     learnMore: 'Learn more',
@@ -1799,6 +1819,8 @@ const translations = {
     'errors.ROL-1012': 'One or more selected permissions are no longer valid. Refresh the page and try again.',
     'errors.ROL-1013': 'This role is managed declaratively and cannot be edited or deleted.',
     'errors.ROL-1015': 'New roles cannot be created while the server is running in declarative-only mode.',
+    'errors.ROL-1019': 'Select the assignee to remove from this role.',
+    'errors.ROL-1020': 'This assignee no longer holds the role. Refresh and try again.',
   },
 
   // ============================================================================
@@ -3893,6 +3915,46 @@ const translations = {
       'Applies to every grant the subject holds. The executors that follow act on this setting, so it cannot be changed per request.',
     'core.executions.preDelete.description':
       'Validate the target of an administrative operation and plan the revocation carried out by the executors that follow.',
+
+    // Criteria revocation executor modes
+    'core.executions.criteriaRevocation.mode.revoke': 'Revoke Tokens',
+    'core.executions.criteriaRevocation.mode.advanceCutoff': 'Advance Revocation Cutoff',
+    'core.executions.criteriaRevocation.mode.label': 'Mode',
+    'core.executions.criteriaRevocation.mode.placeholder': 'Select a mode',
+    'core.executions.criteriaRevocation.mode.hint':
+      'Revoke runs before the change. Advance Revocation Cutoff runs after the change commits, closing the window a token could be minted in. A node without a mode revokes.',
+    'core.executions.criteriaRevocation.description': 'Persist every token criterion from the trusted revocation plan.',
+
+    // Access change validator executor modes
+    'core.executions.accessChangeValidator.mode.roleAssignmentRemoval': 'Validate and Plan Assignment Removal',
+    'core.executions.accessChangeValidator.mode.roleDeletion': 'Validate and Plan Role Deletion',
+    'core.executions.accessChangeValidator.mode.rolePermissionRemoval': 'Validate and Plan Permission Change',
+    'core.executions.accessChangeValidator.mode.groupDeletion': 'Validate and Plan Group Deletion',
+    'core.executions.accessChangeValidator.mode.groupMembershipRemoval': 'Validate and Plan Membership Removal',
+    'core.executions.accessChangeValidator.mode.actionDeletion': 'Validate and Plan Action Deletion',
+    'core.executions.accessChangeValidator.mode.label': 'Mode',
+    'core.executions.accessChangeValidator.mode.placeholder': 'Select a mode',
+    'core.executions.accessChangeValidator.description':
+      'Validate an access change and plan the revocation of the scopes it takes away, carried out by the executors that follow.',
+
+    // Role executor modes
+    'core.executions.roleExecutor.mode.roleAssignmentRemoval': 'Remove Role Assignment',
+    'core.executions.roleExecutor.mode.roleDeletion': 'Delete Role',
+    'core.executions.roleExecutor.mode.rolePermissionRemoval': 'Change Role Permissions',
+    'core.executions.roleExecutor.mode.label': 'Mode',
+    'core.executions.roleExecutor.mode.placeholder': 'Select a mode',
+    'core.executions.roleExecutor.mode.hint':
+      'Must match the mode of the access change validator earlier in the flow. A mismatched pair is refused at runtime.',
+    'core.executions.roleExecutor.description': 'Apply the role change named by the trusted revocation plan.',
+
+    // Group executor modes
+    'core.executions.groupExecutor.mode.groupDeletion': 'Delete Group',
+    'core.executions.groupExecutor.mode.groupMembershipRemoval': 'Remove Group Member',
+    'core.executions.groupExecutor.mode.label': 'Mode',
+    'core.executions.groupExecutor.mode.placeholder': 'Select a mode',
+    'core.executions.groupExecutor.mode.hint':
+      'Must match the mode of the access change validator earlier in the flow. A mismatched pair is refused at runtime.',
+    'core.executions.groupExecutor.description': 'Apply the group change named by the trusted revocation plan.',
 
     // Passkey executor modes
     'core.executions.passkey.mode.challenge': 'Challenge',

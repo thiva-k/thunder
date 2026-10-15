@@ -51,6 +51,8 @@ var catalog = map[string]providers.ExecutorMeta{
 	ExecutorNameCredentialSetter: {},
 	ExecutorNameCredentialsAuth:  {},
 	ExecutorNameCriteriaRevocation: {
+		DefaultMode:        ExecutorModeRevoke,
+		SupportedModes:     []string{ExecutorModeAdvanceCutoff, ExecutorModeRevoke},
 		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION"},
 	},
 	ExecutorNameEmailExecutor: {
@@ -216,6 +218,30 @@ var catalog = map[string]providers.ExecutorMeta{
 	},
 	ExecutorNameOwnerResolver: {
 		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION", "REGISTRATION"},
+	},
+	ExecutorNameAccessChangeValidator: {
+		SupportedModes: []string{
+			ExecutorModeActionDeletion,
+			ExecutorModeGroupDeletion,
+			ExecutorModeGroupMembershipRemoval,
+			ExecutorModeRoleAssignmentRemoval,
+			ExecutorModeRoleDeletion,
+			ExecutorModeRolePermissionRemoval,
+		},
+		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION"},
+	},
+	ExecutorNameRole: {
+		SupportedModes: []string{
+			ExecutorModeRoleAssignmentRemoval, ExecutorModeRoleDeletion, ExecutorModeRolePermissionRemoval,
+		},
+		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION"},
+	},
+	ExecutorNameGroup: {
+		SupportedModes:     []string{ExecutorModeGroupDeletion, ExecutorModeGroupMembershipRemoval},
+		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION"},
+	},
+	ExecutorNameActionDeletion: {
+		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION"},
 	},
 }
 

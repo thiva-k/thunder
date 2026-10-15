@@ -1,4 +1,4 @@
-# Copyright 2025 The ThunderID Authors
+# Copyright 2025-2026 The ThunderID Authors
 # SPDX-License-Identifier: Apache-2.0
 
 server:
@@ -265,6 +265,9 @@ oauth:
     max_iat_age: {{ .Values.configuration.oauth.clientAssertion.maxIatAge }}
   cimd:
     enabled: {{ .Values.configuration.oauth.cimd.enabled }}
+  revocation:
+    criteria:
+      max_entries_per_change: {{ .Values.configuration.oauth.revocation.criteria.maxEntriesPerChange }}
   send_server_errors_to_client: {{ .Values.configuration.oauth.sendServerErrorsToClient }}
   allowed_auth_methods:
   {{- range .Values.configuration.oauth.allowedAuthMethods }}
