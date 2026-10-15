@@ -27,7 +27,7 @@ const (
 	googleClientSecret   = "orgs_test_google_secret"
 	githubClientID       = "orgs_test_github_client"
 	githubClientSecret   = "orgs_test_github_secret"
-	customerTypeName     = "federated_customer"
+	customerTypeHandle   = "federated_customer"
 	loginFlowHandle      = "federated-orgs-login-test"
 	onboardingFlowHandle = "federated-orgs-user-onboarding-test"
 	googleAction         = "action_google"
@@ -73,7 +73,7 @@ var (
 				"executor": map[string]interface{}{
 					"name": "GoogleOIDCAuthExecutor",
 				},
-				"onSuccess": "check_state",
+				"onSuccess": "disambiguate",
 			},
 			{
 				"id":   "github_auth",
@@ -84,23 +84,6 @@ var (
 				},
 				"executor": map[string]interface{}{
 					"name": "GithubOAuthExecutor",
-				},
-				"onSuccess": "check_state",
-			},
-			{
-				"id":   "check_state",
-				"type": "TASK_EXECUTION",
-				"condition": map[string]interface{}{
-					"key":    "{{ctx(entityState)}}",
-					"value":  "not_exists",
-					"onSkip": "auth_assert",
-				},
-				"executor": map[string]interface{}{
-					"name": "IdentifyingExecutor",
-					"mode": "check_state",
-					"inputs": []map[string]interface{}{
-						{"identifier": "sub", "type": "TEXT_INPUT", "required": true},
-					},
 				},
 				"onSuccess": "disambiguate",
 			},
@@ -115,11 +98,8 @@ var (
 				"executor": map[string]interface{}{
 					"name": "IdentifyingExecutor",
 					"mode": "resolve",
-					"inputs": []map[string]interface{}{
-						{"identifier": "sub", "type": "TEXT_INPUT", "required": true},
-					},
 				},
-				"onSuccess":    "prompt_create_org",
+				"onSuccess":    "auth_assert",
 				"onIncomplete": "prompt_select_org",
 			},
 			{
@@ -132,22 +112,10 @@ var (
 						},
 						"action": map[string]interface{}{
 							"ref":      selectOUAction,
-							"nextNode": "resolve_federated_user",
+							"nextNode": "disambiguate",
 						},
 					},
 				},
-			},
-			{
-				"id":   "resolve_federated_user",
-				"type": "TASK_EXECUTION",
-				"executor": map[string]interface{}{
-					"name": "FederatedAuthResolverExecutor",
-					"inputs": []map[string]interface{}{
-						{"identifier": "ouHandle", "type": "TEXT_INPUT", "required": true},
-					},
-				},
-				"onSuccess":    "auth_assert",
-				"onIncomplete": "prompt_select_org",
 			},
 			{
 				"id":   "prompt_create_org",
@@ -311,7 +279,8 @@ var (
 				"id":   "send_invite_email",
 				"type": "TASK_EXECUTION",
 				"properties": map[string]interface{}{
-					"emailTemplate": "USER_INVITE",
+					"emailTemplate": "user-invite",
+					"senderId":      "",
 				},
 				"executor": map[string]interface{}{
 					"name": "EmailExecutor",
@@ -460,9 +429,9 @@ var (
 	}
 
 	customerType = testutils.UserType{
-		Name: customerTypeName,
+		Handle:      customerTypeHandle,
+		DisplayName: "Federated Customer",
 		Schema: map[string]interface{}{
-			"sub":            map[string]interface{}{"type": "string"},
 			"email":          map[string]interface{}{"type": "string"},
 			"email_verified": map[string]interface{}{"type": "string"},
 			"name":           map[string]interface{}{"type": "string"},
@@ -483,46 +452,37 @@ func githubUser(id int64, login, email, name string) federatedUser {
 		login: login}
 }
 
-// CloudTestSuite covers a project where every user signs in with Google or GitHub and can belong to
-// several organizations. An invited user gets one account per organization, and the login flow asks
-// which organization to continue with when the identity matches more than one account.
-type CloudTestSuite struct {
+// MultiOUSocialSignupTestSuite covers a project where every user signs in with Google or GitHub and
+// can belong to several organizations. An invited user gets one account per organization, and the
+// login flow asks which organization to continue with when the identity matches more than one account.
+type MultiOUSocialSignupTestSuite struct {
 	suite.Suite
-	mockGoogle      *testutils.MockGoogleOIDCServer
-	mockGithub      *testutils.MockGithubOAuthServer
-	mockSMTP        *testutils.MockSMTPServer
-	idpIDs          []string
-	userTypeID      string
-	loginFlowID     string
-	onboardingID    string
-	appID           string
-	createdOUIDs    []string
-	flowConfigSaved bool
+	mockGoogle   *testutils.MockGoogleOIDCServer
+	mockGithub   *testutils.MockGithubOAuthServer
+	mockSMTP     *testutils.MockSMTPServer
+	senderID     string
+	idpIDs       []string
+	userTypeID   string
+	loginFlowID  string
+	onboardingID string
+	appID        string
+	createdOUIDs []string
+	flowConfig   json.RawMessage
 }
 
-func TestCloudTestSuite(t *testing.T) {
-	suite.Run(t, new(CloudTestSuite))
+func TestMultiOUSocialSignupTestSuite(t *testing.T) {
+	suite.Run(t, new(MultiOUSocialSignupTestSuite))
 }
 
-func (ts *CloudTestSuite) SetupSuite() {
+func (ts *MultiOUSocialSignupTestSuite) SetupSuite() {
 	ts.mockSMTP = testutils.NewMockSMTPServer(0)
 	ts.Require().NoError(ts.mockSMTP.Start(), "Failed to start mock SMTP server")
 	time.Sleep(100 * time.Millisecond)
 
-	emailPatch := map[string]interface{}{
-		"email": map[string]interface{}{
-			"smtp": map[string]interface{}{
-				"host":                  "localhost",
-				"port":                  ts.mockSMTP.GetPort(),
-				"from_address":          "noreply@thunder.test",
-				"enable_start_tls":      false,
-				"enable_authentication": false,
-			},
-		},
-	}
-	ts.Require().NoError(testutils.PatchDeploymentConfig(emailPatch), "Failed to patch email config")
-	ts.Require().NoError(testutils.RestartServer(), "Failed to restart server with email config")
-	ts.Require().NoError(testutils.ObtainAdminAccessToken(), "Failed to obtain admin token after restart")
+	senderID, err := testutils.CreateSMTPEmailProvider("Organizations Test Email Provider", "localhost",
+		ts.mockSMTP.GetPort(), "noreply@thunderid.test")
+	ts.Require().NoError(err, "Failed to create the SMTP email provider")
+	ts.senderID = senderID
 
 	ts.startMockProviders()
 
@@ -554,14 +514,16 @@ func (ts *CloudTestSuite) SetupSuite() {
 
 	setNodeProperty(onboardingFlow, "google_signup", "idpId", googleIDPID)
 	setNodeProperty(onboardingFlow, "github_signup", "idpId", githubIDPID)
+	setNodeProperty(onboardingFlow, "send_invite_email", "senderId", ts.senderID)
 	onboardingID, err := testutils.CreateFlow(onboardingFlow)
 	ts.Require().NoError(err, "Failed to create user onboarding flow")
 	ts.onboardingID = onboardingID
 
-	ts.Require().NoError(setFlowServerConfig(map[string]interface{}{
+	flowConfig, err := testutils.MergeWritableServerConfig("flow", map[string]interface{}{
 		"userOnboardingFlow": map[string]interface{}{"defaultHandle": onboardingFlowHandle},
-	}), "Failed to set the default user onboarding flow")
-	ts.flowConfigSaved = true
+	})
+	ts.Require().NoError(err, "Failed to set the default user onboarding flow")
+	ts.flowConfig = flowConfig
 
 	appID, err := testutils.CreateApplication(testutils.Application{
 		OUID:                      rootOUID,
@@ -571,17 +533,17 @@ func (ts *CloudTestSuite) SetupSuite() {
 		ClientID:                  "orgs_test_client",
 		ClientSecret:              "orgs_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
-		AllowedUserTypes:          []string{customerTypeName},
+		AllowedUserTypes:          []string{customerTypeHandle},
 		AuthFlowID:                loginFlowID,
 		AssertionConfig: map[string]interface{}{
-			"userAttributes": []string{"userType", "ouId", "ouName", "ouHandle"},
+			"userAttributes": []string{"userTypeHandle", "ouId", "ouName", "ouHandle"},
 		},
 	})
 	ts.Require().NoError(err, "Failed to create application")
 	ts.appID = appID
 }
 
-func (ts *CloudTestSuite) startMockProviders() {
+func (ts *MultiOUSocialSignupTestSuite) startMockProviders() {
 	mockGoogle, err := testutils.NewMockGoogleOIDCServer(mockGooglePort, googleClientID, googleClientSecret)
 	ts.Require().NoError(err, "Failed to create mock Google server")
 	ts.mockGoogle = mockGoogle
@@ -617,7 +579,7 @@ func (ts *CloudTestSuite) startMockProviders() {
 	ts.Require().NoError(ts.mockGithub.Start(), "Failed to start mock GitHub server")
 }
 
-func (ts *CloudTestSuite) createIDP(idpType, clientID, clientSecret, scopes string) string {
+func (ts *MultiOUSocialSignupTestSuite) createIDP(idpType, clientID, clientSecret, scopes string) string {
 	idpID, err := testutils.CreateIDP(testutils.IDP{
 		Name:        "Organizations Test " + idpType + " IDP",
 		Description: "Connection users of every organization sign in with",
@@ -634,9 +596,9 @@ func (ts *CloudTestSuite) createIDP(idpType, clientID, clientSecret, scopes stri
 	return idpID
 }
 
-func (ts *CloudTestSuite) TearDownSuite() {
-	if ts.flowConfigSaved {
-		if err := setFlowServerConfig(map[string]interface{}{}); err != nil {
+func (ts *MultiOUSocialSignupTestSuite) TearDownSuite() {
+	if ts.flowConfig != nil {
+		if err := testutils.PutWritableServerConfig("flow", ts.flowConfig); err != nil {
 			ts.T().Logf("teardown: failed to reset the flow server config: %v", err)
 		}
 	}
@@ -655,7 +617,7 @@ func (ts *CloudTestSuite) TearDownSuite() {
 	}
 	for _, users := range usersByProvider {
 		for _, user := range []federatedUser{users.invited, users.newUser, users.selfSignedUp} {
-			accounts, err := findUsersBySub(user.sub)
+			accounts, err := findUsersByEmail(user.email)
 			if err != nil {
 				ts.T().Logf("teardown: failed to find users for %s: %v", user.email, err)
 				continue
@@ -698,28 +660,23 @@ func (ts *CloudTestSuite) TearDownSuite() {
 			ts.T().Logf("teardown: failed to stop mock SMTP server: %v", err)
 		}
 	}
-	if err := testutils.PatchDeploymentConfig(
-		map[string]interface{}{"email": map[string]interface{}{}}); err != nil {
-		ts.T().Logf("teardown: failed to restore email config: %v", err)
-	}
-	if err := testutils.RestartServer(); err != nil {
-		ts.T().Logf("teardown: server did not restart cleanly after config restore: %v", err)
-	}
-	if err := testutils.ObtainAdminAccessToken(); err != nil {
-		ts.T().Logf("teardown: failed to obtain admin token after restore: %v", err)
+	if ts.senderID != "" {
+		if err := testutils.DeleteNotificationSender(ts.senderID); err != nil {
+			ts.T().Logf("teardown: failed to delete the email provider: %v", err)
+		}
 	}
 }
 
 // TestUserInvitedToTwoOrganizationsSelectsOrganizationAtLogin invites one identity to two
 // organizations, so it holds an account in each, and expects the login flow to ask which one to use.
-func (ts *CloudTestSuite) TestUserInvitedToTwoOrganizationsSelectsOrganizationAtLogin() {
+func (ts *MultiOUSocialSignupTestSuite) TestUserInvitedToTwoOrganizationsSelectsOrganizationAtLogin() {
 	for _, provider := range providers {
 		user := usersByProvider[provider].invited
 		ts.Run(provider, func() {
 			ts.inviteUser(user, orgA)
 			ts.inviteUser(user, orgB)
 
-			accounts, err := findUsersBySub(user.sub)
+			accounts, err := findUsersByEmail(user.email)
 			ts.Require().NoError(err)
 			ts.Require().Len(accounts, 2, "Expected one account per organization")
 			ts.ElementsMatch([]string{orgA.ID, orgB.ID}, []string{accounts[0].OUID, accounts[1].OUID})
@@ -735,7 +692,7 @@ func (ts *CloudTestSuite) TestUserInvitedToTwoOrganizationsSelectsOrganizationAt
 
 // TestNewUserCreatesOrganizationAtFirstLogin signs in an identity with no account. The login flow
 // asks for an organization, creates it with the user, and signs the user straight in next time.
-func (ts *CloudTestSuite) TestNewUserCreatesOrganizationAtFirstLogin() {
+func (ts *MultiOUSocialSignupTestSuite) TestNewUserCreatesOrganizationAtFirstLogin() {
 	for _, provider := range providers {
 		user, newOrg := usersByProvider[provider].newUser, usersByProvider[provider].newUserOrg
 		ts.Run(provider, func() {
@@ -750,7 +707,7 @@ func (ts *CloudTestSuite) TestNewUserCreatesOrganizationAtFirstLogin() {
 // TestSelfSignedUpUserInvitedToExistingOrganizationSelectsOrganizationAtLogin signs up an identity
 // with its own organization, invites it to an existing one, and expects the login flow to ask which
 // one to use.
-func (ts *CloudTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelectsOrganizationAtLogin() {
+func (ts *MultiOUSocialSignupTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelectsOrganizationAtLogin() {
 	for _, provider := range providers {
 		user, ownOrg := usersByProvider[provider].selfSignedUp, usersByProvider[provider].selfSignedUpOrg
 		ts.Run(provider, func() {
@@ -758,7 +715,7 @@ func (ts *CloudTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelec
 
 			ts.inviteUser(user, orgA)
 
-			accounts, err := findUsersBySub(user.sub)
+			accounts, err := findUsersByEmail(user.email)
 			ts.Require().NoError(err)
 			ts.Require().Len(accounts, 2, "Expected one account per organization")
 
@@ -774,11 +731,11 @@ func (ts *CloudTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelec
 // inviteUser runs the user onboarding flow for an organization: the admin enters the invitee's
 // email, the invitation is sent by email, and the invitee accepts it by signing up with their
 // provider.
-func (ts *CloudTestSuite) inviteUser(user federatedUser, org testutils.OrganizationUnit) {
+func (ts *MultiOUSocialSignupTestSuite) inviteUser(user federatedUser, org testutils.OrganizationUnit) {
 	ts.mockSMTP.ClearEmails()
 
 	step, err := initiateUserOnboardingFlow(map[string]string{
-		"userType": customerTypeName,
+		"userType": customerTypeHandle,
 		"ouId":     org.ID,
 	})
 	ts.Require().NoError(err, "Failed to initiate user onboarding flow")
@@ -807,7 +764,8 @@ func (ts *CloudTestSuite) inviteUser(user federatedUser, org testutils.Organizat
 
 // signUpWithNewOrganization signs in an identity with no account, creates its organization and
 // returns the provisioned user's ID.
-func (ts *CloudTestSuite) signUpWithNewOrganization(user federatedUser, org *testutils.OrganizationUnit) string {
+func (ts *MultiOUSocialSignupTestSuite) signUpWithNewOrganization(user federatedUser,
+	org *testutils.OrganizationUnit) string {
 	step := ts.signIn(user)
 	ts.Require().Equal("INCOMPLETE", step.FlowStatus, "Expected the flow to ask for an organization")
 	ts.Require().True(common.HasInput(step.Data.Inputs, "ouName"), "Expected ouName input")
@@ -824,7 +782,7 @@ func (ts *CloudTestSuite) signUpWithNewOrganization(user federatedUser, org *tes
 	ts.createdOUIDs = append([]string{claims.OUID}, ts.createdOUIDs...)
 	ts.requireSignedInTo(step, *org, "")
 
-	accounts, err := findUsersBySub(user.sub)
+	accounts, err := findUsersByEmail(user.email)
 	ts.Require().NoError(err)
 	ts.Require().Len(accounts, 1, "Expected one account after sign up")
 	ts.Require().Equal(org.ID, accounts[0].OUID, "Expected the account in the new organization")
@@ -834,7 +792,7 @@ func (ts *CloudTestSuite) signUpWithNewOrganization(user federatedUser, org *tes
 }
 
 // signIn starts the login flow, picks the user's provider and completes the sign-in there.
-func (ts *CloudTestSuite) signIn(user federatedUser) *common.FlowStep {
+func (ts *MultiOUSocialSignupTestSuite) signIn(user federatedUser) *common.FlowStep {
 	step, err := common.InitiateAuthenticationFlow(ts.appID, false, nil, "")
 	ts.Require().NoError(err, "Failed to initiate login flow")
 
@@ -842,7 +800,7 @@ func (ts *CloudTestSuite) signIn(user federatedUser) *common.FlowStep {
 }
 
 // chooseProvider picks the user's provider on a sign-in method prompt offering Google and GitHub.
-func (ts *CloudTestSuite) chooseProvider(step *common.FlowStep, user federatedUser) *common.FlowStep {
+func (ts *MultiOUSocialSignupTestSuite) chooseProvider(step *common.FlowStep, user federatedUser) *common.FlowStep {
 	ts.Require().Equal("VIEW", step.Type, "Expected a prompt to choose the sign-in method")
 	ts.Require().True(common.ValidateRequiredActions(step.Data.Actions, []string{googleAction, githubAction}),
 		"Expected both Google and GitHub to be offered")
@@ -856,7 +814,8 @@ func (ts *CloudTestSuite) chooseProvider(step *common.FlowStep, user federatedUs
 	return step
 }
 
-func (ts *CloudTestSuite) completeFederatedSignIn(step *common.FlowStep, user federatedUser) *common.FlowStep {
+func (ts *MultiOUSocialSignupTestSuite) completeFederatedSignIn(step *common.FlowStep,
+	user federatedUser) *common.FlowStep {
 	switch user.provider {
 	case providerGoogle:
 		ts.mockGoogle.SetAuthorizeFunc(func(string) (string, error) { return user.email, nil })
@@ -871,7 +830,7 @@ func (ts *CloudTestSuite) completeFederatedSignIn(step *common.FlowStep, user fe
 	return ts.continueFlow(step, map[string]string{"code": code}, "")
 }
 
-func (ts *CloudTestSuite) continueFlow(step *common.FlowStep, inputs map[string]string,
+func (ts *MultiOUSocialSignupTestSuite) continueFlow(step *common.FlowStep, inputs map[string]string,
 	action string) *common.FlowStep {
 	next, err := common.CompleteFlow(step.ExecutionID, inputs, action, step.ChallengeToken)
 	ts.Require().NoError(err, "Failed to continue flow")
@@ -879,7 +838,7 @@ func (ts *CloudTestSuite) continueFlow(step *common.FlowStep, inputs map[string]
 	return next
 }
 
-func (ts *CloudTestSuite) requireOrganizationPicker(step *common.FlowStep, handles ...string) {
+func (ts *MultiOUSocialSignupTestSuite) requireOrganizationPicker(step *common.FlowStep, handles ...string) {
 	ts.Require().Equal("INCOMPLETE", step.FlowStatus, "Expected the flow to ask for an organization")
 	for _, input := range step.Data.Inputs {
 		if input.Identifier == "ouHandle" {
@@ -891,10 +850,10 @@ func (ts *CloudTestSuite) requireOrganizationPicker(step *common.FlowStep, handl
 		step.Data.Inputs)
 }
 
-func (ts *CloudTestSuite) requireSignedInTo(step *common.FlowStep, org testutils.OrganizationUnit,
+func (ts *MultiOUSocialSignupTestSuite) requireSignedInTo(step *common.FlowStep, org testutils.OrganizationUnit,
 	userID string) {
 	ts.Require().Equal("COMPLETE", step.FlowStatus, "Expected the login to complete")
-	claims, err := testutils.ValidateJWTAssertionFields(step.Assertion, ts.appID, customerTypeName,
+	claims, err := testutils.ValidateJWTAssertionFields(step.Assertion, ts.appID, customerTypeHandle,
 		org.ID, org.Name, org.Handle)
 	ts.Require().NoError(err, "Unexpected assertion")
 	if userID != "" {
@@ -956,36 +915,9 @@ func initiateUserOnboardingFlow(inputs map[string]string) (*common.FlowStep, err
 	return &step, nil
 }
 
-// setFlowServerConfig replaces the writable layer of the flow server config.
-func setFlowServerConfig(config map[string]interface{}) error {
-	body, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, testutils.TestServerURL+"/server-config/flow",
-		bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := testutils.GetHTTPClient().Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("expected status 200, got %d: %s", resp.StatusCode, respBody)
-	}
-	return nil
-}
-
-// findUsersBySub returns every user holding the given federated subject.
-func findUsersBySub(sub string) ([]testutils.User, error) {
-	filter := url.QueryEscape(fmt.Sprintf("sub eq %q", sub))
+// findUsersByEmail returns every user with the given email.
+func findUsersByEmail(email string) ([]testutils.User, error) {
+	filter := url.QueryEscape(fmt.Sprintf("email eq %q", email))
 	req, err := http.NewRequest(http.MethodGet, testutils.TestServerURL+"/users?filter="+filter, nil)
 	if err != nil {
 		return nil, err
