@@ -1180,8 +1180,6 @@ func mapEntityError(err error) *tidcommon.ServiceError {
 		return &ErrorAttributeConflict
 	case errors.Is(err, entity.ErrInvalidCredential):
 		return &ErrorInvalidCredential
-	case errors.Is(err, entity.ErrLinkedAccountConflict):
-		return &ErrorLinkedAccountConflict
 	default:
 		return nil
 	}

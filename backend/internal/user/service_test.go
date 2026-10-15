@@ -2015,7 +2015,6 @@ func TestUserService_CreateUser_EntityErrors(t *testing.T) {
 	}{
 		{"SchemaNotFound", entitypkg.ErrSchemaValidationFailed, ErrorSchemaValidationFailed},
 		{"AttributeConflict", entitypkg.ErrAttributeConflict, ErrorAttributeConflict},
-		{"FederatedIdentityConflict", entitypkg.ErrLinkedAccountConflict, ErrorLinkedAccountConflict},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
