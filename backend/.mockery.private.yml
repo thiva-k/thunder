@@ -537,6 +537,7 @@ packages:
     interfaces:
       authZENPDPAdapter:
       idpAdapter:
+      httpConnectionAdapter:
       notificationTemplateAdapter:
       senderAdapter:
 

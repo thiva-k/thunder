@@ -8,14 +8,33 @@ package httpconnection
 import (
 	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/system/config"
+	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 )
 
-// Initialize creates the HTTP connection service over the configuration database.
-func Initialize(ouService ou.OrganizationUnitServiceInterface) HTTPConnectionServiceInterface {
+// Initialize creates the HTTP connection service over the store its configured mode selects.
+func Initialize(cfg config.HTTPConnectionConfig,
+	ouService ou.OrganizationUnitServiceInterface) (HTTPConnectionServiceInterface, error) {
+	mode, err := resolvedStoreMode(cfg)
+	if err != nil {
+		return nil, err
+	}
 	ouResolver := connectionou.Initialize(ouService, connectionou.Errors{
 		Required: connectionou.ErrorOURequired,
 		NotFound: connectionou.ErrorInvalidOU,
 		Changed:  connectionou.ErrorOUUpdateNotAllowed,
 	})
-	return newHTTPConnectionService(newHTTPConnectionStore(), ouResolver)
+	return newHTTPConnectionService(initializeStore(mode), ouResolver), nil
+}
+
+// initializeStore selects the mutable, declarative, or composite connection store.
+func initializeStore(mode serverconst.StoreMode) httpConnectionStoreInterface {
+	switch mode {
+	case serverconst.StoreModeDeclarative:
+		return newFileBasedStore()
+	case serverconst.StoreModeComposite:
+		return newCompositeStore(newFileBasedStore(), newHTTPConnectionStore())
+	default:
+		return newHTTPConnectionStore()
+	}
 }

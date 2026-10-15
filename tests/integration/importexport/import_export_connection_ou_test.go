@@ -379,12 +379,12 @@ func exportedVariables(exported string) map[string]interface{} {
 // item by default, so the request does the same.
 func (s *ImportExportConnectionOUSuite) importContent(
 	content string, dryRun bool, variables map[string]interface{},
-) *importResponse {
+) *testutils.ImportResponse {
 	s.T().Helper()
-	response, err := postImport(importRequest{
+	response, err := postImport(testutils.ImportRequest{
 		Content: content,
 		DryRun:  dryRun,
-		Options: importOptions{Upsert: false, ContinueOnError: true, Target: "runtime"},
+		Options: testutils.ImportOptions{Upsert: false, ContinueOnError: true, Target: "runtime"},
 		Vars:    variables,
 	})
 	s.Require().NoError(err)

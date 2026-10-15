@@ -6,6 +6,7 @@ package httpconnection
 import (
 	"context"
 	"errors"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,6 +47,11 @@ type HTTPConnectionServiceInterface interface {
 	GetHTTPConnectionUsages(ctx context.Context, id string) (
 		*resourcedependency.DependenciesResponse, *tidcommon.ServiceError)
 	SetDependencyRegistry(registry resourcedependency.Registry)
+	ValidateHTTPConnection(ctx context.Context, connection *HTTPConnection) *tidcommon.ServiceError
+	ResolveConnectionOU(ctx context.Context, connection *HTTPConnection) *tidcommon.ServiceError
+	ValidateHTTPConnectionCreate(ctx context.Context, connection *HTTPConnection) *tidcommon.ServiceError
+	ValidateHTTPConnectionUpdate(ctx context.Context, existing *HTTPConnection,
+		connection *HTTPConnection) *tidcommon.ServiceError
 }
 
 // httpConnectionService validates and manages HTTP connections.
@@ -113,25 +119,24 @@ func (s *httpConnectionService) GetResolvedConnection(ctx context.Context, id st
 // CreateHTTPConnection validates and stores a connection.
 func (s *httpConnectionService) CreateHTTPConnection(ctx context.Context, connection HTTPConnection) (
 	*HTTPConnection, *tidcommon.ServiceError) {
-	if svcErr := declarativeresource.CheckDeclarativeCreate(); svcErr != nil {
+	if svcErr := s.checkCreate(ctx, &connection); svcErr != nil {
 		return nil, svcErr
 	}
-	if svcErr := s.validate(ctx, &connection); svcErr != nil {
-		return nil, svcErr
+	if connection.ID == "" {
+		id, err := sysutils.GenerateUUIDv7()
+		if err != nil {
+			s.logger.Error(ctx, "Failed to generate HTTP connection ID", log.Error(err))
+			return nil, &tidcommon.InternalServerError
+		}
+		connection.ID = id
 	}
-	if svcErr := s.resolveOU(ctx, &connection); svcErr != nil {
-		return nil, svcErr
-	}
-	id, err := sysutils.GenerateUUIDv7()
-	if err != nil {
-		s.logger.Error(ctx, "Failed to generate HTTP connection ID", log.Error(err))
-		return nil, &tidcommon.InternalServerError
-	}
-	connection.ID = id
 
 	if err := s.store.CreateHTTPConnection(ctx, connection); err != nil {
-		if errors.Is(err, errNameConflict) {
+		switch {
+		case errors.Is(err, errNameConflict), errors.Is(err, errIDConflict):
 			return nil, &ErrorAlreadyExists
+		case errors.Is(err, errHTTPConnectionIsImmutable):
+			return nil, &declarativeresource.ErrorDeclarativeResourceCreateOperation
 		}
 		s.logger.Error(ctx, "Failed to create HTTP connection",
 			log.Error(err), log.String("connectionName", connection.Name))
@@ -145,6 +150,9 @@ func (s *httpConnectionService) ListHTTPConnections(ctx context.Context) ([]HTTP
 	*tidcommon.ServiceError) {
 	connections, err := s.store.ListHTTPConnections(ctx)
 	if err != nil {
+		if errors.Is(err, errResultLimitExceededInCompositeMode) {
+			return nil, &ErrorResultLimitExceededInCompositeMode
+		}
 		s.logger.Error(ctx, "Failed to list HTTP connections", log.Error(err))
 		return nil, &tidcommon.InternalServerError
 	}
@@ -171,22 +179,16 @@ func (s *httpConnectionService) GetHTTPConnection(ctx context.Context, id string
 // UpdateHTTPConnection validates a connection and replaces the stored one.
 func (s *httpConnectionService) UpdateHTTPConnection(ctx context.Context, id string, connection HTTPConnection) (
 	*HTTPConnection, *tidcommon.ServiceError) {
-	if svcErr := declarativeresource.CheckDeclarativeUpdate(); svcErr != nil {
-		return nil, svcErr
-	}
-	if svcErr := s.validate(ctx, &connection); svcErr != nil {
+	if svcErr := s.checkUpdate(ctx, &connection); svcErr != nil {
 		return nil, svcErr
 	}
 	current, svcErr := s.GetHTTPConnection(ctx, id)
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	// An owner cannot change. Leaving it out keeps the one the connection has.
-	ouID, ouErr := s.ouResolver.ResolveForUpdate(ctx, connection.OUID, "", current.OUID)
-	if ouErr != nil {
-		return nil, ouErr
+	if svcErr := s.checkOwnerUnchanged(ctx, &connection, current.OUID); svcErr != nil {
+		return nil, svcErr
 	}
-	connection.OUID = ouID
 	connection.ID = id
 
 	if err := s.store.UpdateHTTPConnection(ctx, connection); err != nil {
@@ -195,6 +197,8 @@ func (s *httpConnectionService) UpdateHTTPConnection(ctx context.Context, id str
 			return nil, &ErrorAlreadyExists
 		case errors.Is(err, errConnectionNotFound):
 			return nil, &ErrorNotFound
+		case errors.Is(err, errHTTPConnectionIsImmutable):
+			return nil, &declarativeresource.ErrorDeclarativeResourceUpdateOperation
 		}
 		s.logger.Error(ctx, "Failed to update HTTP connection", log.Error(err), log.String("connectionID", id))
 		return nil, &tidcommon.InternalServerError
@@ -212,8 +216,11 @@ func (s *httpConnectionService) DeleteHTTPConnection(ctx context.Context, id str
 		return svcErr
 	}
 	if err := s.store.DeleteHTTPConnection(ctx, id); err != nil {
-		if errors.Is(err, errConnectionNotFound) {
+		switch {
+		case errors.Is(err, errConnectionNotFound):
 			return nil
+		case errors.Is(err, errHTTPConnectionIsImmutable):
+			return &declarativeresource.ErrorDeclarativeResourceDeleteOperation
 		}
 		s.logger.Error(ctx, "Failed to delete HTTP connection", log.Error(err), log.String("connectionID", id))
 		return &tidcommon.InternalServerError
@@ -271,6 +278,83 @@ func (s *httpConnectionService) ensureNoBlockingDependencies(ctx context.Context
 	return ErrorHasBlockingDependencies.WithParams(map[string]string{
 		"dependencies": resourcedependency.SummarizeBlockingUsages(blocking),
 	})
+}
+
+// ValidateHTTPConnection runs the checks create and update run on the connection alone, normalizing it
+// in place.
+func (s *httpConnectionService) ValidateHTTPConnection(ctx context.Context,
+	connection *HTTPConnection) *tidcommon.ServiceError {
+	return s.validate(ctx, connection)
+}
+
+// ValidateHTTPConnectionCreate reports what CreateHTTPConnection would refuse, without writing,
+// normalizing the connection in place. The store's refusals of a taken ID or name are read rather than
+// written.
+func (s *httpConnectionService) ValidateHTTPConnectionCreate(ctx context.Context,
+	connection *HTTPConnection) *tidcommon.ServiceError {
+	if svcErr := s.checkCreate(ctx, connection); svcErr != nil {
+		return svcErr
+	}
+	if _, svcErr := s.GetHTTPConnection(ctx, connection.ID); svcErr == nil {
+		return &ErrorAlreadyExists
+	} else if svcErr.Code != ErrorNotFound.Code {
+		return svcErr
+	}
+	return s.checkNameFree(ctx, *connection)
+}
+
+// ValidateHTTPConnectionUpdate reports what UpdateHTTPConnection would refuse of an update to existing,
+// as read by the caller, without writing, normalizing the connection in place. The store's refusals are
+// read rather than written.
+func (s *httpConnectionService) ValidateHTTPConnectionUpdate(ctx context.Context, existing *HTTPConnection,
+	connection *HTTPConnection) *tidcommon.ServiceError {
+	if svcErr := s.checkUpdate(ctx, connection); svcErr != nil {
+		return svcErr
+	}
+	if svcErr := s.checkOwnerUnchanged(ctx, connection, existing.OUID); svcErr != nil {
+		return svcErr
+	}
+	connection.ID = existing.ID
+	if existing.IsReadOnly {
+		return &declarativeresource.ErrorDeclarativeResourceUpdateOperation
+	}
+	return s.checkNameFree(ctx, *connection)
+}
+
+// checkCreate runs the checks a create makes before it writes, normalizing the connection in place and resolving
+// its owner.
+func (s *httpConnectionService) checkCreate(ctx context.Context, connection *HTTPConnection) *tidcommon.ServiceError {
+	if svcErr := declarativeresource.CheckDeclarativeCreate(); svcErr != nil {
+		return svcErr
+	}
+	if svcErr := s.validate(ctx, connection); svcErr != nil {
+		return svcErr
+	}
+	return s.ResolveConnectionOU(ctx, connection)
+}
+
+// checkUpdate runs the checks an update makes before it writes, normalizing the connection in place.
+func (s *httpConnectionService) checkUpdate(ctx context.Context, connection *HTTPConnection) *tidcommon.ServiceError {
+	if svcErr := declarativeresource.CheckDeclarativeUpdate(); svcErr != nil {
+		return svcErr
+	}
+	return s.validate(ctx, connection)
+}
+
+// checkNameFree returns ErrorAlreadyExists when another connection, stored or declared, has the
+// connection's name.
+func (s *httpConnectionService) checkNameFree(ctx context.Context,
+	connection HTTPConnection) *tidcommon.ServiceError {
+	named, err := s.store.GetHTTPConnectionByName(ctx, connection.Name)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to get HTTP connection by name", log.Error(err),
+			log.String("connectionName", connection.Name))
+		return &tidcommon.InternalServerError
+	}
+	if named != nil && named.ID != connection.ID {
+		return &ErrorAlreadyExists
+	}
+	return nil
 }
 
 // validate checks a connection and normalizes it in place for storage.
@@ -348,16 +432,37 @@ func (s *httpConnectionService) validateAuthentication(ctx context.Context, conn
 				return &ErrorInvalidHeaders
 			}
 		}
+		// A connection read from a file or an import document carries the header names as written; an
+		// update matches a kept header by its stored name, so it is stored canonical.
+		if !maps.Equal(canonical.Properties, authConfig.Properties) {
+			if connection.AuthProperties, err = outboundauth.ToProperties(canonical); err != nil {
+				s.logger.Error(ctx, "Failed to store HTTP connection authentication", log.Error(err))
+				return &tidcommon.InternalServerError
+			}
+		}
 	}
 	return nil
 }
 
-// resolveOU checks the organization unit an HTTP connection is owned by. A connection has to name an organization unit
-// by its id, and it has to exist.
-func (s *httpConnectionService) resolveOU(
+// ResolveConnectionOU sets the organization unit an HTTP connection is owned by. The owner is named by id or by
+// handle, and a handle is resolved to the id of the unit it names; when both are given the id wins. A connection has
+// to name an organization unit, and it has to exist.
+func (s *httpConnectionService) ResolveConnectionOU(
 	ctx context.Context, connection *HTTPConnection,
 ) *tidcommon.ServiceError {
-	ouID, svcErr := s.ouResolver.Resolve(ctx, connection.OUID, "")
+	ouID, svcErr := s.ouResolver.Resolve(ctx, connection.OUID, connection.OUHandle)
+	if svcErr != nil {
+		return svcErr
+	}
+	connection.OUID = ouID
+	return nil
+}
+
+// checkOwnerUnchanged keeps the owner of a connection being updated. An owner cannot change; leaving it out keeps the
+// one the connection has.
+func (s *httpConnectionService) checkOwnerUnchanged(ctx context.Context, connection *HTTPConnection,
+	currentOUID string) *tidcommon.ServiceError {
+	ouID, svcErr := s.ouResolver.ResolveForUpdate(ctx, connection.OUID, connection.OUHandle, currentOUID)
 	if svcErr != nil {
 		return svcErr
 	}

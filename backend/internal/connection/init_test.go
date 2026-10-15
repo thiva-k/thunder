@@ -121,7 +121,7 @@ func (s *InitTestSuite) SetupTest() {
 	s.mockResource = &testResourceServerLister{}
 	s.mockHTTP = httpconnectionmock.NewHTTPConnectionServiceInterfaceMock(s.T())
 	s.mux = http.NewServeMux()
-	_, _, err := Initialize(s.mux, nil, s.mockIDP, s.mockNotif, s.mockResource,
+	_, _, _, err := Initialize(s.mux, nil, s.mockIDP, s.mockNotif, s.mockResource,
 		s.authZENPDP, s.mockHTTP, nil)
 	s.Require().NoError(err)
 }
@@ -142,7 +142,7 @@ func (s *InitTestSuite) TestInitializeFailsWhenDeclarativeResourcesCannotBeLoade
 		DeclarativeResources: config.DeclarativeResources{Enabled: true},
 	}))
 
-	exporter, provider, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource,
+	exporter, provider, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource,
 		s.authZENPDP, s.mockHTTP, nil)
 
 	s.ErrorContains(err, "failed to load connection resources")
@@ -163,7 +163,7 @@ func (s *InitTestSuite) TestInitializeFailsWhenADeclarativeConnectionIsInvalid()
 		DeclarativeResources: config.DeclarativeResources{Enabled: true},
 	}))
 
-	_, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource, nil, s.mockHTTP, nil)
+	_, _, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource, nil, s.mockHTTP, nil)
 
 	s.ErrorContains(err, "failed to load connection resources")
 	s.ErrorContains(err, "needs an organization unit")

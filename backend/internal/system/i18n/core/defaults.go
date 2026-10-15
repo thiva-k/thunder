@@ -547,6 +547,8 @@ var defaultMessages = map[string]string{
 	"error.connectionservice.http_connection_has_blocking_dependencies_description": "The HTTP connection cannot be deleted because {{param(dependencies)}} depend on it. Remove or reassign them first.",
 	"error.connectionservice.http_connection_not_found": "HTTP connection not found",
 	"error.connectionservice.http_connection_not_found_description": "No HTTP connection exists for the supplied identifier",
+	"error.connectionservice.http_connection_result_limit_exceeded": "Result limit exceeded in composite mode",
+	"error.connectionservice.http_connection_result_limit_exceeded_description": "The total number of HTTP connections exceeds the maximum limit in composite mode",
 	"error.connectionservice.invalid_authentication_type": "Invalid authentication type",
 	"error.connectionservice.invalid_authentication_type_description": "The authentication type must name a method this deployment supports",
 	"error.connectionservice.invalid_authzen_pdp_authentication": "Invalid AuthZEN PDP authentication",

@@ -452,6 +452,65 @@ func (_c *HTTPConnectionServiceInterfaceMock_ListHTTPConnections_Call) RunAndRet
 	return _c
 }
 
+// ResolveConnectionOU provides a mock function for the type HTTPConnectionServiceInterfaceMock
+func (_mock *HTTPConnectionServiceInterfaceMock) ResolveConnectionOU(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError {
+	ret := _mock.Called(ctx, connection)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolveConnectionOU")
+	}
+
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *httpconnection.HTTPConnection) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, connection)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
+	}
+	return r0
+}
+
+// HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveConnectionOU'
+type HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call struct {
+	*mock.Call
+}
+
+// ResolveConnectionOU is a helper method to define mock.On call
+//   - ctx context.Context
+//   - connection *httpconnection.HTTPConnection
+func (_e *HTTPConnectionServiceInterfaceMock_Expecter) ResolveConnectionOU(ctx any, connection any) *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call {
+	return &HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call{Call: _e.mock.On("ResolveConnectionOU", ctx, connection)}
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call) Run(run func(ctx context.Context, connection *httpconnection.HTTPConnection)) *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *httpconnection.HTTPConnection
+		if args[1] != nil {
+			arg1 = args[1].(*httpconnection.HTTPConnection)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call) Return(serviceError *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call {
+	_c.Call.Return(serviceError)
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call) RunAndReturn(run func(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ResolveConnectionOU_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetDependencyRegistry provides a mock function for the type HTTPConnectionServiceInterfaceMock
 func (_mock *HTTPConnectionServiceInterfaceMock) SetDependencyRegistry(registry resourcedependency.Registry) {
 	_mock.Called(registry)
@@ -564,6 +623,189 @@ func (_c *HTTPConnectionServiceInterfaceMock_UpdateHTTPConnection_Call) Return(h
 }
 
 func (_c *HTTPConnectionServiceInterfaceMock_UpdateHTTPConnection_Call) RunAndReturn(run func(ctx context.Context, id string, connection httpconnection.HTTPConnection) (*httpconnection.HTTPConnection, *common.ServiceError)) *HTTPConnectionServiceInterfaceMock_UpdateHTTPConnection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateHTTPConnection provides a mock function for the type HTTPConnectionServiceInterfaceMock
+func (_mock *HTTPConnectionServiceInterfaceMock) ValidateHTTPConnection(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError {
+	ret := _mock.Called(ctx, connection)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateHTTPConnection")
+	}
+
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *httpconnection.HTTPConnection) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, connection)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
+	}
+	return r0
+}
+
+// HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateHTTPConnection'
+type HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call struct {
+	*mock.Call
+}
+
+// ValidateHTTPConnection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - connection *httpconnection.HTTPConnection
+func (_e *HTTPConnectionServiceInterfaceMock_Expecter) ValidateHTTPConnection(ctx any, connection any) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call {
+	return &HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call{Call: _e.mock.On("ValidateHTTPConnection", ctx, connection)}
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call) Run(run func(ctx context.Context, connection *httpconnection.HTTPConnection)) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *httpconnection.HTTPConnection
+		if args[1] != nil {
+			arg1 = args[1].(*httpconnection.HTTPConnection)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call) Return(serviceError *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call {
+	_c.Call.Return(serviceError)
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call) RunAndReturn(run func(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateHTTPConnectionCreate provides a mock function for the type HTTPConnectionServiceInterfaceMock
+func (_mock *HTTPConnectionServiceInterfaceMock) ValidateHTTPConnectionCreate(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError {
+	ret := _mock.Called(ctx, connection)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateHTTPConnectionCreate")
+	}
+
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *httpconnection.HTTPConnection) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, connection)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
+	}
+	return r0
+}
+
+// HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateHTTPConnectionCreate'
+type HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call struct {
+	*mock.Call
+}
+
+// ValidateHTTPConnectionCreate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - connection *httpconnection.HTTPConnection
+func (_e *HTTPConnectionServiceInterfaceMock_Expecter) ValidateHTTPConnectionCreate(ctx any, connection any) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call {
+	return &HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call{Call: _e.mock.On("ValidateHTTPConnectionCreate", ctx, connection)}
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call) Run(run func(ctx context.Context, connection *httpconnection.HTTPConnection)) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *httpconnection.HTTPConnection
+		if args[1] != nil {
+			arg1 = args[1].(*httpconnection.HTTPConnection)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call) Return(serviceError *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call {
+	_c.Call.Return(serviceError)
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call) RunAndReturn(run func(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionCreate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateHTTPConnectionUpdate provides a mock function for the type HTTPConnectionServiceInterfaceMock
+func (_mock *HTTPConnectionServiceInterfaceMock) ValidateHTTPConnectionUpdate(ctx context.Context, existing *httpconnection.HTTPConnection, connection *httpconnection.HTTPConnection) *common.ServiceError {
+	ret := _mock.Called(ctx, existing, connection)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateHTTPConnectionUpdate")
+	}
+
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *httpconnection.HTTPConnection, *httpconnection.HTTPConnection) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, existing, connection)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
+	}
+	return r0
+}
+
+// HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateHTTPConnectionUpdate'
+type HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call struct {
+	*mock.Call
+}
+
+// ValidateHTTPConnectionUpdate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - existing *httpconnection.HTTPConnection
+//   - connection *httpconnection.HTTPConnection
+func (_e *HTTPConnectionServiceInterfaceMock_Expecter) ValidateHTTPConnectionUpdate(ctx any, existing any, connection any) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call {
+	return &HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call{Call: _e.mock.On("ValidateHTTPConnectionUpdate", ctx, existing, connection)}
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call) Run(run func(ctx context.Context, existing *httpconnection.HTTPConnection, connection *httpconnection.HTTPConnection)) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *httpconnection.HTTPConnection
+		if args[1] != nil {
+			arg1 = args[1].(*httpconnection.HTTPConnection)
+		}
+		var arg2 *httpconnection.HTTPConnection
+		if args[2] != nil {
+			arg2 = args[2].(*httpconnection.HTTPConnection)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call) Return(serviceError *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call {
+	_c.Call.Return(serviceError)
+	return _c
+}
+
+func (_c *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call) RunAndReturn(run func(ctx context.Context, existing *httpconnection.HTTPConnection, connection *httpconnection.HTTPConnection) *common.ServiceError) *HTTPConnectionServiceInterfaceMock_ValidateHTTPConnectionUpdate_Call {
 	_c.Call.Return(run)
 	return _c
 }

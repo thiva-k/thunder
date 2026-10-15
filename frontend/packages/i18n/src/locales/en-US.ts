@@ -2653,6 +2653,7 @@ const translations = {
     'errors.CON-1025': 'Choose an organization unit for this connection.',
     'errors.CON-1026':
       'This connection is used by one or more resources. Remove it from those resources before deleting it.',
+    'errors.CON-1027': 'The number of service endpoint connections exceeds the maximum allowed in composite mode.',
     'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
     'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
     'errors.IDP-1003': 'The identity provider name is invalid or missing.',
