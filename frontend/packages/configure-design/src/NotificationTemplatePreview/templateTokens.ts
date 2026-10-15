@@ -19,7 +19,7 @@ export interface ParsedToken {
 /** A token the preview cannot render faithfully. */
 export interface TemplateWarning {
   severity: 'error' | 'warning';
-  code: 'unsupported' | 'designNotAllowed' | 'designUnresolved' | 'missingTranslation';
+  code: 'unsupported' | 'designNotAllowed' | 'designUnresolved' | 'missingTranslation' | 'unknownContext';
   token: string;
 }
 
@@ -89,6 +89,12 @@ export interface PreviewResolveOptions {
   translations: Record<string, string>;
   theme?: Record<string, unknown> | null;
   colorScheme?: 'light' | 'dark';
+  /**
+   * The ctx keys the runtime can actually inject (the catalog the editor offers, e.g.
+   * `CONTEXT_TOKENS`). When provided, a {{ctx(key)}} outside this set is flagged like a missing
+   * translation; when omitted, ctx tokens are left unchecked (callers that don't surface a catalog).
+   */
+  contextKeys?: ReadonlySet<string>;
 }
 
 /**
@@ -147,6 +153,15 @@ function collectFieldWarnings(
       }
       continue;
     }
+    if (token.kind === 'ctx') {
+      // ctx is left literal for the runtime to substitute; but a key the runtime never injects (not in
+      // the offered catalog) will render literally on send — surface it like a missing translation.
+      // Only validate when the caller supplies the catalog; otherwise ctx is left unchecked.
+      if (opts.contextKeys !== undefined && token.key !== undefined && !opts.contextKeys.has(token.key)) {
+        warnings.push({severity: 'error', code: 'unknownContext', token: token.raw});
+      }
+      continue;
+    }
     if (
       !skipMissingTranslation &&
       token.kind === 't' &&
@@ -157,7 +172,6 @@ function collectFieldWarnings(
       // no value in any language and the renderer fails the send — surface it as an error, not a warning.
       warnings.push({severity: 'error', code: 'missingTranslation', token: token.raw});
     }
-    // ctx is the expected runtime case — left literal, not warned.
   }
   return warnings;
 }
@@ -170,6 +184,8 @@ export function collectWarnings(input: {
   translations: Record<string, string>;
   theme?: Record<string, unknown> | null;
   colorScheme?: 'light' | 'dark';
+  /** ctx keys the runtime can inject; a {{ctx(key)}} outside this set is flagged. Unset → unchecked. */
+  contextKeys?: ReadonlySet<string>;
   /** Suppress missing-translation warnings while translations are still loading / unavailable. */
   skipMissingTranslation?: boolean;
 }): TemplateWarning[] {
@@ -177,6 +193,7 @@ export function collectWarnings(input: {
     translations: input.translations,
     theme: input.theme,
     colorScheme: input.colorScheme,
+    contextKeys: input.contextKeys,
   };
   const skipMissingTranslation = input.skipMissingTranslation ?? false;
   const all = [
