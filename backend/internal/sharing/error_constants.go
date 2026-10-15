@@ -215,19 +215,19 @@ var (
 			DefaultValue: "The policy changed since it was read; reread it and reapply the change",
 		},
 	}
-	// ErrorDeploymentWideScopeDeclarativeOnly is returned when an API request asks for a grant whose
-	// reach is not bounded by the initiator's own position in the tree.
-	ErrorDeploymentWideScopeDeclarativeOnly = tidcommon.ServiceError{
+	// ErrorExclusionNotADirectChild is returned when a policy reaching every child unit carves out
+	// something deeper than one of the initiating organization unit's direct children.
+	ErrorExclusionNotADirectChild = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
 		Code: "SHR-1016",
 		Error: tidcommon.I18nMessage{
-			Key:          "error.sharingservice.deployment_wide_scope_declarative_only",
-			DefaultValue: "Deployment-wide sharing is not allowed",
+			Key:          "error.sharingservice.exclusion_not_a_direct_child",
+			DefaultValue: "Exclusion does not name a direct child",
 		},
 		ErrorDescription: tidcommon.I18nMessage{
-			Key: "error.sharingservice.deployment_wide_scope_declarative_only_description",
-			DefaultValue: "All organization units and the roots of all other trees can only be " +
-				"reached from a declarative resource file, not through the API",
+			Key: "error.sharingservice.exclusion_not_a_direct_child_description",
+			DefaultValue: "A policy reaching every child unit of the initiating organization unit may " +
+				"only carve out one of that unit's direct children",
 		},
 	}
 	// ErrorReshareNotPermitted is returned when the policy covering the initiating organization
@@ -273,7 +273,8 @@ var (
 				"reshare beneath it keeps pointing at the same policy across restarts",
 		},
 	}
-	// ErrorDeclaredPolicyIDConflict is returned when two declarations claim the same policy id.
+	// ErrorDeclaredPolicyIDConflict is returned when a declaration claims a policy id another
+	// policy already holds, whether that one is declared or stored.
 	ErrorDeclaredPolicyIDConflict = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
 		Code: "SHR-1020",
@@ -283,7 +284,7 @@ var (
 		},
 		ErrorDescription: tidcommon.I18nMessage{
 			Key: "error.sharingservice.declared_policy_id_conflict_description",
-			DefaultValue: "Another declared policy already carries this id, and sharing one id " +
+			DefaultValue: "Another policy already carries this id, and sharing one id " +
 				"between two policies would re-parent the reshares beneath them",
 		},
 	}
@@ -388,21 +389,6 @@ var (
 				"declarative resources are loaded",
 		},
 	}
-	// ErrorExclusionNotADirectChild is returned when a policy reaching every child unit carves out
-	// something deeper than one of the initiating organization unit's direct children.
-	ErrorExclusionNotADirectChild = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "SHR-1028",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.sharingservice.exclusion_not_a_direct_child",
-			DefaultValue: "Exclusion does not name a direct child",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key: "error.sharingservice.exclusion_not_a_direct_child_description",
-			DefaultValue: "A policy reaching every child unit of the initiating organization unit may " +
-				"only carve out one of that unit's direct children",
-		},
-	}
 )
 
 // errPolicyNotFound is the store's own signal that no row carries an id, kept unexported because
@@ -444,3 +430,11 @@ var (
 	// errVersionMismatchEngine is returned when an edit is based on a stale version of the policy.
 	errVersionMismatchEngine = errors.New("policy version mismatch")
 )
+
+// errReplayRefused rolls a replay's transaction back. The refusal itself travels out separately,
+// because it names which of the document's policies was refused and why.
+var errReplayRefused = errors.New("sharing policy replay refused")
+
+// errPolicyPurgeRefused rolls back a resource's policy purge. The refusal itself travels out
+// separately, so the caller sees which policy could not be removed.
+var errPolicyPurgeRefused = errors.New("sharing policy purge refused")

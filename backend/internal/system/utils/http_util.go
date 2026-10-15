@@ -89,6 +89,24 @@ func DecodeJSONBody[T any](r *http.Request) (*T, error) {
 	return &data, nil
 }
 
+// DecodeJSONBodyStrict is DecodeJSONBody that refuses a field the target does not declare.
+//
+// Use it where a dropped field changes what the request means rather than merely losing a value: a
+// misspelled key in a body that grants access reads as the narrower request nobody wrote, and the
+// caller is told it succeeded.
+func DecodeJSONBodyStrict[T any](r *http.Request) (*T, error) {
+	var data T
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&data); err != nil {
+		return nil, errors.New("failed to decode JSON: " + err.Error())
+	}
+	if fieldErrors := validateStructNatively(data); fieldErrors != nil {
+		return nil, &ValidationError{Errors: fieldErrors}
+	}
+	return &data, nil
+}
+
 func validateStructNatively(s interface{}) map[string]string {
 	fieldErrors := make(map[string]string)
 	val := reflect.ValueOf(s)

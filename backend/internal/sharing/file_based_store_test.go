@@ -236,3 +236,20 @@ func (s *FileBasedStoreTestSuite) TestTheWholeSetReadReturnsEveryDeclaration() {
 	s.Equal([]string{"p-" + rootOU, "p-" + childOU, "p-" + otherOU},
 		[]string{held[0].ID, held[1].ID, held[2].ID})
 }
+
+// A declared policy depends on its issuer as much as a stored one does, so the issued-by lookup
+// reads every resource and leaves out policies other units issued.
+func (s *FileBasedStoreTestSuite) TestPoliciesIssuedByOneUnitSpanResources() {
+	s.store.seed(declaredPolicy("p1", testResource, rootOU))
+	s.store.seed(declaredPolicy("p2", "resource-2", rootOU))
+	s.store.seed(declaredPolicy("p3", testResource, otherOU))
+
+	got, err := s.store.ListPoliciesIssuedBy(context.Background(), rootOU)
+
+	s.Require().NoError(err)
+	ids := make([]string, 0, len(got))
+	for _, p := range got {
+		ids = append(ids, p.ID)
+	}
+	s.Equal([]string{"p1", "p2"}, ids)
+}

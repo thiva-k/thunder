@@ -45,6 +45,8 @@ type sharingPolicyStoreInterface interface {
 	ListPoliciesRelevantToChain(
 		ctx context.Context, rt ResourceType, resourceID string, chainOUIDs []string,
 	) ([]Policy, error)
+	// ListPoliciesIssuedBy returns every policy one organization unit issued, for any resource.
+	ListPoliciesIssuedBy(ctx context.Context, ouID string) ([]Policy, error)
 	// ReplacePolicyContents rewrites a policy's sections, named units and rules, bumping its version
 	// only when expectedVersion still matches.
 	ReplacePolicyContents(ctx context.Context, p Policy, expectedVersion int) error
@@ -292,6 +294,19 @@ func (s *sharingStore) ListPoliciesForResource(
 		string(rt), resourceID, s.scope(ctx), limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sharing policies: %w", err)
+	}
+	return s.hydrateAll(ctx, dbClient, rows)
+}
+
+// ListPoliciesIssuedBy returns every policy one organization unit issued, for any resource.
+func (s *sharingStore) ListPoliciesIssuedBy(ctx context.Context, ouID string) ([]Policy, error) {
+	dbClient, err := s.client()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := dbClient.QueryContext(ctx, queryListPoliciesIssuedBy, ouID, s.scope(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list sharing policies issued by an organization unit: %w", err)
 	}
 	return s.hydrateAll(ctx, dbClient, rows)
 }

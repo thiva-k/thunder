@@ -330,7 +330,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		resource:      resourceService,
 		notifTemplate: notifTemplateSvc,
 	}, applicationService, agentService, flowMgtService, roleAssignmentService, roleService,
-		groupService, ouService, ouUserResolver, ouGroupResolver, resourceService)
+		groupService, ouService, ouUserResolver, ouGroupResolver, resourceService, sharingService)
 
 	// Initialize export service with collected exporters
 	// This plane authors configuration and does not hold the values it refers to, so an export
@@ -366,6 +366,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		gatewayService,
 		notifTemplateSvc,
 		authZENPDPService,
+		sharingService,
 		// A control plane keeps configuration as references and holds no values, so none are resolved.
 		nil,
 	)

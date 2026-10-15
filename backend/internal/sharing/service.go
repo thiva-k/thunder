@@ -23,6 +23,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
@@ -47,6 +48,16 @@ type SharingServiceInterface interface {
 	) (Policy, *tidcommon.ServiceError)
 	// UpdatePolicy replaces a policy's contents within the limits of its scope family.
 	UpdatePolicy(ctx context.Context, policyID string, req PolicyRequest) (Policy, *tidcommon.ServiceError)
+	// ReplacePoliciesForResource applies the policies an imported document carries for one resource.
+	ReplacePoliciesForResource(ctx context.Context, rt ResourceType, resourceID, owningOUID string,
+		requests []PolicyRequest) (PolicyReplay, *PolicyReplayError)
+	// DeletePoliciesForResource removes every policy recorded for one resource; its delete must call it.
+	DeletePoliciesForResource(ctx context.Context, rt ResourceType, resourceID string) *tidcommon.ServiceError
+	// GetResourceDependencies reports the policies an organization unit issued, each of which keeps
+	// the unit from being deleted. It implements resourcedependency.Provider.
+	GetResourceDependencies(
+		ctx context.Context, resourceType, id string,
+	) ([]resourcedependency.ResourceDependency, error)
 	// DeletePolicy removes a policy and cleans up the state of every organization unit that loses
 	// visibility as a result.
 	DeletePolicy(ctx context.Context, policyID string) *tidcommon.ServiceError
@@ -167,10 +178,16 @@ func (s *sharingService) RegisterResourceType(decl ResourceOverlayFieldDeclarati
 	s.registry.register(decl)
 }
 
-// CreatePolicy records one organization unit's decision about one resource.
+// CreatePolicy records one organization unit's decision about one resource, as an interactive
+// create. A replay goes through this package's own path instead, since it keeps the id and version
+// its document carries.
 func (s *sharingService) CreatePolicy(
 	ctx context.Context, rt ResourceType, resourceID, owningOUID string, req PolicyRequest,
 ) (Policy, *tidcommon.ServiceError) {
+	// The id and the version are the framework's on an interactive create: a caller choosing
+	// either would be replaying something it has no document for.
+	req.ID = ""
+	req.Version = 0
 	return s.createPolicy(ctx, rt, resourceID, owningOUID, req, false)
 }
 
@@ -197,7 +214,8 @@ func (s *sharingService) CreateDeclarativePolicy(
 // policy is seeded into the in-memory store instead of the database, which is the only step the
 // two do differently.
 func (s *sharingService) createPolicy(
-	ctx context.Context, rt ResourceType, resourceID, owningOUID string, req PolicyRequest, declared bool,
+	ctx context.Context, rt ResourceType, resourceID, owningOUID string, req PolicyRequest,
+	declared bool,
 ) (Policy, *tidcommon.ServiceError) {
 	if _, ok := s.registry.get(rt); !ok {
 		return Policy{}, &ErrorResourceTypeNotRegistered
@@ -208,19 +226,17 @@ func (s *sharingService) createPolicy(
 	if owningOUID == "" {
 		return Policy{}, withDetail(ErrorInvalidRequestFormat, "the resource has no owning organization unit")
 	}
-	if !declared {
-		if svcErr := requireDeclarativeForDeploymentWideGrant(req); svcErr != nil {
-			return Policy{}, svcErr
-		}
-	}
-
 	initiatingOUID := req.InitiatingOUID
 	if initiatingOUID == "" {
 		initiatingOUID = owningOUID
 	}
 
 	if declared {
-		if svcErr := s.requireUsableDeclaredID(req.ID, rt, resourceID, initiatingOUID); svcErr != nil {
+		if svcErr := s.requireUsableDeclaredID(ctx, req.ID, rt, resourceID, initiatingOUID); svcErr != nil {
+			return Policy{}, svcErr
+		}
+	} else if req.ID != "" {
+		if svcErr := s.requireUnusedStoredID(ctx, req.ID); svcErr != nil {
 			return Policy{}, svcErr
 		}
 	}
@@ -245,12 +261,22 @@ func (s *sharingService) createPolicy(
 		return s.store.CreatePolicy(txCtx, policy)
 	}); err != nil {
 		// The check above and this insert are not atomic, so a concurrent create can take the one
-		// slot between them and leave this one rejected by the uniqueness constraint. Re-reading
-		// names the policy that won, which is the one to edit, rather than reporting a bare failure.
-		// Asking the database again is also what keeps this free of driver-specific error parsing.
+		// slot between them and leave this one rejected. Re-reading names the policy that won,
+		// which is the one to edit, rather than reporting a bare failure. Asking the database again
+		// is also what keeps this free of driver-specific error parsing.
+		//
+		// The row carries two constraints and either can be the one that rejected it: one policy
+		// per organization unit per resource, and the policy id itself. A replay supplies its own
+		// id, so both are reachable, and the id is looked up as well rather than falling through to
+		// a server error that describes neither.
 		existing, lookupErr := s.store.GetPolicyByInitiator(ctx, rt, resourceID, initiatingOUID)
 		if lookupErr == nil {
 			return Policy{}, withDetail(ErrorPolicyExists, "existing policy "+existing.ID)
+		}
+		if policy.ID != "" {
+			if byID, idErr := s.store.GetPolicy(ctx, policy.ID); idErr == nil {
+				return Policy{}, withDetail(ErrorPolicyExists, "existing policy "+byID.ID)
+			}
 		}
 		s.logger.Error(ctx, "Failed to create sharing policy", log.Error(err))
 		return Policy{}, &tidcommon.InternalServerError
@@ -303,10 +329,20 @@ func (s *sharingService) requireSoleGovernor(
 // only holds together if the id comes from the file: an id minted here would differ on every
 // startup and every reshare beneath it would point at a policy that no longer exists.
 func (s *sharingService) requireUsableDeclaredID(
-	id string, rt ResourceType, resourceID, initiatingOUID string,
+	ctx context.Context, id string, rt ResourceType, resourceID, initiatingOUID string,
 ) *tidcommon.ServiceError {
 	if id == "" {
 		return withDetail(ErrorDeclaredPolicyIDRequired, string(rt)+" "+resourceID)
+	}
+	// A declaration never has a database row of its own, so an id the database holds belongs to
+	// some other policy. Lookups answer from the database first, so letting the declaration keep
+	// the id would leave it unreachable by that id while still listed under its resource.
+	if _, err := s.dbStore.GetPolicy(ctx, id); err == nil {
+		return withDetail(ErrorDeclaredPolicyIDConflict, id)
+	} else if !errors.Is(err, errPolicyNotFound) {
+		s.logger.Error(ctx, "Failed to check a declared policy id against stored policies",
+			log.String("policyID", id), log.Error(err))
+		return &tidcommon.InternalServerError
 	}
 	existing, found := s.fileStore.get(id)
 	if !found {
@@ -320,15 +356,13 @@ func (s *sharingService) requireUsableDeclaredID(
 	return withDetail(ErrorDeclaredPolicyIDConflict, id)
 }
 
-// requireDeclarativeForDeploymentWideGrant refuses the two grants whose reach is not bounded by the
-// initiator's own position in the tree, unless the policy comes from a resource file.
-func requireDeclarativeForDeploymentWideGrant(req PolicyRequest) *tidcommon.ServiceError {
-	if req.AllUnits != nil {
-		return withDetail(ErrorDeploymentWideScopeDeclarativeOnly, string(SectionAllUnits))
-	}
-	if req.OtherTreeRoots != nil && req.OtherTreeRoots.Mode == OtherTreeRootsAll {
-		return withDetail(ErrorDeploymentWideScopeDeclarativeOnly,
-			fmt.Sprintf("%s with mode %s", SectionOtherTreeRoots, OtherTreeRootsAll))
+// requireUnusedStoredID refuses a replay that names an id some other policy already holds, so the
+// collision is answered as a conflict rather than as a failed insert.
+func (s *sharingService) requireUnusedStoredID(ctx context.Context, id string) *tidcommon.ServiceError {
+	if _, svcErr := s.GetPolicy(ctx, id); svcErr == nil {
+		return withDetail(ErrorPolicyExists, id)
+	} else if svcErr.Code != ErrorPolicyNotFound.Code {
+		return svcErr
 	}
 	return nil
 }
@@ -358,9 +392,12 @@ func (s *sharingService) buildPolicy(
 		parentPolicyID = canonicalParentID(covering)
 	}
 
-	// A declaration carries its own id; an API create mints one.
+	// A request carrying an id is a replay of one that already existed, so it keeps it: a reshare
+	// beneath it points at that id, and an import that minted a new one would orphan it. A request
+	// carrying none is a fresh create and is given one. The version it was exported at travels the
+	// same way, so an export of the replayed policy matches the document it came from.
 	id := req.ID
-	if !declared {
+	if id == "" {
 		generated, err := utils.GenerateUUIDv7()
 		if err != nil {
 			s.logger.Error(ctx, "Failed to generate a policy identifier", log.Error(err))
@@ -378,7 +415,7 @@ func (s *sharingService) buildPolicy(
 		Stage:          stage,
 		ParentPolicyID: parentPolicyID,
 		Declared:       declared,
-		Version:        1,
+		Version:        max(req.Version, 1),
 	}
 
 	if svcErr := s.buildSections(ctx, req, &policy); svcErr != nil {
@@ -420,6 +457,11 @@ func (s *sharingService) requireEditLeavesFrontiersIntact(
 		}
 		chain, svcErr := s.buildChain(ctx, p.InitiatingOUID)
 		if svcErr != nil {
+			// A unit that no longer exists has no standing left to protect, and its policies go
+			// in the cleanup that follows the edit.
+			if svcErr.Code == oupkg.ErrorOrganizationUnitNotFound.Code {
+				continue
+			}
 			return svcErr
 		}
 		if reachedByCascadingGrant(grants, p.InitiatingOUID, chain) {
@@ -1016,6 +1058,122 @@ func (s *sharingService) initiatorEffectiveRules(
 	return resolved.Rules, resolved.Visible, nil
 }
 
+// ReplacePoliciesForResource applies the policies a document carries for one resource.
+//
+// Policies are keyed on the organization unit that issues each one rather than on the policy id,
+// because one unit holds at most one policy per resource. That is what lets a document whose policy
+// was rewritten replace the existing one instead of colliding with it.
+//
+// The document is one decision, so a refusal partway undoes what the replay already wrote: policies
+// it created are deleted, and policies it replaced are put back. A policy already in place for an
+// organization unit the document does not name is left alone, because the document says nothing
+// about it.
+func (s *sharingService) ReplacePoliciesForResource(
+	ctx context.Context, rt ResourceType, resourceID, owningOUID string, requests []PolicyRequest,
+) (PolicyReplay, *PolicyReplayError) {
+	var replay PolicyReplay
+	if len(requests) == 0 {
+		return replay, nil
+	}
+
+	var failure *PolicyReplayError
+	// One transaction around the whole document. Each policy write is itself transactional and
+	// joins this one, so a refusal rolls back every earlier write with it. Compensating afterwards
+	// cannot do the same job: a narrowing edit deletes the reshares its sharees issued, and those
+	// are not the document's to recreate.
+	err := s.transactioner.Transact(ctx, func(txCtx context.Context) error {
+		replay = PolicyReplay{}
+		failure = s.replayPolicies(txCtx, rt, resourceID, owningOUID, requests, &replay)
+		if failure != nil {
+			return errReplayRefused
+		}
+		return nil
+	})
+	// The writes inside cleared the caches before the transaction ended, so a reader in between
+	// could have cached a state the commit replaces or the rollback undoes. Cleared either way.
+	s.clearCaches(ctx)
+	if failure != nil {
+		return PolicyReplay{}, failure
+	}
+	if err != nil {
+		s.logger.Error(ctx, "Failed to replay the sharing policies a document carries",
+			log.String("resourceType", string(rt)), log.String("resourceID", resourceID),
+			log.Error(err))
+		return PolicyReplay{}, &PolicyReplayError{
+			InitiatingOUID: owningOUID, Err: &tidcommon.InternalServerError}
+	}
+	return replay, nil
+}
+
+// policyOfInitiator reads the policy one organization unit holds for a resource, as it stands at
+// this point in a replay. A unit holding none is the create case rather than a failure.
+func (s *sharingService) policyOfInitiator(
+	ctx context.Context, rt ResourceType, resourceID, initiatingOUID string, index int,
+) (Policy, bool, *PolicyReplayError) {
+	policy, err := s.store.GetPolicyByInitiator(ctx, rt, resourceID, initiatingOUID)
+	switch {
+	case err == nil:
+		return policy, true, nil
+	case errors.Is(err, errPolicyNotFound):
+		return Policy{}, false, nil
+	default:
+		s.logger.Error(ctx, "Failed to read the policy an organization unit holds while replaying",
+			log.String("resourceType", string(rt)), log.String("resourceID", resourceID),
+			log.String("initiatingOUID", initiatingOUID), log.Error(err))
+		return Policy{}, false, &PolicyReplayError{
+			Index: index, InitiatingOUID: initiatingOUID, Err: &tidcommon.InternalServerError}
+	}
+}
+
+// replayPolicies applies each of the document's policies in turn. It is the body of
+// ReplacePoliciesForResource, kept apart so the transaction wrapping it stays readable.
+func (s *sharingService) replayPolicies(
+	ctx context.Context, rt ResourceType, resourceID, owningOUID string, requests []PolicyRequest,
+	replay *PolicyReplay,
+) *PolicyReplayError {
+	for i, req := range requests {
+		initiator := req.InitiatingOUID
+		if initiator == "" {
+			initiator = owningOUID
+		}
+		// Read the organization unit's policy as it stands now, not from a list taken before the
+		// loop. An earlier entry can narrow a policy and take a reshare with it, and a stale list
+		// would still show that reshare, so the entry describing it would be read as unchanged and
+		// skipped. The document would then report success with the reshare gone.
+		current, found, replayErr := s.policyOfInitiator(ctx, rt, resourceID, initiator, i)
+		if replayErr != nil {
+			return replayErr
+		}
+		if !found {
+			// The private create keeps the id the document carries, so the policy comes back under
+			// the id anything pointing at it already uses.
+			if _, svcErr := s.createPolicy(
+				ctx, rt, resourceID, owningOUID, req, false); svcErr != nil {
+				return &PolicyReplayError{Index: i, InitiatingOUID: initiator, Err: svcErr}
+			}
+			continue
+		}
+		// A declared policy belongs to the file that declares it.
+		if current.Declared {
+			replay.Skipped = append(replay.Skipped, SkippedPolicy{
+				Index: i, InitiatingOUID: initiator, DeclaredPolicyID: current.ID})
+			continue
+		}
+		// An export replayed unchanged must come back out as it went in. Every edit bumps the
+		// version, so rewriting identical contents would make export, import, export disagree with
+		// itself. Only the sections are compared: the policy was found by its initiating unit, and
+		// an edit leaves the id alone.
+		if sameSections(req, requestFromPolicy(current)) {
+			continue
+		}
+		req.Version = current.Version
+		if _, svcErr := s.UpdatePolicy(ctx, current.ID, req); svcErr != nil {
+			return &PolicyReplayError{Index: i, InitiatingOUID: initiator, Err: svcErr}
+		}
+	}
+	return nil
+}
+
 // UpdatePolicy replaces a policy's contents within the limits of its scope family.
 func (s *sharingService) UpdatePolicy(
 	ctx context.Context, policyID string, req PolicyRequest,
@@ -1214,22 +1372,38 @@ func (s *sharingService) rematerializeDependents(ctx context.Context, edited Pol
 
 // orderByInitiatorDepth sorts policies so one whose initiator sits above another always comes first,
 // breaking ties by id so the order is stable across runs.
+//
+// A policy whose initiator no longer exists is left out. It has no ceiling to be re-narrowed
+// against, and the cleanup after the edit removes it.
 func (s *sharingService) orderByInitiatorDepth(
 	ctx context.Context, policies []Policy,
 ) ([]Policy, *tidcommon.ServiceError) {
 	depth := make(map[string]int, len(policies))
+	gone := make(map[string]struct{})
 	for _, p := range policies {
 		if _, done := depth[p.InitiatingOUID]; done {
 			continue
 		}
+		if _, done := gone[p.InitiatingOUID]; done {
+			continue
+		}
 		ancestors, svcErr := s.ouHierarchyResolver.GetAncestorOUIDs(ctx, p.InitiatingOUID)
 		if svcErr != nil {
+			if svcErr.Code == oupkg.ErrorOrganizationUnitNotFound.Code {
+				gone[p.InitiatingOUID] = struct{}{}
+				continue
+			}
 			return nil, svcErr
 		}
 		depth[p.InitiatingOUID] = len(ancestors)
 	}
 
-	out := append([]Policy{}, policies...)
+	out := make([]Policy, 0, len(policies))
+	for _, p := range policies {
+		if _, isGone := gone[p.InitiatingOUID]; !isGone {
+			out = append(out, p)
+		}
+	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if depth[out[i].InitiatingOUID] != depth[out[j].InitiatingOUID] {
 			return depth[out[i].InitiatingOUID] < depth[out[j].InitiatingOUID]
@@ -1237,6 +1411,80 @@ func (s *sharingService) orderByInitiatorDepth(
 		return out[i].ID < out[j].ID
 	})
 	return out, nil
+}
+
+// GetResourceDependencies reports every policy an organization unit issued, for any resource. Each
+// one blocks the unit's deletion: a policy stands on its issuer's view of the resource, and a policy
+// whose issuer is gone would be left behind with nothing under it, still taking part in every later
+// edit of that resource. The unit's policies have to be removed before the unit can be.
+func (s *sharingService) GetResourceDependencies(
+	ctx context.Context, resourceType, id string,
+) ([]resourcedependency.ResourceDependency, error) {
+	if resourceType != resourcedependency.ResourceTypeOU {
+		return []resourcedependency.ResourceDependency{}, nil
+	}
+	issued, err := s.store.ListPoliciesIssuedBy(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	deps := make([]resourcedependency.ResourceDependency, 0, len(issued))
+	for _, p := range issued {
+		deps = append(deps, resourcedependency.ResourceDependency{
+			ResourceType:     resourcedependency.ResourceTypeSharingPolicy,
+			ID:               p.ID,
+			DisplayName:      fmt.Sprintf("%s %s", p.ResourceType, p.ResourceID),
+			BehaviorOnDelete: resourcedependency.BehaviorRestrict,
+		})
+	}
+	return deps, nil
+}
+
+// DeletePoliciesForResource removes every policy recorded for one resource, declared ones excepted:
+// a declaration is its file and goes away with it.
+//
+// Deleting one policy cascades to the reshares beneath it, so a policy later in the list may already
+// be gone by the time it is reached. That is the shape of the walk rather than a failure, so a
+// policy that is no longer there is skipped.
+func (s *sharingService) DeletePoliciesForResource(
+	ctx context.Context, rt ResourceType, resourceID string,
+) *tidcommon.ServiceError {
+	policies, svcErr := s.ListPolicies(ctx, rt, resourceID)
+	if svcErr != nil {
+		return svcErr
+	}
+	if len(policies) == 0 {
+		return nil
+	}
+
+	var failure *tidcommon.ServiceError
+	err := s.transactioner.Transact(ctx, func(txCtx context.Context) error {
+		for _, p := range policies {
+			if p.Declared {
+				continue
+			}
+			if svcErr := s.DeletePolicy(txCtx, p.ID); svcErr != nil {
+				if svcErr.Code == ErrorPolicyNotFound.Code {
+					continue
+				}
+				failure = svcErr
+				return errPolicyPurgeRefused
+			}
+		}
+		return nil
+	})
+	// Each delete inside cleared the caches before the transaction ended, so they are cleared again
+	// whether it committed or rolled back.
+	s.clearCaches(ctx)
+	if failure != nil {
+		return failure
+	}
+	if err != nil {
+		s.logger.Error(ctx, "Failed to remove the sharing policies of a resource",
+			log.String("resourceType", string(rt)), log.String("resourceID", resourceID),
+			log.Error(err))
+		return &tidcommon.InternalServerError
+	}
+	return nil
 }
 
 // DeletePolicy removes a policy and cleans up the state of every organization unit that loses
@@ -1304,11 +1552,18 @@ func (s *sharingService) cleanUpLostVisibility(ctx context.Context, changed Poli
 
 		stillVisible, _, svcErr := s.resolveVisibility(
 			ctx, changed.ResourceType, changed.ResourceID, changed.OwningOUID, ouID)
-		if svcErr != nil {
-			return fmt.Errorf("failed to resolve visibility for %s: %s", ouID, svcErr.Code)
-		}
-		if stillVisible {
+		switch {
+		case svcErr == nil && stillVisible:
 			continue
+		case svcErr != nil && svcErr.Code != oupkg.ErrorOrganizationUnitNotFound.Code:
+			return fmt.Errorf("failed to resolve visibility for %s: %s", ouID, svcErr.Code)
+		case svcErr != nil:
+			// An organization unit a policy names can be deleted while the policy still names it.
+			// It cannot become visible again, so it has lost the resource like any other unit, and
+			// is cleaned up the same way: whatever it shared onward goes too. Failing here instead
+			// would make the policy undeletable, since every retry would stop at the same unit.
+			s.logger.Debug(ctx, "Cleaning up after an organization unit that no longer exists",
+				log.String("ouID", ouID))
 		}
 
 		if err := s.clearOverlayValues(ctx, changed.ResourceType, changed.ResourceID, ouID); err != nil {
@@ -1553,7 +1808,11 @@ func (s *sharingService) ExportPolicies(
 		}
 		queued[l.ID] = pending[1:]
 		p := pending[0]
-		out = append(out, ReplayablePolicy{InitiatingOUID: p.InitiatingOUID, Request: requestFromPolicy(p)})
+		req := requestFromPolicy(p)
+		if p.InitiatingOUID == p.OwningOUID {
+			req.InitiatingOUID = ""
+		}
+		out = append(out, ReplayablePolicy{InitiatingOUID: p.InitiatingOUID, Request: req})
 	}
 	return out, nil
 }
