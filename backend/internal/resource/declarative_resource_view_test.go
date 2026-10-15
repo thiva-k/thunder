@@ -74,9 +74,9 @@ func TestViewResourcePartsNamesEveryPartOfAResourceServer(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{
 		"resources", "actions",
-		"resources/rs-1_orders", "resources/rs-1_orders/resources", "resources/rs-1_orders/actions",
-		"resources/rs-1_items", "resources/rs-1_items/resources", "resources/rs-1_items/actions",
-		"resources/rs-1_invoices", "resources/rs-1_invoices/resources", "resources/rs-1_invoices/actions",
+		"resources/rs-1:orders", "resources/rs-1:orders/resources", "resources/rs-1:orders/actions",
+		"resources/rs-1:orders:items", "resources/rs-1:orders:items/resources", "resources/rs-1:orders:items/actions",
+		"resources/rs-1:invoices", "resources/rs-1:invoices/resources", "resources/rs-1:invoices/actions",
 	}, names)
 }
 
@@ -85,8 +85,8 @@ func TestViewResourcePartsShowsTheTopLevelResources(t *testing.T) {
 	assert.Equal(t, &ResourceListResponse{
 		TotalResults: 2, StartIndex: 1, Count: 2,
 		Resources: []ResourceResponse{
-			{ID: "rs-1_orders", Name: "Orders", Handle: "orders", Permission: "orders"},
-			{ID: "rs-1_invoices", Name: "Invoices", Handle: "invoices", Permission: "invoices"},
+			{ID: "rs-1:orders", Name: "Orders", Handle: "orders", Permission: "orders"},
+			{ID: "rs-1:invoices", Name: "Invoices", Handle: "invoices", Permission: "invoices"},
 		},
 		Links: []LinkResponse{},
 	}, viewResourceServerParts(t)["resources"])
@@ -95,23 +95,23 @@ func TestViewResourcePartsShowsTheTopLevelResources(t *testing.T) {
 // A resource's children are shown all on one page, as the live API lists them by parent.
 func TestViewResourcePartsShowsTheChildrenOfAResource(t *testing.T) {
 	parts := viewResourceServerParts(t)
-	parent := "rs-1_orders"
+	parent := "rs-1:orders"
 	assert.Equal(t, &ResourceListResponse{
 		TotalResults: 1, StartIndex: 1, Count: 1,
 		Resources: []ResourceResponse{
-			{ID: "rs-1_items", Name: "Items", Handle: "items", Parent: &parent, Permission: "orders:items"},
+			{ID: "rs-1:orders:items", Name: "Items", Handle: "items", Parent: &parent, Permission: "orders:items"},
 		},
 		Links: []LinkResponse{},
-	}, parts["resources/rs-1_orders/resources"])
-	assert.Equal(t, 0, parts["resources/rs-1_items/resources"].(*ResourceListResponse).TotalResults)
+	}, parts["resources/rs-1:orders/resources"])
+	assert.Equal(t, 0, parts["resources/rs-1:orders:items/resources"].(*ResourceListResponse).TotalResults)
 }
 
 // One resource is shown with its parent and its permission.
 func TestViewResourcePartsShowsOneResource(t *testing.T) {
-	parent := "rs-1_orders"
+	parent := "rs-1:orders"
 	assert.Equal(t, &ResourceResponse{
-		ID: "rs-1_items", Name: "Items", Handle: "items", Parent: &parent, Permission: "orders:items",
-	}, viewResourceServerParts(t)["resources/rs-1_items"])
+		ID: "rs-1:orders:items", Name: "Items", Handle: "items", Parent: &parent, Permission: "orders:items",
+	}, viewResourceServerParts(t)["resources/rs-1:orders:items"])
 }
 
 // The actions of a resource are shown all on one page.
@@ -120,14 +120,14 @@ func TestViewResourcePartsShowsTheActionsOfAResource(t *testing.T) {
 	assert.Equal(t, &ActionListResponse{
 		TotalResults: 2, StartIndex: 1, Count: 2,
 		Actions: []ActionResponse{
-			{ID: "rs-1_orders_read", Name: "Read", Handle: "read", Permission: "orders:read"},
-			{ID: "rs-1_orders_write", Name: "Write", Handle: "write", Description: "Change orders",
+			{ID: "rs-1:orders:read", Name: "Read", Handle: "read", Permission: "orders:read"},
+			{ID: "rs-1:orders:write", Name: "Write", Handle: "write", Description: "Change orders",
 				Permission: "orders:write"},
 		},
 		Links: []LinkResponse{},
-	}, parts["resources/rs-1_orders/actions"])
+	}, parts["resources/rs-1:orders/actions"])
 
-	list, ok := parts["resources/rs-1_invoices/actions"].(*ActionListResponse)
+	list, ok := parts["resources/rs-1:invoices/actions"].(*ActionListResponse)
 	require.True(t, ok)
 	assert.Equal(t, []ActionResponse{}, list.Actions)
 }

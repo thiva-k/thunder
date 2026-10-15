@@ -865,19 +865,19 @@ func (s *importService) importResourceServerChildren(
 		}
 	}
 
-	// handleToID maps resource handle → created/resolved ID for parent resolution.
-	handleToID := make(map[string]string)
+	// pathToID maps a resource path (its permission) → created/resolved ID for parent resolution.
+	pathToID := make(map[string]string)
 
 	// A child is written after its parent, whichever order the document lists them in, so its
-	// parent handle always resolves to an id already created or found. An export lists resources
+	// parent path always resolves to an id already created or found. An export lists resources
 	// newest first, which puts a child before its parent.
 	ordered := parentsFirst(rs.Resources)
 	for i := range ordered {
 		res := ordered[i]
 
-		// Resolve ParentHandle to the parent ID using handles seen so far in this import.
+		// Resolve the parent path to the parent ID using resources seen so far in this import.
 		if res.ParentHandle != "" {
-			if parentID, ok := handleToID[res.ParentHandle]; ok {
+			if parentID, ok := pathToID[res.ParentHandle]; ok {
 				res.Parent = &parentID
 			}
 		}
@@ -890,7 +890,7 @@ func (s *importService) importResourceServerChildren(
 			// Resource already exists — look it up under the same parent scope to get its ID.
 			var parentID *string
 			if res.ParentHandle != "" {
-				if pid, ok := handleToID[res.ParentHandle]; ok {
+				if pid, ok := pathToID[res.ParentHandle]; ok {
 					parentID = &pid
 				}
 			}
@@ -911,7 +911,7 @@ func (s *importService) importResourceServerChildren(
 			created = &providers.Resource{ID: existingID}
 		}
 
-		handleToID[res.Handle] = created.ID
+		pathToID[res.Permission] = created.ID
 
 		for j := range res.Actions {
 			action := res.Actions[j]
@@ -925,29 +925,29 @@ func (s *importService) importResourceServerChildren(
 	return nil
 }
 
-// parentsFirst orders resources so each comes after the resource its parent handle names. A parent
+// parentsFirst orders resources so each comes after the resource its parent path names. A parent
 // the document does not hold, or a cycle, which ProcessResourceServer refuses before this, leaves
 // the resource where it is rather than dropping it. Resources are tracked by position rather than by
-// handle, so two sharing a handle, which ProcessResourceServer also refuses, are both kept and the
+// path, so two sharing a path, which ProcessResourceServer also refuses, are both kept and the
 // ordering still ends.
 func parentsFirst(resources []providers.Resource) []providers.Resource {
 	held := make(map[string]bool, len(resources))
 	for _, res := range resources {
-		held[res.Handle] = true
+		held[res.Permission] = true
 	}
 	ordered := make([]providers.Resource, 0, len(resources))
 	placed := make([]bool, len(resources))
-	placedHandles := make(map[string]bool, len(resources))
+	placedPaths := make(map[string]bool, len(resources))
 	for len(ordered) < len(resources) {
 		progressed := false
 		for i, res := range resources {
 			if placed[i] {
 				continue
 			}
-			if res.ParentHandle == "" || placedHandles[res.ParentHandle] || !held[res.ParentHandle] {
+			if res.ParentHandle == "" || placedPaths[res.ParentHandle] || !held[res.ParentHandle] {
 				ordered = append(ordered, res)
 				placed[i] = true
-				placedHandles[res.Handle] = true
+				placedPaths[res.Permission] = true
 				progressed = true
 			}
 		}

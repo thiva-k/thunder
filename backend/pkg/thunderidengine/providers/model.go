@@ -156,7 +156,7 @@ type Resource struct {
 	Handle       string   `yaml:"handle"                json:"handle"`
 	Description  string   `yaml:"description,omitempty" json:"description,omitempty"`
 	Parent       *string  `yaml:"-"                     json:"-"`                // Resolved parent ID
-	ParentHandle string   `yaml:"parent,omitempty"      json:"parent,omitempty"` // Parent handle during YAML parsing only
+	ParentHandle string   `yaml:"parent,omitempty"      json:"parent,omitempty"` // Parent reference; the parent's full path once processed
 	Permission   string   `yaml:"-"                     json:"-"`                // Computed permission string
 	Actions      []Action `yaml:"actions,omitempty"     json:"actions,omitempty"`
 }

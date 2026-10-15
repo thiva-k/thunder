@@ -284,6 +284,45 @@ content:
 | `ciba-notification` | email, sms | Approve a backchannel (CIBA) authentication request. |
 | `otp` | email, sms | Verify an email address or phone number with a one-time passcode. |
 
+## Resource Servers
+
+A `resource_server` document declares a resource server with its resources and actions. A resource's permission joins the handles from the top-level resource down to that resource with the resource server's `delimiter`. An action's permission appends the action handle.
+
+### Delimiter and Handles
+
+- `delimiter` is optional and defaults to `resource.default_delimiter`. It must be one of `.`, `_`, `:`, `-`, or `/`.
+- A handle can contain letters, digits, `.`, `_`, `:`, `-`, and `/`, up to 100 characters, but not the resource server's delimiter.
+
+### Parent References
+
+A handle must be unique under its parent. Set `parent` to the full path of the parent resource, such as `parent: app:team:member`.
+
+### Example
+
+```yaml
+resource_type: resource_server
+id: 01900000-0000-7000-8000-0000000009ff
+name: Team Workspace
+identifier: "urn:example:workspace"
+ouHandle: default
+delimiter: ":"
+resources:
+  - { name: App, handle: app }
+  - { name: Project, handle: project, parent: app }
+  - name: Project Member
+    handle: member
+    parent: "app:project"
+    actions:
+      - { name: Read, handle: read }
+  - { name: Team, handle: team, parent: app }
+  - name: Team Member
+    handle: member
+    parent: "app:team"
+    actions:
+      - { name: Read, handle: read }
+  - { name: Lead, handle: lead, parent: "app:team:member" }
+```
+
 ## Delete File-Backed Declarative Resource
 
 `POST /import/delete` removes a declarative file-backed resource by `resourceType` and `resourceKey`.

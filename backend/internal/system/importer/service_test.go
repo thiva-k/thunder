@@ -3138,7 +3138,7 @@ func (f *fakeResourceServerService) CreateResource(
 	_ context.Context, _ string, res providers.Resource,
 ) (*providers.Resource, *tidcommon.ServiceError) {
 	f.resources = append(f.resources, res)
-	return &providers.Resource{ID: "id-" + res.Handle}, nil
+	return &providers.Resource{ID: "id-" + res.Permission}, nil
 }
 
 func (f *fakeResourceServerService) GetResourceList(
@@ -3438,13 +3438,13 @@ func TestImportResourceServer_OUHandleResolved(t *testing.T) {
 	assert.Equal(t, "ou-default", rsSvc.created[0].OUID)
 }
 
-// TestParentsFirstEndsWithADuplicateHandle verifies that two resources sharing a handle are both
-// ordered, and that the ordering ends rather than waiting for the second to be placed.
-func TestParentsFirstEndsWithADuplicateHandle(t *testing.T) {
+// TestParentsFirstEndsWithADuplicatePath verifies that two resources sharing a path are both ordered,
+// and that the ordering ends rather than waiting for the second to be placed.
+func TestParentsFirstEndsWithADuplicatePath(t *testing.T) {
 	resources := []providers.Resource{
-		{Handle: "orders", ParentHandle: "shop"},
-		{Handle: "shop"},
-		{Handle: "orders"},
+		{Handle: "orders", ParentHandle: "shop", Permission: "shop:orders"},
+		{Handle: "shop", Permission: "shop"},
+		{Handle: "orders", ParentHandle: "shop", Permission: "shop:orders"},
 	}
 
 	done := make(chan []providers.Resource, 1)
@@ -3457,7 +3457,7 @@ func TestParentsFirstEndsWithADuplicateHandle(t *testing.T) {
 		assert.Equal(t, "orders", ordered[1].Handle)
 		assert.Equal(t, "orders", ordered[2].Handle)
 	case <-time.After(2 * time.Second):
-		t.Fatal("parentsFirst did not end with two resources sharing a handle")
+		t.Fatal("parentsFirst did not end with two resources sharing a path")
 	}
 }
 
@@ -3501,6 +3501,57 @@ func TestImportResourceServer_ChildBeforeParent(t *testing.T) {
 	assert.Equal(t, "drafts", rsSvc.resources[1].Handle)
 	require.NotNil(t, rsSvc.resources[1].Parent)
 	assert.Equal(t, "id-docs", *rsSvc.resources[1].Parent)
+}
+
+// TestImportResourceServer_SameHandleUnderDifferentParents verifies that a repeated handle is
+// imported under the parent its path names.
+func TestImportResourceServer_SameHandleUnderDifferentParents(t *testing.T) {
+	rsSvc := &fakeResourceServerService{}
+	svc := newImportService(
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"resource_type: resource_server",
+		"id: rs-new",
+		"name: Test RS",
+		"identifier: test-rs",
+		"ouId: ou-explicit",
+		"resources:",
+		"  - { name: Lead, handle: lead, parent: \"app:team:member\" }",
+		"  - { name: App, handle: app }",
+		"  - { name: Project, handle: project, parent: app }",
+		"  - { name: Member, handle: member, parent: project }",
+		"  - { name: Team, handle: team, parent: app }",
+		"  - { name: Member, handle: member, parent: \"app:team\" }",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, rsSvc.resources, 6)
+
+	parents := make(map[string]string, len(rsSvc.resources))
+	for _, res := range rsSvc.resources {
+		parent := ""
+		if res.Parent != nil {
+			parent = *res.Parent
+		}
+		parents[res.Permission] = parent
+	}
+	assert.Equal(t, map[string]string{
+		"app":                  "",
+		"app:project":          "id-app",
+		"app:project:member":   "id-app:project",
+		"app:team":             "id-app",
+		"app:team:member":      "id-app:team",
+		"app:team:member:lead": "id-app:team:member",
+	}, parents)
 }
 
 // TestImportResourceServer_OUHandleNotFound verifies that an unknown ou_handle on a resource

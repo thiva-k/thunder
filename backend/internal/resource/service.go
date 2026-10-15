@@ -1637,6 +1637,9 @@ func validateHandle(handle string, delimiter string) *tidcommon.ServiceError {
 
 // getDefaultDelimiter returns the default delimiter from configuration.
 func getDefaultDelimiter() string {
+	if !config.IsServerRuntimeInitialized() {
+		return ":"
+	}
 	delimiter := config.GetServerRuntime().Config.Resource.DefaultDelimiter
 	if delimiter == "" {
 		return ":" // Fallback default if not configured
