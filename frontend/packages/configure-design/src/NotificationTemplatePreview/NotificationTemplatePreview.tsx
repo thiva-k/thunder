@@ -40,6 +40,11 @@ export interface NotificationTemplatePreviewProps {
   /** Resolved theme (caller-provided). `undefined` → default theme; `null` → spinner. */
   theme?: Theme | null;
   colorScheme?: 'light' | 'dark';
+  /**
+   * ctx keys the runtime can inject (the catalog the editor offers). When set, a {{ctx(key)}} outside
+   * it is flagged; when omitted, ctx tokens are left unchecked.
+   */
+  contextKeys?: ReadonlySet<string>;
 }
 
 /**
@@ -55,6 +60,7 @@ export default function NotificationTemplatePreview({
   locale = undefined,
   theme = undefined,
   colorScheme = undefined,
+  contextKeys = undefined,
 }: NotificationTemplatePreviewProps): JSX.Element {
   const {t} = useTranslation('design');
 
@@ -92,9 +98,10 @@ export default function NotificationTemplatePreview({
             translations,
             theme: effectiveTheme,
             colorScheme: scheme,
+            contextKeys,
             skipMissingTranslation,
           }),
-    [themeLoading, subject, body, channel, translations, effectiveTheme, scheme, skipMissingTranslation],
+    [themeLoading, subject, body, channel, translations, effectiveTheme, scheme, contextKeys, skipMissingTranslation],
   );
 
   const opts = useMemo(
@@ -224,6 +231,12 @@ function warningMessage(
       return t(
         'notificationTemplatePreview.warnings.missingTranslation',
         'No translation for "{{token}}" in any language; the template will fail to send until it is added.',
+        {token},
+      );
+    case 'unknownContext':
+      return t(
+        'notificationTemplatePreview.warnings.unknownContext',
+        '"{{token}}" is not a recognized context value and will not be substituted when the template is sent.',
         {token},
       );
     default:

@@ -7,6 +7,7 @@ import {getDisplayNameForCode, I18nDefaultConstants, toFlagEmoji, useGetLanguage
 import {Box, MenuItem, TextField, Typography} from '@wso2/oxygen-ui';
 import {useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
+import {CONTEXT_TOKEN_KEYS} from '../../constants/template-tokens';
 import type {NotificationChannel, TemplateColorScheme} from '../../models/notification-template';
 
 /**
@@ -129,6 +130,7 @@ export default function TemplatePreviewPanel({
         locale={language || defaultLocale}
         theme={previewTheme}
         colorScheme={colorScheme}
+        contextKeys={CONTEXT_TOKEN_KEYS}
       />
     </Box>
   );

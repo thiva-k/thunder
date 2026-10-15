@@ -77,7 +77,7 @@ describe('collectWarnings', () => {
     const warnings = collectWarnings({
       channel: 'email',
       subject: '{{t(otp.subject)}}',
-      body: '<p>{{ctx(otp)}}</p>',
+      body: '<p>{{ctx(otpCode)}}</p>',
       translations,
     });
     expect(warnings).toEqual([]);
@@ -128,8 +128,24 @@ describe('collectWarnings', () => {
     expect(warnings).toEqual([{severity: 'error', code: 'missingTranslation', token: '{{t(missing.key)}}'}]);
   });
 
-  it('does not warn about ctx tokens', () => {
-    expect(collectWarnings({channel: 'email', body: '{{ctx(otp)}}', translations})).toEqual([]);
+  const contextKeys = new Set(['otpCode']);
+
+  it('does not warn about a known ctx token', () => {
+    expect(collectWarnings({channel: 'email', body: '{{ctx(otpCode)}}', translations, contextKeys})).toEqual([]);
+  });
+
+  it('reports an unknown ctx token as an error', () => {
+    const warnings = collectWarnings({channel: 'email', body: '{{ctx(unknownKey)}}', translations, contextKeys});
+    expect(warnings).toEqual([{severity: 'error', code: 'unknownContext', token: '{{ctx(unknownKey)}}'}]);
+  });
+
+  it('reports an unknown ctx token in an SMS body too', () => {
+    const warnings = collectWarnings({channel: 'sms', body: '{{ctx(unknownKey)}}', translations, contextKeys});
+    expect(warnings).toEqual([{severity: 'error', code: 'unknownContext', token: '{{ctx(unknownKey)}}'}]);
+  });
+
+  it('leaves ctx tokens unchecked when no context catalog is supplied', () => {
+    expect(collectWarnings({channel: 'email', body: '{{ctx(unknownKey)}}', translations})).toEqual([]);
   });
 
   it('de-duplicates the same token+code across subject and body', () => {
