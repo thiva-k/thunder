@@ -1,7 +1,7 @@
 # Extension Executor Specification
 
 - **Status:** Draft
-- **Version:** 0.6
+- **Version:** 0.7
 - **Related documents:**
   - Discovery issue #5555 (ThunderID Extensibility: extension model and authentication)
   - Design discussion #5659 (Extension executor: architecture, response contract and custom authentication)
@@ -76,12 +76,14 @@ The extension executor is a utility executor and cannot set the authenticated us
 
 Validation:
 
-- The step calls only through an HTTP endpoint connection; there is no inline URL. A step without `connectionId` fails with `ErrExtensionConfigInvalid` (configuration invalid) before any call.
+- The step calls only through an HTTP endpoint connection; there is no inline URL. A flow whose extension step has no `connectionId` is refused at save. A step that still reaches run time without one fails with `ErrExtensionConfigInvalid` (configuration invalid) before any call.
+- `inputKeys` and `runtimeDataKeys` must be string arrays. `responseKeys` may be a string array or a comma-separated string.
 - Keeping every endpoint in a connection means credentials are always stored encrypted and the `https` rule (AC2.7) always applies. For local development, use a connection with authentication `none` and an `http` URL.
 
 ### Extension executor: endpoint resolution
 
-- The executor calls `GetResolvedConnection` on every execution. That returns the URL, the timeout and the final header map, with the authentication header applied and secrets decrypted in memory only. A connection that is missing, deleted or cannot be resolved fails the node with `ErrExtensionConfigInvalid`, and no call is made.
+- The executor calls `GetResolvedConnection` on every execution. That returns the URL, the timeout and the final header map, with the authentication header applied and secrets decrypted in memory only. A step with no connection configured, or whose connection does not exist, fails the node with `ErrExtensionConfigInvalid`, and no call is made. A connection that exists but cannot be resolved is a failure inside ThunderID: the node fails with `ErrExtensionCallFailed`, with `errorKind` `internal` in the audit event, and no call is made.
+- The embedded engine (`pkg/thunderidengine`) has no connection resolver, so an extension step run there fails with `ErrExtensionConfigInvalid`.
 
 ### Extension executor: request construction
 
@@ -133,8 +135,8 @@ Never sent: node properties, shared runtime data, forwarded data, the execution 
 
 | Class | Members | Sent |
 |---|---|---|
-| Secret engine state | `otpSessionToken`, `consent_session_token`, `oauthState`, `oidcNonce`, `magicLinkUsedJti`, `storedInviteToken`, `inviteLink`, `magicLinkURL`, `ssoSessionHandle`, `ssoSessionId`, `tokenFamilyId`, `candidateUsers`, `failureReasonJSON`, `openid4vpVerificationState`, `passkeySessionToken`, and every SSO checkpoint key (names starting with an SSO session key followed by a checkpoint suffix) | Never, even when named. |
-| Other engine keys | Every other key on the reserved list (see *Response storage*), for example `clientId`, `requested_permissions`, `ouId` | Only when named in `runtimeDataKeys`. Exception: `applicationId` and `userID` are sent by default when present. |
+| Secret engine state | `otpSessionToken`, `consent_session_token`, `oauthState`, `oidcNonce`, `magicLinkUsedJti`, `storedInviteToken`, `inviteLink`, `magicLinkURL`, `ssoSessionHandle`, `ssoSessionId`, `tokenFamilyId`, `candidateUsers`, `failureReasonJSON`, `openid4vpVerificationState`, `passkeySessionToken`, `linkingCheckpoint`, and every SSO checkpoint key (names starting with an SSO session key followed by a checkpoint suffix) | Never, even when named. |
+| Other engine keys | Every other key on the reserved list (see *Response storage*), for example `clientId`, `requested_permissions`, `ouId`, `externalIdentity`, `linkingCandidateUserIds`, `linkingVerificationRequested`, `ownerId`, `categoryType`, `defaultOUID` | Only when named in `runtimeDataKeys`. Exception: `applicationId` and `userID` are sent by default when present. |
 | Flow data | Every key not on the reserved list, such as data stored by earlier extensions | Only when named in `runtimeDataKeys`. |
 
 Without `runtimeDataKeys`, a service therefore receives only `applicationId` and `userID`. Data an earlier extension stored never reaches a later one unless an administrator names it on that later step, so one service cannot read another's answers by default.
@@ -154,7 +156,7 @@ A service answers with HTTP status 2xx and a JSON object. This is what a service
 | Field | When | Meaning |
 |---|---|---|
 | `actionStatus` | Always | `SUCCESS`, `FAILED`, `INCOMPLETE` or `ERROR`. Case-sensitive. |
-| `failureReason` | With `FAILED` or `INCOMPLETE`, optional | A machine-readable code, up to 64 characters from `[A-Za-z0-9_.-]`. Passed to the client application as `params.reason`. |
+| `failureReason` | With `FAILED` or `INCOMPLETE`, optional | A machine-readable code, up to 64 characters from `[A-Za-z0-9_.-]`. Passed to the client application as `params.reason`, except for a credential failure (see *Failure information and user messages*). |
 | `failureDescription` | With `FAILED` or `INCOMPLETE`, optional | Text for the user, shown as plain text and cut to 256 characters. |
 | `redirectUrl` | With `INCOMPLETE`, optional | An absolute `http` or `https` URL to send the user's browser to (see *Redirect to the service's page*). |
 | Any other top-level field | Optional | Data for later steps, stored as text when allowed by `responseKeys`. It must not use a reserved key (see *Response storage*). |
@@ -222,12 +224,12 @@ The outcome is decided in this order:
 | Outcome | Executor status | Flow continues at | Client error | Runtime data |
 |---|---|---|---|---|
 | `SUCCESS` | complete | `onSuccess` | none | Response fields stored; earlier `failureReason` and `failureDescription` reset to `""` |
-| `FAILED` | failure | `onFailure`, or ends the flow with an error if none is set | `ErrExtensionActionFailed` | `failureReason` and `failureDescription` stored |
-| `INCOMPLETE` | user input required | `onIncomplete`, which must lead to a prompt | `ErrExtensionInputRequired` when a message exists | Response fields plus `failureReason` and `failureDescription` stored |
+| `FAILED` | failure | `onFailure`, or ends the flow with an error if none is set | `ErrExtensionActionFailed`, or `ErrInvalidCredentials` for a credential failure | `failureReason` and `failureDescription` stored |
+| `INCOMPLETE` | user input required | `onIncomplete`, which must lead to a prompt; without `onIncomplete`, the flow ends with ThunderID's internal server error | `ErrExtensionInputRequired` when a message exists, or `ErrInvalidCredentials` for a credential failure | Response fields plus `failureReason` and `failureDescription` stored; nothing is stored when the step has no `onIncomplete` |
 | `INCOMPLETE` with `redirectUrl` | external redirection | The user's browser goes to `redirectUrl`; the flow pauses on this step and runs it again when the browser returns | none | Response fields stored |
 | `ERROR` | failure | `onFailure`, or ends the flow with an error | `ErrExtensionCallFailed` (generic) | unchanged |
 
-On `ERROR`, nothing from the response reaches the client. `failureReason` and `failureDescription` appear only in the audit event (see *Audit event*).
+On `ERROR`, nothing from the response reaches the client. `failureReason` appears only in the audit event (see *Audit event*); `failureDescription` is not recorded.
 
 ### Extension executor: redirect to the service's page
 
@@ -246,6 +248,7 @@ Some services collect input on their own page, such as a PIN pad or a document u
 - `redirectUrl` must be an absolute `http` or `https` URL. `javascript:` and `data:` URLs would run in the sign-in page instead of leaving it, so they, relative URLs and non-string values make the outcome `ERROR`. An empty or `null` value means no redirect.
 - Any `http` or `https` destination is accepted. The service is configured by an administrator, and services commonly host their page on another origin from their API.
 - `redirectUrl` is part of the contract and is never stored as data. With any status other than `INCOMPLETE` it is ignored.
+- Until custom authentication (redirect) is delivered, an `INCOMPLETE` with a non-empty `redirectUrl` is treated as `ERROR`, with `errorKind` `contract`.
 
 ### Extension executor: response storage
 
@@ -264,11 +267,14 @@ Some services collect input on their own page, such as a PIN pad or a document u
 - The executor keeps a single list of runtime-data keys that the engine or a built-in step relies on:
   - every `RuntimeKey*` constant in `internal/flow/common`;
   - the identity keys `userID`, `userId` and `ouId`;
+  - `groups`, since authorization reads it before the user store;
+  - `password`, so that a service cannot plant a credential;
   - `applicationId`;
   - `failureReasonJSON`;
   - `authorized_permissions`;
   - the keys each built-in executor defines for its own state, including `defaultOUID`, `categoryType`, `ownerId`, `idpId`, `senderId` and `passkeySessionToken`;
   - SSO checkpoint keys, matched by prefix because their names carry a checkpoint suffix.
+- Profile attributes such as `username`, `email`, `given_name` and `family_name` are not reserved and stay storable, since provisioning after the resolver relies on them (pattern 2).
 - A unit test fails if any `RuntimeKey*` constant in `internal/flow/common`, or any runtime-key constant in `internal/flow/executor`, is missing from the list, so the list cannot fall behind as the engine grows.
 - **A response that contains a reserved key as a top-level field is `ERROR`.** That holds even when `responseKeys` would have dropped the field, so a misbehaving service is always visible. Nothing from such a response is stored.
 - The proof of concept showed why this matters: the `{{userId}}` placeholder resolves from `runtimeData.userId` before the authenticated user, so a service that returned its own user ID under that name would be taken for the signed-in user by every later step that uses the placeholder.
@@ -288,9 +294,9 @@ Some services collect input on their own page, such as a PIN pad or a document u
   - `FAILED` uses "The request was rejected";
   - `INCOMPLETE` returns no error.
 - **Credential failures:**
-  - When `failureReason` is `invalid_credentials` or `user_not_found`, the user sees ThunderID's own message, "Invalid username or password.", whatever the service sent.
-  - `params.reason` is still passed, so a client application can tell the cases apart.
-  - The same message for both cases stops an extension from revealing which accounts exist.
+  - When `failureReason` is `invalid_credentials` or `user_not_found`, with `FAILED` or `INCOMPLETE`, the step returns ThunderID's own `ErrInvalidCredentials`, exactly as the built-in credential steps do, with no params, whatever the service sent.
+  - The reason is kept only in runtime data and the audit event.
+  - The same error for both cases, identical to a native credential failure, stops an extension from revealing which accounts exist.
 
 ### Extension executor: audit event
 
@@ -299,12 +305,12 @@ Every execution publishes one event, `EXTENSION_CALL`, on ThunderID's observabil
 - `executionId`, `nodeId`, `flowType`;
 - `connectionId`;
 - `outcome`;
-- `failureReason`, for `FAILED` and `INCOMPLETE`;
+- `failureReason`, when the service sent one in the allowed form;
 - `httpStatus`, when a response was received;
 - the call's duration, as the bus's existing duration key;
-- `errorKind`, for `ERROR`: `timeout`, `transport`, `status`, `body`, `contract` or `reserved_key`.
+- `errorKind`, for `ERROR`: `timeout`, `transport`, `status`, `body`, `contract`, `reserved_key` or `internal`. It is absent when the service itself answered `ERROR`.
 
-The event never contains URLs, header values, request or response bodies, user inputs, runtime-data values or `failureDescription`. Configuration and resolution failures (`ErrExtensionConfigInvalid`) emit the same event with `outcome` set to `CONFIG_ERROR`.
+The event never contains URLs, header values, request or response bodies, user inputs, runtime-data values or `failureDescription`. Configuration failures (`ErrExtensionConfigInvalid`) emit the same event with `outcome` set to `CONFIG_ERROR`.
 
 ### Extension executor: errors
 
@@ -312,9 +318,10 @@ Errors are named here by their constant. Numeric codes are assigned from the nex
 
 | Error | When | Client sees |
 |---|---|---|
-| `ErrExtensionConfigInvalid` | No connection configured; connection missing or unresolvable | "Configuration error", generic description |
-| `ErrExtensionCallFailed` | Outcome `ERROR` for any reason, including an unsafe `redirectUrl` | "Extension call failed", generic description |
-| `ErrExtensionActionFailed` | Outcome `FAILED` | "Request rejected"; description from `failureDescription` or the credential-failure message; `params.description`, `params.reason` |
+| `ErrExtensionConfigInvalid` | No connection configured, or the connection does not exist | "Configuration error", generic description |
+| `ErrExtensionCallFailed` | Outcome `ERROR` for any reason, including an unsafe `redirectUrl` and a connection that exists but cannot be resolved | "Extension call failed", generic description |
+| `ErrExtensionActionFailed` | Outcome `FAILED` | "Request rejected"; description from `failureDescription`; `params.description`, `params.reason` |
+| `ErrInvalidCredentials` (existing) | Outcome `FAILED` or `INCOMPLETE` with `failureReason` `invalid_credentials` or `user_not_found` | ThunderID's own invalid-credentials error, with no params |
 | `ErrExtensionInputRequired` | Outcome `INCOMPLETE` with a message | "Additional input required"; `params.description`, `params.reason` |
 
 ### HTTP endpoint connection
@@ -620,7 +627,7 @@ The connection's timeout bounds and the 64 KiB cap are constants, not configurat
 **Acceptance criteria:**
 
 - **AC1.1:** Given a flow with an extension step that references a connection, when the flow reaches the step, then ThunderID POSTs to the connection's URL with the connection's headers and timeout.
-- **AC1.2:** Given an extension step with no `connectionId`, when the flow reaches it, then the step fails with `ErrExtensionConfigInvalid` and no request is sent.
+- **AC1.2:** Given a flow whose extension step has no `connectionId`, when the flow is saved, then the save is refused.
 - **AC1.3:** Given an extension step that references a deleted connection, when the flow reaches it, then the step fails with `ErrExtensionConfigInvalid` and no request is sent.
 
 ### R2. Endpoints are reusable and secrets are protected
@@ -691,12 +698,12 @@ The connection's timeout bounds and the 64 KiB cap are constants, not configurat
 
 ### R7. User-facing failure text is bounded and cannot reveal accounts
 
-**Requirement:** Text a service sends for users is plain, bounded, and replaced by ThunderID's own message for credential failures.
+**Requirement:** Text a service sends for users is plain and bounded, and a credential failure returns ThunderID's own invalid-credentials error.
 
 **Acceptance criteria:**
 
 - **AC7.1:** Given a `failureDescription` of 300 characters containing control characters, when it is shown, then the user sees at most 256 characters, with no control characters.
-- **AC7.2:** Given `FAILED` with `failureReason` `user_not_found`, and separately with `invalid_credentials`, when each is shown, then both show "Invalid username or password." and `params.reason` differs.
+- **AC7.2:** Given `FAILED` with `failureReason` `user_not_found`, and separately with `invalid_credentials`, when each is returned, then both return the same `ErrInvalidCredentials`, without `params.reason`.
 - **AC7.3:** Given `FAILED` with no `failureDescription`, when it is shown, then the description is "The request was rejected".
 - **AC7.4:** Given a `failureReason` containing characters outside `[A-Za-z0-9_.-]` or longer than 64 characters, when the error is returned, then `params.reason` is absent.
 
@@ -750,3 +757,4 @@ The connection's timeout bounds and the 64 KiB cap are constants, not configurat
 | 0.4 | 2026-10-13 | The inline endpoint is removed; an extension step calls only through an HTTP endpoint connection (AC1.1 to AC1.3, AC10.3). The audit event is published on the observability event bus as `EXTENSION_CALL` (R8). The never-sent and reserved lists add `passkeySessionToken`, executor-owned keys and SSO checkpoint keys (AC6.4). |
 | 0.5 | 2026-10-13 | Connection authentication reuses the shared outbound authentication model (`none` and `basic` today; bearer token and API key follow in a separate feature), with its secret-retention rule and the URL origin as the credential target. Plain headers refuse credential-carrying and HTTP-managed names (AC2.8). URL host and port are validated and the URL stored canonicalized. A separate error for an invalid description. The URL and its query string are documented as not secret. An omitted secret is kept under the shared rule; `******` is not treated as a kept value. |
 | 0.6 | 2026-10-14 | Aligned with the HTTP endpoint connection implementation: `PROPERTIES` stores the shared model's authentication property array, not a separate `secrets` array; connection errors are named by their `httpconnection.Error*` constants, and an unsupported authentication type returns the existing `connection.ErrorInvalidAuthenticationType`; the create wizard includes authentication; the primary key is `(DEPLOYMENT_ID, ID)`, as in the other configuration tables. |
+| 0.7 | 2026-10-15 | Aligned with the extension executor implementation: `groups` and `password` are reserved, while profile attributes stay storable; a credential failure returns ThunderID's own `ErrInvalidCredentials` with no params (AC7.2); a connection that exists but cannot be resolved is `ErrExtensionCallFailed` with `errorKind` `internal`; the audit event carries `failureReason` but never `failureDescription`; a flow whose extension step has no connection is refused at save (AC1.2); property types for `inputKeys`, `runtimeDataKeys` and `responseKeys`; an `INCOMPLETE` without `onIncomplete` ends the flow with an internal server error; a redirect is treated as `ERROR` until custom authentication is delivered; the embedded engine has no connection resolver; the never-sent and engine-key lists add the linking, ownership and OU keys the executor classifies. |
