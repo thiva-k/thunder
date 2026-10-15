@@ -1,7 +1,7 @@
 # Extension Executor Specification
 
 - **Status:** Draft
-- **Version:** 0.5
+- **Version:** 0.6
 - **Related documents:**
   - Discovery issue #5555 (ThunderID Extensibility: extension model and authentication)
   - Design discussion #5659 (Extension executor: architecture, response contract and custom authentication)
@@ -323,12 +323,12 @@ A connection of type `http`. Fields and validation:
 
 | Field | Rule | Error |
 |---|---|---|
-| `name` | Required, unique per deployment, at most 255 characters | `ErrHTTPConnectionInvalidName`; `ErrHTTPConnectionAlreadyExists` when duplicate |
-| `description` | Optional, at most 500 characters | `ErrHTTPConnectionInvalidDescription` |
-| `url` | Required, absolute `http` or `https` URL with a valid host and a port from 1 to 65535, and no user name or password. Must be `https` when `authentication.type` is not `none`, so that a stored credential never crosses the network in clear. `http` remains for services that receive no credential, such as a local development service. Stored canonicalized: scheme and host in lower case, default port removed. The URL, including its query string, is not secret: it is stored and returned in clear, so a credential must not be put in it. | `ErrHTTPConnectionInvalidURL` |
-| `timeoutMs` | 1 to 20 000; `0` or omitted means 10 000 | `ErrHTTPConnectionInvalidTimeout` |
-| `headers` | `[{name, value}]`; names valid and unique (case-insensitive); values without line breaks. A PUT replaces the whole list, so omitted means none. Names that carry credentials or that the HTTP stack manages are refused: `Authorization`, `Proxy-Authorization`, `Cookie`, `Host`, `Content-Length`, `Content-Type`, `Transfer-Encoding`, `Connection`, `TE`, `Trailer`, `Upgrade`, `Keep-Alive` and `Expect`. A credential belongs in `authentication`, where it is encrypted and masked. | `ErrHTTPConnectionInvalidHeaders` |
-| `authentication` | Optional outbound authentication object, the same one SMTP email connections use (`internal/system/outboundauth`): `{"type": "none" \| "basic", "properties": {...}}`. Omitted means `none`, on update as much as on create. `basic` requires `username` and `password`; for HTTP the username may not contain a colon, since HTTP Basic joins the two with one (RFC 7617). | `ErrHTTPConnectionInvalidAuthentication` |
+| `name` | Required, unique per deployment, at most 255 characters | `httpconnection.ErrorInvalidName`; `httpconnection.ErrorAlreadyExists` when duplicate |
+| `description` | Optional, at most 500 characters | `httpconnection.ErrorInvalidDescription` |
+| `url` | Required, absolute `http` or `https` URL with a valid host and a port from 1 to 65535, and no user name or password. Must be `https` when `authentication.type` is not `none`, so that a stored credential never crosses the network in clear. `http` remains for services that receive no credential, such as a local development service. Stored canonicalized: scheme and host in lower case, default port removed. The URL, including its query string, is not secret: it is stored and returned in clear, so a credential must not be put in it. | `httpconnection.ErrorInvalidURL` |
+| `timeoutMs` | 1 to 20 000; `0` or omitted means 10 000 | `httpconnection.ErrorInvalidTimeout` |
+| `headers` | `[{name, value}]`; names valid and unique (case-insensitive); values without line breaks. A PUT replaces the whole list, so omitted means none. Names that carry credentials or that the HTTP stack manages are refused: `Authorization`, `Proxy-Authorization`, `Cookie`, `Host`, `Content-Length`, `Content-Type`, `Transfer-Encoding`, `Connection`, `TE`, `Trailer`, `Upgrade`, `Keep-Alive` and `Expect`. A credential belongs in `authentication`, where it is encrypted and masked. | `httpconnection.ErrorInvalidHeaders` |
+| `authentication` | Optional outbound authentication object, the same one SMTP email connections use (`internal/system/outboundauth`): `{"type": "none" \| "basic", "properties": {...}}`. Omitted means `none`, on update as much as on create. `basic` requires `username` and `password`; for HTTP the username may not contain a colon, since HTTP Basic joins the two with one (RFC 7617). | `httpconnection.ErrorInvalidAuthentication`; `connection.ErrorInvalidAuthenticationType` when the type is not one the server implements |
 
 Authentication reuses the shared outbound authentication model rather than defining its own, so every connection that dials out with credentials stores, masks and validates them the same way, and the console renders the methods the server reports through `GET /connections/meta`. The model offers `none` and `basic` today. Bearer token and API-key methods are added to the shared model by a follow-up feature (#5789), after which HTTP endpoint connections offer them without a change here.
 
@@ -336,13 +336,13 @@ Authentication reuses the shared outbound authentication model rather than defin
 
 - **Storage:** encrypted with the server's configuration key and stored in the connection's properties, never in plain text.
 - **Reads:** every read returns each secret as `******`. The basic username is returned in clear.
-- **Updates** follow the shared rule for outbound credentials. A secret that is omitted keeps its stored value only while the credential's target is unchanged: the same authentication type, the same non-secret properties (the username) and the same URL **origin** (scheme, host and port, with default ports normalized). Otherwise the stored secret is dropped and must be supplied again, or the update fails with `ErrHTTPConnectionInvalidAuthentication`. This stops an editor from pointing a connection at their own server, or changing the user it signs in as, and collecting its stored password. A secret value is never compared with the mask: `******` sent back is taken as the new value, as for every outbound credential, so clients omit a secret to keep it.
+- **Updates** follow the shared rule for outbound credentials. A secret that is omitted keeps its stored value only while the credential's target is unchanged: the same authentication type, the same non-secret properties (the username) and the same URL **origin** (scheme, host and port, with default ports normalized). Otherwise the stored secret is dropped and must be supplied again, or the update fails with `httpconnection.ErrorInvalidAuthentication`. This stops an editor from pointing a connection at their own server, or changing the user it signs in as, and collecting its stored password. A secret value is never compared with the mask: `******` sent back is taken as the new value, as for every outbound credential, so clients omit a secret to keep it.
 
 **Resolution for calls.** Plain headers first, then the outbound authentication's HTTP binding adds the credential. With `basic`, that is `Authorization: Basic base64(username:password)`. Decrypted values exist only in the outgoing request, for the duration of the call.
 
 **Lifecycle.**
 
-- Delete is refused with `ErrHTTPConnectionHasBlockingDependencies` while any flow references the connection through `connectionId`. Flow management reports those references through the dependency registry. A failure to determine usages also refuses the delete.
+- Delete is refused with `httpconnection.ErrorHasBlockingDependencies` while any flow references the connection through `connectionId`. Flow management reports those references through the dependency registry. A failure to determine usages also refuses the delete.
 - Connections defined in declarative YAML are read-only (update and delete fail as declarative resources).
 - Export writes each secret as a `.env` parameter, as for SMTP connections. Import accepts the same shape.
 
@@ -515,12 +515,13 @@ PostgreSQL:
 ```sql
 CREATE TABLE "HTTP_CONNECTION" (
     DEPLOYMENT_ID VARCHAR(255) NOT NULL,
-    ID            VARCHAR(36)  PRIMARY KEY,
+    ID            VARCHAR(36)  NOT NULL,
     NAME          VARCHAR(255) NOT NULL,
     DESCRIPTION   VARCHAR(500),
     PROPERTIES    JSONB        NOT NULL,
     CREATED_AT    TIMESTAMPTZ  DEFAULT NOW(),
-    UPDATED_AT    TIMESTAMPTZ  DEFAULT NOW()
+    UPDATED_AT    TIMESTAMPTZ  DEFAULT NOW(),
+    PRIMARY KEY (DEPLOYMENT_ID, ID)
 );
 CREATE UNIQUE INDEX idx_http_connection_name_deployment ON "HTTP_CONNECTION" (DEPLOYMENT_ID, NAME);
 ```
@@ -530,17 +531,18 @@ SQLite:
 ```sql
 CREATE TABLE "HTTP_CONNECTION" (
     DEPLOYMENT_ID VARCHAR(255) NOT NULL,
-    ID            VARCHAR(36)  PRIMARY KEY,
+    ID            VARCHAR(36)  NOT NULL,
     NAME          VARCHAR(255) NOT NULL,
     DESCRIPTION   VARCHAR(500),
     PROPERTIES    TEXT         NOT NULL,
     CREATED_AT    TEXT         DEFAULT (datetime('now')),
-    UPDATED_AT    TEXT         DEFAULT (datetime('now'))
+    UPDATED_AT    TEXT         DEFAULT (datetime('now')),
+    PRIMARY KEY (DEPLOYMENT_ID, ID)
 );
 CREATE UNIQUE INDEX idx_http_connection_name_deployment ON "HTTP_CONNECTION" (DEPLOYMENT_ID, NAME);
 ```
 
-- `PROPERTIES` holds `url`, `timeoutMs`, `headers` and the outbound authentication properties written by the shared model (its type, the username, and the password as an encrypted secret). `secrets` is a property array whose every value is encrypted (`bearerToken`, `basicPassword`, `apiKeyHeader:<name>`).
+- `PROPERTIES` is a JSON object `{url, timeoutMs, headers, authentication}`. `authentication` is the property array the shared outbound authentication model writes: the authentication type, the username, and the password marked secret and encrypted. It is omitted when the connection has no authentication. No other secret is stored.
 - The table is added to the SQLite and Postgres configuration scripts. There is no migration framework, so the release notes carry the DDL for existing deployments.
 - No other table changes.
 
@@ -552,9 +554,9 @@ All routes require the same authorization as the other connection routes.
 |---|---|---|
 | `GET /connections/http` | none | `200`, a list of connection summaries |
 | `POST /connections/http` | `HTTPConnectionCreateRequest` | `201`, `HTTPConnectionResponse` |
-| `GET /connections/http/{id}` | none | `200`, `HTTPConnectionResponse`; `404 ErrHTTPConnectionNotFound` |
-| `PUT /connections/http/{id}` | `HTTPConnectionUpdateRequest` | `200`; `400`, one of the validation errors in the field table above; `404`; `409 ErrHTTPConnectionAlreadyExists` |
-| `DELETE /connections/http/{id}` | none | `204`; `404`; `409 ErrHTTPConnectionHasBlockingDependencies` |
+| `GET /connections/http/{id}` | none | `200`, `HTTPConnectionResponse`; `404 httpconnection.ErrorNotFound` |
+| `PUT /connections/http/{id}` | `HTTPConnectionUpdateRequest` | `200`; `400`, one of the validation errors in the field table above; `404`; `409 httpconnection.ErrorAlreadyExists` |
+| `DELETE /connections/http/{id}` | none | `204`; `404`; `409 httpconnection.ErrorHasBlockingDependencies` |
 | `GET /connections/http/{id}/usages` | none | `200`, `{totalResults, summary, usages[]}` |
 | `GET /connections?category=http` | none | `200`, the standard paginated list |
 
@@ -562,7 +564,7 @@ The request and response bodies have the fields in *HTTP endpoint connection*. R
 
 ### UI
 
-**Connections, create.** "HTTP Endpoint" in the custom section of the wizard. The steps are name, then URL. Timeout, headers and authentication use defaults on create and can be edited afterwards.
+**Connections, create.** "HTTP Endpoint" in the custom section of the wizard. The steps are name, then URL and authentication, which offers the same methods as on the detail page and defaults to `none`. Timeout and headers use defaults on create and can be edited afterwards.
 
 **Connections, detail page:**
 
@@ -629,12 +631,12 @@ The connection's timeout bounds and the 64 KiB cap are constants, not configurat
 
 - **AC2.1:** Given a connection with `basic` authentication, when it is read through any API, then every secret value is `******`, and the stored record contains no secret in plain text.
 - **AC2.2:** Given a stored connection, when it is updated with the password omitted, the same authentication type, the same username and the same URL origin, then the next call carries the original secret.
-- **AC2.3:** Given a stored connection with `basic` authentication, when its username changes and the password is omitted, then the update fails with `400 ErrHTTPConnectionInvalidAuthentication` and the connection is unchanged.
-- **AC2.4:** Given a stored connection with authentication other than `none`, when its URL host, port or scheme changes and the password is omitted, then the update fails with `400 ErrHTTPConnectionInvalidAuthentication`.
+- **AC2.3:** Given a stored connection with `basic` authentication, when its username changes and the password is omitted, then the update fails with `400 httpconnection.ErrorInvalidAuthentication` and the connection is unchanged.
+- **AC2.4:** Given a stored connection with authentication other than `none`, when its URL host, port or scheme changes and the password is omitted, then the update fails with `400 httpconnection.ErrorInvalidAuthentication`.
 - **AC2.5:** Given a connection that is updated, when a flow next calls it, then the new URL, headers and secrets are used without editing the flow.
 - **AC2.6:** Given a connection, when it is exported, then each secret appears as a `.env` parameter and not in the YAML.
-- **AC2.7:** Given a connection with authentication other than `none`, when it is created or updated with an `http` URL, then the request fails with `400 ErrHTTPConnectionInvalidURL`; with `none`, an `http` URL is accepted.
-- **AC2.8:** Given a connection, when it is created or updated with a plain header named `Authorization`, `Cookie`, `Host` or another refused name, in any case, then the request fails with `400 ErrHTTPConnectionInvalidHeaders`.
+- **AC2.7:** Given a connection with authentication other than `none`, when it is created or updated with an `http` URL, then the request fails with `400 httpconnection.ErrorInvalidURL`; with `none`, an `http` URL is accepted.
+- **AC2.8:** Given a connection, when it is created or updated with a plain header named `Authorization`, `Cookie`, `Host` or another refused name, in any case, then the request fails with `400 httpconnection.ErrorInvalidHeaders`.
 
 ### R3. Connections in use cannot be deleted
 
@@ -643,8 +645,8 @@ The connection's timeout bounds and the 64 KiB cap are constants, not configurat
 **Acceptance criteria:**
 
 - **AC3.1:** Given a flow whose extension step references a connection, when its usages are requested, then the flow is listed.
-- **AC3.2:** Given that reference, when the connection is deleted, then the request fails with `409 ErrHTTPConnectionHasBlockingDependencies`.
-- **AC3.3:** Given no references, when the connection is deleted, then it returns `204`, and a later read returns `404 ErrHTTPConnectionNotFound`.
+- **AC3.2:** Given that reference, when the connection is deleted, then the request fails with `409 httpconnection.ErrorHasBlockingDependencies`.
+- **AC3.3:** Given no references, when the connection is deleted, then it returns `204`, and a later read returns `404 httpconnection.ErrorNotFound`.
 
 ### R4. A service answers with a fixed contract and the flow routes on it
 
@@ -747,3 +749,4 @@ The connection's timeout bounds and the 64 KiB cap are constants, not configurat
 | 0.3 | 2026-10-13 | Review fixes: pattern 1 uses `verifiedUserId`, since `userId` is reserved; a service must not return reserved keys; a connection with authentication requires an `https` URL (AC2.7); separate PostgreSQL and SQLite schemas; flow data is sent only when named in `runtimeDataKeys` (AC5.4); a response format section for service authors; sample PIN service responses for each custom authentication pattern. |
 | 0.4 | 2026-10-13 | The inline endpoint is removed; an extension step calls only through an HTTP endpoint connection (AC1.1 to AC1.3, AC10.3). The audit event is published on the observability event bus as `EXTENSION_CALL` (R8). The never-sent and reserved lists add `passkeySessionToken`, executor-owned keys and SSO checkpoint keys (AC6.4). |
 | 0.5 | 2026-10-13 | Connection authentication reuses the shared outbound authentication model (`none` and `basic` today; bearer token and API key follow in a separate feature), with its secret-retention rule and the URL origin as the credential target. Plain headers refuse credential-carrying and HTTP-managed names (AC2.8). URL host and port are validated and the URL stored canonicalized. A separate error for an invalid description. The URL and its query string are documented as not secret. An omitted secret is kept under the shared rule; `******` is not treated as a kept value. |
+| 0.6 | 2026-10-14 | Aligned with the HTTP endpoint connection implementation: `PROPERTIES` stores the shared model's authentication property array, not a separate `secrets` array; connection errors are named by their `httpconnection.Error*` constants, and an unsupported authentication type returns the existing `connection.ErrorInvalidAuthenticationType`; the create wizard includes authentication; the primary key is `(DEPLOYMENT_ID, ID)`, as in the other configuration tables. |
