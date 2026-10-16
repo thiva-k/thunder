@@ -344,6 +344,21 @@ func (p *defaultAuthnProvider) resolveLinkedEntities(ctx context.Context,
 	return linkedIDs, nil
 }
 
+// claimLegacySubject migrates the users federated before links were recorded, who hold the
+// subject only in the schema attribute sub, to links at the connection presenting it.
+func (p *defaultAuthnProvider) claimLegacySubject(ctx context.Context,
+	token map[string]interface{}) ([]string, *tidcommon.ServiceError) {
+	idpID, _ := token[authnprovidercm.UserAttributeFederatedIdpID].(string)
+	sub, _ := token[authnprovidercm.UserAttributeSub].(string)
+
+	claimedIDs, err := p.entitySvc.ClaimLegacySubject(ctx, idpID, sub)
+	if err != nil {
+		return nil, p.logAndReturnServerError(ctx, "Failed to migrate a legacy subject",
+			log.String("error", err.Error()))
+	}
+	return claimedIDs, nil
+}
+
 func (p *defaultAuthnProvider) buildAuthnResult(
 	ctx context.Context, authnResult *authncommon.AuthnResult,
 ) (*providers.AuthnResult, *tidcommon.ServiceError) {
@@ -357,6 +372,9 @@ func (p *defaultAuthnProvider) buildAuthnResult(
 	}
 	if entityID == "" && authnprovidercm.IsFederatedToken(authnResult.Token) {
 		linkedIDs, svcErr := p.resolveLinkedEntities(ctx, authnResult.Token)
+		if svcErr == nil && len(linkedIDs) == 0 {
+			linkedIDs, svcErr = p.claimLegacySubject(ctx, authnResult.Token)
+		}
 		if svcErr != nil {
 			return nil, svcErr
 		}

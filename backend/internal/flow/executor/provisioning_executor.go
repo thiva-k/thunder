@@ -875,6 +875,13 @@ func (p *provisioningExecutor) getAttributesForProvisioning(
 			} else if runtimeValue, exists := ctx.RuntimeData[a.Attribute]; exists && runtimeValue != "" {
 				credentialAttrs[a.Attribute] = runtimeValue
 			}
+		} else if a.Attribute == userAttributeSub {
+			// sub is read only from a verified external identity. Federated sign-ins migrate a user
+			// holding a matching sub, so a client-supplied value would let an account capture
+			// someone else's first sign-in.
+			if claimValue, exists := extIdentity.Claim(a.Attribute); exists && claimValue != "" {
+				identifyingAttrs[a.Attribute] = convertToSchemaType(claimValue, a.Type)
+			}
 		} else {
 			// External claims are only a fallback and must never take priority over runtime data.
 			if value, exists := ctx.UserInputs[a.Attribute]; exists && value != "" {
