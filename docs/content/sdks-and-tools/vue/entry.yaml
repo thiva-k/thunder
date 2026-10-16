@@ -457,7 +457,9 @@ sections:
         type: SessionConfig
         tag: optional
         description: Behaviour around the {{ProductName}} session. Set `session.silentSignIn.beforeRedirect` to `true`
-          to try a silent sign-in before `signIn()` redirects.
+          to try a silent sign-in before `signIn()` redirects. The silent attempt is skipped when the sign-in options
+          set their own `prompt`. `session.silentSignIn.timeout` (milliseconds, default `10000`) bounds how long a silent
+          sign-in waits.
       example: |-
         <template>
           <ThunderIDProvider
