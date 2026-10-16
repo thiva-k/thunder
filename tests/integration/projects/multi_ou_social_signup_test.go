@@ -483,10 +483,10 @@ func githubUser(id int64, login, email, name string) federatedUser {
 		login: login}
 }
 
-// CloudTestSuite covers a project where every user signs in with Google or GitHub and can belong to
-// several organizations. An invited user gets one account per organization, and the login flow asks
-// which organization to continue with when the identity matches more than one account.
-type CloudTestSuite struct {
+// MultiOUSocialSignupTestSuite covers a project where every user signs in with Google or GitHub and
+// can belong to several organizations. An invited user gets one account per organization, and the
+// login flow asks which organization to continue with when the identity matches more than one account.
+type MultiOUSocialSignupTestSuite struct {
 	suite.Suite
 	mockGoogle      *testutils.MockGoogleOIDCServer
 	mockGithub      *testutils.MockGithubOAuthServer
@@ -500,11 +500,11 @@ type CloudTestSuite struct {
 	flowConfigSaved bool
 }
 
-func TestCloudTestSuite(t *testing.T) {
-	suite.Run(t, new(CloudTestSuite))
+func TestMultiOUSocialSignupTestSuite(t *testing.T) {
+	suite.Run(t, new(MultiOUSocialSignupTestSuite))
 }
 
-func (ts *CloudTestSuite) SetupSuite() {
+func (ts *MultiOUSocialSignupTestSuite) SetupSuite() {
 	ts.mockSMTP = testutils.NewMockSMTPServer(0)
 	ts.Require().NoError(ts.mockSMTP.Start(), "Failed to start mock SMTP server")
 	time.Sleep(100 * time.Millisecond)
@@ -581,7 +581,7 @@ func (ts *CloudTestSuite) SetupSuite() {
 	ts.appID = appID
 }
 
-func (ts *CloudTestSuite) startMockProviders() {
+func (ts *MultiOUSocialSignupTestSuite) startMockProviders() {
 	mockGoogle, err := testutils.NewMockGoogleOIDCServer(mockGooglePort, googleClientID, googleClientSecret)
 	ts.Require().NoError(err, "Failed to create mock Google server")
 	ts.mockGoogle = mockGoogle
@@ -617,7 +617,7 @@ func (ts *CloudTestSuite) startMockProviders() {
 	ts.Require().NoError(ts.mockGithub.Start(), "Failed to start mock GitHub server")
 }
 
-func (ts *CloudTestSuite) createIDP(idpType, clientID, clientSecret, scopes string) string {
+func (ts *MultiOUSocialSignupTestSuite) createIDP(idpType, clientID, clientSecret, scopes string) string {
 	idpID, err := testutils.CreateIDP(testutils.IDP{
 		Name:        "Organizations Test " + idpType + " IDP",
 		Description: "Connection users of every organization sign in with",
@@ -634,7 +634,7 @@ func (ts *CloudTestSuite) createIDP(idpType, clientID, clientSecret, scopes stri
 	return idpID
 }
 
-func (ts *CloudTestSuite) TearDownSuite() {
+func (ts *MultiOUSocialSignupTestSuite) TearDownSuite() {
 	if ts.flowConfigSaved {
 		if err := setFlowServerConfig(map[string]interface{}{}); err != nil {
 			ts.T().Logf("teardown: failed to reset the flow server config: %v", err)
@@ -712,7 +712,7 @@ func (ts *CloudTestSuite) TearDownSuite() {
 
 // TestUserInvitedToTwoOrganizationsSelectsOrganizationAtLogin invites one identity to two
 // organizations, so it holds an account in each, and expects the login flow to ask which one to use.
-func (ts *CloudTestSuite) TestUserInvitedToTwoOrganizationsSelectsOrganizationAtLogin() {
+func (ts *MultiOUSocialSignupTestSuite) TestUserInvitedToTwoOrganizationsSelectsOrganizationAtLogin() {
 	for _, provider := range providers {
 		user := usersByProvider[provider].invited
 		ts.Run(provider, func() {
@@ -735,7 +735,7 @@ func (ts *CloudTestSuite) TestUserInvitedToTwoOrganizationsSelectsOrganizationAt
 
 // TestNewUserCreatesOrganizationAtFirstLogin signs in an identity with no account. The login flow
 // asks for an organization, creates it with the user, and signs the user straight in next time.
-func (ts *CloudTestSuite) TestNewUserCreatesOrganizationAtFirstLogin() {
+func (ts *MultiOUSocialSignupTestSuite) TestNewUserCreatesOrganizationAtFirstLogin() {
 	for _, provider := range providers {
 		user, newOrg := usersByProvider[provider].newUser, usersByProvider[provider].newUserOrg
 		ts.Run(provider, func() {
@@ -750,7 +750,7 @@ func (ts *CloudTestSuite) TestNewUserCreatesOrganizationAtFirstLogin() {
 // TestSelfSignedUpUserInvitedToExistingOrganizationSelectsOrganizationAtLogin signs up an identity
 // with its own organization, invites it to an existing one, and expects the login flow to ask which
 // one to use.
-func (ts *CloudTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelectsOrganizationAtLogin() {
+func (ts *MultiOUSocialSignupTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelectsOrganizationAtLogin() {
 	for _, provider := range providers {
 		user, ownOrg := usersByProvider[provider].selfSignedUp, usersByProvider[provider].selfSignedUpOrg
 		ts.Run(provider, func() {
@@ -774,7 +774,7 @@ func (ts *CloudTestSuite) TestSelfSignedUpUserInvitedToExistingOrganizationSelec
 // inviteUser runs the user onboarding flow for an organization: the admin enters the invitee's
 // email, the invitation is sent by email, and the invitee accepts it by signing up with their
 // provider.
-func (ts *CloudTestSuite) inviteUser(user federatedUser, org testutils.OrganizationUnit) {
+func (ts *MultiOUSocialSignupTestSuite) inviteUser(user federatedUser, org testutils.OrganizationUnit) {
 	ts.mockSMTP.ClearEmails()
 
 	step, err := initiateUserOnboardingFlow(map[string]string{
@@ -807,7 +807,8 @@ func (ts *CloudTestSuite) inviteUser(user federatedUser, org testutils.Organizat
 
 // signUpWithNewOrganization signs in an identity with no account, creates its organization and
 // returns the provisioned user's ID.
-func (ts *CloudTestSuite) signUpWithNewOrganization(user federatedUser, org *testutils.OrganizationUnit) string {
+func (ts *MultiOUSocialSignupTestSuite) signUpWithNewOrganization(user federatedUser,
+	org *testutils.OrganizationUnit) string {
 	step := ts.signIn(user)
 	ts.Require().Equal("INCOMPLETE", step.FlowStatus, "Expected the flow to ask for an organization")
 	ts.Require().True(common.HasInput(step.Data.Inputs, "ouName"), "Expected ouName input")
@@ -834,7 +835,7 @@ func (ts *CloudTestSuite) signUpWithNewOrganization(user federatedUser, org *tes
 }
 
 // signIn starts the login flow, picks the user's provider and completes the sign-in there.
-func (ts *CloudTestSuite) signIn(user federatedUser) *common.FlowStep {
+func (ts *MultiOUSocialSignupTestSuite) signIn(user federatedUser) *common.FlowStep {
 	step, err := common.InitiateAuthenticationFlow(ts.appID, false, nil, "")
 	ts.Require().NoError(err, "Failed to initiate login flow")
 
@@ -842,7 +843,7 @@ func (ts *CloudTestSuite) signIn(user federatedUser) *common.FlowStep {
 }
 
 // chooseProvider picks the user's provider on a sign-in method prompt offering Google and GitHub.
-func (ts *CloudTestSuite) chooseProvider(step *common.FlowStep, user federatedUser) *common.FlowStep {
+func (ts *MultiOUSocialSignupTestSuite) chooseProvider(step *common.FlowStep, user federatedUser) *common.FlowStep {
 	ts.Require().Equal("VIEW", step.Type, "Expected a prompt to choose the sign-in method")
 	ts.Require().True(common.ValidateRequiredActions(step.Data.Actions, []string{googleAction, githubAction}),
 		"Expected both Google and GitHub to be offered")
@@ -856,7 +857,8 @@ func (ts *CloudTestSuite) chooseProvider(step *common.FlowStep, user federatedUs
 	return step
 }
 
-func (ts *CloudTestSuite) completeFederatedSignIn(step *common.FlowStep, user federatedUser) *common.FlowStep {
+func (ts *MultiOUSocialSignupTestSuite) completeFederatedSignIn(step *common.FlowStep,
+	user federatedUser) *common.FlowStep {
 	switch user.provider {
 	case providerGoogle:
 		ts.mockGoogle.SetAuthorizeFunc(func(string) (string, error) { return user.email, nil })
@@ -871,7 +873,7 @@ func (ts *CloudTestSuite) completeFederatedSignIn(step *common.FlowStep, user fe
 	return ts.continueFlow(step, map[string]string{"code": code}, "")
 }
 
-func (ts *CloudTestSuite) continueFlow(step *common.FlowStep, inputs map[string]string,
+func (ts *MultiOUSocialSignupTestSuite) continueFlow(step *common.FlowStep, inputs map[string]string,
 	action string) *common.FlowStep {
 	next, err := common.CompleteFlow(step.ExecutionID, inputs, action, step.ChallengeToken)
 	ts.Require().NoError(err, "Failed to continue flow")
@@ -879,7 +881,7 @@ func (ts *CloudTestSuite) continueFlow(step *common.FlowStep, inputs map[string]
 	return next
 }
 
-func (ts *CloudTestSuite) requireOrganizationPicker(step *common.FlowStep, handles ...string) {
+func (ts *MultiOUSocialSignupTestSuite) requireOrganizationPicker(step *common.FlowStep, handles ...string) {
 	ts.Require().Equal("INCOMPLETE", step.FlowStatus, "Expected the flow to ask for an organization")
 	for _, input := range step.Data.Inputs {
 		if input.Identifier == "ouHandle" {
@@ -891,7 +893,7 @@ func (ts *CloudTestSuite) requireOrganizationPicker(step *common.FlowStep, handl
 		step.Data.Inputs)
 }
 
-func (ts *CloudTestSuite) requireSignedInTo(step *common.FlowStep, org testutils.OrganizationUnit,
+func (ts *MultiOUSocialSignupTestSuite) requireSignedInTo(step *common.FlowStep, org testutils.OrganizationUnit,
 	userID string) {
 	ts.Require().Equal("COMPLETE", step.FlowStatus, "Expected the login to complete")
 	claims, err := testutils.ValidateJWTAssertionFields(step.Assertion, ts.appID, customerTypeName,
