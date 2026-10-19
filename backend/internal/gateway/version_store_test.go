@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/thunder-id/thunderid/internal/system/deployment"
 	"github.com/thunder-id/thunderid/tests/mocks/database/providermock"
 )
 
@@ -28,7 +29,7 @@ func TestVersionStoreTestSuite(t *testing.T) {
 func (s *VersionStoreTestSuite) SetupTest() {
 	s.providerMock = providermock.NewDBProviderInterfaceMock(s.T())
 	s.dbClientMock = providermock.NewDBClientInterfaceMock(s.T())
-	s.store = &versionStore{dbProvider: s.providerMock, deploymentID: storeDeploymentID}
+	s.store = &versionStore{dbProvider: s.providerMock}
 	s.providerMock.On("GetConfigDBClient").Return(s.dbClientMock, nil).Maybe()
 }
 
@@ -39,7 +40,7 @@ func (s *VersionStoreTestSuite) TestAddPlacesTheVersionWithinTheDeployment() {
 		"docs", "sealed", "note", "0", storeDeploymentID, storeDeploymentID).
 		Return([]map[string]interface{}{{"seq": int64(3)}}, nil).Once()
 
-	v, err := s.store.Add(context.Background(),
+	v, err := s.store.Add(scoped(),
 		Version{Hash: "abc123", Name: "Spring", Note: "note", Resources: "docs", variables: "sealed"})
 
 	s.Require().NoError(err)
@@ -60,15 +61,15 @@ func (s *VersionStoreTestSuite) TestSettleKeepsTheVersionWithItsHash() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, querySettleVersion, 5, "ddd777", storeDeploymentID).
 		Return(int64(0), errors.New("database is down")).Once()
 
-	settled, err := s.store.Settle(context.Background(), 4, "fff999")
+	settled, err := s.store.Settle(scoped(), 4, "fff999")
 	s.Require().NoError(err)
 	s.True(settled)
 
-	settled, err = s.store.Settle(context.Background(), 4, "eee888")
+	settled, err = s.store.Settle(scoped(), 4, "eee888")
 	s.Require().NoError(err)
 	s.False(settled)
 
-	_, err = s.store.Settle(context.Background(), 5, "ddd777")
+	_, err = s.store.Settle(scoped(), 5, "ddd777")
 	s.Error(err)
 }
 
@@ -82,11 +83,11 @@ func (s *VersionStoreTestSuite) TestReplaceCurrentUpdatesTheNewestVersionInPlace
 		"", storeDeploymentID, storeDeploymentID, storeDeploymentID, storeDeploymentID).
 		Return([]map[string]interface{}{}, nil).Once()
 
-	replaced, err := s.store.ReplaceCurrent(context.Background(), Version{Hash: "fff999", Resources: "docs"})
+	replaced, err := s.store.ReplaceCurrent(scoped(), Version{Hash: "fff999", Resources: "docs"})
 	s.Require().NoError(err)
 	s.Equal(4, replaced.Seq)
 	s.True(replaced.Current)
-	none, err := s.store.ReplaceCurrent(context.Background(), Version{Hash: "eee888", Resources: "docs"})
+	none, err := s.store.ReplaceCurrent(scoped(), Version{Hash: "eee888", Resources: "docs"})
 	s.Require().NoError(err)
 	s.Nil(none)
 }
@@ -96,7 +97,7 @@ func (s *VersionStoreTestSuite) TestFindLooksUpAHashPrefix() {
 	s.dbClientMock.On("QueryContext", mock.Anything, queryFindVersions, "abc1234%", storeDeploymentID).
 		Return([]map[string]interface{}{{"seq": int64(5)}, {"seq": int64(2)}}, nil).Once()
 
-	found, err := s.store.Find(context.Background(), "abc1234")
+	found, err := s.store.Find(scoped(), "abc1234")
 
 	s.Require().NoError(err)
 	s.Equal([]int{5, 2}, found)
@@ -113,22 +114,22 @@ func (s *VersionStoreTestSuite) TestReadsAreDeploymentScoped() {
 	s.dbClientMock.On("QueryContext", mock.Anything, queryLatestVersion, storeDeploymentID).
 		Return([]map[string]interface{}{{"latest": int64(2)}}, nil).Once()
 
-	listed, err := s.store.List(context.Background())
+	listed, err := s.store.List(scoped())
 	s.Require().NoError(err)
 	s.Require().Len(listed, 3)
 	s.True(listed[0].Current, "a version kept as it is was not read as current")
 	s.True(listed[1].Current)
 	s.False(listed[2].Current)
 
-	v, err := s.store.Get(context.Background(), 2)
+	v, err := s.store.Get(scoped(), 2)
 	s.Require().NoError(err)
 	s.Equal("sealed", v.variables)
 
-	absent, err := s.store.Get(context.Background(), 9)
+	absent, err := s.store.Get(scoped(), 9)
 	s.Require().NoError(err)
 	s.Nil(absent)
 
-	latest, err := s.store.Latest(context.Background())
+	latest, err := s.store.Latest(scoped())
 	s.Require().NoError(err)
 	s.Equal(2, latest)
 }
@@ -138,8 +139,8 @@ func (s *VersionStoreTestSuite) TestPruneNamesTheBoundAndTheDeployment() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryPruneVersions, 4,
 		storeDeploymentID, storeDeploymentID, storeDeploymentID).Return(int64(1), nil).Once()
 
-	s.Require().NoError(s.store.Prune(context.Background(), 4))
-	s.Require().NoError(s.store.Prune(context.Background(), 0), "nothing to prune below the bound")
+	s.Require().NoError(s.store.Prune(scoped(), 4))
+	s.Require().NoError(s.store.Prune(scoped(), 0), "nothing to prune below the bound")
 }
 
 func (s *VersionStoreTestSuite) TestAppliedStateIsReadWrittenAndForgotten() {
@@ -155,21 +156,20 @@ func (s *VersionStoreTestSuite) TestAppliedStateIsReadWrittenAndForgotten() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryDeleteAppliedVersion, "gw-1",
 		storeDeploymentID).Return(int64(1), nil).Once()
 
-	held, err := s.store.GetApplied(context.Background(), "gw-1")
+	held, err := s.store.GetApplied(scoped(), "gw-1")
 	s.Require().NoError(err)
 	s.Equal(2, held.AppliedVersion)
 	s.Equal("abc123", held.Applied)
 	s.Zero(held.PreviousVersion, "a NULL previous version reads as none")
 	s.Empty(held.Previous)
 
-	nothing, err := s.store.GetApplied(context.Background(), "gw-2")
+	nothing, err := s.store.GetApplied(scoped(), "gw-2")
 	s.Require().NoError(err)
 	s.Nil(nothing)
 
-	s.Require().NoError(s.store.SetApplied(context.Background(), "gw-1", 3, "abc123", 2, 2))
-	s.Require().NoError(s.store.SetApplied(context.Background(), "gw-1", 1, "def456", 0, 0),
-		"no previous is stored as NULL")
-	s.Require().NoError(s.store.DeleteApplied(context.Background(), "gw-1"))
+	s.Require().NoError(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2))
+	s.Require().NoError(s.store.SetApplied(scoped(), "gw-1", 1, "def456", 0, 0), "no previous is stored as NULL")
+	s.Require().NoError(s.store.DeleteApplied(scoped(), "gw-1"))
 }
 
 // Nothing recorded means either the version was removed while it was applied, or another apply to the
@@ -184,9 +184,9 @@ func (s *VersionStoreTestSuite) TestAnUnrecordedApplySaysWhy() {
 	s.dbClientMock.On("QueryContext", mock.Anything, queryGetVersion, 3, storeDeploymentID).
 		Return([]map[string]interface{}{{"seq": int64(3), "hash": "fff999", "resources": "", "note": ""}}, nil).Once()
 
-	s.ErrorIs(s.store.SetApplied(context.Background(), "gw-1", 3, "abc123", 2, 2), errVersionRemoved)
-	s.ErrorIs(s.store.SetApplied(context.Background(), "gw-1", 3, "abc123", 2, 2), errAppliedChanged)
-	s.ErrorIs(s.store.SetApplied(context.Background(), "gw-1", 3, "abc123", 2, 2), errVersionRemoved,
+	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2), errVersionRemoved)
+	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2), errAppliedChanged)
+	s.ErrorIs(s.store.SetApplied(scoped(), "gw-1", 3, "abc123", 2, 2), errVersionRemoved,
 		"a version replaced as current while it was applied was recorded")
 }
 
@@ -204,15 +204,15 @@ func (s *VersionStoreTestSuite) TestExclusionsAreReadWrittenInOneTransactionAndF
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryDeleteExcluded, "gw-1", storeDeploymentID).
 		Return(int64(1), nil).Once()
 
-	excluded, err := s.store.GetExcluded(context.Background(), "gw-1")
+	excluded, err := s.store.GetExcluded(scoped(), "gw-1")
 	s.Require().NoError(err)
 	s.Equal([]excludedResource{{Key: "organization_unit/ou-a", Type: "organization_unit", ID: "ou-a"}}, excluded)
-	s.Require().NoError(s.store.SetExcluded(context.Background(), "gw-1",
+	s.Require().NoError(s.store.SetExcluded(scoped(), "gw-1",
 		[]excludedResource{{Key: "organization_unit/ou-b", Type: "organization_unit", ID: "ou-b"}},
 		[]string{"organization_unit/ou-a"}))
 	s.True(tx.ran)
 	s.False(tx.rolledBack)
-	s.Require().NoError(s.store.DeleteExcluded(context.Background(), "gw-1"))
+	s.Require().NoError(s.store.DeleteExcluded(scoped(), "gw-1"))
 }
 
 // A write cut short rolls the whole choice back, so it is never left half made.
@@ -224,7 +224,7 @@ func (s *VersionStoreTestSuite) TestAnExclusionWriteCutShortRollsBack() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryInclude, "gw-1", "organization_unit/ou-a",
 		storeDeploymentID).Return(int64(0), errors.New("database is down")).Once()
 
-	err := s.store.SetExcluded(context.Background(), "gw-1",
+	err := s.store.SetExcluded(scoped(), "gw-1",
 		[]excludedResource{{Key: "organization_unit/ou-b", Type: "organization_unit", ID: "ou-b", Name: "b"}},
 		[]string{"organization_unit/ou-a"})
 
@@ -233,8 +233,8 @@ func (s *VersionStoreTestSuite) TestAnExclusionWriteCutShortRollsBack() {
 
 	provider := providermock.NewDBProviderInterfaceMock(s.T())
 	provider.On("GetConfigDBTransactioner").Return(nil, errors.New("no database")).Once()
-	store := &versionStore{dbProvider: provider, deploymentID: storeDeploymentID}
-	s.Error(store.SetExcluded(context.Background(), "gw-1", nil, []string{"organization_unit/ou-a"}))
+	store := &versionStore{dbProvider: provider}
+	s.Error(store.SetExcluded(scoped(), "gw-1", nil, []string{"organization_unit/ou-a"}))
 }
 
 func (s *VersionStoreTestSuite) TestEveryCallReportsAFailure() {
@@ -262,7 +262,7 @@ func (s *VersionStoreTestSuite) TestEveryCallReportsAFailure() {
 	s.dbClientMock.On("ExecuteContext", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), failure).Maybe()
 
-	ctx := context.Background()
+	ctx := scoped()
 	_, err := s.store.Add(ctx, Version{})
 	s.Error(err)
 	_, err = s.store.ReplaceCurrent(ctx, Version{})
@@ -288,11 +288,38 @@ func (s *VersionStoreTestSuite) TestEveryCallReportsAFailure() {
 func (s *VersionStoreTestSuite) TestAProviderFailureIsReported() {
 	provider := providermock.NewDBProviderInterfaceMock(s.T())
 	provider.On("GetConfigDBClient").Return(nil, errors.New("no database"))
-	store := &versionStore{dbProvider: provider, deploymentID: storeDeploymentID}
+	store := &versionStore{dbProvider: provider}
 
-	_, err := store.List(context.Background())
+	_, err := store.List(scoped())
 	s.Error(err)
-	s.Error(store.DeleteApplied(context.Background(), "gw-1"))
+	s.Error(store.DeleteApplied(scoped(), "gw-1"))
+}
+
+// Versions, what a gateway runs and what it leaves alone are read in each request's own deployment,
+// so one organization never reads another's.
+func (s *VersionStoreTestSuite) TestEachRequestIsScopedToItsOwnDeployment() {
+	s.dbClientMock.On("QueryContext", mock.Anything, queryListVersions, "org-a").
+		Return([]map[string]interface{}{{"seq": int64(1)}}, nil).Once()
+	s.dbClientMock.On("QueryContext", mock.Anything, queryListVersions, "org-b").
+		Return([]map[string]interface{}{}, nil).Once()
+	s.dbClientMock.On("QueryContext", mock.Anything, queryGetAppliedVersion, "gw-1", "org-b").
+		Return([]map[string]interface{}{}, nil).Once()
+	s.dbClientMock.On("QueryContext", mock.Anything, queryGetExcluded, "gw-1", "org-b").
+		Return([]map[string]interface{}{}, nil).Once()
+	orgA := deployment.WithID(context.Background(), "org-a")
+	orgB := deployment.WithID(context.Background(), "org-b")
+
+	a, err := s.store.List(orgA)
+	s.Require().NoError(err)
+	b, err := s.store.List(orgB)
+	s.Require().NoError(err)
+	_, err = s.store.GetApplied(orgB, "gw-1")
+	s.Require().NoError(err)
+	_, err = s.store.GetExcluded(orgB, "gw-1")
+	s.Require().NoError(err)
+
+	s.Len(a, 1)
+	s.Empty(b)
 }
 
 // A settled version is made current again by one guarded statement; the store reports whether any
@@ -305,12 +332,12 @@ func (s *VersionStoreTestSuite) TestUnsettleRestoresTheCurrentVersionWhenNothing
 	s.dbClientMock.On("ExecuteContext", mock.Anything, queryUnsettleVersion, 2, "ddd777", storeDeploymentID,
 		storeDeploymentID, storeDeploymentID, storeDeploymentID).Return(int64(0), errors.New("database is down")).Once()
 
-	restored, err := s.store.Unsettle(context.Background(), 4, "fff999")
+	restored, err := s.store.Unsettle(scoped(), 4, "fff999")
 	s.Require().NoError(err)
 	s.True(restored)
-	restored, err = s.store.Unsettle(context.Background(), 3, "eee888")
+	restored, err = s.store.Unsettle(scoped(), 3, "eee888")
 	s.Require().NoError(err)
 	s.False(restored)
-	_, err = s.store.Unsettle(context.Background(), 2, "ddd777")
+	_, err = s.store.Unsettle(scoped(), 2, "ddd777")
 	s.Error(err)
 }

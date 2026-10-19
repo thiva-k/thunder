@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/thunder-id/thunderid/internal/system/config"
 	dbmodel "github.com/thunder-id/thunderid/internal/system/database/model"
 	dbprovider "github.com/thunder-id/thunderid/internal/system/database/provider"
+	"github.com/thunder-id/thunderid/internal/system/deployment"
 )
 
 var (
@@ -206,14 +206,12 @@ type versionStoreInterface interface {
 // versionStore keeps versions in the configuration database. It is used whatever the gateway store
 // mode is: a gateway declared in a file is held in memory, but what is applied to it is not.
 type versionStore struct {
-	dbProvider   dbprovider.DBProviderInterface
-	deploymentID string
+	dbProvider dbprovider.DBProviderInterface
 }
 
 func newVersionStore() versionStoreInterface {
 	return &versionStore{
-		dbProvider:   dbprovider.GetDBProvider(),
-		deploymentID: config.GetServerRuntime().Config.Server.Identifier,
+		dbProvider: dbprovider.GetDBProvider(),
 	}
 }
 
@@ -237,7 +235,8 @@ func (s *versionStore) execute(ctx context.Context, q dbmodel.DBQuery, args ...i
 
 func (s *versionStore) Add(ctx context.Context, version Version) (*Version, error) {
 	rows, err := s.query(ctx, queryInsertVersion, uuid.New().String(), version.Hash, version.Name,
-		version.Resources, version.variables, version.Note, flag(version.Current), s.deploymentID, s.deploymentID)
+		version.Resources, version.variables, version.Note, flag(version.Current), deployment.Resolve(ctx),
+		deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to capture the version: %w", err)
 	}
@@ -252,8 +251,9 @@ func (s *versionStore) Add(ctx context.Context, version Version) (*Version, erro
 }
 
 func (s *versionStore) ReplaceCurrent(ctx context.Context, version Version) (*Version, error) {
+	deploymentID := deployment.Resolve(ctx)
 	rows, err := s.query(ctx, queryReplaceCurrentVersion, version.Hash, version.Name, version.Resources,
-		version.variables, version.Note, s.deploymentID, s.deploymentID, s.deploymentID, s.deploymentID)
+		version.variables, version.Note, deploymentID, deploymentID, deploymentID, deploymentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to replace the current version: %w", err)
 	}
@@ -273,7 +273,7 @@ func (s *versionStore) Settle(ctx context.Context, seq int, hash string) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("failed to get database client: %w", err)
 	}
-	settled, err := dbClient.ExecuteContext(ctx, querySettleVersion, seq, hash, s.deploymentID)
+	settled, err := dbClient.ExecuteContext(ctx, querySettleVersion, seq, hash, deployment.Resolve(ctx))
 	if err != nil {
 		return false, fmt.Errorf("failed to settle the version: %w", err)
 	}
@@ -285,8 +285,9 @@ func (s *versionStore) Unsettle(ctx context.Context, seq int, hash string) (bool
 	if err != nil {
 		return false, fmt.Errorf("failed to get database client: %w", err)
 	}
-	restored, err := dbClient.ExecuteContext(ctx, queryUnsettleVersion, seq, hash, s.deploymentID, s.deploymentID,
-		s.deploymentID, s.deploymentID)
+	deploymentID := deployment.Resolve(ctx)
+	restored, err := dbClient.ExecuteContext(ctx, queryUnsettleVersion, seq, hash, deploymentID, deploymentID,
+		deploymentID, deploymentID)
 	if err != nil {
 		return false, fmt.Errorf("failed to make the version current again: %w", err)
 	}
@@ -316,7 +317,7 @@ func flag(current bool) string {
 }
 
 func (s *versionStore) List(ctx context.Context) ([]Version, error) {
-	rows, err := s.query(ctx, queryListVersions, s.deploymentID)
+	rows, err := s.query(ctx, queryListVersions, deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list the versions: %w", err)
 	}
@@ -335,7 +336,7 @@ func (s *versionStore) List(ctx context.Context) ([]Version, error) {
 }
 
 func (s *versionStore) Get(ctx context.Context, seq int) (*Version, error) {
-	rows, err := s.query(ctx, queryGetVersion, seq, s.deploymentID)
+	rows, err := s.query(ctx, queryGetVersion, seq, deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the version: %w", err)
 	}
@@ -354,7 +355,7 @@ func (s *versionStore) Get(ctx context.Context, seq int) (*Version, error) {
 }
 
 func (s *versionStore) Latest(ctx context.Context) (int, error) {
-	rows, err := s.query(ctx, queryLatestVersion, s.deploymentID)
+	rows, err := s.query(ctx, queryLatestVersion, deployment.Resolve(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("failed to read the latest version: %w", err)
 	}
@@ -365,7 +366,7 @@ func (s *versionStore) Latest(ctx context.Context) (int, error) {
 }
 
 func (s *versionStore) Find(ctx context.Context, prefix string) ([]int, error) {
-	rows, err := s.query(ctx, queryFindVersions, prefix+"%", s.deploymentID)
+	rows, err := s.query(ctx, queryFindVersions, prefix+"%", deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find the version: %w", err)
 	}
@@ -381,14 +382,14 @@ func (s *versionStore) Prune(ctx context.Context, through int) error {
 		return nil
 	}
 	if err := s.execute(ctx, queryPruneVersions,
-		through, s.deploymentID, s.deploymentID, s.deploymentID); err != nil {
+		through, deployment.Resolve(ctx), deployment.Resolve(ctx), deployment.Resolve(ctx)); err != nil {
 		return fmt.Errorf("failed to remove old versions: %w", err)
 	}
 	return nil
 }
 
 func (s *versionStore) GetApplied(ctx context.Context, gatewayID string) (*AppliedVersion, error) {
-	rows, err := s.query(ctx, queryGetAppliedVersion, gatewayID, s.deploymentID)
+	rows, err := s.query(ctx, queryGetAppliedVersion, gatewayID, deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read what the gateway holds: %w", err)
 	}
@@ -419,7 +420,7 @@ func (s *versionStore) SetApplied(ctx context.Context, gatewayID string, applied
 	// A held version of 0 never matches a recorded one, since versions are numbered from 1, so a
 	// first apply is refused when another apply recorded the gateway first.
 	recorded, err := dbClient.ExecuteContext(ctx, queryUpsertAppliedVersion,
-		gatewayID, applied, previousSeq, s.deploymentID, applied, hash, s.deploymentID, held)
+		gatewayID, applied, previousSeq, deployment.Resolve(ctx), applied, hash, deployment.Resolve(ctx), held)
 	if err != nil {
 		return fmt.Errorf("failed to record what the gateway holds: %w", err)
 	}
@@ -437,14 +438,14 @@ func (s *versionStore) SetApplied(ctx context.Context, gatewayID string, applied
 }
 
 func (s *versionStore) DeleteApplied(ctx context.Context, gatewayID string) error {
-	if err := s.execute(ctx, queryDeleteAppliedVersion, gatewayID, s.deploymentID); err != nil {
+	if err := s.execute(ctx, queryDeleteAppliedVersion, gatewayID, deployment.Resolve(ctx)); err != nil {
 		return fmt.Errorf("failed to forget what the gateway held: %w", err)
 	}
 	return nil
 }
 
 func (s *versionStore) GetExcluded(ctx context.Context, gatewayID string) ([]excludedResource, error) {
-	rows, err := s.query(ctx, queryGetExcluded, gatewayID, s.deploymentID)
+	rows, err := s.query(ctx, queryGetExcluded, gatewayID, deployment.Resolve(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read what the gateway leaves alone: %w", err)
 	}
@@ -469,12 +470,12 @@ func (s *versionStore) SetExcluded(ctx context.Context, gatewayID string, exclud
 	return transactioner.Transact(ctx, func(txCtx context.Context) error {
 		for _, resource := range exclude {
 			if err := s.execute(txCtx, queryExclude, gatewayID, resource.Key, resource.Type,
-				nullable(resource.ID), nullable(resource.Name), s.deploymentID); err != nil {
+				nullable(resource.ID), nullable(resource.Name), deployment.Resolve(txCtx)); err != nil {
 				return fmt.Errorf("failed to set the gateway to leave a resource alone: %w", err)
 			}
 		}
 		for _, key := range include {
-			if err := s.execute(txCtx, queryInclude, gatewayID, key, s.deploymentID); err != nil {
+			if err := s.execute(txCtx, queryInclude, gatewayID, key, deployment.Resolve(txCtx)); err != nil {
 				return fmt.Errorf("failed to set the gateway to take a resource again: %w", err)
 			}
 		}
@@ -491,7 +492,7 @@ func nullable(value string) interface{} {
 }
 
 func (s *versionStore) DeleteExcluded(ctx context.Context, gatewayID string) error {
-	if err := s.execute(ctx, queryDeleteExcluded, gatewayID, s.deploymentID); err != nil {
+	if err := s.execute(ctx, queryDeleteExcluded, gatewayID, deployment.Resolve(ctx)); err != nil {
 		return fmt.Errorf("failed to forget what the gateway left alone: %w", err)
 	}
 	return nil
