@@ -243,6 +243,11 @@ func (p *defaultAuthnProvider) StoreAccountLink(ctx context.Context, entityRefer
 	if svcErr != nil {
 		return svcErr
 	}
+	// A declarative user cannot be written to, so its links can only be declared with it.
+	if entityResult.IsReadOnly {
+		return newClientError(authnprovidercm.ErrorCodeNotImplemented, "Account link not stored",
+			"Account links of a declarative user cannot be stored")
+	}
 
 	if err := p.entitySvc.LinkAccount(ctx, entityResult.ID, idpID, sub); err != nil {
 		if errors.Is(err, entity.ErrIndexedValueLimitExceeded) {
