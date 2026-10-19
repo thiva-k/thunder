@@ -633,6 +633,11 @@ const sidebars: SidebarsConfig = {
                 },
                 {
                   type: 'doc',
+                  id: 'guides/identity-providers/link-accounts',
+                  label: 'Link Accounts',
+                },
+                {
+                  type: 'doc',
                   id: 'guides/identity-providers/token-exchange-idp',
                   label: 'Token Exchange',
                   key: 'idp-token-exchange',
