@@ -26,6 +26,9 @@ type Version struct {
 	Name      string    `json:"name,omitempty"`
 	Note      string    `json:"note,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
+	// CreatedBy is the user the version was captured for: who captured it, or whose change a capture
+	// after a change followed. A current version replaced in place names the latest change's user.
+	CreatedBy *Actor `json:"createdBy,omitempty"`
 	// Resources is the exported configuration, one document per resource. A listing leaves it out.
 	Resources string `json:"resources,omitempty"`
 	// Skipped names the resources the export could not write, each with why, as an export reports
@@ -92,6 +95,8 @@ type AppliedVersion struct {
 	Applied         string     `json:"appliedVersion,omitempty"`
 	Previous        string     `json:"previousVersion,omitempty"`
 	AppliedAt       *time.Time `json:"appliedAt,omitempty"`
+	// AppliedBy is the user who applied the version, or reverted the gateway to it.
+	AppliedBy *Actor `json:"appliedBy,omitempty"`
 }
 
 // ApplyRequest is the body of an apply. Version is a version's hash, a prefix of at least seven of its

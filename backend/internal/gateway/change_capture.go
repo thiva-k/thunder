@@ -41,7 +41,8 @@ var configurationPaths = []string{
 // versions keep in place until a gateway holds it. Nothing is captured while nothing changes.
 //
 // Each deployment is captured on its own: a change to one schedules a capture of that one, and
-// neither waits on, nor resets, another's.
+// neither waits on, nor resets, another's. A capture is kept for the user who made the last change
+// before it.
 type ChangeCapture struct {
 	capture func(ctx context.Context) error
 	delay   time.Duration
@@ -59,6 +60,7 @@ type deploymentCapture struct {
 	generation uint64
 	running    bool
 	pending    bool
+	actor      *Actor
 	// failures counts the captures that failed in a row; the next is tried again after a delay that
 	// grows with it, so a failing exporter is not asked every two seconds, and a passing one soon after.
 	failures int
@@ -73,9 +75,9 @@ func NewChangeCapture() *ChangeCapture {
 	}
 }
 
-func (c *ChangeCapture) bind(versions VersionServiceInterface) {
+func (c *ChangeCapture) bind(versions *versionService) {
 	c.capture = func(ctx context.Context) error {
-		if _, svcErr := versions.Capture(ctx, CaptureRequest{Current: true}); svcErr != nil {
+		if _, svcErr := versions.capture(ctx, CaptureRequest{Current: true}); svcErr != nil {
 			return fmt.Errorf("%s: %s", svcErr.Code, svcErr.Error.DefaultValue)
 		}
 		return nil
@@ -116,22 +118,28 @@ func changesConfiguration(r *http.Request) bool {
 }
 
 // Notify schedules a capture of the deployment ctx acts for once its configuration has stopped
-// changing for a moment. A change while a capture runs schedules one more after it, so the last change
-// is always captured.
+// changing for a moment, kept for the user ctx acts for. A change while a capture runs schedules one
+// more after it, so the last change is always captured.
 func (c *ChangeCapture) Notify(ctx context.Context) {
 	if c == nil || c.capture == nil {
 		return
 	}
-	c.notify(deployment.Resolve(ctx))
+	c.notify(deployment.Resolve(ctx), actorOf(ctx), false)
 }
 
-func (c *ChangeCapture) notify(deploymentID string) {
+// notify schedules a capture for a change actor made, nil when the change names no user, so the
+// capture is for no one rather than for whoever changed something last. With keep set, the capture
+// stays for the user it already had: the re-run after a change that arrived while a capture ran.
+func (c *ChangeCapture) notify(deploymentID string, actor *Actor, keep bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	d := c.deployments[deploymentID]
 	if d == nil {
 		d = &deploymentCapture{}
 		c.deployments[deploymentID] = d
+	}
+	if !keep {
+		d.actor = actor
 	}
 	if d.running {
 		d.pending = true
@@ -161,13 +169,14 @@ func (c *ChangeCapture) run(deploymentID string, generation uint64) {
 	}
 	d.timer = nil
 	d.running = true
+	actor := d.actor
 	c.mu.Unlock()
 
 	// The capture is the system's own work, not the request's that set it off: it exports the whole
 	// configuration whoever made the change, so a version never depends on what one caller may read.
-	// It is still the deployment's that changed.
-	ctx, cancel := context.WithTimeout(deployment.WithID(security.WithRuntimeContext(context.Background()),
-		deploymentID), changeCaptureTimeout)
+	// It is still the deployment's that changed, and kept for the user whose change it follows.
+	ctx, cancel := context.WithTimeout(withActor(deployment.WithID(security.WithRuntimeContext(
+		context.Background()), deploymentID), actor), changeCaptureTimeout)
 	err := c.capture(ctx)
 	if err != nil {
 		c.logger.Warn(ctx, "Failed to capture the configuration after a change; it will be tried again",
@@ -191,7 +200,7 @@ func (c *ChangeCapture) run(deploymentID string, generation uint64) {
 	}
 	c.mu.Unlock()
 	if again {
-		c.notify(deploymentID)
+		c.notify(deploymentID, nil, true)
 	}
 }
 

@@ -110,6 +110,46 @@ func TestAChangeToTheConfigurationIsCaptured(t *testing.T) {
 	}
 }
 
+// A capture after a change is kept for the user who made the last change before it, though it runs
+// as the system's own work.
+func TestACaptureAfterAChangeIsKeptForWhoMadeIt(t *testing.T) {
+	captured := make(chan *Actor, 1)
+	c, _ := changeCaptureFor(t, func(ctx context.Context) error {
+		captured <- actorOf(ctx)
+		return nil
+	})
+
+	request := httptest.NewRequest(http.MethodPost, "/applications", nil).WithContext(
+		signedIn("u-1", map[string]interface{}{"username": "alice"}))
+	c.Middleware(answering(http.StatusCreated)).ServeHTTP(httptest.NewRecorder(), request)
+	waitForCapture(t, c)
+
+	assert.Equal(t, &Actor{ID: "u-1"}, <-captured)
+}
+
+// A change whose request names no user is captured for no one, not for whoever changed something
+// before it; a change that arrives while a capture runs keeps its user for the capture after.
+func TestAChangeNamingNoUserIsCapturedForNoOne(t *testing.T) {
+	captured := make(chan *Actor, 2)
+	c, _ := changeCaptureFor(t, func(ctx context.Context) error {
+		captured <- actorOf(ctx)
+		return nil
+	})
+	c.delay = time.Hour
+
+	change := func(ctx context.Context) {
+		request := httptest.NewRequest(http.MethodPost, "/applications", nil).WithContext(ctx)
+		c.Middleware(answering(http.StatusCreated)).ServeHTTP(httptest.NewRecorder(), request)
+	}
+	change(signedIn("u-1", nil))
+	c.Flush(context.Background())
+	assert.Equal(t, &Actor{ID: "u-1"}, <-captured)
+
+	change(context.Background())
+	c.Flush(context.Background())
+	assert.Nil(t, <-captured, "a change naming no user was captured for the user before it")
+}
+
 // Changes close together are captured once, and a change while a capture runs is captured after it.
 func TestChangesAreCapturedOnceTheySettle(t *testing.T) {
 	release := make(chan struct{})
@@ -168,7 +208,7 @@ func TestABoundChangeCaptureKeepsTheCurrentVersion(t *testing.T) {
 	f := newVersionFixture(t)
 	c := NewChangeCapture()
 	c.delay = time.Millisecond
-	c.bind(f.svc)
+	c.bind(f.svc.(*versionService))
 	f.exporter.response = exportOf("", "ou-a")
 
 	c.Notify(context.Background())
@@ -176,6 +216,8 @@ func TestABoundChangeCaptureKeepsTheCurrentVersion(t *testing.T) {
 
 	require.Len(t, f.versions.versions, 1)
 	assert.True(t, f.versions.versions[0].Current)
+	// The answer is discarded, so the user it names is not looked up at the issuer.
+	assert.Zero(t, f.names.fills, "the capture after a change looked a name up")
 
 	f.exporter.err = &tidcommon.InternalServerError
 	require.Error(t, c.capture(context.Background()))
