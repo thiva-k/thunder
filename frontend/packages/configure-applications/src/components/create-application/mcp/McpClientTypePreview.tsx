@@ -61,7 +61,7 @@ export default function McpClientTypePreview({clientType}: McpClientTypePreviewP
               size="small"
               variant="outlined"
               icon={<KeyRound size={14} />}
-              label={t('applications:onboarding.mcp.oauthProfile.clientCredentials', 'Client Credentials')}
+              label={t('applications:onboarding.mcp.oauthProfile.clientCredentials', 'Client credentials')}
             />
             <Chip
               size="small"

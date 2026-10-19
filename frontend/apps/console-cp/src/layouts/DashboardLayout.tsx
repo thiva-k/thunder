@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getInitials} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {SignOutButton, User, useThunderID} from '@thunderid/react';
@@ -10,7 +11,6 @@ import {
   Button,
   ColorSchemeImage,
   ColorSchemeToggle,
-  Divider,
   Footer,
   Header,
   Sidebar,
@@ -27,6 +27,7 @@ import {
   Languages,
   Layers,
   LayoutGrid,
+  LogOut,
   Mail,
   MessageSquare,
   Network,
@@ -207,7 +208,7 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
           },
           {
             id: 'resource-servers',
-            text: t('navigation:pages.resourceServers', 'Resource Servers'),
+            text: t('navigation:pages.resourceServers', 'Resource servers'),
             icon: <Server />,
             path: RouteConfig.resourceServers.list(),
           },
@@ -306,13 +307,13 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
             children: [
               {
                 id: 'email-templates',
-                text: t('navigation:pages.emailTemplates', 'Email Templates'),
+                text: t('navigation:pages.emailTemplates', 'Email templates'),
                 icon: <Mail />,
                 path: RouteConfig.notificationTemplates.channel('email'),
               },
               {
                 id: 'sms-templates',
-                text: t('navigation:pages.smsTemplates', 'SMS Templates'),
+                text: t('navigation:pages.smsTemplates', 'SMS templates'),
                 icon: <MessageSquare />,
                 path: RouteConfig.notificationTemplates.channel('sms'),
               },
@@ -331,7 +332,7 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
         routes: [
           {
             id: 'gateways',
-            text: t('navigation:pages.gateways', 'Gateway Management'),
+            text: t('navigation:pages.gateways', 'Gateway management'),
             icon: <Network />,
             path: RouteConfig.gateways.list(),
           },
@@ -391,8 +392,8 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
             <Header.BrandLogo>
               <ColorSchemeImage
                 src={{
-                  light: `${import.meta.env.BASE_URL}/assets/images/logo.svg`,
-                  dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,
+                  light: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/assets/images/logo.svg`,
+                  dark: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/assets/images/logo-inverted.svg`,
                 }}
                 alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}}
                 height={27}
@@ -416,14 +417,15 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
               {t('deploy:header.title', 'Deploy')}
             </Button>
             <ColorSchemeToggle />
-            <Divider orientation="vertical" flexItem sx={{mx: 1, display: {xs: 'none', sm: 'block'}}} />
             <User>
               {(user) => {
-                const avatar = typeof user?.picture === 'string' ? user.picture : undefined;
+                const name = String(user?.name ?? '');
+                // Two-letter initials when there is no picture, matching the other WSO2 consoles.
+                const avatar = typeof user?.picture === 'string' ? user.picture : name ? getInitials(name) : undefined;
 
                 return (
                   <UserMenu>
-                    <UserMenu.Trigger name={String(user?.name ?? '')} avatar={avatar} showName />
+                    <UserMenu.Trigger name={String(user?.name ?? '')} avatar={avatar} />
                     <UserMenu.Header
                       name={String(user?.name ?? '')}
                       email={String(user?.email ?? '')}
@@ -439,7 +441,11 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
                     <UserMenu.Divider />
                     <SignOutButton>
                       {({signOut}) => (
-                        <UserMenu.Logout label={t('common:userMenu.signOut')} onClick={() => handleSignOut(signOut)} />
+                        <UserMenu.Logout
+                          icon={<LogOut />}
+                          label={t('common:actions.signOut', 'Sign out')}
+                          onClick={() => handleSignOut(signOut)}
+                        />
                       )}
                     </SignOutButton>
                   </UserMenu>

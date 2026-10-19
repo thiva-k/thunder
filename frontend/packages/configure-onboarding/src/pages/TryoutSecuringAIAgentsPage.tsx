@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {Box, Button, Stack, Tab, Tabs, Typography, IconButton, LinearProgress, AppBreadcrumbs} from '@wso2/oxygen-ui';
 import {BookOpen, Bot, CalendarCheck, Check, Copy, Search, Shield, X} from '@wso2/oxygen-ui-icons-react';
@@ -81,6 +82,7 @@ export default function TryoutSecuringAIAgentsPage(): JSX.Element {
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+      <DocumentTitle title={t('common:welcome.getStarted.options.secureAiAgent.title', 'Secure an AI agent')} />
       <LinearProgress variant="determinate" value={0} sx={{height: 6}} />
       <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>
         <Box

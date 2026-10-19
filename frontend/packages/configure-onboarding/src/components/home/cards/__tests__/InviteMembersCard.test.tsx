@@ -166,16 +166,16 @@ describe('InviteMembersCard', () => {
       });
     });
 
-    it('renders the "Add User" button', () => {
+    it('renders the "Add user" button', () => {
       render(<InviteMembersCard />);
 
-      expect(screen.getByRole('button', {name: 'Add User'})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Add user'})).toBeInTheDocument();
     });
 
     it('navigates to /users/add when Add User is clicked', () => {
       render(<InviteMembersCard />);
 
-      fireEvent.click(screen.getByRole('button', {name: 'Add User'}));
+      fireEvent.click(screen.getByRole('button', {name: 'Add user'}));
 
       expect(mockNavigate).toHaveBeenCalledWith('/users/add');
     });

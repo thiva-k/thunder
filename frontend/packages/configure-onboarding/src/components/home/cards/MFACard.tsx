@@ -12,12 +12,12 @@ export default function MFACard(): JSX.Element {
   return (
     <HomeNextStepCard
       icon={<KeyRound size={24} />}
-      title={t('next_steps.mfa.title', 'Multi-factor Authentication')}
+      title={t('next_steps.mfa.title', 'Multi-factor authentication')}
       description={t(
         'next_steps.mfa.description',
         'Protect users by enabling an additional verification factor to the sign-in process.',
       )}
-      primaryLabel={t('next_steps.mfa.actions.primary.label', 'Configure Flows')}
+      primaryLabel={t('next_steps.mfa.actions.primary.label', 'Configure flows')}
       primaryRoute="/flows"
     />
   );

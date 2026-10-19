@@ -32,7 +32,7 @@ export default function NextStepsSection(): JSX.Element {
   return (
     <Box>
       <Typography variant="h6" sx={{mb: 2, fontWeight: 600}}>
-        {t('next_steps.section.title', 'Quick Links')}
+        {t('next_steps.section.title', 'Quick links')}
       </Typography>
       <Grid
         container

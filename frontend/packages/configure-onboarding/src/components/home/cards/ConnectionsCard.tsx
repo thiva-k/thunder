@@ -21,7 +21,7 @@ export default function ConnectionsCard(): JSX.Element {
         defaultValue:
           'Manage the external services {{product}} connects to for social login, enterprise OIDC, SMS delivery, and more.',
       })}
-      primaryLabel={t('next_steps.connections.actions.primary.label', 'Manage Connections')}
+      primaryLabel={t('next_steps.connections.actions.primary.label', 'Manage connections')}
       primaryRoute="/connections"
     />
   );

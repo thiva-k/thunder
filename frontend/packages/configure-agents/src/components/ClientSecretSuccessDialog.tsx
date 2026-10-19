@@ -104,7 +104,7 @@ export default function ClientSecretSuccessDialog({
           >
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
-                {t('agents:regenerateSecret.success.secretLabel', 'New Client Secret')}
+                {t('agents:regenerateSecret.success.secretLabel', 'New client secret')}
               </Typography>
               <TextField
                 fullWidth

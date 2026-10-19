@@ -200,9 +200,9 @@ describe('ConnectionCreateWizardPage', () => {
     fireEvent.change(screen.getByTestId('connection-name-input'), {target: {value: 'Booking PDP'}});
     fireEvent.click(screen.getByTestId('wizard-continue'));
 
-    expect(screen.getByRole('heading', {name: 'Connection Configuration', level: 1})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Connection configuration', level: 1})).toBeInTheDocument();
     expect(screen.getByText('Add custom connection')).toBeInTheDocument();
-    expect(screen.getByText('Policy Decision Point (PDP)')).toBeInTheDocument();
+    expect(screen.getByText('Policy decision point (PDP)')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', {name: 'Show hidden breadcrumbs'}));
     expect(screen.getByText('AuthZEN')).toBeInTheDocument();
     expect(screen.getByTestId('stub-connection-form')).toHaveAttribute('data-show-authentication', 'false');

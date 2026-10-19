@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render, screen} from '@thunderid/test-utils';
+import {render, screen, waitFor} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import HomePage from '../HomePage';
 
@@ -15,7 +15,8 @@ vi.mock('react-i18next', async (importOriginal) => ({
 type UserData = {name?: string; email?: string} | null;
 let mockUser: UserData = null;
 
-vi.mock('@thunderid/react', () => ({
+vi.mock('@thunderid/react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/react')>()),
   User: ({children}: {children: (user: UserData) => React.ReactNode}) => <>{children(mockUser)}</>,
 }));
 
@@ -31,6 +32,12 @@ describe('HomePage', () => {
   beforeEach(() => {
     mockUser = null;
     vi.clearAllMocks();
+  });
+
+  it('sets the document title to the product name', async () => {
+    render(<HomePage />);
+
+    await waitFor(() => expect(document.title).toBe('ThunderID'));
   });
 
   describe('Greeting', () => {

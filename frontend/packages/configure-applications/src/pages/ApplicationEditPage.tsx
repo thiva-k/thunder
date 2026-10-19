@@ -1,7 +1,13 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {
+  DocumentTitle,
+  PageLoadingAnimation,
+  QueryErrorNotice,
+  ResourceAvatar,
+  UnsavedChangesBar,
+} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -205,13 +211,21 @@ export default function ApplicationEditPage() {
     [editedApp, application],
   );
 
+  const resourceTypeTitle = t('navigation:pages.applications', 'Applications');
+
   if (isLoading) {
-    return <PageLoadingAnimation />;
+    return (
+      <>
+        <DocumentTitle title={resourceTypeTitle} />
+        <PageLoadingAnimation />
+      </>
+    );
   }
 
   if (error) {
     return (
       <PageContent>
+        <DocumentTitle title={resourceTypeTitle} />
         <QueryErrorNotice
           error={error}
           t={tForErrors}
@@ -226,7 +240,7 @@ export default function ApplicationEditPage() {
               }}
               startIcon={<ArrowLeft size={16} />}
             >
-              {t('applications:edit.page.back', 'Back to Applications')}
+              {t('applications:edit.page.back', 'Back to applications')}
             </Button>
           }
         />
@@ -237,6 +251,7 @@ export default function ApplicationEditPage() {
   if (!application) {
     return (
       <PageContent>
+        <DocumentTitle title={resourceTypeTitle} />
         <Alert severity="warning" sx={{mb: 2}}>
           {t('applications:edit.page.notFound')}
         </Alert>
@@ -542,6 +557,7 @@ export default function ApplicationEditPage() {
 
   return (
     <PageContent>
+      <DocumentTitle title={application.name} />
       {application.isReadOnly && (
         <Alert severity="info" sx={{mb: 2}}>
           {t('common:messages.readOnlyResource', 'This resource is read-only and cannot be modified.')}
@@ -560,7 +576,7 @@ export default function ApplicationEditPage() {
             editable={!application.isReadOnly}
             value={editedApp.logoUrl ?? application.logoUrl}
             fallback={ApplicationConstants.DEFAULT_AVATAR}
-            editAriaLabel={t('applications:edit.page.logoUpdate.label', 'Update Logo')}
+            editAriaLabel={t('applications:edit.page.logoUpdate.label', 'Update logo')}
             onSelect={(newLogoUrl: string) => {
               // Can't go through handleFieldChange: reverting to the original logo drops the key
               // rather than setting it, so the stale save error has to be cleared here too.

@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {FullScreenCreationWizardLayout} from '@thunderid/components';
+import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
@@ -170,7 +170,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
       ? [
           {
             key: 'pdp',
-            label: t('wizard.type.policyDecisionPoint.label', 'Policy Decision Point (PDP)'),
+            label: t('wizard.type.policyDecisionPoint.label', 'Policy decision point (PDP)'),
             onClick: () => {
               setSelectedType(POLICY_DECISION_POINT_TYPE);
               setStep(Step.PROTOCOL);
@@ -188,7 +188,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
           {
             key: 'configure',
             label: isAuthZENPDP
-              ? t('detail.configuration.title', 'Connection Configuration')
+              ? t('detail.configuration.title', 'Connection configuration')
               : t('form.chrome.configure', 'Configure connection'),
           },
         ]
@@ -261,6 +261,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
 
   return (
     <FullScreenCreationWizardLayout onClose={close} progress={progress} breadcrumbItems={crumbs} footer={footer}>
+      <DocumentTitle title={t('wizard.title', 'Add custom connection')} />
       {step === Step.TYPE && (
         <SelectConnectionType
           selectedType={selectedType}
@@ -303,7 +304,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
           <Stack direction="column" spacing={1}>
             <Typography variant="h1" gutterBottom>
               {isAuthZENPDP
-                ? t('detail.configuration.title', 'Connection Configuration')
+                ? t('detail.configuration.title', 'Connection configuration')
                 : t('wizard.configure.heading')}
             </Typography>
             <Typography variant="subtitle1" gutterBottom>

@@ -41,7 +41,7 @@ describe('LoginBoxCard', () => {
   it('renders the card title', () => {
     render(<LoginBoxCard />);
 
-    expect(screen.getByText('Sign-in Box')).toBeInTheDocument();
+    expect(screen.getByText('Sign-in box')).toBeInTheDocument();
   });
 
   it('renders the card description', () => {
@@ -55,13 +55,13 @@ describe('LoginBoxCard', () => {
   it('renders the primary action button', () => {
     render(<LoginBoxCard />);
 
-    expect(screen.getByRole('button', {name: 'Open Design Studio'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Open design studio'})).toBeInTheDocument();
   });
 
   it('navigates to /design when the primary button is clicked', () => {
     render(<LoginBoxCard />);
 
-    fireEvent.click(screen.getByRole('button', {name: 'Open Design Studio'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Open design studio'}));
 
     expect(mockNavigate).toHaveBeenCalledWith('/design');
   });
@@ -70,6 +70,6 @@ describe('LoginBoxCard', () => {
     render(<LoginBoxCard />);
 
     expect(screen.queryByText('New')).not.toBeInTheDocument();
-    expect(screen.queryByText('Coming Soon')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
   });
 });

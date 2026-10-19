@@ -129,7 +129,7 @@ export default function McpAccessSection({
     onFieldChange('allowedAgentTypes', enabled ? [ApplicationConstants.DEFAULT_AGENT_TYPE_HANDLE] : []);
   };
 
-  const agentSignInLabel = t('applications:edit.access.agentSignIn.toggle.label', 'Enable Agent Sign-In');
+  const agentSignInLabel = t('applications:edit.access.agentSignIn.toggle.label', 'Enable agent sign-in');
 
   const clientUriSchema = z.object({
     url: z
@@ -254,7 +254,7 @@ export default function McpAccessSection({
       <Stack spacing={3}>
         <FormControl fullWidth>
           <FormLabel htmlFor="mcp-allowed-user-types-autocomplete">
-            {t('applications:edit.general.labels.allowedUserTypes', 'Allowed User Types')}
+            {t('applications:edit.general.labels.allowedUserTypes', 'Allowed user types')}
           </FormLabel>
           <Autocomplete
             multiple

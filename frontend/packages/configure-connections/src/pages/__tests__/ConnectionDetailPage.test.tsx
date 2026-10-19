@@ -453,6 +453,11 @@ describe('ConnectionDetailPage', () => {
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
   });
 
+  it('sets the browser tab title to the connection name', async () => {
+    render(<ConnectionDetailPage />);
+    await waitFor(() => expect(document.title).toBe('Google | ThunderID'));
+  });
+
   it('renders the connection form in the Credentials card', () => {
     render(<ConnectionDetailPage />);
     expect(screen.getByRole('region', {name: 'Credentials'})).toContainElement(
@@ -479,7 +484,7 @@ describe('ConnectionDetailPage', () => {
     mockConn.data = {
       id: 'sms1',
       type: 'sms-gateway',
-      name: 'SMS Gateway',
+      name: 'SMS gateway',
       url: 'https://sms.example.com/send',
       authentication: {type: 'api_key', properties: {'X-API-Key': '******'}},
     };
@@ -499,7 +504,7 @@ describe('ConnectionDetailPage', () => {
     mockConn.data = {
       id: 'sms1',
       type: 'sms-gateway',
-      name: 'SMS Gateway',
+      name: 'SMS gateway',
       url: 'https://sms.example.com/send',
       authentication: {type: 'bearer', properties: {token: '******'}},
     };
@@ -774,7 +779,7 @@ describe('ConnectionDetailPage', () => {
     mockMeta.methods = [{type: 'none', displayName: 'None'}];
     render(<ConnectionDetailPage />);
 
-    expect(screen.getByLabelText('Connection Configuration')).toBeInTheDocument();
+    expect(screen.getByLabelText('Connection configuration')).toBeInTheDocument();
     expect(screen.queryByTestId('connection-authentication-section')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('connection-tab-authentication'));
     expect(screen.getByText('Authentication method')).toBeInTheDocument();
@@ -990,7 +995,7 @@ describe('ConnectionDetailPage', () => {
     it('edits authentication in the General tab from the vendor metadata', () => {
       render(<ConnectionDetailPage />);
 
-      expect(screen.getByLabelText('Connection Configuration')).toBeInTheDocument();
+      expect(screen.getByLabelText('Connection configuration')).toBeInTheDocument();
       expect(screen.getByRole('region', {name: 'Authentication'})).toContainElement(
         screen.getByTestId('connection-authentication-section'),
       );

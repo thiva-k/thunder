@@ -80,7 +80,7 @@ export default function StartBuildingSection(): JSX.Element {
                 color="primary.light"
                 sx={{fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.08em'}}
               >
-                {t('start_building.hero.eyebrow', 'Get Started')}
+                {t('start_building.hero.eyebrow', 'Get started')}
               </Typography>
               <Typography variant="h3" fontWeight={600}>
                 {t('start_building.hero.title', {
@@ -105,7 +105,7 @@ export default function StartBuildingSection(): JSX.Element {
                       }}
                       sx={{textTransform: 'none', whiteSpace: 'nowrap'}}
                     >
-                      {t('start_building.hero.actions.view_apps.label', 'Create Applications')}
+                      {t('start_building.hero.actions.view_apps.label', 'Create applications')}
                     </Button>
                     <Box
                       onClick={goToApplicationList}
@@ -136,7 +136,7 @@ export default function StartBuildingSection(): JSX.Element {
                     }}
                     sx={{textTransform: 'none'}}
                   >
-                    {t('start_building.hero.actions.create.label', 'Create Application')}
+                    {t('start_building.hero.actions.create.label', 'Create application')}
                   </Button>
                 )}
               </Box>
@@ -160,7 +160,7 @@ export default function StartBuildingSection(): JSX.Element {
                 variant="overline"
                 sx={{fontSize: '0.625rem', fontWeight: 600, letterSpacing: '0.06em', color: 'text.disabled'}}
               >
-                {t('start_building.frameworks.label', 'Start with a Template')}
+                {t('start_building.frameworks.label', 'Start with a template')}
               </Typography>
               <FrameworkFlipCard slotCount={showAllFrameworkSlots ? 3 : 1} />
             </Box>

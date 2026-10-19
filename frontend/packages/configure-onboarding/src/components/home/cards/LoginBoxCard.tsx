@@ -39,12 +39,12 @@ export default function LoginBoxCard(): JSX.Element {
   return (
     <HomeNextStepCard
       icon={<Palette size={24} />}
-      title={t('next_steps.login_box.title', 'Sign-in Box')}
+      title={t('next_steps.login_box.title', 'Sign-in box')}
       description={t(
         'next_steps.login_box.description',
         'Build themes and attach them to your applications to personalise the sign-in experience.',
       )}
-      primaryLabel={t('next_steps.login_box.actions.primary.label', 'Open Design Studio')}
+      primaryLabel={t('next_steps.login_box.actions.primary.label', 'Open design studio')}
       primaryRoute="/design"
       preview={preview}
     />

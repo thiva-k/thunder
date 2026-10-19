@@ -191,8 +191,8 @@ export default function EditCredentialsSettings({
 
   const showSecretSection = isConfidentialClient || isFlowNativeClient;
   const secretLabel = isConfidentialClient
-    ? t('applications:clientSecret.clientSecretLabel', 'Client Secret')
-    : t('applications:edit.credentials.sections.secret.flowSecretLabel', 'Flow Secret');
+    ? t('applications:clientSecret.clientSecretLabel', 'Client secret')
+    : t('applications:edit.credentials.sections.secret.flowSecretLabel', 'Flow secret');
   const secretHint = isConfidentialClient
     ? t(
         'applications:edit.credentials.sections.secret.hints.clientSecret',

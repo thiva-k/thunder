@@ -51,20 +51,20 @@ describe('StartBuildingSection', () => {
       mockUseGetApplications.mockReturnValue({data: {totalResults: 0}});
     });
 
-    it('renders "Create Application" button when no apps exist', () => {
+    it('renders "Create application" button when no apps exist', () => {
       render(<StartBuildingSection />);
-      expect(screen.getByRole('button', {name: 'Create Application'})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Create application'})).toBeInTheDocument();
     });
 
     it('navigates to /applications/types when the button is clicked', () => {
       render(<StartBuildingSection />);
-      fireEvent.click(screen.getByRole('button', {name: 'Create Application'}));
+      fireEvent.click(screen.getByRole('button', {name: 'Create application'}));
       expect(mockNavigate).toHaveBeenCalledWith('/applications/types');
     });
 
-    it('does not render the "Create Applications" view button when totalResults is 0', () => {
+    it('does not render the "Create applications" view button when totalResults is 0', () => {
       render(<StartBuildingSection />);
-      expect(screen.queryByRole('button', {name: 'Create Applications'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', {name: 'Create applications'})).not.toBeInTheDocument();
     });
   });
 
@@ -73,20 +73,20 @@ describe('StartBuildingSection', () => {
       mockUseGetApplications.mockReturnValue({data: {totalResults: 3}});
     });
 
-    it('renders "Create Applications" button when apps exist', () => {
+    it('renders "Create applications" button when apps exist', () => {
       render(<StartBuildingSection />);
-      expect(screen.getByRole('button', {name: 'Create Applications'})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Create applications'})).toBeInTheDocument();
     });
 
     it('navigates to /applications when the button is clicked', () => {
       render(<StartBuildingSection />);
-      fireEvent.click(screen.getByRole('button', {name: 'Create Applications'}));
+      fireEvent.click(screen.getByRole('button', {name: 'Create applications'}));
       expect(mockNavigate).toHaveBeenCalledWith('/applications/types');
     });
 
     it('does not render the create-only button when apps exist', () => {
       render(<StartBuildingSection />);
-      expect(screen.queryByRole('button', {name: 'Create Application'})).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', {name: 'Create application'})).not.toBeInTheDocument();
     });
 
     it('navigates to /applications when the application count is clicked', () => {

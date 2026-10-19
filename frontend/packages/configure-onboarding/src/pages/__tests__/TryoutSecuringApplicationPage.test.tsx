@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render, screen, userEvent, fireEvent} from '@thunderid/test-utils';
+import {render, screen, userEvent, fireEvent, waitFor} from '@thunderid/test-utils';
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 import {WAYFINDER_APP_URL, WAYFINDER_MAIL_URL} from '../../constants/sample-urls';
 
@@ -118,6 +118,12 @@ describe('TryoutSecuringApplicationPage', () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('sets the document title', async () => {
+    render(<TryoutSecuringApplicationPage />);
+
+    await waitFor(() => expect(document.title).toBe('common:welcome.applicationTryout.title | ThunderID'));
   });
 
   it('renders without crashing', () => {

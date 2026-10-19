@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {FullScreenCreationWizardLayout} from '@thunderid/components';
+import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
 import {AuthenticatorTypes, IdentityProviderTypes, useIdentityProviders} from '@thunderid/configure-connections';
 import {GatePreview, VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@thunderid/configure-design';
 import {
@@ -144,7 +144,7 @@ export default function ApplicationCreatePage(): JSX.Element {
 
   const steps: Record<ApplicationCreateFlowStep, {label: string; order: number}> = useMemo(
     () => ({
-      ORGANIZATION_UNIT: {label: t('applications:onboarding.steps.organizationUnit', 'Organization Unit'), order: 1},
+      ORGANIZATION_UNIT: {label: t('applications:onboarding.steps.organizationUnit', 'Organization unit'), order: 1},
       DETAILS: {label: t('applications:onboarding.steps.details'), order: 2},
       SECURITY: {label: t('applications:onboarding.steps.security'), order: 3},
       DESIGN: {label: t('applications:onboarding.steps.design'), order: 4},
@@ -1177,27 +1177,33 @@ export default function ApplicationCreatePage(): JSX.Element {
     });
   };
 
+  const pageTitle = t('applications:listing.addApplication', 'Add application');
+
   if (currentStep === ApplicationCreateFlowStep.ORGANIZATION_UNIT) {
     if (isOuLoading || !hasMultipleOUs) {
       return (
         <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <DocumentTitle title={pageTitle} />
           <CircularProgress />
         </Box>
       );
     }
 
     return (
-      <OrganizationUnitPickerScreen
-        icon={<Home size={26} />}
-        title={t('applications:onboarding.organizationUnit.title')}
-        subtitle={t('applications:onboarding.organizationUnit.subtitle')}
-        value={ouId}
-        onChange={handleOuIdChange}
-        onBack={ouId ? () => setCurrentStep(ApplicationCreateFlowStep.DETAILS) : handleBackToTemplates}
-        onContinue={handleNextStep}
-        backLabel={t('common:actions.back')}
-        continueLabel={t('common:actions.continue')}
-      />
+      <>
+        <DocumentTitle title={pageTitle} />
+        <OrganizationUnitPickerScreen
+          icon={<Home size={26} />}
+          title={t('applications:onboarding.organizationUnit.title')}
+          subtitle={t('applications:onboarding.organizationUnit.subtitle')}
+          value={ouId}
+          onChange={handleOuIdChange}
+          onBack={ouId ? () => setCurrentStep(ApplicationCreateFlowStep.DETAILS) : handleBackToTemplates}
+          onContinue={handleNextStep}
+          backLabel={t('common:actions.back')}
+          continueLabel={t('common:actions.continue')}
+        />
+      </>
     );
   }
 
@@ -1296,6 +1302,7 @@ export default function ApplicationCreatePage(): JSX.Element {
         </Box>
       }
     >
+      <DocumentTitle title={pageTitle} />
       {error && (
         <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
           {error}

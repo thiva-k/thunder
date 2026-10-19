@@ -49,7 +49,7 @@ export default function HomeNextStepCard({
 
   const statusStyles = featureStatus ? FEATURE_STATUS_STYLES[featureStatus] : null;
   const statusLabel = featureStatus
-    ? t(`feature_status.${featureStatus}`, featureStatus === 'new' ? 'New' : 'Coming Soon')
+    ? t(`feature_status.${featureStatus}`, featureStatus === 'new' ? 'New' : 'Coming soon')
     : null;
 
   return (

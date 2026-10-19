@@ -159,10 +159,10 @@ export default function McpConnectTab({
                 icon={isM2m ? <Bot size={14} /> : <UserRound size={14} />}
                 label={
                   isM2m
-                    ? t('applications:edit.mcp.connect.profileBadge.m2m', 'On its own behalf (Client Credentials)')
+                    ? t('applications:edit.mcp.connect.profileBadge.m2m', 'On its own behalf (client credentials)')
                     : t(
                         'applications:edit.mcp.connect.profileBadge.userDelegated',
-                        'On behalf of a user (Authorization Code + PKCE)',
+                        'On behalf of a user (authorization code + PKCE)',
                       )
                 }
               />
@@ -187,7 +187,7 @@ export default function McpConnectTab({
             {isConfidentialClient && (
               <FormControl fullWidth>
                 <FormLabel htmlFor="mcp-connect-client-secret">
-                  {t('applications:clientSecret.clientSecretLabel', 'Client Secret')}
+                  {t('applications:clientSecret.clientSecretLabel', 'Client secret')}
                 </FormLabel>
                 <Stack direction="row" spacing={1}>
                   <TextField

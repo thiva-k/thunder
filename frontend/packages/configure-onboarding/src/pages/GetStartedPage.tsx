@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {TechnologyApplicationTemplate} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {Box, Button, IconButton, Stack, Typography, AppBreadcrumbs} from '@wso2/oxygen-ui';
@@ -54,6 +55,7 @@ export default function GetStartedPage(): JSX.Element {
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+      <DocumentTitle title={t('common:welcome.getStarted.title', 'Get started')} />
       <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>
         <Box
           sx={{

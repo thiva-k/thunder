@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useToast} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, CircularProgress, Typography} from '@wso2/oxygen-ui';
@@ -268,6 +269,7 @@ export default function GatewayExplorerPage(): JSX.Element {
         if (event.key === 'Escape') setSelected(null);
       }}
     >
+      <DocumentTitle title={gateway?.name ?? t('header.title', 'Deploy')} />
       <FullScreenHeader
         breadcrumbs={[
           {key: 'deploy', label: t('header.title', 'Deploy'), onClick: () => void navigate(routes.deploy.list())},

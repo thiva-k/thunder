@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {
   Box,
@@ -40,6 +41,7 @@ export default function CreateProjectPage(): JSX.Element {
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+      <DocumentTitle title={t('common:welcome.createProject.title', 'How {{productName}} works!', {productName})} />
       {/* Progress bar at the very top */}
       <LinearProgress variant="determinate" value={0} sx={{height: 6}} />
 

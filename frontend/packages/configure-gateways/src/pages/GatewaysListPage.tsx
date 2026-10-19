@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {Button, PageContent, PageTitle} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
@@ -30,8 +31,9 @@ export default function GatewaysListPage(): JSX.Element {
 
   return (
     <PageContent>
+      <DocumentTitle title={t('gateways:list.title', 'Gateway management')} />
       <PageTitle>
-        <PageTitle.Header>{t('gateways:list.title', 'Gateway Management')}</PageTitle.Header>
+        <PageTitle.Header>{t('gateways:list.title', 'Gateway management')}</PageTitle.Header>
         <PageTitle.SubHeader>
           {t('gateways:list.subtitle', 'Register the gateways this deployment administers and how it reaches them.')}
         </PageTitle.SubHeader>
