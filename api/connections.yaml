@@ -2076,7 +2076,8 @@ components:
 
         Credential values are stored encrypted and returned as `"******"`. On update, a masked
         value retains the matching stored credential while the connection target is unchanged.
-        For `api_key`, `properties` contains HTTP header names and values. Omitting a header
+        For `api_key`, `properties` contains HTTP header names and values; a header name cannot
+        contain a dot. Omitting a header
         from a supplied `api_key` block deletes it. Omitting the whole `authentication` block
         keeps the existing configuration. Setting `type` to `none` removes authentication.
       required: [type]
@@ -2296,7 +2297,9 @@ components:
             How the claim's value(s) are interpreted. Defaults to "string" (a single scalar value)
             when omitted. "array", or "string" combined with delimiter, is multi-valued and requires
             the includes/not_includes operators; every other combination is single-valued and
-            requires a different operator.
+            requires a different operator. "number" values are compared exactly when they have at
+            most 1024 characters and an exponent within ±400; beyond that they are compared as
+            64-bit floating-point numbers.
           enum: [string, number, boolean, array]
           default: "string"
           example: "array"

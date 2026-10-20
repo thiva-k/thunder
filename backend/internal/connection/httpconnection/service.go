@@ -155,7 +155,7 @@ func (s *httpConnectionService) validate(ctx context.Context, connection *HTTPCo
 	if utf8.RuneCountInString(connection.Description) > maxDescriptionLength {
 		return &ErrorInvalidDescription
 	}
-	endpoint, ok := parseEndpointURL(strings.TrimSpace(connection.URL))
+	endpoint, ok := httpauth.ParseEndpointURL(strings.TrimSpace(connection.URL))
 	if !ok {
 		return &ErrorInvalidURL
 	}
