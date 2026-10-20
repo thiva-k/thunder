@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {FullScreenCreationWizardLayout} from '@thunderid/components';
+import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
 import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
 import {useResolveDisplayName} from '@thunderid/hooks';
 import {
@@ -85,13 +85,14 @@ export default function UserAddFormPage(): JSX.Element {
     <FullScreenCreationWizardLayout
       onClose={handleClose}
       progress={0}
-      breadcrumbItems={[{key: 'add-user', label: t('users:addUser', 'Add User')}]}
+      breadcrumbItems={[{key: 'add-user', label: t('users:addUser', 'Add user')}]}
       footer={null}
     >
+      <DocumentTitle title={t('users:addUser', 'Add user')} />
       <Stack spacing={3}>
         <Box>
           <Typography variant="h1" gutterBottom>
-            {t('users:addUser', 'Add User')}
+            {t('users:addUser', 'Add user')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {t('users:addForm.subtitle')}

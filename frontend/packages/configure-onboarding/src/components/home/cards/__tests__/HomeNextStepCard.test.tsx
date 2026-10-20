@@ -125,7 +125,7 @@ describe('HomeNextStepCard', () => {
       render(<HomeNextStepCard {...DEFAULT_PROPS} />);
 
       expect(screen.queryByText('New')).not.toBeInTheDocument();
-      expect(screen.queryByText('Coming Soon')).not.toBeInTheDocument();
+      expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
     });
 
     it('renders a chip with fallback label "New" for featureStatus="new"', () => {
@@ -134,10 +134,10 @@ describe('HomeNextStepCard', () => {
       expect(screen.getByText('New')).toBeInTheDocument();
     });
 
-    it('renders a chip with fallback label "Coming Soon" for featureStatus="coming_soon"', () => {
+    it('renders a chip with fallback label "Coming soon" for featureStatus="coming_soon"', () => {
       render(<HomeNextStepCard {...DEFAULT_PROPS} featureStatus="coming_soon" />);
 
-      expect(screen.getByText('Coming Soon')).toBeInTheDocument();
+      expect(screen.getByText('Coming soon')).toBeInTheDocument();
     });
   });
 });

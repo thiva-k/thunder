@@ -45,7 +45,7 @@ vi.mock('../cards/ConnectionsCard', () => ({
 describe('NextStepsSection', () => {
   it('renders the section title', () => {
     render(<NextStepsSection />);
-    expect(screen.getByText('Quick Links')).toBeInTheDocument();
+    expect(screen.getByText('Quick links')).toBeInTheDocument();
   });
 
   it('renders InviteMembersCard', () => {

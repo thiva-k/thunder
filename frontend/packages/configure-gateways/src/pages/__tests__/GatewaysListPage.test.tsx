@@ -16,7 +16,7 @@ vi.mock('@thunderid/react', async (importOriginal) => {
 
 vi.mock('@thunderid/contexts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/contexts')>();
-  return {...actual, useConfig: () => ({getServerUrl: () => SERVER_URL})};
+  return {...actual, useConfig: () => ({config: {brand: {product_name: 'ThunderID'}}, getServerUrl: () => SERVER_URL})};
 });
 
 const mockNavigate = vi.fn();
@@ -51,7 +51,7 @@ describe('GatewaysListPage', () => {
     mockHttpRequest.mockImplementation(createHttpRouter(routes));
     renderWithProviders(<GatewaysListPage />);
 
-    expect(screen.getByRole('heading', {name: 'Gateway Management'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Gateway management'})).toBeInTheDocument();
     expect(await screen.findByText('production')).toBeInTheDocument();
     expect(screen.getByText('https://staging.example.com')).toBeInTheDocument();
     expect(screen.getAllByText('Default')).toHaveLength(1);

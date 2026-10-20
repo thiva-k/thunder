@@ -138,12 +138,12 @@ export default function InviteMembersCard(): JSX.Element {
   return (
     <HomeNextStepCard
       icon={<UsersRound size={24} />}
-      title={t('next_steps.invite_members.title', 'Add Users')}
+      title={t('next_steps.invite_members.title', 'Add users')}
       description={t(
         'next_steps.invite_members.description',
         'Add or invite collaborators to help manage your organization.',
       )}
-      primaryLabel={t('next_steps.invite_members.actions.primary.label', 'Add User')}
+      primaryLabel={t('next_steps.invite_members.actions.primary.label', 'Add user')}
       primaryRoute={userRoutes.add()}
       preview={preview}
     />

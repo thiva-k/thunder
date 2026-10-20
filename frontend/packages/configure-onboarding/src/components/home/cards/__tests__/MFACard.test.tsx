@@ -30,7 +30,7 @@ describe('MFACard', () => {
   it('renders the card title', () => {
     render(<MFACard />);
 
-    expect(screen.getByText('Multi-factor Authentication')).toBeInTheDocument();
+    expect(screen.getByText('Multi-factor authentication')).toBeInTheDocument();
   });
 
   it('renders the card description', () => {
@@ -44,13 +44,13 @@ describe('MFACard', () => {
   it('renders the primary action button', () => {
     render(<MFACard />);
 
-    expect(screen.getByRole('button', {name: 'Configure Flows'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Configure flows'})).toBeInTheDocument();
   });
 
   it('navigates to /flows when the primary button is clicked', () => {
     render(<MFACard />);
 
-    fireEvent.click(screen.getByRole('button', {name: 'Configure Flows'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Configure flows'}));
 
     expect(mockNavigate).toHaveBeenCalledWith('/flows');
   });
@@ -59,6 +59,6 @@ describe('MFACard', () => {
     render(<MFACard />);
 
     expect(screen.queryByText('New')).not.toBeInTheDocument();
-    expect(screen.queryByText('Coming Soon')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
   });
 });

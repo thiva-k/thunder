@@ -154,7 +154,7 @@ describe('EditCredentialsSettings', () => {
     });
   });
 
-  describe('Secret section — redirect-based (Client Secret)', () => {
+  describe('Secret section — redirect-based (Client secret)', () => {
     it('shows the masked secret field and a Regenerate button for a confidential client', () => {
       render(
         <EditCredentialsSettings
@@ -165,7 +165,7 @@ describe('EditCredentialsSettings', () => {
         />,
       );
 
-      expect(screen.getByLabelText('Client Secret')).toHaveDisplayValue('••••••••••••••••');
+      expect(screen.getByLabelText('Client secret')).toHaveDisplayValue('••••••••••••••••');
       expect(screen.getByRole('button', {name: /regenerate/i})).toBeInTheDocument();
     });
 
@@ -240,7 +240,7 @@ describe('EditCredentialsSettings', () => {
     });
   });
 
-  describe('Secret section — flow-native (Flow Secret)', () => {
+  describe('Secret section — flow-native (Flow secret)', () => {
     it('shows the Flow Secret label and a Regenerate button for a flow-native app', () => {
       render(
         <EditCredentialsSettings
@@ -251,7 +251,7 @@ describe('EditCredentialsSettings', () => {
         />,
       );
 
-      expect(screen.getByLabelText('Flow Secret')).toHaveDisplayValue('••••••••••••••••');
+      expect(screen.getByLabelText('Flow secret')).toHaveDisplayValue('••••••••••••••••');
       expect(screen.getByRole('button', {name: /regenerate/i})).toBeInTheDocument();
     });
 
@@ -353,7 +353,7 @@ describe('EditCredentialsSettings', () => {
         />,
       );
 
-      expect(screen.queryByText('Platform Attestation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Platform attestation')).not.toBeInTheDocument();
     });
 
     it('renders the attestation section when showAttestation is true', () => {
@@ -367,7 +367,7 @@ describe('EditCredentialsSettings', () => {
         />,
       );
 
-      expect(screen.getByText('Platform Attestation')).toBeInTheDocument();
+      expect(screen.getByText('Platform attestation')).toBeInTheDocument();
     });
   });
 });

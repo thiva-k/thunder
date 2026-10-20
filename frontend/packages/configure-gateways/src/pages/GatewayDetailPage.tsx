@@ -1,7 +1,13 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, QueryErrorNotice, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
+import {
+  DocumentTitle,
+  PageLoadingAnimation,
+  QueryErrorNotice,
+  SettingsCard,
+  UnsavedChangesBar,
+} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
 import {
@@ -100,8 +106,15 @@ function GatewayDetail({gatewayId}: {gatewayId: string}): JSX.Element {
     });
   };
 
+  const resourceTypeTitle = t('gateways:list.title', 'Gateway management');
+
   if (isLoading) {
-    return <PageLoadingAnimation />;
+    return (
+      <>
+        <DocumentTitle title={resourceTypeTitle} />
+        <PageLoadingAnimation />
+      </>
+    );
   }
 
   // A refetch that fails keeps the gateway already read, so the page stays and says so above it,
@@ -109,6 +122,7 @@ function GatewayDetail({gatewayId}: {gatewayId: string}): JSX.Element {
   if (!gateway) {
     return (
       <PageContent>
+        <DocumentTitle title={resourceTypeTitle} />
         <QueryErrorNotice
           error={error ?? new Error('Gateway not found')}
           t={tForErrors}
@@ -127,6 +141,7 @@ function GatewayDetail({gatewayId}: {gatewayId: string}): JSX.Element {
 
   return (
     <PageContent>
+      <DocumentTitle title={gateway.name} />
       <PageTitle>
         <PageTitle.BackButton component={<Link to={routes.list()} />}>
           {t('gateways:detail.back', 'Back to gateways')}
@@ -218,7 +233,7 @@ function GatewayDetail({gatewayId}: {gatewayId: string}): JSX.Element {
         </SettingsCard>
 
         <SettingsCard
-          title={t('gateways:detail.dangerZone.title', 'Danger Zone')}
+          title={t('gateways:detail.dangerZone.title', 'Danger zone')}
           description={t(
             'gateways:detail.dangerZone.description',
             'Removing the registration stops this deployment administering the gateway.',

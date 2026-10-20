@@ -458,7 +458,7 @@ export default function OAuth2ConfigSection({
         {showRedirectUris && (
           <FormControl fullWidth>
             <FormLabel htmlFor="post-logout-redirect-uris-section">
-              {t('applications:edit.general.postLogoutRedirectUris.title', 'Post-Logout Redirect URIs')}
+              {t('applications:edit.general.postLogoutRedirectUris.title', 'Post-logout redirect URIs')}
             </FormLabel>
             <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 2}}>
               {t(
@@ -528,7 +528,7 @@ export default function OAuth2ConfigSection({
         {/* Token Endpoint Auth Method */}
         <FormControl fullWidth size="small">
           <FormLabel htmlFor="token_endpoint_auth_method">
-            {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Client Authentication Method')}
+            {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Client authentication method')}
           </FormLabel>
           <Select
             id="token_endpoint_auth_method"
@@ -682,7 +682,7 @@ export default function OAuth2ConfigSection({
                 inputProps={{
                   'aria-label': t(
                     'applications:edit.advanced.labels.requirePAR',
-                    'Require Pushed Authorization Requests',
+                    'Require pushed authorization requests',
                   ),
                 }}
               />
@@ -690,7 +690,7 @@ export default function OAuth2ConfigSection({
             label={
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography variant="subtitle2">
-                  {t('applications:edit.advanced.labels.requirePAR', 'Require Pushed Authorization Requests')}
+                  {t('applications:edit.advanced.labels.requirePAR', 'Require pushed authorization requests')}
                 </Typography>
                 {isParLocked && (
                   <Tooltip title={t('applications:edit.advanced.lockedByTemplate', 'Set by template')}>

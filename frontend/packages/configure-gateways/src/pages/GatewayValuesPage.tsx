@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {Alert, Box, CircularProgress, PageTitle, Stack, Tab, Tabs} from '@wso2/oxygen-ui';
 import {useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -126,6 +127,11 @@ export default function GatewayValuesPage(): JSX.Element {
   }
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+      <DocumentTitle
+        title={
+          gateway ? t('values.title', 'Configure {{gateway}}', {gateway: gateway.name}) : t('header.title', 'Deploy')
+        }
+      />
       <FullScreenHeader
         breadcrumbs={[
           {key: 'deploy', label: t('header.title', 'Deploy'), onClick: back},

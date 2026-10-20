@@ -65,7 +65,7 @@ describe('McpAccessSection', () => {
   it('renders the agent sign-in toggle off when no agent type is allowed', () => {
     render(<McpAccessSection application={mockApplication} onFieldChange={mockOnFieldChange} isReadOnly={false} />);
 
-    expect(screen.getByLabelText('Enable Agent Sign-In')).not.toBeChecked();
+    expect(screen.getByLabelText('Enable agent sign-in')).not.toBeChecked();
   });
 
   it('renders the agent sign-in toggle on when an agent type is allowed', () => {
@@ -77,14 +77,14 @@ describe('McpAccessSection', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Enable Agent Sign-In')).toBeChecked();
+    expect(screen.getByLabelText('Enable agent sign-in')).toBeChecked();
   });
 
   it('allows the default agent type when agent sign-in is enabled', async () => {
     const user = userEvent.setup();
     render(<McpAccessSection application={mockApplication} onFieldChange={mockOnFieldChange} isReadOnly={false} />);
 
-    await user.click(screen.getByLabelText('Enable Agent Sign-In'));
+    await user.click(screen.getByLabelText('Enable agent sign-in'));
 
     expect(mockOnFieldChange).toHaveBeenCalledWith('allowedAgentTypes', ['default']);
   });
@@ -99,7 +99,7 @@ describe('McpAccessSection', () => {
       />,
     );
 
-    await user.click(screen.getByLabelText('Enable Agent Sign-In'));
+    await user.click(screen.getByLabelText('Enable agent sign-in'));
 
     expect(mockOnFieldChange).toHaveBeenCalledWith('allowedAgentTypes', []);
   });
@@ -108,13 +108,13 @@ describe('McpAccessSection', () => {
     const user = userEvent.setup();
     render(<McpAccessSection application={mockApplication} onFieldChange={mockOnFieldChange} isReadOnly={false} />);
 
-    await user.click(screen.getByLabelText('Enable Agent Sign-In'));
+    await user.click(screen.getByLabelText('Enable agent sign-in'));
 
-    expect(screen.getByLabelText('Enable Agent Sign-In')).toBeChecked();
+    expect(screen.getByLabelText('Enable agent sign-in')).toBeChecked();
 
-    await user.click(screen.getByLabelText('Enable Agent Sign-In'));
+    await user.click(screen.getByLabelText('Enable agent sign-in'));
 
-    expect(screen.getByLabelText('Enable Agent Sign-In')).not.toBeChecked();
+    expect(screen.getByLabelText('Enable agent sign-in')).not.toBeChecked();
   });
 
   it('renders the client URI field mapped to application.url', () => {
@@ -136,7 +136,7 @@ describe('McpAccessSection', () => {
     render(<McpAccessSection application={mockApplication} onFieldChange={mockOnFieldChange} isReadOnly />);
 
     expect(screen.getByDisplayValue('https://agent.example.com')).toBeDisabled();
-    expect(screen.getByLabelText('Enable Agent Sign-In')).toBeDisabled();
+    expect(screen.getByLabelText('Enable agent sign-in')).toBeDisabled();
   });
 
   describe('Authorized redirect URIs', () => {

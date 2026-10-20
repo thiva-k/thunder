@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useToast} from '@thunderid/contexts';
 import {Alert, Box, CircularProgress, PageTitle, Stack} from '@wso2/oxygen-ui';
 import {Fragment, useCallback, useMemo, useState, type JSX} from 'react';
@@ -108,6 +109,7 @@ export default function DeployPage(): JSX.Element {
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+      <DocumentTitle title={t('page.title', 'Deploy')} />
       <FullScreenHeader
         breadcrumbs={[{key: 'deploy', label: t('header.title', 'Deploy')}]}
         onExit={() => void navigate(routes.home.list())}

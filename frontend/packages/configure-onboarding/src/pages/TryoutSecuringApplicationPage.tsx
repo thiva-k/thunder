@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {
   Box,
@@ -62,6 +63,7 @@ export default function TryoutSecuringConsumerApp(): JSX.Element {
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
+      <DocumentTitle title={t('common:welcome.applicationTryout.title', 'Secure your application')} />
       <LinearProgress variant="determinate" value={0} sx={{height: 6}} />
 
       <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>

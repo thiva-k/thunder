@@ -60,6 +60,6 @@ describe('ConnectionsCard', () => {
   it('renders the primary action button', () => {
     render(<ConnectionsCard />);
 
-    expect(screen.getByRole('button', {name: 'Manage Connections'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Manage connections'})).toBeInTheDocument();
   });
 });

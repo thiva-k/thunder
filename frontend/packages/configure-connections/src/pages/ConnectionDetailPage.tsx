@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {QueryErrorNotice, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
+import {DocumentTitle, QueryErrorNotice, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, ListingTable, PageContent, Skeleton, Stack, Tab, Tabs, Typography} from '@wso2/oxygen-ui';
@@ -440,6 +440,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
 
   return (
     <PageContent>
+      <DocumentTitle title={data?.name ?? t('navigation:pages.connections', 'Connections')} />
       <Button
         variant="text"
         startIcon={<ChevronLeft size={16} />}
@@ -549,7 +550,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
             )}
             {supportsSubjectMapping && (
               <Tab
-                label={t('detail.tabs.subjectMapping', 'Attribute Configuration')}
+                label={t('detail.tabs.subjectMapping', 'Attribute configuration')}
                 sx={{textTransform: 'none'}}
                 data-testid="connection-tab-subject-mapping"
               />
@@ -575,7 +576,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
               <SettingsCard
                 title={
                   generalSettingsCardCopy === 'configuration'
-                    ? t('detail.configuration.title', 'Connection Configuration')
+                    ? t('detail.configuration.title', 'Connection configuration')
                     : t('detail.credentials.title', 'Credentials')
                 }
                 description={

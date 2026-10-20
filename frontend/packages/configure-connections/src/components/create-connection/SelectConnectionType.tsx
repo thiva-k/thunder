@@ -63,7 +63,7 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
     {
       type: 'trusted-idp',
       labelKey: 'wizard.type.trustedIdp.label',
-      labelDefault: 'Trusted Token Issuer',
+      labelDefault: 'Trusted token issuer',
       descriptionKey: 'wizard.type.trustedIdp.description',
       descriptionDefault: "Trust an external IdP's identity assertions and exchange them for access tokens.",
       tagKey: 'wizard.type.trustedIdp.tag',
@@ -74,7 +74,7 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
     {
       type: POLICY_DECISION_POINT_TYPE,
       labelKey: 'wizard.type.policyDecisionPoint.label',
-      labelDefault: 'Policy Decision Point (PDP)',
+      labelDefault: 'Policy decision point (PDP)',
       descriptionKey: 'wizard.type.policyDecisionPoint.description',
       descriptionDefault: 'Connect a policy decision point using a supported authorization protocol.',
       tagKey: 'wizard.type.policyDecisionPoint.tag',
@@ -96,7 +96,7 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
     {
       type: ConnectionTypes.SMTP,
       labelKey: 'wizard.type.smtp.label',
-      labelDefault: 'Email Provider (SMTP)',
+      labelDefault: 'Email provider (SMTP)',
       descriptionKey: 'wizard.type.smtp.description',
       descriptionDefault: 'Deliver email through your own SMTP server.',
       tagKey: 'wizard.type.smtp.tag',
@@ -107,7 +107,7 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
     {
       type: ConnectionTypes.HTTP,
       labelKey: 'wizard.type.http.label',
-      labelDefault: 'Service Endpoint',
+      labelDefault: 'Service endpoint',
       descriptionKey: 'wizard.type.http.description',
       descriptionDefault: 'Call an HTTP service from a flow, such as a risk engine or a custom check.',
       tagKey: 'wizard.type.http.tag',

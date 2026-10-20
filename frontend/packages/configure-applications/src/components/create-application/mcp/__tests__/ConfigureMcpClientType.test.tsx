@@ -39,7 +39,7 @@ describe('ConfigureMcpClientType', () => {
       />,
     );
 
-    expect(screen.getByText('Client Type')).toBeInTheDocument();
+    expect(screen.getByText('Client type')).toBeInTheDocument();
     expect(screen.getByText('How will this client obtain tokens?')).toBeInTheDocument();
   });
 
@@ -56,13 +56,13 @@ describe('ConfigureMcpClientType', () => {
     expect(screen.getByText('On behalf of a user')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'A client in a host app (IDE, desktop app, or chat client) that acts on behalf of a signed-in user. Uses Authorization Code with PKCE.',
+        'A client in a host app (IDE, desktop app, or chat client) that acts on behalf of a signed-in user. Uses authorization code with PKCE.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('On its own behalf')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'A client that authenticates with its own credentials without user interaction. Uses Client Credentials.',
+        'A client that authenticates with its own credentials without user interaction. Uses client credentials.',
       ),
     ).toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe('ConfigureMcpClientType', () => {
       />,
     );
 
-    expect(screen.getByRole('radiogroup', {name: 'Client Type'})).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', {name: 'Client type'})).toBeInTheDocument();
   });
 
   it('should default-select the user-delegated card', () => {
@@ -187,7 +187,7 @@ describe('ConfigureMcpClientType', () => {
       );
 
       expect(screen.getByText('What you get')).toBeInTheDocument();
-      expect(screen.getByText('Authorization Code + PKCE (required)')).toBeInTheDocument();
+      expect(screen.getByText('Authorization code + PKCE (required)')).toBeInTheDocument();
       expect(screen.getByText('Public client')).toBeInTheDocument();
       expect(screen.getByText('Refresh tokens')).toBeInTheDocument();
     });
@@ -202,7 +202,7 @@ describe('ConfigureMcpClientType', () => {
         />,
       );
 
-      expect(screen.getByText('Client Credentials')).toBeInTheDocument();
+      expect(screen.getByText('Client credentials')).toBeInTheDocument();
       expect(screen.getByText('Confidential client')).toBeInTheDocument();
       expect(screen.getByText('Client secret issued')).toBeInTheDocument();
     });

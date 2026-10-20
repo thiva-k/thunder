@@ -20,7 +20,7 @@ describe('SelectConnectionType', () => {
     expect(screen.getByTestId('connection-type-option-policy-decision-point')).toBeInTheDocument();
     expect(screen.getByTestId('connection-type-option-sms-gateway')).toBeInTheDocument();
     expect(screen.getByTestId('connection-type-option-email-smtp')).toBeInTheDocument();
-    expect(screen.getByText('Email Provider (SMTP)')).toBeInTheDocument();
+    expect(screen.getByText('Email provider (SMTP)')).toBeInTheDocument();
   });
 
   it('selects the OIDC type when clicked', () => {
@@ -47,9 +47,9 @@ describe('SelectConnectionType', () => {
     expect(onSelect).toHaveBeenCalledWith('email-smtp');
   });
 
-  it('selects the Service Endpoint type when clicked', () => {
+  it('selects the Service endpoint type when clicked', () => {
     render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
-    expect(screen.getByText('Service Endpoint')).toBeInTheDocument();
+    expect(screen.getByText('Service endpoint')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('connection-type-option-http'));
     expect(onSelect).toHaveBeenCalledWith('http');
   });

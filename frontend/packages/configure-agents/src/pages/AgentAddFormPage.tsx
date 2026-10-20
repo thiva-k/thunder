@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {FullScreenCreationWizardLayout} from '@thunderid/components';
+import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useGetAgentType, useGetAgentTypes, type AgentTypeListItem} from '@thunderid/configure-agent-types';
 import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
 import {renderSchemaField} from '@thunderid/configure-users';
@@ -121,13 +121,14 @@ export default function AgentAddFormPage(): JSX.Element {
     <FullScreenCreationWizardLayout
       onClose={handleClose}
       progress={0}
-      breadcrumbItems={[{key: 'add-agent', label: t('agents:addAgent', 'Add Agent')}]}
+      breadcrumbItems={[{key: 'add-agent', label: t('agents:addAgent', 'Add agent')}]}
       footer={null}
     >
+      <DocumentTitle title={t('agents:addAgent', 'Add agent')} />
       <Stack spacing={3}>
         <Box>
           <Typography variant="h1" gutterBottom>
-            {t('agents:addAgent', 'Add Agent')}
+            {t('agents:addAgent', 'Add agent')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {t('agents:addForm.subtitle')}

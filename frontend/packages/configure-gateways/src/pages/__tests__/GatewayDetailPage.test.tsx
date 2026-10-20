@@ -16,7 +16,7 @@ vi.mock('@thunderid/react', async (importOriginal) => {
 
 vi.mock('@thunderid/contexts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/contexts')>();
-  return {...actual, useConfig: () => ({getServerUrl: () => SERVER_URL})};
+  return {...actual, useConfig: () => ({config: {brand: {product_name: 'ThunderID'}}, getServerUrl: () => SERVER_URL})};
 });
 
 const mockNavigate = vi.fn();

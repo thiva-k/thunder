@@ -60,7 +60,7 @@ describe('VENDOR_META_BY_TYPE', () => {
   it('presents the HTTP endpoint as a custom connection that re-enters credentials on an origin change', () => {
     expect(VENDOR_META_BY_TYPE[ConnectionTypes.HTTP]).toMatchObject({
       key: 'http',
-      displayName: 'Service Endpoint',
+      displayName: 'Service endpoint',
       descriptionKey: 'connections:vendor.http.description',
       categories: ['custom'],
       presentation: 'custom',

@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {Box, Card, IconButton, Stack, Typography, useTheme} from '@wso2/oxygen-ui';
 import {
@@ -115,6 +116,7 @@ export default function WelcomePage(): JSX.Element {
         flexDirection: 'column',
       }}
     >
+      <DocumentTitle />
       {/* Header with close button */}
       <Box sx={{p: 4, display: 'flex', justifyContent: 'flex-start', alignItems: 'center'}}>
         <IconButton

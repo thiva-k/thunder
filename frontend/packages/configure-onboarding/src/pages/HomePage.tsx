@@ -1,6 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {DocumentTitle} from '@thunderid/components';
 import {User} from '@thunderid/react';
 import {Box, PageContent, Stack, Typography, useTheme} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
@@ -14,6 +15,7 @@ export default function HomePage(): JSX.Element {
 
   return (
     <PageContent>
+      <DocumentTitle />
       <Stack spacing={4}>
         <User>
           {(user: {name?: string; email?: string} | null) => (

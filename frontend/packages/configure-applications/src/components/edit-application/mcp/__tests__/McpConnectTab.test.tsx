@@ -117,7 +117,7 @@ describe('McpConnectTab', () => {
         />,
       );
 
-      expect(screen.getByText('On behalf of a user (Authorization Code + PKCE)')).toBeInTheDocument();
+      expect(screen.getByText('On behalf of a user (authorization code + PKCE)')).toBeInTheDocument();
     });
 
     it('renders the machine-to-machine badge for a client_credentials-only client', () => {
@@ -130,7 +130,7 @@ describe('McpConnectTab', () => {
         />,
       );
 
-      expect(screen.getByText('On its own behalf (Client Credentials)')).toBeInTheDocument();
+      expect(screen.getByText('On its own behalf (client credentials)')).toBeInTheDocument();
     });
   });
 
@@ -161,7 +161,7 @@ describe('McpConnectTab', () => {
         />,
       );
 
-      expect(screen.getByText('Client Secret')).toBeInTheDocument();
+      expect(screen.getByText('Client secret')).toBeInTheDocument();
       expect(screen.getByDisplayValue('••••••••••••••••')).toBeInTheDocument();
       expect(screen.getByRole('button', {name: 'Generate'})).toBeInTheDocument();
     });
