@@ -133,6 +133,13 @@ const GatewaysListPage = lazy(() =>
 const GatewayDetailPage = lazy(() =>
   import('@thunderid/configure-gateways').then((m) => ({default: m.GatewayDetailPage})),
 );
+const DeployPage = lazy(() => import('@thunderid/configure-gateways').then((m) => ({default: m.DeployPage})));
+const GatewayExplorerPage = lazy(() =>
+  import('@thunderid/configure-gateways').then((m) => ({default: m.GatewayExplorerPage})),
+);
+const GatewayValuesPage = lazy(() =>
+  import('@thunderid/configure-gateways').then((m) => ({default: m.GatewayValuesPage})),
+);
 const ConnectionsListPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.ConnectionsListPage})),
 );
@@ -314,6 +321,18 @@ export default function App(): JSX.Element {
                   }
                 >
                   <Route index element={<UserAddPage />} />
+                </Route>
+                <Route
+                  path={RouteConfig.deploy.list()}
+                  element={
+                    <ProtectedRoute>
+                      <FullScreenLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<DeployPage />} />
+                  <Route path="gateways/:gatewayId/explore" element={<GatewayExplorerPage />} />
+                  <Route path="gateways/:gatewayId/values" element={<GatewayValuesPage />} />
                 </Route>
                 <Route
                   path={RouteConfig.userTypes.create()}

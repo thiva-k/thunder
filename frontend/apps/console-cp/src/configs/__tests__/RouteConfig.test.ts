@@ -10,6 +10,12 @@ describe('RouteConfig', () => {
     expect(RouteConfig.gateways.detail('gw-1')).toBe('/gateways/gw-1');
   });
 
+  it('deploy builds paths from the segment, escaping the gateway id', () => {
+    expect(RouteConfig.deploy.list()).toBe('/deploy');
+    expect(RouteConfig.deploy.explore('gw 1')).toBe('/deploy/gateways/gw%201/explore');
+    expect(RouteConfig.deploy.values('gw-1')).toBe('/deploy/gateways/gw-1/values');
+  });
+
   it('organizationUnits builds paths from the segment', () => {
     expect(RouteConfig.organizationUnits.list()).toBe('/organization-units');
     expect(RouteConfig.organizationUnits.detail('ou-1')).toBe('/organization-units/ou-1');

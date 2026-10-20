@@ -33,6 +33,9 @@ vi.mock('@thunderid/configure-onboarding', async (importOriginal) => ({
 vi.mock('@thunderid/configure-gateways', () => ({
   GatewaysListPage: () => <div data-testid="gateways-list-page">Gateways List Page</div>,
   GatewayDetailPage: () => <div data-testid="gateway-detail-page">Gateway Detail Page</div>,
+  DeployPage: () => <div data-testid="deploy-page">Deploy Page</div>,
+  GatewayExplorerPage: () => <div data-testid="gateway-explorer-page">Gateway Explorer Page</div>,
+  GatewayValuesPage: () => <div data-testid="gateway-values-page">Gateway Values Page</div>,
 }));
 
 vi.mock('@thunderid/contexts', async (importOriginal) => ({
@@ -474,6 +477,30 @@ describe('App', () => {
     render(<App />);
     await waitFor(() => {
       expect(screen.getByTestId('gateway-detail-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads DeployPage lazily at /deploy', async () => {
+    window.history.pushState({}, '', '/deploy');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('deploy-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads GatewayExplorerPage lazily at /deploy/gateways/:gatewayId/explore', async () => {
+    window.history.pushState({}, '', '/deploy/gateways/gw-1/explore');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('gateway-explorer-page')).toBeInTheDocument();
+    });
+  });
+
+  it('loads GatewayValuesPage lazily at /deploy/gateways/:gatewayId/values', async () => {
+    window.history.pushState({}, '', '/deploy/gateways/gw-1/values');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('gateway-values-page')).toBeInTheDocument();
     });
   });
 
