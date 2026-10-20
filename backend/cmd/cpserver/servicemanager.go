@@ -29,6 +29,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/cimd"
 	"github.com/thunder-id/thunderid/internal/connection"
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
+	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entity"
@@ -187,6 +188,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	authZENPDPService, err := authzenpdp.Initialize(runtime.Config.AuthZENPDP, entityTypeService)
 	fatalOnError(ctx, logger, err, "Failed to initialize AuthZENPDPService")
 
+	httpConnectionService := httpconnection.Initialize()
+
 	resourceService, resourceExporter, err := resource.Initialize(mux, ouService, authZENPDPService, valueCapture)
 	fatalOnError(ctx, logger, err, "Failed to initialize Resource Service")
 	exporters = append(exporters, resourceExporter)
@@ -225,7 +228,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// Register the /connections API as a thin layer over the identity-provider and
 	// notification-sender management services.
 	connectionExporter, err := connection.Initialize(
-		mux, idpService, notifSenderMgtSvc, resourceService, authZENPDPService, valueCapture)
+		mux, mcpServer, idpService, notifSenderMgtSvc, resourceService, authZENPDPService, httpConnectionService,
+		valueCapture)
 	fatalOnError(ctx, logger, err, "Failed to initialize connection declarative resources")
 	exporters = append(exporters, connectionExporter)
 
