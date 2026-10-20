@@ -565,6 +565,45 @@ configuration:
     # URN prefix of the per-user-type SCIM extension schemas. A trailing colon is added if missing.
     urnPrefix: "urn:thunderid:params:scim:schemas:"
 
+  # Account access (automatic lock) policy for the user and agent categories, the deployment base of
+  # the accountAccess server-config section. The values are the product defaults; a key removed here
+  # is not rendered, so the product default applies.
+  accountAccess:
+    user:
+      # "authentication_method" locks only the sign-in method that failed; "entity" locks every method.
+      lockGranularity: "authentication_method"
+      # Record when the user last signed in, at most once per lastLoginResolutionSeconds.
+      recordLastLogin: false
+      lastLoginResolutionSeconds: 3600
+      default:
+        enabled: true
+        # Failed attempts within failureWindowSeconds that form a lock.
+        threshold: 5
+        failureWindowSeconds: 3600
+        # Durations of consecutive locks; the last one repeats.
+        lockDurationsSeconds: [300, 900, 1800, 3600]
+        # Time after a lock ends before the escalation resets.
+        lockDecaySeconds: 86400
+        # Counted failures since the last clear that form a lock that does not expire. 0 sets no limit.
+        maxConsecutiveFailures: 50
+      notifications:
+        onLock:
+          email:
+            enabled: true
+            # User attribute holding the address the lock email is sent to.
+            recipientAttribute: "email"
+    agent:
+      lockGranularity: "authentication_method"
+      recordLastLogin: false
+      lastLoginResolutionSeconds: 3600
+      default:
+        enabled: true
+        threshold: 5
+        failureWindowSeconds: 900
+        lockDurationsSeconds: [60, 300, 900]
+        lockDecaySeconds: 3600
+        maxConsecutiveFailures: 50
+
   # Logging configuration. Logs go to the console (stdout) so a log collector can pick
   # them up from the pod, which is the expected setup on Kubernetes. Everything below
   # console output is optional; omitted keys keep the server defaults.

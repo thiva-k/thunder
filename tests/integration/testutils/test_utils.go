@@ -623,6 +623,40 @@ func RunInitScript(zipFilePattern string) error {
 	return nil
 }
 
+// CreateEntityRuntimeOnlyDB writes a SQLite database at dbPath, relative to the product home, holding
+// only the shipped runtime-persistent schema's ENTITY_RUNTIME_DATA table. A server pointed at it reads
+// entity runtime rows, while every other runtime-persistent query fails.
+func CreateEntityRuntimeOnlyDB(dbPath string) error {
+	home := GetExtractedProductHome()
+	schema, err := os.ReadFile(filepath.Join(home, "dbscripts", "runtime_persistent", "sqlite.sql"))
+	if err != nil {
+		return fmt.Errorf("failed to read the runtime-persistent schema: %w", err)
+	}
+	start := strings.Index(string(schema), `CREATE TABLE "ENTITY_RUNTIME_DATA"`)
+	if start < 0 {
+		return fmt.Errorf("the runtime-persistent schema has no ENTITY_RUNTIME_DATA table")
+	}
+	end := strings.Index(string(schema[start:]), ");")
+	if end <= 0 {
+		return fmt.Errorf("unterminated ENTITY_RUNTIME_DATA definition")
+	}
+
+	schemaFile, err := os.CreateTemp("", "entity_runtime_only-*.sql")
+	if err != nil {
+		return fmt.Errorf("failed to create the ENTITY_RUNTIME_DATA schema file: %w", err)
+	}
+	defer os.Remove(schemaFile.Name())
+	_, err = schemaFile.Write(schema[start : start+end+2])
+	if closeErr := schemaFile.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return fmt.Errorf("failed to write the ENTITY_RUNTIME_DATA schema file: %w", err)
+	}
+
+	return initSQLiteDB("entity_runtime_only", schemaFile.Name(), filepath.Join(home, dbPath))
+}
+
 // initSQLiteDB creates a SQLite database from a schema file using the sqlite3 CLI.
 func initSQLiteDB(name, schemaPath, dbPath string) error {
 	log.Printf("Initializing SQLite database: %s", name)

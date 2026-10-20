@@ -6755,3 +6755,123 @@ displayName: SMS OTP Verification
 description: Sent to verify a user's phone number with a one-time passcode.
 content:
   body: "Your verification code is: {{ctx(otpCode)}}. It expires in {{ctx(expiryTime)}}."
+---
+resource_type: notification_template
+channel: email
+handle: account-locked
+ouHandle: default
+displayName: Account Temporarily Locked Email
+description: Sent when repeated failed sign-ins lock sign-in to the account for a limited time.
+content:
+  subject: "Sign-in was temporarily locked on your account"
+  body: |
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
+      <h2>Sign-in temporarily locked</h2>
+      <p>Sign-in to your account has been temporarily locked due to multiple failed attempts.</p>
+      <p><strong>It will be available again in {{ctx(lockDuration)}}, on {{ctx(unlockTime)}} UTC.</strong></p>
+      <p>To regain access sooner, complete account recovery or contact your administrator.</p>
+      <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
+    </body>
+    </html>
+---
+resource_type: notification_template
+channel: email
+handle: account-locked-permanent
+ouHandle: default
+displayName: Account Locked Email
+description: Sent when repeated failed sign-ins lock sign-in to the account until it is released.
+content:
+  subject: "Sign-in was locked on your account"
+  body: |
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
+      <h2>Sign-in locked</h2>
+      <p>Sign-in to your account has been locked due to multiple failed attempts.</p>
+      <p><strong>This lock does not expire automatically.</strong></p>
+      <p>To regain access, complete account recovery or contact your administrator.</p>
+      <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
+    </body>
+    </html>
+---
+resource_type: notification_template
+channel: email
+handle: account-locked-credential
+ouHandle: default
+displayName: Credential Sign-in Temporarily Locked Email
+description: Sent when repeated failed sign-ins lock credential sign-in for a limited time.
+content:
+  subject: "Sign-in was temporarily locked on your account"
+  body: |
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
+      <h2>Sign-in temporarily locked</h2>
+      <p>Credential sign-in has been temporarily locked due to multiple failed attempts.</p>
+      <p><strong>It will be available again in {{ctx(lockDuration)}}, on {{ctx(unlockTime)}} UTC.</strong></p>
+      <p>To regain access sooner, complete account recovery or contact your administrator.</p>
+      <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
+    </body>
+    </html>
+---
+resource_type: notification_template
+channel: email
+handle: account-locked-credential-permanent
+ouHandle: default
+displayName: Credential Sign-in Locked Email
+description: Sent when repeated failed sign-ins lock credential sign-in until it is released.
+content:
+  subject: "Sign-in was locked on your account"
+  body: |
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
+      <h2>Sign-in locked</h2>
+      <p>Credential sign-in has been locked due to multiple failed attempts.</p>
+      <p><strong>This lock does not expire automatically.</strong></p>
+      <p>To regain access, complete account recovery or contact your administrator.</p>
+      <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
+    </body>
+    </html>
+---
+resource_type: notification_template
+channel: email
+handle: account-locked-otp
+ouHandle: default
+displayName: Verification Code Sign-in Temporarily Locked Email
+description: Sent when repeated failed sign-ins lock verification code sign-in for a limited time.
+content:
+  subject: "Sign-in was temporarily locked on your account"
+  body: |
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
+      <h2>Sign-in temporarily locked</h2>
+      <p>Verification code sign-in has been temporarily locked due to multiple failed attempts.</p>
+      <p><strong>It will be available again in {{ctx(lockDuration)}}, on {{ctx(unlockTime)}} UTC.</strong></p>
+      <p>To regain access sooner, complete account recovery or contact your administrator.</p>
+      <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
+    </body>
+    </html>
+---
+resource_type: notification_template
+channel: email
+handle: account-locked-otp-permanent
+ouHandle: default
+displayName: Verification Code Sign-in Locked Email
+description: Sent when repeated failed sign-ins lock verification code sign-in until it is released.
+content:
+  subject: "Sign-in was locked on your account"
+  body: |
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
+      <h2>Sign-in locked</h2>
+      <p>Verification code sign-in has been locked due to multiple failed attempts.</p>
+      <p><strong>This lock does not expire automatically.</strong></p>
+      <p>To regain access, complete account recovery or contact your administrator.</p>
+      <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
+    </body>
+    </html>
