@@ -430,7 +430,9 @@ func (ts *GatewayVersionsTestSuite) TestWhatCannotBeDoneIsRefused() {
 		map[string]any{}, nil))
 }
 
-// A gateway that cannot be reached is reported as such, and nothing is recorded for it.
+// A gateway that cannot be reached is reported as such, and nothing is recorded for it. That holds
+// from the first call to it: for a version that refers to a value, a dry run asks the gateway which
+// values it holds before anything else.
 func (ts *GatewayVersionsTestSuite) TestAnUnreachableGatewayIsReported() {
 	var unreachable gateway
 	ts.Require().Equal(http.StatusCreated, ts.call(http.MethodPost, "/gateways", map[string]any{
@@ -438,12 +440,18 @@ func (ts *GatewayVersionsTestSuite) TestAnUnreachableGatewayIsReported() {
 		"baseUrl": "https://127.0.0.1:1",
 	}, &unreachable))
 	defer ts.call(http.MethodDelete, "/gateways/"+unreachable.ID, nil, nil)
+	ts.referringUnit()
 	captured := ts.capture("")
 
+	ts.Equal(http.StatusBadGateway, ts.call(http.MethodPost, "/gateways/"+unreachable.ID+"/apply",
+		map[string]any{"version": captured.Version, "dryRun": true}, nil),
+		"a dry run that could not read the gateway's values was not reported as unreachable")
 	status := ts.call(http.MethodPost, "/gateways/"+unreachable.ID+"/apply",
 		map[string]any{"version": fmt.Sprint(captured.Version)}, nil)
 
 	ts.Equal(http.StatusBadGateway, status)
+	ts.Equal(http.StatusBadGateway, ts.call(http.MethodGet, "/gateways/"+unreachable.ID+"/variables", nil, nil),
+		"a store read through an unreachable gateway was not reported as such")
 }
 
 // A gateway's variables are managed through this plane, which presents the gateway's key: what is
