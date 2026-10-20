@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -22,6 +21,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/utils"
+	"github.com/thunder-id/thunderid/internal/system/valuecompare"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -1005,7 +1005,7 @@ func validateAuthorizationRule(
 		})
 	}
 	if valueType == providers.AuthorizationValueTypeNumber {
-		if _, err := strconv.ParseFloat(strings.TrimSpace(rule.Value), 64); err != nil {
+		if err := valuecompare.Validate(strings.TrimSpace(rule.Value), valuecompare.TypeNumber); err != nil {
 			return tidcommon.CustomServiceError(ErrorInvalidAttributeConfiguration, tidcommon.I18nMessage{
 				Key: "error.idpservice.authorization_rule_mapping_value_not_number_description",
 				DefaultValue: "authorization rule mapping for claim '{{param(claim)}}' has value " +
@@ -1015,7 +1015,7 @@ func validateAuthorizationRule(
 		}
 	}
 	if valueType == providers.AuthorizationValueTypeBoolean {
-		if _, err := strconv.ParseBool(strings.TrimSpace(rule.Value)); err != nil {
+		if err := valuecompare.Validate(strings.TrimSpace(rule.Value), valuecompare.TypeBoolean); err != nil {
 			return tidcommon.CustomServiceError(ErrorInvalidAttributeConfiguration, tidcommon.I18nMessage{
 				Key: "error.idpservice.authorization_rule_mapping_value_not_boolean_description",
 				DefaultValue: "authorization rule mapping for claim '{{param(claim)}}' has value " +

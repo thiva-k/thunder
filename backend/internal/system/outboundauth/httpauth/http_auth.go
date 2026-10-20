@@ -7,7 +7,6 @@ package httpauth
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 
@@ -134,11 +133,8 @@ func ValidateCredentialTransport(request *http.Request) error {
 	if request.URL.Scheme == "https" {
 		return nil
 	}
-	if request.URL.Scheme == "http" {
-		address := net.ParseIP(host)
-		if strings.EqualFold(host, "localhost") || address != nil && address.IsLoopback() {
-			return nil
-		}
+	if request.URL.Scheme == "http" && IsLoopbackHost(host) {
+		return nil
 	}
 	return fmt.Errorf("HTTPS is required when authentication is configured")
 }
