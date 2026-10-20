@@ -375,17 +375,17 @@ func (s *flowMgtService) GetFlowUsages(
 // (resourceType, id). It implements the resourcedependency.Provider interface: an active flow
 // references an identity provider or notification sender when one of its nodes carries the matching
 // ID in its properties, an HTTP connection when one of its extension steps does, and a notification
-// template when a node carries the matching email/SMS template handle. Such a reference blocks
-// deletion of the target, since the flow would break without it.
+// template when a node carries the matching email/SMS template handle. An organization unit is used by the flows
+// it owns and by the flows whose nodes name it as their parentOuId. Such a reference blocks deletion of the
+// target, since the flow would break without it.
 func (s *flowMgtService) GetResourceDependencies(
 	ctx context.Context, resourceType, id string) ([]resourcedependency.ResourceDependency, error) {
 	// Templates are referenced by handle, not id, so they need a channel-aware path.
 	if resourceType == resourcedependency.ResourceTypeNotificationTemplate {
 		return s.notificationTemplateUsages(ctx, id)
 	}
-	// A flow cannot exist without its owner, so the flows an organization unit owns block its deletion.
 	if resourceType == resourcedependency.ResourceTypeOU {
-		return s.ownedFlows(ctx, id)
+		return s.organizationUnitUsages(ctx, id)
 	}
 
 	var propertyKey, executorName string
@@ -400,6 +400,13 @@ func (s *flowMgtService) GetResourceDependencies(
 		return []resourcedependency.ResourceDependency{}, nil
 	}
 
+	return s.referencingFlows(ctx, executorName, propertyKey, id)
+}
+
+// referencingFlows lists the active flows whose nodes carry the given ID in the named property key. A non-empty
+// executorName counts only the nodes that run that executor.
+func (s *flowMgtService) referencingFlows(
+	ctx context.Context, executorName, propertyKey, id string) ([]resourcedependency.ResourceDependency, error) {
 	flows, err := s.store.ListActiveFlowsWithNodes(ctx)
 	if err != nil {
 		// The registry logs provider errors; don't double-log here.
@@ -415,6 +422,33 @@ func (s *flowMgtService) GetResourceDependencies(
 				DisplayName:      flow.Name,
 				BehaviorOnDelete: resourcedependency.BehaviorRestrict,
 			})
+		}
+	}
+
+	return usages, nil
+}
+
+// organizationUnitUsages lists the flows that block the deletion of an organization unit: the flows it owns, since a
+// flow cannot exist without its owner, and the flows whose nodes name it as their parentOuId, since those would fail
+// to resolve it. A flow that does both is listed once.
+func (s *flowMgtService) organizationUnitUsages(
+	ctx context.Context, ouID string) ([]resourcedependency.ResourceDependency, error) {
+	usages, err := s.ownedFlows(ctx, ouID)
+	if err != nil {
+		return nil, err
+	}
+	referencing, err := s.referencingFlows(ctx, "", common.NodePropertyOUParent, ouID)
+	if err != nil {
+		return nil, err
+	}
+
+	listed := make(map[string]struct{}, len(usages))
+	for _, usage := range usages {
+		listed[usage.ID] = struct{}{}
+	}
+	for _, usage := range referencing {
+		if _, ok := listed[usage.ID]; !ok {
+			usages = append(usages, usage)
 		}
 	}
 

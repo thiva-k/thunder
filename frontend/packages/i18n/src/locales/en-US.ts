@@ -4526,6 +4526,12 @@ const translations = {
     'core.executions.ouResolver.resolveFrom.caller': 'Caller',
     'core.executions.ouResolver.resolveFrom.prompt': 'Prompt',
     'core.executions.ouResolver.resolveFrom.promptAll': 'Prompt all',
+    'core.executions.ouResolver.parentOuId.label': 'Parent OU ID',
+    'core.executions.ouResolver.parentOuId.placeholder': 'OU ID',
+    'core.executions.ouResolver.parentOuId.hint': 'Users select an OU below this one.',
+    'core.executions.ouResolver.directChildrenOnly.label': 'Limit to direct children',
+    'core.executions.ouResolver.directChildrenOnly.hint':
+      'Only direct children of the parent OU can be selected. Declare an ouHandle input below to select by handle.',
 
     // Invite executor
     'core.executions.invite.description': 'Configure the invite executor mode.',

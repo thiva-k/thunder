@@ -121,7 +121,8 @@ type ActionDefinition struct {
 }
 
 type ExecutorDefinition struct {
-	Name string `json:"name"`
+	Name   string            `json:"name"`
+	Inputs []InputDefinition `json:"inputs,omitempty"`
 }
 
 type ConditionDefinition struct {

@@ -2148,7 +2148,8 @@ func federatedLinkingNode() providers.NodeDefinition {
 func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingRequiresOnIncomplete() {
 	nodes := linkingFlowNodes("")
 
-	err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+	err := s.v.validateExecutorSpecificConstraints(
+		&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 	s.NotNil(err)
 }
@@ -2156,7 +2157,8 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingRequ
 func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingValid() {
 	nodes := linkingFlowNodes("login_options")
 
-	err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+	err := s.v.validateExecutorSpecificConstraints(
+		&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 	s.Nil(err)
 }
@@ -2167,7 +2169,8 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingOnIn
 	nodes := linkingFlowNodes("login_options")
 	nodes[1].Variant = ""
 
-	err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+	err := s.v.validateExecutorSpecificConstraints(
+		&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 	s.Nil(err)
 }
@@ -2212,7 +2215,8 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingDeci
 		s.Run(tc.name, func() {
 			nodes := linkingPromptNodes(tc.confirmTarget, tc.rejectTarget)
 
-			err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+			err := s.v.validateExecutorSpecificConstraints(
+				&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 			if tc.valid {
 				s.Nil(err)
@@ -2268,7 +2272,8 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingVeri
 		s.Run(tc.name, func() {
 			nodes := tc.wire(linkingPromptNodes("login_options", "linking"))
 
-			err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+			err := s.v.validateExecutorSpecificConstraints(
+				&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 			s.Require().NotNil(err)
 			s.Equal(tc.key, err.ErrorDescription.Key)
@@ -2283,7 +2288,8 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingVeri
 	nodes := linkingPromptNodes("verify_call", "linking")
 	nodes[len(nodes)-1].OnSuccess = "provisioning"
 
-	err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+	err := s.v.validateExecutorSpecificConstraints(
+		&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 	s.Require().NotNil(err)
 	s.Equal("error.flowmgtservice.linking_verification_call_not_returning_description",
@@ -2336,7 +2342,8 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingFail
 		s.Run(tc.name, func() {
 			nodes := tc.nodes
 
-			err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes)
+			err := s.v.validateExecutorSpecificConstraints(
+				&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeAuthentication)
 
 			if tc.valid {
 				s.Nil(err)
@@ -2364,4 +2371,128 @@ func (s *ValidatorTestSuite) TestValidateSystemFlowDefinition() {
 	svcErr := s.v.ValidateSystemFlowDefinition(context.Background(), flow)
 	s.Require().NotNil(svcErr)
 	s.Equal("ask", svcErr.ErrorDescription.Params["nodeID"])
+}
+
+func ouResolverNode(properties map[string]interface{}) []providers.NodeDefinition {
+	return []providers.NodeDefinition{{
+		ID: "ou", Type: string(common.NodeTypeTaskExecution),
+		Executor:   &providers.ExecutorDefinition{Name: executor.ExecutorNameOUResolver},
+		Properties: properties,
+	}}
+}
+
+func (s *ValidatorTestSuite) TestValidateOUResolverExecutor() {
+	const missing = "error.flowmgtservice.missing_required_executor_property_description"
+	const unsupported = "error.flowmgtservice.unsupported_ou_resolver_property_description"
+	const invalidValue = "error.flowmgtservice.invalid_ou_resolver_property_value_description"
+	auth, reg := providers.FlowTypeAuthentication, providers.FlowTypeRegistration
+
+	tests := []struct {
+		name         string
+		flowType     providers.FlowType
+		properties   map[string]interface{}
+		wantKey      string
+		wantProperty string
+	}{
+		{"AuthPromptWithoutParent", auth,
+			map[string]interface{}{"resolveFrom": "prompt"}, missing, "parentOuId"},
+		{"AuthPromptBlankParent", auth,
+			map[string]interface{}{"resolveFrom": "prompt", "parentOuId": "  "}, missing, "parentOuId"},
+		{"AuthPromptWithParent", auth,
+			map[string]interface{}{"resolveFrom": "prompt", "parentOuId": "ou-1"}, "", ""},
+		{"AuthCallerWithoutParent", auth,
+			map[string]interface{}{"resolveFrom": "caller"}, "", ""},
+		{"RegistrationPromptWithoutParent", reg,
+			map[string]interface{}{"resolveFrom": "prompt"}, "", ""},
+		{"AuthCallerWithParent", auth,
+			map[string]interface{}{"resolveFrom": "caller", "parentOuId": "ou-1"}, unsupported, "parentOuId"},
+		{"AuthPromptAllWithParent", auth,
+			map[string]interface{}{"resolveFrom": "promptAll", "parentOuId": "ou-1"}, unsupported, "parentOuId"},
+		{"RegistrationPromptWithParent", reg,
+			map[string]interface{}{"resolveFrom": "prompt", "parentOuId": "ou-1"}, unsupported, "parentOuId"},
+		{"RegistrationPromptBlankParent", reg,
+			map[string]interface{}{"resolveFrom": "prompt", "parentOuId": ""}, "", ""},
+		{"CallerDirectChildrenOnly", reg,
+			map[string]interface{}{"resolveFrom": "caller", "directChildrenOnly": true},
+			unsupported, "directChildrenOnly"},
+		{"PromptAllDirectChildrenOnly", reg,
+			map[string]interface{}{"resolveFrom": "promptAll", "directChildrenOnly": true},
+			unsupported, "directChildrenOnly"},
+		{"CallerDirectChildrenOnlyFalse", reg,
+			map[string]interface{}{"resolveFrom": "caller", "directChildrenOnly": false}, "", ""},
+		{"RegistrationPromptDirectChildrenOnly", reg,
+			map[string]interface{}{"resolveFrom": "prompt", "directChildrenOnly": true}, "", ""},
+		{"StringDirectChildrenOnly", reg,
+			map[string]interface{}{"resolveFrom": "prompt", "directChildrenOnly": "true"},
+			invalidValue, "directChildrenOnly"},
+		{"NonStringParentOuId", auth,
+			map[string]interface{}{"resolveFrom": "prompt", "parentOuId": 7}, invalidValue, "parentOuId"},
+	}
+	for _, tc := range tests {
+		s.Run(tc.name, func() {
+			nodes := ouResolverNode(tc.properties)
+
+			err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes, tc.flowType)
+
+			if tc.wantKey == "" {
+				s.Nil(err)
+				return
+			}
+			s.NotNil(err)
+			s.Equal(tc.wantKey, err.ErrorDescription.Key)
+			s.Equal(tc.wantProperty, err.ErrorDescription.Params["propertyKey"])
+		})
+	}
+}
+
+func (s *ValidatorTestSuite) TestValidateOUResolverExecutor_Inputs() {
+	const unsupported = "error.flowmgtservice.unsupported_ou_resolver_property_description"
+	const invalidInputs = "error.flowmgtservice.invalid_ou_resolver_inputs_description"
+	idInput := providers.InputDefinition{Identifier: "ouId", Required: true}
+	handleInput := providers.InputDefinition{Identifier: "ouHandle", Required: true}
+	prompt := map[string]interface{}{"resolveFrom": "prompt"}
+	directChildren := map[string]interface{}{"resolveFrom": "prompt", "directChildrenOnly": true}
+
+	tests := []struct {
+		name         string
+		properties   map[string]interface{}
+		inputs       []providers.InputDefinition
+		wantKey      string
+		wantProperty string
+	}{
+		{"DirectChildrenWithoutInputs", directChildren, nil, "", ""},
+		{"DirectChildrenWithIdInput", directChildren, []providers.InputDefinition{idInput}, "", ""},
+		{"DirectChildrenWithHandleInput", directChildren, []providers.InputDefinition{handleInput}, "", ""},
+		{"DirectChildrenWithOptionalHandleInput", directChildren,
+			[]providers.InputDefinition{{Identifier: "ouHandle"}}, invalidInputs, ""},
+		{"DirectChildrenWithBothInputs", directChildren,
+			[]providers.InputDefinition{idInput, handleInput}, invalidInputs, ""},
+		{"DirectChildrenWithOtherInput", directChildren,
+			[]providers.InputDefinition{{Identifier: "name", Required: true}}, invalidInputs, ""},
+		{"HandleInputWithoutDirectChildrenOnly", prompt,
+			[]providers.InputDefinition{handleInput}, unsupported, "ouHandle"},
+		{"HandleInputWithDirectChildrenOnlyFalse",
+			map[string]interface{}{"resolveFrom": "prompt", "directChildrenOnly": false},
+			[]providers.InputDefinition{handleInput}, unsupported, "ouHandle"},
+		{"IdInputWithoutDirectChildrenOnly", prompt, []providers.InputDefinition{idInput}, "", ""},
+		{"OtherInputWithoutDirectChildrenOnly", prompt,
+			[]providers.InputDefinition{{Identifier: "name", Required: true}}, "", ""},
+	}
+	for _, tc := range tests {
+		s.Run(tc.name, func() {
+			nodes := ouResolverNode(tc.properties)
+			nodes[0].Executor.Inputs = tc.inputs
+
+			err := s.v.validateExecutorSpecificConstraints(
+				&nodes[0], nodeIndexFor(nodes), nodes, providers.FlowTypeRegistration)
+
+			if tc.wantKey == "" {
+				s.Nil(err)
+				return
+			}
+			s.NotNil(err)
+			s.Equal(tc.wantKey, err.ErrorDescription.Key)
+			s.Equal(tc.wantProperty, err.ErrorDescription.Params["propertyKey"])
+		})
+	}
 }

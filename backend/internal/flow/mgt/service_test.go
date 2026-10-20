@@ -2179,6 +2179,71 @@ func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_ExtensionStepRefer
 	}}, usages)
 }
 
+func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_FlowReferencesOU() {
+	ouID := "ou-parent"
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return([]BasicFlowDefinition{}, 0, nil)
+	s.mockStore.EXPECT().ListActiveFlowsWithNodes(mock.Anything).Return([]*providers.CompleteFlowDefinition{
+		{
+			ID:   "flow1",
+			Name: "Sign In",
+			Nodes: []providers.NodeDefinition{
+				{ID: "ou", Type: "TASK_EXECUTION", Properties: map[string]interface{}{"parentOuId": ouID}},
+			},
+		},
+		{
+			ID:   "flow2",
+			Name: "Other Sign In",
+			Nodes: []providers.NodeDefinition{
+				{ID: "ou", Type: "TASK_EXECUTION", Properties: map[string]interface{}{"parentOuId": "other-ou"}},
+			},
+		},
+	}, nil)
+
+	usages, err := s.service.GetResourceDependencies(
+		context.Background(), resourcedependency.ResourceTypeOU, ouID)
+
+	s.NoError(err)
+	s.Len(usages, 1)
+	s.Equal("flow1", usages[0].ID)
+	s.Equal(resourcedependency.ResourceTypeFlow, usages[0].ResourceType)
+	s.Equal(resourcedependency.BehaviorRestrict, usages[0].BehaviorOnDelete)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_OUListsOwnedAndReferencingFlowsOnce() {
+	ouID := "ou-parent"
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return([]BasicFlowDefinition{
+		{ID: "owned-only", Name: "Owned", OUID: ouID},
+		{ID: "both", Name: "Both", OUID: ouID},
+	}, 2, nil)
+	s.mockStore.EXPECT().ListActiveFlowsWithNodes(mock.Anything).Return([]*providers.CompleteFlowDefinition{
+		{ID: "both", Name: "Both", Nodes: []providers.NodeDefinition{
+			{ID: "ou", Type: "TASK_EXECUTION", Properties: map[string]interface{}{"parentOuId": ouID}}}},
+		{ID: "referencing-only", Name: "Referencing", Nodes: []providers.NodeDefinition{
+			{ID: "ou", Type: "TASK_EXECUTION", Properties: map[string]interface{}{"parentOuId": ouID}}}},
+	}, nil)
+
+	usages, err := s.service.GetResourceDependencies(
+		context.Background(), resourcedependency.ResourceTypeOU, ouID)
+
+	s.NoError(err)
+	ids := make([]string, 0, len(usages))
+	for _, usage := range usages {
+		ids = append(ids, usage.ID)
+	}
+	s.Equal([]string{"owned-only", "both", "referencing-only"}, ids)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_OUReportsAFailureToScanReferences() {
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return([]BasicFlowDefinition{}, 0, nil)
+	s.mockStore.EXPECT().ListActiveFlowsWithNodes(mock.Anything).Return(nil, errors.New("db down"))
+
+	usages, err := s.service.GetResourceDependencies(
+		context.Background(), resourcedependency.ResourceTypeOU, "ou-parent")
+
+	s.Nil(usages)
+	s.Error(err)
+}
+
 func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_NoReferencingFlows() {
 	s.mockStore.EXPECT().ListActiveFlowsWithNodes(mock.Anything).Return([]*providers.CompleteFlowDefinition{
 		{ID: "flow1", Nodes: []providers.NodeDefinition{{ID: "start", Type: "START"}}},
@@ -2784,6 +2849,7 @@ func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_ListsTheFlowsAnOUO
 		{ID: "flow-1", Name: "Owned", OUID: "ou-1"},
 		{ID: "flow-2", Name: "Other", OUID: "ou-2"},
 	}, 2, nil)
+	s.mockStore.EXPECT().ListActiveFlowsWithNodes(mock.Anything).Return(nil, nil)
 
 	deps, err := s.service.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeOU, "ou-1")
 
@@ -2802,6 +2868,7 @@ func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_PagesThroughEveryF
 	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return(first, maxPageSize+1, nil)
 	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, maxPageSize, "").
 		Return([]BasicFlowDefinition{{ID: "flow-last", Name: "Last", OUID: "ou-1"}}, maxPageSize+1, nil)
+	s.mockStore.EXPECT().ListActiveFlowsWithNodes(mock.Anything).Return(nil, nil)
 
 	deps, err := s.service.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeOU, "ou-1")
 

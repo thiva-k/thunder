@@ -148,6 +148,8 @@ var catalog = map[string]providers.ExecutorMeta{
 	ExecutorNameOUResolver: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
 			{Property: "resolveFrom"},
+			{Property: "parentOuId"},
+			{Property: "directChildrenOnly"},
 		},
 	},
 	ExecutorNameOpenID4VPVerify: {
