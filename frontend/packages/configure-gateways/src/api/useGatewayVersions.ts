@@ -80,6 +80,7 @@ export function useApplyVersion(): UseMutationResult<ApplyResult, Error, ApplyIn
 export interface RevertInput {
   gatewayId: string;
   dryRun?: boolean;
+  confirmRemovals?: boolean;
 }
 
 /** Puts a gateway back on the version it ran before the one it runs now. */
@@ -87,7 +88,8 @@ export function useRevert(): UseMutationResult<ApplyResult, Error, RevertInput> 
   const source = useDeploySource();
   const queryClient = useQueryClient();
   return useMutation<ApplyResult, Error, RevertInput>({
-    mutationFn: ({gatewayId, dryRun = false}: RevertInput): Promise<ApplyResult> => source.revert(gatewayId, dryRun),
+    mutationFn: ({gatewayId, dryRun = false, confirmRemovals = false}: RevertInput): Promise<ApplyResult> =>
+      source.revert(gatewayId, dryRun, confirmRemovals),
     onSuccess: (result: ApplyResult, {gatewayId}: RevertInput) => {
       if (result.dryRun) return;
       void queryClient.invalidateQueries({queryKey: [DeployQueryKeys.APPLIED_VERSION, gatewayId]});

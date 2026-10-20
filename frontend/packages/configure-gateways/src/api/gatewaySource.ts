@@ -53,8 +53,11 @@ export default function useGatewaySource(): DeploySource {
         } satisfies ApplyRequest),
       apply: (targetId: string, data: ApplyRequest): Promise<ApplyResult> =>
         request<ApplyResult>('POST', `${gateway(targetId)}/apply`, data),
-      revert: (targetId: string, dryRun: boolean): Promise<ApplyResult> =>
-        request<ApplyResult>('POST', `${gateway(targetId)}/revert`, {dryRun}),
+      revert: (targetId: string, dryRun: boolean, confirmRemovals?: boolean): Promise<ApplyResult> =>
+        request<ApplyResult>('POST', `${gateway(targetId)}/revert`, {
+          dryRun,
+          ...(confirmRemovals ? {confirmRemovals} : {}),
+        }),
       values: async (targetId: string, kind: ValueKind): Promise<StoredValue[]> => {
         const collection = collectionOf(kind);
         const values: StoredValue[] = [];
