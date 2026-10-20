@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -421,6 +422,16 @@ func (s *importService) ImportResources(
 		outcome, resolved := s.resolveReferences(ctx, doc)
 		if resolved {
 			outcome = s.importDocument(ctx, doc, options, request.DryRun, flowIDAliases)
+		}
+		if outcome.Status == statusSuccess {
+			switch doc.ResourceType {
+			case resourceTypeUser, resourceTypeAgent, resourceTypeApplication:
+				if _, present := documentState(doc); present {
+					outcome.Message = strings.TrimSpace(outcome.Message +
+						" State in the document was ignored; a new identity starts ACTIVE " +
+						"and an existing identity keeps its state")
+				}
+			}
 		}
 		results = append(results, outcome)
 

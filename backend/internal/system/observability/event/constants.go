@@ -17,6 +17,8 @@ const (
 	ComponentBackchannelLogout = "BackchannelLogout"
 	// ComponentIdentityGovernance identifies the identity governance service.
 	ComponentIdentityGovernance = "IdentityGovernance"
+	// ComponentServerConfig identifies the server-config service.
+	ComponentServerConfig = "ServerConfig"
 )
 
 // Authentication and Authorization Event Types
@@ -62,6 +64,10 @@ const (
 	EventTypeIdentityUnlocked providers.EventType = "IDENTITY_UNLOCKED"
 	// EventTypeIdentityUnlockFailed is triggered when an unlock is refused or cannot be written.
 	EventTypeIdentityUnlockFailed providers.EventType = "IDENTITY_UNLOCK_FAILED"
+	// EventTypeServerConfigUpdated is triggered when a server-config section's writable layer is replaced.
+	EventTypeServerConfigUpdated providers.EventType = "SERVER_CONFIG_UPDATED"
+	// EventTypeServerConfigUpdateFailed is triggered when a server-config write is rejected or fails.
+	EventTypeServerConfigUpdateFailed providers.EventType = "SERVER_CONFIG_UPDATE_FAILED"
 
 	// Back-Channel Logout Events
 	// EventTypeBackchannelLogoutDelivered is triggered when a relying party accepts a logout token.

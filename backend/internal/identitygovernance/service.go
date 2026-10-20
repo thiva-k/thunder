@@ -66,12 +66,16 @@ type IdentityGovernanceServiceInterface interface {
 	// RecordLogin stamps when access was last granted, if enabled for the entity's category.
 	RecordLogin(ctx context.Context, entityID string) *tidcommon.ServiceError
 
+	// ReadEntityAccess derives the effective status and last login time for one loaded entity.
+	ReadEntityAccess(ctx context.Context, entity providers.Entity) AccessRead
+
 	// ReadAccess derives what management reads report for each entity, in order: the effective status
 	// and the last login time. Each category's lockout policy is resolved once per call.
 	ReadAccess(ctx context.Context, entities []providers.Entity) []AccessRead
 
-	// SetServerConfigService injects the server-config service the accountAccess section is read from.
-	// It is built after governance, since it takes the section handler Initialize returns.
+	// SetServerConfigService injects the server-config service the accountAccess section and the lock
+	// email's default sender are read from. It is built after governance, since it takes the section
+	// handler Initialize returns.
 	SetServerConfigService(serverConfigService serverconfig.ServerConfigService)
 }
 
@@ -389,6 +393,11 @@ func (s *identityGovernanceService) RecordLogin(ctx context.Context, entityID st
 	return nil
 }
 
+// ReadEntityAccess derives the access facts for one entity. See IdentityGovernanceServiceInterface.
+func (s *identityGovernanceService) ReadEntityAccess(ctx context.Context, entity providers.Entity) AccessRead {
+	return accessReadFor(&entity, s.enforcementFor(ctx, entity.Category), s.now())
+}
+
 // ReadAccess derives the access facts management reads report. See IdentityGovernanceServiceInterface.
 func (s *identityGovernanceService) ReadAccess(ctx context.Context, entities []providers.Entity) []AccessRead {
 	now := s.now()
@@ -409,6 +418,9 @@ func (s *identityGovernanceService) ReadAccess(ctx context.Context, entities []p
 // SetServerConfigService injects the server-config service. See IdentityGovernanceServiceInterface.
 func (s *identityGovernanceService) SetServerConfigService(serverConfigService serverconfig.ServerConfigService) {
 	s.source.setReader(serverConfigService)
+	if s.notifier != nil {
+		s.notifier.setServerConfigService(serverConfigService)
+	}
 }
 
 // enforcementFor resolves which recorded locks a category's policy enforces. An application has no

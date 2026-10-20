@@ -2554,6 +2554,70 @@ func (s *ServiceTestSuite) TestReadAccessUsesTheCurrentSection() {
 		"a lock whose policy is switched off is not reported")
 }
 
+func (s *ServiceTestSuite) TestReadEntityAccessReportsCurrentStatus() {
+	for _, tc := range []struct {
+		name     string
+		category providers.EntityCategory
+		state    providers.EntityState
+		unlockAt string
+		disabled bool
+		corrupt  bool
+		want     providers.AccessStatus
+	}{
+		{name: "active", category: providers.EntityCategoryUser, want: providers.AccessStatusActive},
+		{name: "live user lock", category: providers.EntityCategoryUser,
+			unlockAt: s.now.Add(time.Minute).Format(time.RFC3339), want: providers.AccessStatusLocked},
+		{name: "expired lock", category: providers.EntityCategoryUser,
+			unlockAt: s.now.Add(-time.Minute).Format(time.RFC3339), want: providers.AccessStatusActive},
+		{name: "disabled lock", category: providers.EntityCategoryUser, disabled: true,
+			unlockAt: permanentUnlockAt, want: providers.AccessStatusActive},
+		{name: "agent lock", category: providers.EntityCategoryAgent,
+			unlockAt: permanentUnlockAt, want: providers.AccessStatusLocked},
+		{name: "suspension overrides lock", category: providers.EntityCategoryUser,
+			state: providers.EntityStateSuspended, unlockAt: permanentUnlockAt, want: providers.AccessStatusSuspended},
+		{name: "application suspension", category: providers.EntityCategoryApp,
+			state: providers.EntityStateSuspended, want: providers.AccessStatusSuspended},
+		{name: "corrupt attributes", category: providers.EntityCategoryUser, corrupt: true,
+			want: providers.AccessStatusSuspended},
+	} {
+		s.Run(tc.name, func() {
+			source := newAccountAccessSourceInterfaceMock(s.T())
+			cfg := testAccountAccessConfig()
+			agentPolicy := *cfg.User.Default
+			cfg.Agent.Default = &agentPolicy
+			cfg.User.Default.Enabled = new(tc.category != providers.EntityCategoryAgent && !tc.disabled)
+			cfg.Agent.LockGranularity = new(granularityAuthenticationMethod)
+			cfg.Agent.Default.Enabled = new(tc.category == providers.EntityCategoryAgent && !tc.disabled)
+			if tc.category != providers.EntityCategoryApp {
+				source.EXPECT().Current(s.ctx).Return(cfg).Once()
+			}
+			svc := newIdentityGovernanceService(newEntityStateProviderMock(s.T()), source, nil, nil, nil)
+			svc.now = func() time.Time { return s.now }
+			stored := RuntimeAttributes{AccessState: AccessState{LastLoginAt: "2026-09-07T10:00:00Z"}}
+			if tc.unlockAt != "" {
+				stored.AccessState.Lock.AuthenticationMethods = map[providers.AuthenticationMethod]LockEntry{
+					providers.AuthenticationMethodCredential: {UnlockAt: tc.unlockAt},
+				}
+			}
+			attributes, err := json.Marshal(stored)
+			s.Require().NoError(err)
+			if tc.corrupt {
+				attributes = []byte(`{"accessState":`)
+			}
+			entity := providers.Entity{ID: "e1", Category: tc.category, State: tc.state, RuntimeAttributes: attributes}
+
+			read := svc.ReadEntityAccess(s.ctx, entity)
+
+			s.Equal(tc.want, read.Status.Value)
+			if tc.corrupt {
+				s.Empty(read.LastLoginAt)
+			} else {
+				s.Equal(stored.AccessState.LastLoginAt, read.LastLoginAt)
+			}
+		})
+	}
+}
+
 // A page of one category resolves the policy once and reports each entity in order.
 func (s *ServiceTestSuite) TestReadAccessResolvesThePolicyOncePerCall() {
 	s.source.EXPECT().Current(mock.Anything).Return(testAccountAccessConfig()).Once()
@@ -2588,6 +2652,17 @@ func (s *ServiceTestSuite) TestSetServerConfigServiceSetsTheSectionReader() {
 	s.source.EXPECT().setReader(reader).Once()
 
 	s.svc.SetServerConfigService(reader)
+}
+
+// The lock email reads its default sender through the same server-config service.
+func (s *ServiceTestSuite) TestSetServerConfigServiceReachesTheNotifier() {
+	reader := serverconfigmock.NewServerConfigServiceMock(s.T())
+	notifier := newLockNotifierInterfaceMock(s.T())
+	s.source.EXPECT().setReader(reader).Once()
+	notifier.EXPECT().setServerConfigService(reader).Once()
+	svc := newIdentityGovernanceService(s.port, s.source, notifier, nil, nil)
+
+	svc.SetServerConfigService(reader)
 }
 
 // testAccountAccessConfig is a representative deployment: a user default and agent locking switched

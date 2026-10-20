@@ -800,11 +800,9 @@ type LockNotificationConfig struct {
 	Email LockEmailConfig `yaml:"email" json:"email"`
 }
 
-// LockEmailConfig is the automatic-lock email for one category. It is sent through the server's
-// default email sender.
+// LockEmailConfig holds the lock email settings.
 type LockEmailConfig struct {
-	Enabled            *bool   `yaml:"enabled" json:"enabled"`
-	RecipientAttribute *string `yaml:"recipient_attribute" json:"recipient_attribute"`
+	Enabled *bool `yaml:"enabled" json:"enabled"`
 }
 
 // LockPolicyConfig is a category's lockout policy, applied to every authentication method. Fields
