@@ -681,9 +681,6 @@ importers:
       '@thunderid/configure-flows':
         specifier: workspace:^
         version: link:../../packages/configure-flows
-      '@thunderid/configure-gateways':
-        specifier: workspace:^
-        version: link:../../packages/configure-gateways
       '@thunderid/configure-groups':
         specifier: workspace:^
         version: link:../../packages/configure-groups

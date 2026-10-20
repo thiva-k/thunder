@@ -5,7 +5,6 @@ import type {AgentTypeRoutePaths} from '@thunderid/configure-agent-types';
 import type {AgentRoutePaths} from '@thunderid/configure-agents';
 import type {ApplicationRoutePaths} from '@thunderid/configure-applications';
 import type {ConnectionRoutePaths} from '@thunderid/configure-connections';
-import type {DeployRoutePaths} from '@thunderid/configure-gateways';
 import type {DesignRoutePaths} from '@thunderid/configure-design';
 import type {FlowRoutePaths} from '@thunderid/configure-flows';
 import type {GroupRoutePaths} from '@thunderid/configure-groups';
@@ -54,7 +53,6 @@ export type RouteConfig = OrganizationUnitRoutePaths &
   AgentRoutePaths &
   ApplicationRoutePaths &
   ConnectionRoutePaths &
-  DeployRoutePaths &
   ResourceServerRoutePaths &
   TranslationRoutePaths &
   VerifiableCredentialRoutePaths &
@@ -100,7 +98,6 @@ export const ROUTE_SEGMENTS = {
   importConfiguration: 'import-configuration',
   welcome: 'welcome',
   settings: 'settings',
-  deploy: 'deploy',
 } as const;
 
 const RouteConfig: RouteConfig = {
@@ -220,11 +217,6 @@ const RouteConfig: RouteConfig = {
   },
   settings: {
     list: () => `/${ROUTE_SEGMENTS.settings}`,
-  },
-  deploy: {
-    list: () => `/${ROUTE_SEGMENTS.deploy}`,
-    explore: (gatewayId: string) => `/${ROUTE_SEGMENTS.deploy}/gateways/${encodeURIComponent(gatewayId)}/explore`,
-    values: (gatewayId: string) => `/${ROUTE_SEGMENTS.deploy}/gateways/${encodeURIComponent(gatewayId)}/values`,
   },
 };
 

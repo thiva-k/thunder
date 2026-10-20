@@ -132,13 +132,14 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('navigation:categories.resources')).toBeInTheDocument();
   });
 
-  it('opens the Deploy page from the header, not from the navigation', async () => {
+  // Deploying to gateways is a control plane's: this console, which every other server serves, offers
+  // no way to it.
+  it('offers no Deploy', () => {
     render(<DashboardLayout />);
 
+    expect(screen.queryByTestId('header-deploy')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /deploy/i})).not.toBeInTheDocument();
     expect(screen.queryByRole('link', {name: /deploy/i})).not.toBeInTheDocument();
-    await userEvent.click(screen.getByTestId('header-deploy'));
-
-    expect(mockNavigate).toHaveBeenCalledWith('/deploy');
   });
 
   it('renders navigation items', () => {
