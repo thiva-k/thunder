@@ -481,7 +481,24 @@ CREATE TABLE "GATEWAY_APPLIED_VERSION" (
     PREVIOUS_SEQ INTEGER,
     APPLIED_AT TIMESTAMPTZ DEFAULT NOW(),
     APPLIED_BY VARCHAR(255),
+    -- When each value the applied version refers to was last set, as the gateway's store said at the
+    -- apply, so the next apply reports those set again since by comparing the store's own times.
+    HELD_VALUES TEXT,
     PRIMARY KEY (GATEWAY_ID, DEPLOYMENT_ID)
+);
+
+-- One apply or revert at a time per gateway, across every node of this plane: an apply claims the
+-- row with a token of its own before it sends anything and clears it when done, and a claim older
+-- than an import may take is taken over. PENDING_LATEST records that the latest version is to be
+-- applied again once the running apply finishes, for whoever asked while it ran.
+CREATE TABLE "GATEWAY_APPLY_LEASE" (
+    DEPLOYMENT_ID VARCHAR(255) NOT NULL,
+    GATEWAY_ID VARCHAR(36) NOT NULL,
+    TOKEN VARCHAR(36),
+    APPLYING_SINCE TIMESTAMPTZ,
+    PENDING_LATEST BOOLEAN NOT NULL DEFAULT FALSE,
+    PENDING_BY VARCHAR(255),
+    PRIMARY KEY (DEPLOYMENT_ID, GATEWAY_ID)
 );
 
 -- The resources each gateway is set to leave alone: an apply neither writes nor removes them there,

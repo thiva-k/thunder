@@ -31,11 +31,15 @@ func (ts *ControlPlaneTestSuite) waitForCurrent(holds string) listed {
 		status, raw := ts.call(http.MethodGet, "/configuration-versions", nil, &versions)
 		ts.Require().Equal(http.StatusOK, status, string(raw))
 		if len(versions) > 0 && versions[0].Current {
+			// The current version is replaced in place by each later change, which gives it a new hash,
+			// so the one just listed can be gone by the time it is read; it is then listed again.
 			var newest read
 			status, raw = ts.call(http.MethodGet, "/configuration-versions/"+versions[0].Version, nil, &newest)
-			ts.Require().Equal(http.StatusOK, status, string(raw))
-			if strings.Contains(newest.Resources, holds) {
-				return versions[0]
+			if status != http.StatusNotFound {
+				ts.Require().Equal(http.StatusOK, status, string(raw))
+				if strings.Contains(newest.Resources, holds) {
+					return versions[0]
+				}
 			}
 		}
 		if time.Now().After(deadline) {

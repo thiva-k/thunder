@@ -135,6 +135,29 @@ removes something it did not apply.
   apply sends the version whole again.
 - **A removal the gateway did not complete leaves the version unrecorded.** `recorded` is then `false`,
   and the next apply works from the version held before and sends the removal again.
+- **Many removals need confirming.** An apply or revert that would remove more resources than
+  `gateway.removal_confirmation_threshold` (five unless configured) is refused with `409` (`GTW-1030`).
+  Run it as a dry run to see the removals, then send it again with `"confirmRemovals": true`.
+- **A value changed since the last apply is reported.** `changed` names the variables and secrets the
+  version refers to that were set on the gateway again since the version it holds was applied, with
+  where the version refers to each, as `missing` does. Values are never shown. Such a value takes
+  effect with this apply although no version carries it. The time the gateway's store gives for each
+  value is compared with the time it gave at the last apply, so the control plane's clock plays no
+  part. A value the control plane sent itself, such as a secret captured from a resource, is reported
+  too, since it also takes effect outside any version.
+- **One apply at a time per gateway, and the latest version is never lost.** Applies and reverts to the
+  same gateway run one at a time across every control plane node. While one runs, an apply that asks
+  for `latest` with nothing selected and nothing confirmed is not run or refused but queued: the answer
+  is `202` with `queued` and `queuedVersion`, and once the running apply finishes the latest version at
+  that moment is applied, for the user who asked, so a burst of changes costs one more apply. What
+  that later apply would refuse for its removals is refused now instead. The queued apply is best
+  effort: it is not kept if the node running it restarts, and a failure is logged rather than
+  answered, so read the gateway's applied version to see what it holds. An apply of a version named
+  by its hash, a confirmed one, or a revert waits for the running apply, and is refused with `409`
+  (`GTW-1029`) if it is still running after as long as an import may take.
+- **An apply that took too long to prepare sends nothing.** An apply that has not sent its import
+  within the time its lease allows for one sends nothing and is answered with `503` (`GTW-5003`), so
+  its import can never overlap one from an apply that took the lease over. Apply again.
 
 ### Missing Values
 
@@ -206,8 +229,8 @@ selection includes it again.
 - **An apply that may have reached the gateway keeps its choice.** When the gateway answers with a
   `5xx`, or the connection times out or drops after the request was sent, the gateway may hold what it
   was sent, so the choice stays. Apply again to bring the gateway in line.
-- **One apply at a time per gateway.** Applies and reverts to the same gateway wait for each other on a
-  control plane node, so one apply's choice and import never interleave with another's.
+- **One apply at a time per gateway.** Applies and reverts to the same gateway run one at a time across
+  every control plane node, so one apply's choice and import never interleave with another's.
 - **Removing a gateway forgets its choices.**
 
 ## Revert a Gateway

@@ -100,14 +100,16 @@ var (
 	// queryGetAppliedVersion reads what a gateway holds.
 	queryGetAppliedVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-06",
-		Query: `SELECT A.APPLIED_SEQ, A.PREVIOUS_SEQ, A.APPLIED_AT, A.APPLIED_BY, V.HASH AS APPLIED_HASH, ` +
+		Query: `SELECT A.APPLIED_SEQ, A.PREVIOUS_SEQ, A.APPLIED_AT, A.APPLIED_BY, A.HELD_VALUES, ` +
+			`V.HASH AS APPLIED_HASH, ` +
 			`P.HASH AS PREVIOUS_HASH FROM "GATEWAY_APPLIED_VERSION" A ` +
 			`LEFT JOIN "CONFIGURATION_VERSION" V ON V.SEQ = A.APPLIED_SEQ AND V.DEPLOYMENT_ID = A.DEPLOYMENT_ID ` +
 			`LEFT JOIN "CONFIGURATION_VERSION" P ON P.SEQ = A.PREVIOUS_SEQ AND P.DEPLOYMENT_ID = A.DEPLOYMENT_ID ` +
 			`WHERE A.GATEWAY_ID = $1 AND A.DEPLOYMENT_ID = $2`,
 	}
-	// queryUpsertAppliedVersion records what a gateway now holds, only while that version is still kept
-	// and the gateway still holds the version the apply worked from.
+	// queryUpsertAppliedVersion records what a gateway now holds, only while that version is still kept,
+	// the gateway still holds the version the apply worked from, and the apply still holds the
+	// gateway's lease: one superseded after a take-over records nothing.
 	//
 	// A capture can prune the version an apply is writing; recording it anyway would leave the gateway
 	// holding a version no longer kept, and the next apply could not work out what to remove. Two
@@ -117,21 +119,26 @@ var (
 	queryUpsertAppliedVersion = dbmodel.DBQuery{
 		ID: "GTV_MGT-07",
 		Query: `INSERT INTO "GATEWAY_APPLIED_VERSION" (GATEWAY_ID, APPLIED_SEQ, PREVIOUS_SEQ, APPLIED_BY, ` +
-			`DEPLOYMENT_ID) ` +
+			`DEPLOYMENT_ID, HELD_VALUES) ` +
 			`SELECT CAST($1 AS VARCHAR(36)), CAST($2 AS INTEGER), CAST($3 AS INTEGER), ` +
-			`CAST($4 AS VARCHAR(255)), CAST($5 AS VARCHAR(255)) ` +
+			`CAST($4 AS VARCHAR(255)), CAST($5 AS VARCHAR(255)), CAST($11 AS TEXT) ` +
 			`WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
 			`WHERE SEQ = $6 AND HASH = $7 AND DEPLOYMENT_ID = $8) ` +
+			`AND EXISTS (SELECT 1 FROM "GATEWAY_APPLY_LEASE" ` +
+			`WHERE GATEWAY_ID = $1 AND DEPLOYMENT_ID = $5 AND TOKEN = $10) ` +
 			`ON CONFLICT (GATEWAY_ID, DEPLOYMENT_ID) DO UPDATE SET ` +
 			`APPLIED_SEQ = excluded.APPLIED_SEQ, PREVIOUS_SEQ = excluded.PREVIOUS_SEQ, APPLIED_AT = NOW(), ` +
-			`APPLIED_BY = excluded.APPLIED_BY WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $9`,
+			`APPLIED_BY = excluded.APPLIED_BY, HELD_VALUES = excluded.HELD_VALUES ` +
+			`WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $9`,
 		SQLiteQuery: `INSERT INTO "GATEWAY_APPLIED_VERSION" (GATEWAY_ID, APPLIED_SEQ, PREVIOUS_SEQ, APPLIED_BY, ` +
-			`DEPLOYMENT_ID) ` +
-			`SELECT $1, $2, $3, $4, $5 WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
+			`DEPLOYMENT_ID, HELD_VALUES) ` +
+			`SELECT $1, $2, $3, $4, $5, $11 WHERE EXISTS (SELECT 1 FROM "CONFIGURATION_VERSION" ` +
 			`WHERE SEQ = $6 AND HASH = $7 AND DEPLOYMENT_ID = $8) ` +
+			`AND EXISTS (SELECT 1 FROM "GATEWAY_APPLY_LEASE" ` +
+			`WHERE GATEWAY_ID = $1 AND DEPLOYMENT_ID = $5 AND TOKEN = $10) ` +
 			`ON CONFLICT (GATEWAY_ID, DEPLOYMENT_ID) DO UPDATE SET ` +
 			`APPLIED_SEQ = excluded.APPLIED_SEQ, PREVIOUS_SEQ = excluded.PREVIOUS_SEQ, ` +
-			`APPLIED_AT = datetime('now'), APPLIED_BY = excluded.APPLIED_BY ` +
+			`APPLIED_AT = datetime('now'), APPLIED_BY = excluded.APPLIED_BY, HELD_VALUES = excluded.HELD_VALUES ` +
 			`WHERE "GATEWAY_APPLIED_VERSION".APPLIED_SEQ = $9`,
 	}
 	// queryFindVersions finds the versions whose hash starts with a prefix, newest first. Two are enough
@@ -201,11 +208,25 @@ type versionStoreInterface interface {
 	// GetApplied reads what a gateway holds, or nil when nothing has been applied to it.
 	GetApplied(ctx context.Context, gatewayID string) (*AppliedVersion, error)
 	// SetApplied records what a gateway now holds, provided the applied version still has the hash the
-	// apply wrote and the gateway still holds held, the version the apply worked out its deletions from
-	// (0 for none). By is who applied it.
+	// apply wrote, the gateway still holds held, the version the apply worked out its deletions from
+	// (0 for none), and token still holds the gateway's lease. By is who applied it.
 	SetApplied(ctx context.Context, gatewayID string, applied int, hash string, previous, held int,
-		by *Actor) error
+		by *Actor, values, token string) error
 	DeleteApplied(ctx context.Context, gatewayID string) error
+	// ClaimLease takes the gateway's lease for token when none holds it, or when the apply holding it
+	// took it longer ago than an apply can run, and reports whether it did.
+	ClaimLease(ctx context.Context, gatewayID, token string) (bool, error)
+	// HoldsLease reports whether token still holds the gateway's lease.
+	HoldsLease(ctx context.Context, gatewayID, token string) (bool, error)
+	// ReleaseLease gives the lease back, when token holds it.
+	ReleaseLease(ctx context.Context, gatewayID, token string) error
+	// MarkPendingLatest asks for the latest version to be applied again after the apply holding the
+	// lease, for by, and reports false when none holds it.
+	MarkPendingLatest(ctx context.Context, gatewayID string, by *Actor) (bool, error)
+	// TakePendingLatest clears that ask and reports whether there was one and for whom.
+	TakePendingLatest(ctx context.Context, gatewayID string) (*Actor, bool, error)
+	// DeleteLease forgets a removed gateway's lease.
+	DeleteLease(ctx context.Context, gatewayID string) error
 	// GetExcluded reads the resources a gateway is set to leave alone, and those a skipped apply left
 	// owed to it, sorted by key.
 	GetExcluded(ctx context.Context, gatewayID string) ([]excludedResource, error)
@@ -421,11 +442,12 @@ func (s *versionStore) GetApplied(ctx context.Context, gatewayID string) (*Appli
 		Previous:        asString(rows[0]["previous_hash"]),
 		AppliedAt:       &appliedAt,
 		AppliedBy:       actorFrom(rows[0]["applied_by"]),
+		heldValues:      asString(rows[0]["held_values"]),
 	}, nil
 }
 
 func (s *versionStore) SetApplied(ctx context.Context, gatewayID string, applied int, hash string,
-	previous, held int, by *Actor) error {
+	previous, held int, by *Actor, values, token string) error {
 	var previousSeq interface{}
 	if previous > 0 {
 		previousSeq = previous
@@ -438,7 +460,7 @@ func (s *versionStore) SetApplied(ctx context.Context, gatewayID string, applied
 	// first apply is refused when another apply recorded the gateway first.
 	recorded, err := dbClient.ExecuteContext(ctx, queryUpsertAppliedVersion,
 		gatewayID, applied, previousSeq, actorColumn(by), deployment.Resolve(ctx), applied, hash,
-		deployment.Resolve(ctx), held)
+		deployment.Resolve(ctx), held, token, nullable(values))
 	if err != nil {
 		return fmt.Errorf("failed to record what the gateway holds: %w", err)
 	}

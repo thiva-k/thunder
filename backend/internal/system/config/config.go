@@ -344,6 +344,10 @@ type GatewayConfig struct {
 	// cannot point this plane's calls, which carry the gateway's key, at something inside its own
 	// network. Turn it on for a local or single-host setup whose gateways sit on such addresses.
 	AllowPrivateAddresses bool `yaml:"allow_private_addresses" json:"allow_private_addresses"`
+	// RemovalConfirmationThreshold is how many resources an apply may remove from a gateway before it
+	// has to be confirmed; an apply that would remove more is refused unless the request confirms it.
+	// A pointer so that an explicit zero, which turns the check off, is told from an omitted field.
+	RemovalConfirmationThreshold *int `yaml:"removal_confirmation_threshold" json:"removal_confirmation_threshold"`
 	// Store defines the storage mode for gateways.
 	// Valid values: "mutable", "declarative", "composite" (hybrid mode)
 	// If not specified, falls back to global DeclarativeResources.Enabled setting:
@@ -357,6 +361,12 @@ type GatewayConfig struct {
 // deployment administers none.
 func (c GatewayConfig) MaxGatewayCount() int {
 	return derefInt(c.MaxGateways, 0)
+}
+
+// RemovalConfirmationLimit reports how many resources an apply may remove without being confirmed,
+// zero for no check. Unset, it is five (an explicit default lives in default.json).
+func (c GatewayConfig) RemovalConfirmationLimit() int {
+	return derefInt(c.RemovalConfirmationThreshold, 5)
 }
 
 // MaxVersionCount reports how many captured configuration versions a deployment keeps. It is never
