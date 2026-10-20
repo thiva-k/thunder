@@ -5,6 +5,7 @@ import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/rea
 import {useConfig} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import GatewayQueryKeys from '../constants/gateway-query-keys';
+import DeployQueryKeys from '../constants/query-keys';
 import type {GatewayRegistration, RegisterGatewayRequest} from '../models/gateway';
 
 export default function useRegisterGateway(): UseMutationResult<GatewayRegistration, Error, RegisterGatewayRequest> {
@@ -24,6 +25,7 @@ export default function useRegisterGateway(): UseMutationResult<GatewayRegistrat
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({queryKey: [GatewayQueryKeys.GATEWAYS]});
+      void queryClient.invalidateQueries({queryKey: [DeployQueryKeys.GATEWAYS]});
     },
   });
 }

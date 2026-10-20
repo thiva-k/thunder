@@ -681,6 +681,9 @@ importers:
       '@thunderid/configure-flows':
         specifier: workspace:^
         version: link:../../packages/configure-flows
+      '@thunderid/configure-gateways':
+        specifier: workspace:^
+        version: link:../../packages/configure-gateways
       '@thunderid/configure-groups':
         specifier: workspace:^
         version: link:../../packages/configure-groups
@@ -4512,7 +4515,7 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^22.15.19
-        version: 22.20.1
+        version: 22.19.19
 
   samples/apps/wayfinder-sample/backend:
     dependencies:
@@ -7903,7 +7906,7 @@ packages:
       '@babel/plugin-transform-runtime': ^7.29.0 || ^8.0.0-rc.1
       '@babel/runtime': ^7.27.0 || ^8.0.0-rc.1
       rolldown: ^1.0.0-rc.5
-      vite: '>=8.0.16'
+      vite: 8.0.16
     peerDependenciesMeta:
       '@babel/plugin-transform-runtime':
         optional: true
@@ -8580,8 +8583,8 @@ packages:
   '@types/node@17.0.45':
     resolution: {integrity: sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==}
 
-  '@types/node@22.20.1':
-    resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
+  '@types/node@22.19.19':
+    resolution: {integrity: sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew==}
 
   '@types/node@24.12.4':
     resolution: {integrity: sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA==}
@@ -8958,7 +8961,7 @@ packages:
     resolution: {integrity: sha512-v0xaezt+DKEmKfaxg133ldzADrwLGd7Ze1MfQQTYfvs8OqZIwbxyxaYURivwV7sWy5fqn3rH5uOrSp07bp44Ow==}
     peerDependencies:
       msw: ^2.4.9
-      vite: '>=8.0.16'
+      vite: 8.0.16
     peerDependenciesMeta:
       msw:
         optional: true
@@ -20844,7 +20847,7 @@ snapshots:
 
   '@types/node@17.0.45': {}
 
-  '@types/node@22.20.1':
+  '@types/node@22.19.19':
     dependencies:
       undici-types: 6.21.0
 

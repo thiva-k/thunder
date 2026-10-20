@@ -6,6 +6,7 @@ import {renderHook} from '@thunderid/test-utils';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {createHttpRouter, SERVER_URL, type HttpCall} from '../../__tests__/http';
 import GatewayQueryKeys from '../../constants/gateway-query-keys';
+import DeployQueryKeys from '../../constants/query-keys';
 import useDeleteGateway from '../useDeleteGateway';
 import useGetGateway from '../useGetGateway';
 import useGetGateways from '../useGetGateways';
@@ -71,6 +72,7 @@ describe('gateway API hooks', () => {
       expect.objectContaining({method: 'POST', data: {name: 'production', baseUrl: gateway.baseUrl}}),
     );
     expect(invalidate).toHaveBeenCalledWith({queryKey: [GatewayQueryKeys.GATEWAYS]});
+    expect(invalidate).toHaveBeenCalledWith({queryKey: [DeployQueryKeys.GATEWAYS]});
   });
 
   it('updates a gateway, caches the result and confirms the edit', async () => {
@@ -109,6 +111,7 @@ describe('gateway API hooks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(invalidate).toHaveBeenCalledWith({queryKey: [GatewayQueryKeys.GATEWAYS]});
+    expect(invalidate).toHaveBeenCalledWith({queryKey: [DeployQueryKeys.GATEWAYS]});
     expect(mockShowToast).toHaveBeenCalledWith('Gateway removed.', 'success');
   });
 });

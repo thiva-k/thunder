@@ -6,6 +6,7 @@ import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import GatewayQueryKeys from '../constants/gateway-query-keys';
+import DeployQueryKeys from '../constants/query-keys';
 import type {Gateway, UpdateGatewayRequest} from '../models/gateway';
 
 export default function useUpdateGateway(): UseMutationResult<
@@ -32,6 +33,7 @@ export default function useUpdateGateway(): UseMutationResult<
     onSuccess: (gateway, {id, data}) => {
       queryClient.setQueryData([GatewayQueryKeys.GATEWAY, id], gateway);
       void queryClient.invalidateQueries({queryKey: [GatewayQueryKeys.GATEWAYS]});
+      void queryClient.invalidateQueries({queryKey: [DeployQueryKeys.GATEWAYS]});
       showToast(
         data.key !== undefined
           ? t('gateways:rotateKey.success', 'The key was rotated.')
