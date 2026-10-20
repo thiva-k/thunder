@@ -1671,6 +1671,21 @@ func (suite *DefaultAuthnProviderTestSuite) TestStoreAccountLink_LinkLimitIsClie
 	suite.Equal(authnprovidercm.ErrorCodeInvalidRequest, svcErr.Code)
 }
 
+// A declarative user is not written to, and the not-implemented code lets the sign-in complete.
+func (suite *DefaultAuthnProviderTestSuite) TestStoreAccountLink_DeclarativeUserIsNotImplemented() {
+	entityResult := &providers.Entity{ID: "user123", Category: providers.EntityCategoryUser,
+		Type: "customer", IsReadOnly: true}
+	suite.mockService.On("GetEntity", mock.Anything, "user123").Return(entityResult, nil)
+
+	token := map[string]interface{}{"userID": "user123"}
+	svcErr := suite.provider.StoreAccountLink(context.Background(), token, "idp-a", "sub-1")
+	suite.Require().NotNil(svcErr)
+	suite.Equal(tidcommon.ClientErrorType, svcErr.Type)
+	suite.Equal(authnprovidercm.ErrorCodeNotImplemented, svcErr.Code)
+	suite.mockService.AssertNotCalled(suite.T(), "LinkAccount", mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything)
+}
+
 // A storage failure is the provider's own problem, not the caller's.
 func (suite *DefaultAuthnProviderTestSuite) TestStoreAccountLink_StoreFailureIsServerError() {
 	entityResult := &providers.Entity{ID: "user123", Category: providers.EntityCategoryUser, Type: "customer"}

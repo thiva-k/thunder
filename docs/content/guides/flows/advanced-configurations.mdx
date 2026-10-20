@@ -560,6 +560,8 @@ Sets credentials (e.g., password) for an existing user. Typically used in regist
 
 A federated executor signs in a local user only through a link already recorded for the connection. A matching attribute never signs a user in directly. Follow the federated node with an [Account Linking](#identity-and-user-resolution) node, which matches the connection's account-linking attributes against existing accounts and has the user verify one of the matched accounts before linking it.
 
+A declarative user is read-only, so <ProductName /> does not record a link for it. When the user verifies a declarative account, sign-in completes without storing the link, and later sign-ins through the same connection repeat the matching and verification.
+
 To sign in a first-time federated user who has no local account, enable `allowAuthenticationWithoutLocalUser` on the executor and place a [Provisioning](#user-provisioning-and-attributes) executor downstream. The application must allow exactly one user type with self-registration enabled.
 
 <details>
