@@ -13,7 +13,7 @@ import {
   type EmbeddedFlowComponent,
   type InviteUserRenderProps,
 } from '@thunderid/react';
-import type {ApiError} from '@thunderid/types';
+import type {ApiError, I18nMessage} from '@thunderid/types';
 import {EMAIL_REGEX} from '@thunderid/utils';
 import {
   Box,
@@ -83,8 +83,9 @@ function deriveStepLabel(
 
 const FLOW_NOT_FOUND_ERROR_CODE = 'FLM-1003';
 
-function containsFlowNotFoundText(value: string | undefined): boolean {
-  return value?.toLowerCase().includes('flow not found') ?? false;
+function containsFlowNotFoundText(value: I18nMessage | string | undefined): boolean {
+  const text = typeof value === 'object' ? value.defaultValue : value;
+  return text?.toLowerCase().includes('flow not found') ?? false;
 }
 
 function isMissingOnboardingFlow(error: unknown): boolean {
