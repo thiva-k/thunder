@@ -2447,8 +2447,9 @@ describe('ApplicationEditPage', () => {
 
   describe('Client Secret Popup (just created)', () => {
     afterEach(async () => {
-      const {useLocation} = await import('react-router');
+      const {useLocation, useNavigate} = await import('react-router');
       (useLocation as ReturnType<typeof vi.fn>).mockReturnValue({state: null});
+      (useNavigate as ReturnType<typeof vi.fn>).mockReturnValue(vi.fn());
     });
 
     it('should not render the secret dialog when there is no justCreatedSecret navigation state', () => {
@@ -2494,6 +2495,42 @@ describe('ApplicationEditPage', () => {
       await waitFor(() => {
         expect(screen.queryByTestId('application-show-client-secret')).not.toBeInTheDocument();
       });
+    });
+
+    it('should clear justCreatedSecret from the history entry while still showing the secret', async () => {
+      const mockNavigate = vi.fn();
+      const {useLocation, useNavigate} = await import('react-router');
+      (useNavigate as ReturnType<typeof vi.fn>).mockReturnValue(mockNavigate);
+      (useLocation as ReturnType<typeof vi.fn>).mockReturnValue({
+        pathname: '/applications/test-app-id',
+        state: {
+          justCreatedSecret: {
+            appName: 'My New App',
+            clientSecret: 'brand-new-secret',
+          },
+        },
+      });
+
+      const {rerender} = renderComponent();
+
+      expect(mockNavigate).toHaveBeenCalledWith('/applications/test-app-id', {replace: true, state: null});
+
+      // The replaced history entry no longer carries the secret, but the open dialog keeps it.
+      (useLocation as ReturnType<typeof vi.fn>).mockReturnValue({pathname: '/applications/test-app-id', state: null});
+      rerender(<ApplicationEditPage />);
+
+      expect(screen.getByDisplayValue('brand-new-secret')).toBeInTheDocument();
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not replace the history entry when there is no justCreatedSecret navigation state', async () => {
+      const mockNavigate = vi.fn();
+      const {useNavigate} = await import('react-router');
+      (useNavigate as ReturnType<typeof vi.fn>).mockReturnValue(mockNavigate);
+
+      renderComponent();
+
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 });
