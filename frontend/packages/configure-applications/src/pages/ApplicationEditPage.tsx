@@ -28,7 +28,7 @@ import {
   DialogContent,
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
-import {useState, useCallback, useMemo, type SyntheticEvent} from 'react';
+import {useState, useCallback, useEffect, useMemo, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import useGetApplication from '../api/useGetApplication';
@@ -131,8 +131,17 @@ export default function ApplicationEditPage() {
     [t],
   );
 
-  const justCreatedSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
+  // The create wizard hands over the new secret in the navigation state. Keep it for this mount only
+  // and drop it from the history entry, so reloading the page never shows the secret again.
+  const navigationSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
+  const [justCreatedSecret] = useState(navigationSecret);
   const [secretDialogOpen, setSecretDialogOpen] = useState(Boolean(justCreatedSecret));
+
+  useEffect(() => {
+    if (navigationSecret) {
+      void navigate(location.pathname, {replace: true, state: null});
+    }
+  }, [navigationSecret, navigate, location.pathname]);
 
   const [activeTabKey, setActiveTabKey] = useState('overview');
   const [editedApp, setEditedApp] = useState<Partial<Application>>({});
