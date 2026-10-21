@@ -42,7 +42,7 @@ func (s *HTTPConnectionToolsTestSuite) SetupTest() {
 	s.mockHTTP = httpconnectionmock.NewHTTPConnectionServiceInterfaceMock(s.T())
 	svc := newService(idpmock.NewIDPServiceInterfaceMock(s.T()),
 		notificationmock.NewNotificationSenderMgtSvcInterfaceMock(s.T()), &testResourceServerLister{},
-		&authZENPDPServiceStub{}, s.mockHTTP)
+		newAuthZENPDPServiceMock(s.T()), s.mockHTTP)
 
 	server := mcp.NewServer(&mcp.Implementation{Name: "test-server", Version: "1.0.0"}, nil)
 	registerMCPTools(server, svc)
@@ -236,7 +236,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreatePassesThePasswordAndMasksTheOut
 		Return(s.storedConnection(toolsStoredURL), (*tidcommon.ServiceError)(nil))
 
 	result, raw := s.call("thunderid_create_http_connection", map[string]any{
-		"name": "Risk", "description": "Risk engine", "url": toolsStoredURL, "timeoutMs": 5000,
+		"name": "Risk", "description": "Risk engine", "ouId": "ou-1", "url": toolsStoredURL, "timeoutMs": 5000,
 		"headers": []any{map[string]any{"name": "X-Tenant", "value": "acme"}},
 		"authentication": map[string]any{"type": "basic", "properties": map[string]any{
 			"username": "svc-user", "password": testHTTPConnectionPassword}},
@@ -255,7 +255,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreatePassesThePasswordAndMasksTheOut
 
 func (s *HTTPConnectionToolsTestSuite) TestCreateRejectsAnUnsupportedAuthenticationType() {
 	result, _ := s.call("thunderid_create_http_connection", map[string]any{
-		"name": "Risk", "url": toolsStoredURL, "authentication": map[string]any{"type": "digest"},
+		"name": "Risk", "ouId": "ou-1", "url": toolsStoredURL, "authentication": map[string]any{"type": "digest"},
 	})
 
 	s.True(result.IsError)
@@ -277,7 +277,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreateMasksBearerAndAPIKeySecrets() {
 				})
 
 			result, raw := s.call("thunderid_create_http_connection", map[string]any{
-				"name": "Risk", "url": toolsStoredURL, "authentication": auth})
+				"name": "Risk", "ouId": "ou-1", "url": toolsStoredURL, "authentication": auth})
 
 			var out httpConnectionMCPOutput
 			s.structured(result, &out)
@@ -294,7 +294,8 @@ func (s *HTTPConnectionToolsTestSuite) TestCreateReturnsTheValidationError() {
 	s.mockHTTP.On("CreateHTTPConnection", mock.Anything, mock.Anything).
 		Return((*httpconnection.HTTPConnection)(nil), &httpconnection.ErrorInvalidURL)
 
-	result, _ := s.call("thunderid_create_http_connection", map[string]any{"name": "Risk", "url": "ftp://x"})
+	result, _ := s.call("thunderid_create_http_connection",
+		map[string]any{"name": "Risk", "ouId": "ou-1", "url": "ftp://x"})
 
 	text := s.errorText(result)
 	s.Contains(text, "failed to create HTTP connection")

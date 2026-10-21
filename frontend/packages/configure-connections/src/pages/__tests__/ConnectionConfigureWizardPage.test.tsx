@@ -12,6 +12,9 @@ const navigateMock = vi.fn();
 const showToastMock = vi.fn();
 const mockParams = {type: 'google'};
 const mutationState = {isPending: false, isError: false};
+const callerOu = {ouId: 'ou-root', isLoading: false};
+
+vi.mock('../../hooks/useCallerOuId', () => ({default: () => callerOu}));
 
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
@@ -57,6 +60,8 @@ describe('ConnectionConfigureWizardPage', () => {
     mockParams.type = 'google';
     mutationState.isPending = false;
     mutationState.isError = false;
+    callerOu.ouId = 'ou-root';
+    callerOu.isLoading = false;
   });
 
   it('shows a single configure step and creates with the fixed vendor name', () => {
@@ -77,12 +82,50 @@ describe('ConnectionConfigureWizardPage', () => {
     };
     expect(payload).toMatchObject({
       name: 'Google Login',
+      ouId: 'ou-root',
       clientId: 'x',
       clientSecret: 's',
       redirectUri: 'https://id.acme.io/gate/callback',
     });
     expect(payload.scopes).toBeUndefined();
     expect(payload.attributeConfiguration).toBeUndefined();
+  });
+
+  it("sends the signed-in user's organization unit as ouId without asking for one", () => {
+    callerOu.ouId = 'ou-acme';
+    render(<ConnectionConfigureWizardPage />);
+
+    expect(screen.queryByText('Where should this connection belong?')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Google Login', ouId: 'ou-acme'});
+  });
+
+  it('does not create when the token names no organization unit', () => {
+    callerOu.ouId = '';
+    render(<ConnectionConfigureWizardPage />);
+
+    expect(screen.getByTestId('wizard-create')).toBeDisabled();
+    expect(screen.getByTestId('wizard-ou-required')).toHaveTextContent(
+      'Your session does not name an organization unit. Sign out and sign in again.',
+    );
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    expect(mutateMock).not.toHaveBeenCalled();
+  });
+
+  it('does not show the organization unit error while the token is being read', () => {
+    callerOu.ouId = '';
+    callerOu.isLoading = true;
+    render(<ConnectionConfigureWizardPage />);
+
+    expect(screen.getByTestId('wizard-create')).toBeDisabled();
+    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
+  });
+
+  it('does not show the organization unit error once the token names one', () => {
+    render(<ConnectionConfigureWizardPage />);
+
+    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
   });
 
   it('shows the setup hint with the redirect URI to copy for Google', () => {
@@ -174,6 +217,7 @@ describe('ConnectionConfigureWizardPage', () => {
     const payload = mutateMock.mock.calls[0][0] as Record<string, unknown>;
     expect(payload).toMatchObject({
       name: 'Twilio SMS',
+      ouId: 'ou-root',
       accountSid: 'AC00000000000000000000000000000000',
       senderId: '+15005550006',
     });

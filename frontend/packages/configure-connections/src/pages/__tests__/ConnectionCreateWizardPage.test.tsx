@@ -13,6 +13,9 @@ const showToastMock = vi.fn();
 const mutationState = {isPending: false, isError: false};
 /** Extra form values the stubbed form enters after the defaults, e.g. authentication fields. */
 const formExtraValues: Record<string, string> = {};
+const callerOu = {ouId: 'ou-root', isLoading: false};
+
+vi.mock('../../hooks/useCallerOuId', () => ({default: () => callerOu}));
 
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
@@ -87,15 +90,17 @@ vi.mock('../../components/ConnectionForm', () => ({
 vi.mock('../../components/TrustedIssuerCreateForm', () => ({
   default: function StubTrustedIssuerCreateForm({
     name,
+    ouId,
     onNameConflict,
     onBack,
   }: {
     name: string;
+    ouId: string;
     onNameConflict: () => void;
     onBack: () => void;
   }) {
     return (
-      <div data-testid="custom-step">
+      <div data-testid="custom-step" data-ou-id={ouId}>
         {name}
         <button type="button" data-testid="custom-step-conflict" onClick={onNameConflict}>
           trigger conflict
@@ -123,6 +128,8 @@ describe('ConnectionCreateWizardPage', () => {
     }
     mutationState.isPending = false;
     mutationState.isError = false;
+    callerOu.ouId = 'ou-root';
+    callerOu.isLoading = false;
   });
 
   it('shows the type heading without the redundant step label', () => {
@@ -239,6 +246,7 @@ describe('ConnectionCreateWizardPage', () => {
       attributeConfiguration?: unknown;
     };
     expect(payload.name).toBe('Acme Workforce OIDC');
+    expect(payload).toMatchObject({ouId: 'ou-root'});
     expect(payload.redirectUri).toBe('https://id.acme.io/gate/callback');
     expect('attributeConfiguration' in payload).toBe(false);
 
@@ -258,6 +266,7 @@ describe('ConnectionCreateWizardPage', () => {
     expect(mutateMock).toHaveBeenCalledTimes(1);
     expect(mutateMock.mock.calls[0][0]).toEqual({
       name: 'Custom SMS Sender',
+      ouId: 'ou-root',
       url: 'https://sms.example.com/send',
       httpMethod: 'POST',
       contentType: 'JSON',
@@ -278,6 +287,7 @@ describe('ConnectionCreateWizardPage', () => {
     expect(mutateMock).toHaveBeenCalledTimes(1);
     expect(mutateMock.mock.calls[0][0]).toEqual({
       name: 'Corp SMTP',
+      ouId: 'ou-root',
       host: 'smtp.example.com',
       port: 587,
       fromAddress: 'noreply@example.com',
@@ -298,7 +308,11 @@ describe('ConnectionCreateWizardPage', () => {
     fireEvent.click(screen.getByTestId('wizard-create'));
 
     expect(mutateMock).toHaveBeenCalledTimes(1);
-    expect(mutateMock.mock.calls[0][0]).toEqual({name: 'Risk Engine', url: 'https://sms.example.com/send'});
+    expect(mutateMock.mock.calls[0][0]).toEqual({
+      name: 'Risk Engine',
+      ouId: 'ou-root',
+      url: 'https://sms.example.com/send',
+    });
 
     const {onSuccess} = mutateMock.mock.calls[0][1] as {onSuccess: (data: {id: string}) => void};
     onSuccess({id: 'http-1'});
@@ -319,6 +333,7 @@ describe('ConnectionCreateWizardPage', () => {
 
     expect(mutateMock.mock.calls[0][0]).toEqual({
       name: 'Risk Engine',
+      ouId: 'ou-root',
       url: 'https://sms.example.com/send',
       authentication: {type: 'basic', properties: {username: 'risk-client', password: 's3cret'}},
     });
@@ -337,6 +352,7 @@ describe('ConnectionCreateWizardPage', () => {
 
     expect(mutateMock.mock.calls[0][0]).toEqual({
       name: 'Risk Engine',
+      ouId: 'ou-root',
       url: 'https://sms.example.com/send',
       authentication: {type: 'bearer', properties: {token: 'tok-1'}},
     });
@@ -357,6 +373,7 @@ describe('ConnectionCreateWizardPage', () => {
 
     expect(mutateMock.mock.calls[0][0]).toEqual({
       name: 'Risk Engine',
+      ouId: 'ou-root',
       url: 'https://sms.example.com/send',
       authentication: {type: 'api_key', properties: {'X-Api-Key': 'k-1', 'X-Client': 'c-1'}},
     });
@@ -549,6 +566,91 @@ describe('ConnectionCreateWizardPage', () => {
 
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
     expect(screen.queryByTestId('custom-step')).not.toBeInTheDocument();
+  });
+
+  it('creates an OAuth 2 connection owned by the organization unit from the token', () => {
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-oauth', 'Acme OAuth');
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Acme OAuth', ouId: 'ou-root'});
+  });
+
+  it('creates an AuthZEN PDP connection owned by the organization unit from the token', () => {
+    Object.assign(formExtraValues, {endpoint: 'https://pdp.example.com/access/v1/evaluation'});
+    render(<ConnectionCreateWizardPage />);
+
+    fireEvent.click(screen.getByTestId('connection-type-option-policy-decision-point'));
+    fireEvent.click(screen.getByTestId('pdp-protocol-option-authzen'));
+    fireEvent.click(screen.getByTestId('wizard-continue'));
+    fireEvent.change(screen.getByTestId('connection-name-input'), {target: {value: 'Booking PDP'}});
+    fireEvent.click(screen.getByTestId('wizard-continue'));
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Booking PDP', ouId: 'ou-root'});
+  });
+
+  it('passes the organization unit from the token to the trusted issuer step', () => {
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-trusted-idp');
+
+    expect(screen.getByTestId('custom-step')).toHaveAttribute('data-ou-id', 'ou-root');
+  });
+
+  it("sends the signed-in user's organization unit as ouId without asking for one", () => {
+    callerOu.ouId = 'ou-acme';
+    render(<ConnectionCreateWizardPage />);
+
+    expect(screen.queryByText('Where should this connection belong?')).not.toBeInTheDocument();
+    expect(screen.getByText('What kind of connection do you want to add?')).toBeInTheDocument();
+    selectTypeAndName('connection-type-option-http', 'Risk Engine');
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Risk Engine', ouId: 'ou-acme'});
+  });
+
+  it("passes the signed-in user's organization unit to the trusted issuer step", () => {
+    callerOu.ouId = 'ou-acme';
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-trusted-idp');
+
+    expect(screen.getByTestId('custom-step')).toHaveAttribute('data-ou-id', 'ou-acme');
+  });
+
+  it('does not create when the token names no organization unit', () => {
+    callerOu.ouId = '';
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-http', 'Risk Engine');
+
+    expect(screen.getByTestId('wizard-create')).toBeDisabled();
+    expect(screen.getByTestId('wizard-ou-required')).toHaveTextContent(
+      'Your session does not name an organization unit. Sign out and sign in again.',
+    );
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    expect(mutateMock).not.toHaveBeenCalled();
+  });
+
+  it('does not show the organization unit error while the token is being read', () => {
+    callerOu.ouId = '';
+    callerOu.isLoading = true;
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-http', 'Risk Engine');
+
+    expect(screen.getByTestId('wizard-create')).toBeDisabled();
+    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
+  });
+
+  it('does not show the organization unit error once the token names one', () => {
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-http', 'Risk Engine');
+
+    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
   });
 
   it('shows seven type cards including trusted-idp, policy decision point, email-smtp and http', () => {

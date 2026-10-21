@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/idp"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
@@ -24,6 +25,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/secretresolver"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/connection/authzenpdpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/notification/notificationmock"
 
@@ -385,20 +387,21 @@ func (s *DeclarativeResourceTestSuite) TestConnectionResourceID() {
 }
 
 func (s *DeclarativeResourceTestSuite) TestValidateConnectionDTOWrapper() {
-	s.Error(validateConnectionDTOWrapper(&providers.IDPDTO{ID: "idp-1", Name: ""}, nil))
-	s.Error(validateConnectionDTOWrapper(&providers.IDPDTO{ID: "idp-1", Name: "Google"}, nil),
+	s.Error(validateConnectionDTOWrapper(&providers.IDPDTO{ID: "idp-1", Name: ""}, nil, nil, nil))
+	s.Error(validateConnectionDTOWrapper(&providers.IDPDTO{ID: "idp-1", Name: "Google"}, nil, nil, nil),
 		"a name-only IdP DTO must fail full validation (missing type and required properties)")
 	s.NoError(validateConnectionDTOWrapper(&providers.IDPDTO{
-		ID: "idp-1", Name: "Google", Type: providers.IDPTypeGoogle,
+		ID: "idp-1", Name: "Google", Type: providers.IDPTypeGoogle, OUID: "ou-1",
 		Properties: []cmodels.Property{
 			mustProperty(s.T(), idp.PropClientID, "client-id", false),
 			mustProperty(s.T(), idp.PropClientSecret, "client-secret", true),
 			mustProperty(s.T(), idp.PropRedirectURI, "https://app/cb", false),
 		},
-	}, nil))
-	s.Error(validateConnectionDTOWrapper(&ncommon.NotificationSenderDTO{ID: "s-1", Name: ""}, nil))
-	s.NoError(validateConnectionDTOWrapper(&ncommon.NotificationSenderDTO{ID: "s-1", Name: "Twilio"}, nil))
-	s.NoError(validateConnectionDTOWrapper("not-a-dto", nil))
+	}, nil, nil, nil))
+	s.Error(validateConnectionDTOWrapper(&ncommon.NotificationSenderDTO{ID: "s-1", Name: ""}, nil, nil, nil))
+	s.NoError(validateConnectionDTOWrapper(&ncommon.NotificationSenderDTO{ID: "s-1", Name: "Twilio", OUID: "ou-1"},
+		nil, nil, nil))
+	s.NoError(validateConnectionDTOWrapper("not-a-dto", nil, nil, nil))
 }
 
 // An email sender takes the API's validation path on load, so a provider that cannot deliver
@@ -412,9 +415,9 @@ func (s *DeclarativeResourceTestSuite) TestValidateConnectionDTOWrapperValidates
 		return sender
 	}
 
-	valid := "id: sm-1\ntype: email-smtp\nname: SMTP\nhost: smtp.example.com\nport: 587\n" +
-		"fromAddress: noreply@example.com\n"
-	s.NoError(validateConnectionDTOWrapper(parse(valid), nil))
+	valid := "id: sm-1\ntype: email-smtp\nname: SMTP\nouId: ou-1\nhost: smtp.example.com\n" +
+		"port: 587\nfromAddress: noreply@example.com\n"
+	s.NoError(validateConnectionDTOWrapper(parse(valid), nil, nil, nil))
 
 	cases := map[string]string{
 		"missing port": "id: sm-1\ntype: email-smtp\nname: SMTP\nhost: smtp.example.com\n" +
@@ -426,7 +429,7 @@ func (s *DeclarativeResourceTestSuite) TestValidateConnectionDTOWrapperValidates
 			"  properties:\n    username: mailer\n    password: s3cret\n",
 	}
 	for name, doc := range cases {
-		err := validateConnectionDTOWrapper(parse(doc), nil)
+		err := validateConnectionDTOWrapper(parse(doc), nil, nil, nil)
 		s.Require().Error(err, name)
 		s.Contains(err.Error(), `connection resource "sm-1" is invalid`, name)
 	}
@@ -536,10 +539,11 @@ func (s *DeclarativeResourceTestSuite) TestGetAllResourceIDsExcludesDeclarativeA
 		Return([]idp.BasicIDPDTO{}, (*tidcommon.ServiceError)(nil))
 	s.mockNotif.On("ListSenders", mock.Anything).
 		Return([]ncommon.NotificationSenderDTO{}, (*tidcommon.ServiceError)(nil))
-	pdpService := &authZENPDPServiceStub{connections: []authzenpdp.AuthZENPDPConnection{
+	pdpService := authzenpdpmock.NewAuthZENPDPServiceInterfaceMock(s.T())
+	pdpService.On("ListAuthZENPDPs", mock.Anything).Return([]authzenpdp.AuthZENPDPConnection{
 		{ID: "mutable", Name: "Mutable PDP"},
 		{ID: "declarative", Name: "Declarative PDP", IsReadOnly: true},
-	}}
+	}, (*tidcommon.ServiceError)(nil))
 	exporter := newConnectionExporter(s.mockIDP, s.mockNotif,
 		pdpService)
 
@@ -894,4 +898,172 @@ func secretAllowedAt(fields []string, path string) bool {
 		return false
 	}
 	return len(secretresolver.MisplacedSecrets(&node, fields)) == 0
+}
+
+func (s *DeclarativeResourceTestSuite) TestConnectionModelCarriesOU() {
+	tests := []struct {
+		name    string
+		export  func() (connectionExportModel, error)
+		restore func(connectionExportModel) (ouID, ouHandle string, err error)
+	}{
+		{
+			name: "identity provider",
+			export: func() (connectionExportModel, error) {
+				return connectionModelFromIDPDTO(providers.IDPDTO{
+					ID: "google-1", Name: "My Google", Type: providers.IDPTypeGoogle, OUID: "ou-1"})
+			},
+			restore: func(model connectionExportModel) (string, string, error) {
+				idpDTO, senderDTO, err := connectionModelToDTO(model)
+				s.Nil(senderDTO)
+				return idpDTO.OUID, idpDTO.OUHandle, err
+			},
+		},
+		{
+			name: "notification sender",
+			export: func() (connectionExportModel, error) {
+				return connectionModelFromSenderDTO(ncommon.NotificationSenderDTO{
+					ID: "s-1", Name: "Twilio", Type: ncommon.NotificationSenderTypeMessage,
+					Provider: ncommon.NotificationProviderTypeTwilio, OUID: "ou-1",
+				})
+			},
+			restore: func(model connectionExportModel) (string, string, error) {
+				idpDTO, senderDTO, err := connectionModelToDTO(model)
+				s.Nil(idpDTO)
+				return senderDTO.OUID, senderDTO.OUHandle, err
+			},
+		},
+		{
+			name: "AuthZEN PDP",
+			export: func() (connectionExportModel, error) {
+				return connectionModelFromAuthZENPDP(authzenpdp.AuthZENPDPConnection{
+					ID: "pdp-1", Name: "PDP", OUID: "ou-1", Endpoint: "https://pdp.example.com/evaluation",
+				})
+			},
+			restore: func(model connectionExportModel) (string, string, error) {
+				pdp, err := connectionModelToAuthZENPDP(model)
+				return pdp.OUID, pdp.OUHandle, err
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		s.Run(tc.name, func() {
+			model, err := tc.export()
+			s.Require().NoError(err)
+			s.Equal("ou-1", model.OUID)
+
+			model.OUHandle = "acme"
+			ouID, ouHandle, err := tc.restore(model)
+
+			s.Require().NoError(err)
+			s.Equal("ou-1", ouID)
+			s.Equal("acme", ouHandle)
+		})
+	}
+}
+
+func (s *DeclarativeResourceTestSuite) TestConnectionDocumentOUHandle() {
+	var node yaml.Node
+	s.Require().NoError(yaml.Unmarshal([]byte(
+		"id: idp-1\ntype: google\nname: G\nouHandle: acme\nclientId: c\nredirectUri: https://app/cb\n"), &node))
+
+	dto, _, err := ParseConnectionFromNode(&node)
+	s.Require().NoError(err)
+	s.Require().NotNil(dto)
+	s.Equal("acme", dto.OUHandle)
+	s.Empty(dto.OUID)
+
+	exported, err := connectionModelFromIDPDTO(providers.IDPDTO{
+		ID: "idp-1", Name: "G", Type: providers.IDPTypeGoogle, OUID: "ou-acme", OUHandle: "acme",
+	})
+	s.Require().NoError(err)
+	s.Equal("ou-acme", exported.OUID)
+	s.Empty(exported.OUHandle)
+}
+
+func (s *DeclarativeResourceTestSuite) TestValidateConnectionDTOOwner() {
+	const resolvedOUID = "ou-acme"
+	newSender := func(ouID, ouHandle string) *ncommon.NotificationSenderDTO {
+		return &ncommon.NotificationSenderDTO{ID: "s-1", Name: "Twilio", OUID: ouID, OUHandle: ouHandle}
+	}
+	newPDP := func(ouID, ouHandle string) *authzenpdp.AuthZENPDPConnection {
+		return &authzenpdp.AuthZENPDPConnection{ID: "pdp-1", Name: "PDP", Endpoint: "https://pdp.example.com/e",
+			OUID: ouID, OUHandle: ouHandle}
+	}
+
+	newIDP := func(ouID, ouHandle string) *providers.IDPDTO {
+		return &providers.IDPDTO{ID: "idp-1", Name: "Google", Type: providers.IDPTypeGoogle, OUID: ouID,
+			OUHandle: ouHandle, Properties: []cmodels.Property{
+				mustProperty(s.T(), idp.PropClientID, "client-id", false),
+				mustProperty(s.T(), idp.PropClientSecret, "client-secret", true),
+				mustProperty(s.T(), idp.PropRedirectURI, "https://app/cb", false),
+			}}
+	}
+
+	s.Run("an identity provider resolves its owner through the identity provider service", func() {
+		dto := newIDP("", "acme")
+		s.mockIDP.On("ResolveIdentityProviderOU", mock.Anything, dto).
+			Run(func(mock.Arguments) { dto.OUID = resolvedOUID }).Return((*tidcommon.ServiceError)(nil)).Once()
+		s.mockIDP.On("ApplySchemaAwareDefaults", mock.Anything, dto).Return().Once()
+		s.NoError(validateConnectionDTOWrapper(dto, s.mockIDP, nil, nil))
+		s.Equal(resolvedOUID, dto.OUID)
+	})
+	s.Run("an identity provider fails when its owner cannot be resolved", func() {
+		dto := newIDP("", "missing")
+		s.mockIDP.On("ResolveIdentityProviderOU", mock.Anything, dto).Return(&idp.ErrorInvalidIDPOU).Once()
+		err := validateConnectionDTOWrapper(dto, s.mockIDP, nil, nil)
+		s.ErrorContains(err, `organization unit "missing" of connection resource "idp-1"`)
+	})
+	s.Run("an identity provider fails without an owner", func() {
+		s.ErrorContains(validateConnectionDTOWrapper(newIDP("", ""), nil, nil, nil), "needs an organization unit")
+	})
+	s.Run("fails without an owner", func() {
+		s.ErrorContains(validateConnectionDTOWrapper(newSender("", ""), nil, nil, nil),
+			"needs an organization unit")
+		s.ErrorContains(validateConnectionDTOWrapper(newPDP("", ""), nil, nil, nil),
+			"needs an organization unit")
+	})
+	s.Run("fails for a handle when no service can resolve it", func() {
+		s.ErrorContains(validateConnectionDTOWrapper(newSender("", "acme"), nil, nil, nil),
+			"needs an organization unit")
+		s.ErrorContains(validateConnectionDTOWrapper(newPDP("", "acme"), nil, nil, nil),
+			"needs an organization unit")
+	})
+	s.Run("keeps an id given", func() {
+		s.NoError(validateConnectionDTOWrapper(newSender("ou-1", ""), nil, nil, nil))
+		s.NoError(validateConnectionDTOWrapper(newPDP("ou-1", ""), nil, nil, nil))
+	})
+	s.Run("resolves the owner through the service of the kind", func() {
+		sender := newSender("", "acme")
+		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).
+			Run(func(mock.Arguments) { sender.OUID = resolvedOUID }).Return((*tidcommon.ServiceError)(nil)).Once()
+		s.NoError(validateConnectionDTOWrapper(sender, nil, s.mockNotif, nil))
+		s.Equal(resolvedOUID, sender.OUID)
+
+		pdp := newPDP("", "acme")
+		pdpService := authzenpdpmock.NewAuthZENPDPServiceInterfaceMock(s.T())
+		pdpService.On("ResolveConnectionOU", mock.Anything, pdp).
+			Run(func(mock.Arguments) { pdp.OUID = resolvedOUID }).Return((*tidcommon.ServiceError)(nil)).Once()
+		s.NoError(validateConnectionDTOWrapper(pdp, nil, nil, pdpService))
+		s.Equal(resolvedOUID, pdp.OUID)
+	})
+	s.Run("fails when the service cannot resolve the owner", func() {
+		sender := newSender("", "missing")
+		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).Return(&connectionou.ErrorInvalidOU).Once()
+		err := validateConnectionDTOWrapper(sender, nil, s.mockNotif, nil)
+		s.ErrorContains(err, `organization unit "missing" of connection resource "s-1" could not be resolved`)
+	})
+	s.Run("fails when the AuthZEN PDP service cannot resolve the owner", func() {
+		pdp := newPDP("", "missing")
+		pdpService := authzenpdpmock.NewAuthZENPDPServiceInterfaceMock(s.T())
+		pdpService.On("ResolveConnectionOU", mock.Anything, pdp).Return(&connectionou.ErrorInvalidOU).Once()
+		err := validateConnectionDTOWrapper(pdp, nil, nil, pdpService)
+		s.ErrorContains(err, `organization unit "missing" of connection resource`)
+	})
+	s.Run("fails when the service cannot find the ouId given", func() {
+		sender := newSender("ou-missing", "")
+		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).Return(&connectionou.ErrorInvalidOU).Once()
+		err := validateConnectionDTOWrapper(sender, nil, s.mockNotif, nil)
+		s.ErrorContains(err, `organization unit of connection resource "s-1" could not be resolved`)
+	})
 }

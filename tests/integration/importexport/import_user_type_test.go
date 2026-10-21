@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
@@ -128,7 +129,7 @@ func userTypeDocument(id, handle, displayName string) string {
 }
 
 // newImportUUID returns a random version 4 UUID.
-func newImportUUID(suite *ImportExportErrorSuite) string {
+func newImportUUID(suite interface{ Require() *require.Assertions }) string {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	suite.Require().NoError(err)

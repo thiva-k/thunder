@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -24,11 +25,13 @@ import (
 	"github.com/thunder-id/thunderid/internal/application"
 	"github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	flowmgt "github.com/thunder-id/thunderid/internal/flow/mgt"
 	"github.com/thunder-id/thunderid/internal/group"
+	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/notification"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/notificationtemplate"
@@ -197,8 +200,18 @@ type fakeIDPService struct {
 	getErr    *tidcommon.ServiceError
 }
 
+func (f *fakeIDPService) ResolveIdentityProviderOU(context.Context, *providers.IDPDTO) *tidcommon.ServiceError {
+	return nil
+}
+
 type fakeAuthZENPDPService struct {
 	created *authzenpdp.AuthZENPDPConnection
+}
+
+func (f *fakeAuthZENPDPService) ResolveConnectionOU(
+	context.Context, *authzenpdp.AuthZENPDPConnection,
+) *tidcommon.ServiceError {
+	return nil
 }
 
 func (f *fakeAuthZENPDPService) CreateAuthZENPDPConnection(
@@ -295,6 +308,10 @@ type fakeSenderService struct {
 	updateErr *tidcommon.ServiceError
 	createErr *tidcommon.ServiceError
 	getErr    *tidcommon.ServiceError
+}
+
+func (f *fakeSenderService) ResolveSenderOU(context.Context, *ncommon.NotificationSenderDTO) *tidcommon.ServiceError {
+	return nil
 }
 
 func (f *fakeSenderService) CreateSender(
@@ -4617,4 +4634,233 @@ func TestDeleteResource_RemovesAuthorizationDetailTypeFile(t *testing.T) {
 	assert.Equal(t, "payment.yaml", resp.DeletedFile)
 	_, statErr := os.Stat(filepath.Join(resourceDir, "payment.yaml"))
 	assert.True(t, os.IsNotExist(statErr))
+}
+
+// connectionKind describes how the importer drives the service of one kind of connection, so a scenario runs against
+// each kind.
+type connectionKind struct {
+	name string
+	// doc is a connection document of the kind with the given id, naming its owner by the given lines.
+	doc func(id, owner string) string
+	// service returns the mock of the service of the kind, and the methods the importer calls on it.
+	service                                func() *mock.Mock
+	resolveMethod, createMethod, getMethod string
+	// created is what the service answers a create call with, and stored what it answers a get call with for a
+	// connection owned by the given organization unit.
+	created any
+	stored  func(ouID string) any
+	// updateNotAllowedCode is the code of the error the service answers an update to another owner with.
+	updateNotAllowedCode string
+}
+
+// ownerCall is a call to the service to resolve the owner of a connection document.
+type ownerCall struct {
+	// wantOUID and wantHandle are the owner the document names, which the importer hands to the service.
+	wantOUID, wantHandle string
+	// setOUID is the organization unit the service resolves the owner to, when it is not empty.
+	setOUID string
+	// svcErr is the error the service answers with.
+	svcErr *tidcommon.ServiceError
+}
+
+type ImportConnectionOUTestSuite struct {
+	suite.Suite
+	idpService    *idpAdapterMock
+	senderService *senderAdapterMock
+	pdpService    *authZENPDPAdapterMock
+	svc           ImportServiceInterface
+}
+
+func TestImportConnectionOUTestSuite(t *testing.T) {
+	suite.Run(t, new(ImportConnectionOUTestSuite))
+}
+
+func (s *ImportConnectionOUTestSuite) SetupTest() {
+	s.idpService = newIdpAdapterMock(s.T())
+	s.senderService = newSenderAdapterMock(s.T())
+	s.pdpService = newAuthZENPDPAdapterMock(s.T())
+	s.svc = newImportService(
+		nil, s.idpService, s.senderService, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, s.pdpService)
+}
+
+// ownerFields returns the pointers to the ouId and the ouHandle of the connection a resolve call is made with, which
+// every kind of connection holds in fields of those names.
+func ownerFields(arg any) (ouID, ouHandle *string) {
+	connection := reflect.ValueOf(arg).Elem()
+	return connection.FieldByName("OUID").Addr().Interface().(*string),
+		connection.FieldByName("OUHandle").Addr().Interface().(*string)
+}
+
+// createdOU returns the organization unit the argument of a create call names, which is a connection or a request
+// that holds it in a field named OUID.
+func createdOU(arg any) string {
+	return reflect.Indirect(reflect.ValueOf(arg)).FieldByName("OUID").String()
+}
+
+// expectResolve expects the service of the kind to be asked to resolve the owner of the document.
+func (s *ImportConnectionOUTestSuite) expectResolve(kind connectionKind, call ownerCall) {
+	kind.service().On(kind.resolveMethod, mock.Anything, mock.MatchedBy(func(arg any) bool {
+		ouID, ouHandle := ownerFields(arg)
+		return *ouID == call.wantOUID && *ouHandle == call.wantHandle
+	})).Run(func(args mock.Arguments) {
+		if call.setOUID != "" {
+			ouID, _ := ownerFields(args.Get(1))
+			*ouID = call.setOUID
+		}
+	}).Return(call.svcErr).Once()
+}
+
+// expectCreate expects the connection to be created under the given organization unit.
+func (s *ImportConnectionOUTestSuite) expectCreate(kind connectionKind, ouID string) {
+	kind.service().On(kind.createMethod, mock.Anything, mock.MatchedBy(func(arg any) bool {
+		return createdOU(arg) == ouID
+	})).Return(kind.created, (*tidcommon.ServiceError)(nil)).Once()
+}
+
+// expectExisting expects the service to hold the connection of the document, owned by the given organization unit.
+func (s *ImportConnectionOUTestSuite) expectExisting(kind connectionKind, ouID string) {
+	kind.service().On(kind.getMethod, mock.Anything, "conn-1").
+		Return(kind.stored(ouID), (*tidcommon.ServiceError)(nil)).Once()
+}
+
+// kinds returns the three kinds of connection the importer drives, each over the suite's mocks.
+func (s *ImportConnectionOUTestSuite) kinds() []connectionKind {
+	return []connectionKind{
+		{
+			name: "identity provider",
+			doc: func(id, owner string) string {
+				return "resource_type: connection\n" + idLine(id) + "name: idp-one\ntype: google\n" + owner +
+					"clientId: abc\n"
+			},
+			service:       func() *mock.Mock { return &s.idpService.Mock },
+			resolveMethod: "ResolveIdentityProviderOU", createMethod: "CreateIdentityProvider",
+			getMethod: "GetIdentityProvider",
+			created:   &providers.IDPDTO{ID: "idp-new", Name: "idp-one"},
+			stored: func(ouID string) any {
+				return &providers.IDPDTO{ID: "conn-1", Name: "idp-one", OUID: ouID}
+			},
+			updateNotAllowedCode: idp.ErrorIDPOUUpdateNotAllowed.Code,
+		},
+		{
+			name: "notification sender",
+			doc: func(id, owner string) string {
+				return "resource_type: connection\n" + idLine(id) + "name: sms\ntype: twilio\n" + owner +
+					"accountSid: AC1\nauthToken: t\nsenderId: x\n"
+			},
+			service:       func() *mock.Mock { return &s.senderService.Mock },
+			resolveMethod: "ResolveSenderOU", createMethod: "CreateSender", getMethod: "GetSender",
+			created: &ncommon.NotificationSenderDTO{ID: "sender-new", Name: "sms"},
+			stored: func(ouID string) any {
+				return &ncommon.NotificationSenderDTO{ID: "conn-1", Name: "sms", OUID: ouID}
+			},
+			updateNotAllowedCode: notification.ErrorSenderOUUpdateNotAllowed.Code,
+		},
+		{
+			name: "AuthZEN PDP",
+			doc: func(id, owner string) string {
+				return "resource_type: connection\n" + idLine(id) + "name: pdp\ntype: authzen-pdp\n" + owner +
+					"endpoint: https://pdp.example.com\n"
+			},
+			service:       func() *mock.Mock { return &s.pdpService.Mock },
+			resolveMethod: "ResolveConnectionOU", createMethod: "CreateAuthZENPDPConnection",
+			getMethod: "GetAuthZENPDP",
+			created:   &authzenpdp.AuthZENPDPConnection{ID: "pdp-new", Name: "pdp"},
+			stored: func(ouID string) any {
+				return &authzenpdp.AuthZENPDPConnection{ID: "conn-1", Name: "pdp", OUID: ouID}
+			},
+			updateNotAllowedCode: connectionou.ErrorOUUpdateNotAllowed.Code,
+		},
+	}
+}
+
+// idLine is the id line of a connection document, which is empty for a document that has no id.
+func idLine(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "id: " + id + "\n"
+}
+
+// importOne imports a document that holds one connection and returns its outcome.
+func (s *ImportConnectionOUTestSuite) importOne(content string, dryRun bool) ImportItemOutcome {
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{Content: content, DryRun: dryRun})
+	s.Require().Nil(err)
+	s.Require().Len(resp.Results, 1)
+	return resp.Results[0]
+}
+
+func (s *ImportConnectionOUTestSuite) TestOwnerIsResolvedByTheServiceOfTheKind() {
+	for _, kind := range s.kinds() {
+		s.Run(kind.name, func() {
+			s.SetupTest()
+			s.expectResolve(kind, ownerCall{wantHandle: "default", setOUID: "ou-default"})
+			s.expectCreate(kind, "ou-default")
+
+			outcome := s.importOne(kind.doc("", "ouHandle: default\n"), false)
+
+			s.Equal(statusSuccess, outcome.Status)
+			s.Equal(operationCreate, outcome.Operation)
+		})
+	}
+}
+
+func (s *ImportConnectionOUTestSuite) TestOUIDAndHandleAreBothHandedToTheService() {
+	for _, kind := range s.kinds() {
+		s.Run(kind.name, func() {
+			s.SetupTest()
+			s.expectResolve(kind, ownerCall{wantOUID: "ou-other", wantHandle: "default"})
+			s.expectCreate(kind, "ou-other")
+
+			outcome := s.importOne(kind.doc("", "ouId: ou-other\nouHandle: default\n"), false)
+
+			s.Equal(statusSuccess, outcome.Status)
+		})
+	}
+}
+
+func (s *ImportConnectionOUTestSuite) TestOwnerTheServiceCannotResolveFailsTheItem() {
+	for _, kind := range s.kinds() {
+		for _, dryRun := range []bool{false, true} {
+			s.Run(fmt.Sprintf("%s dry run %t", kind.name, dryRun), func() {
+				s.SetupTest()
+				s.expectResolve(kind, ownerCall{wantHandle: "missing", svcErr: &connectionou.ErrorInvalidOU})
+
+				outcome := s.importOne(kind.doc("", "ouHandle: missing\n"), dryRun)
+
+				s.Equal(statusFailed, outcome.Status)
+				s.Equal(connectionou.ErrorInvalidOU.Code, outcome.Code)
+			})
+		}
+	}
+}
+
+func (s *ImportConnectionOUTestSuite) TestDryRunRefusesToMoveAnExistingConnection() {
+	for _, kind := range s.kinds() {
+		s.Run(kind.name, func() {
+			s.SetupTest()
+			s.expectResolve(kind, ownerCall{wantOUID: "ou-2"})
+			s.expectExisting(kind, "ou-1")
+
+			outcome := s.importOne(kind.doc("conn-1", "ouId: ou-2\n"), true)
+
+			s.Equal(statusFailed, outcome.Status)
+			s.Equal(kind.updateNotAllowedCode, outcome.Code)
+		})
+	}
+}
+
+func (s *ImportConnectionOUTestSuite) TestDryRunAcceptsTheOwnerAnExistingConnectionHas() {
+	for _, kind := range s.kinds() {
+		s.Run(kind.name, func() {
+			s.SetupTest()
+			s.expectResolve(kind, ownerCall{wantOUID: "ou-1"})
+			s.expectExisting(kind, "ou-1")
+
+			outcome := s.importOne(kind.doc("conn-1", "ouId: ou-1\n"), true)
+
+			s.Equal(statusSuccess, outcome.Status)
+			s.Equal(operationUpdate, outcome.Operation)
+		})
+	}
 }

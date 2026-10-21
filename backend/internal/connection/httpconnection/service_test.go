@@ -12,16 +12,19 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/outboundauth"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 )
 
 type HTTPConnectionServiceTestSuite struct {
 	suite.Suite
 	ctx       context.Context
 	mockStore *httpConnectionStoreInterfaceMock
+	mockOU    *oumock.OrganizationUnitServiceInterfaceMock
 	service   *httpConnectionService
 }
 
@@ -33,7 +36,14 @@ func (s *HTTPConnectionServiceTestSuite) SetupTest() {
 	initTestRuntime(s.T(), false)
 	s.ctx = context.Background()
 	s.mockStore = newHttpConnectionStoreInterfaceMock(s.T())
-	s.service = newHTTPConnectionService(s.mockStore)
+	s.mockOU = oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
+	// Every connection names the organization unit it belongs to; unless a test is about the owner, "ou-1" exists.
+	s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "ou-1").Return(true, nil).Maybe()
+	s.service = newHTTPConnectionService(s.mockStore, connectionou.Initialize(s.mockOU, connectionou.Errors{
+		Required: connectionou.ErrorOURequired,
+		NotFound: connectionou.ErrorInvalidOU,
+		Changed:  connectionou.ErrorOUUpdateNotAllowed,
+	}))
 }
 
 func (s *HTTPConnectionServiceTestSuite) noneAuth() []cmodels.Property {
@@ -41,7 +51,7 @@ func (s *HTTPConnectionServiceTestSuite) noneAuth() []cmodels.Property {
 }
 
 func (s *HTTPConnectionServiceTestSuite) connection(url string, auth []cmodels.Property) HTTPConnection {
-	return HTTPConnection{Name: "Risk", URL: url, AuthProperties: auth}
+	return HTTPConnection{Name: "Risk", OUID: "ou-1", URL: url, AuthProperties: auth}
 }
 
 // expectCreate captures the connection handed to the store.
@@ -65,7 +75,7 @@ func (s *HTTPConnectionServiceTestSuite) TestCreateNormalizesAndStores() {
 	auth := basicAuthProperties(s.T())
 
 	created, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{
-		Name: " Risk ", Description: "Risk engine", URL: " HTTPS://Risk.Example.COM:443/evaluate?x=1 ",
+		OUID: "ou-1", Name: " Risk ", Description: "Risk engine", URL: " HTTPS://Risk.Example.COM:443/evaluate?x=1 ",
 		Headers:        []Header{{Name: " X-Tenant ", Value: "acme"}},
 		AuthProperties: auth,
 	})
@@ -73,7 +83,8 @@ func (s *HTTPConnectionServiceTestSuite) TestCreateNormalizesAndStores() {
 	s.Require().Nil(svcErr)
 	s.NotEmpty(created.ID)
 	s.Equal(HTTPConnection{
-		ID: created.ID, Name: "Risk", Description: "Risk engine", URL: "https://risk.example.com/evaluate?x=1",
+		ID: created.ID, Name: "Risk", Description: "Risk engine", OUID: "ou-1",
+		URL:       "https://risk.example.com/evaluate?x=1",
 		TimeoutMS: defaultTimeoutMS, Headers: []Header{{Name: "X-Tenant", Value: "acme"}}, AuthProperties: auth,
 	}, *created)
 	s.Equal(*created, *stored)
@@ -82,7 +93,8 @@ func (s *HTTPConnectionServiceTestSuite) TestCreateNormalizesAndStores() {
 func (s *HTTPConnectionServiceTestSuite) TestCreateWithoutAuthenticationStoresNone() {
 	stored := s.expectCreate()
 
-	_, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{Name: "Risk", URL: "http://localhost:9000/x"})
+	_, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{
+		OUID: "ou-1", Name: "Risk", URL: "http://localhost:9000/x"})
 
 	s.Require().Nil(svcErr)
 	config, err := outboundauth.FromProperties(stored.AuthProperties)
@@ -234,25 +246,27 @@ func (s *HTTPConnectionServiceTestSuite) TestPlainHeaderMayNotRepeatAnAPIKeyHead
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestNameAndDescriptionLimits() {
-	s.assertCreateRejected(HTTPConnection{Name: " ", URL: testURL}, ErrorInvalidName)
-	s.assertCreateRejected(HTTPConnection{Name: strings.Repeat("n", maxNameLength+1), URL: testURL},
+	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: " ", URL: testURL}, ErrorInvalidName)
+	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: strings.Repeat("n", maxNameLength+1), URL: testURL},
 		ErrorInvalidName)
-	s.assertCreateRejected(HTTPConnection{Name: "Risk", URL: testURL,
+	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL,
 		Description: strings.Repeat("d", maxDescriptionLength+1)}, ErrorInvalidDescription)
 
 	s.expectCreate()
-	_, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{Name: strings.Repeat("é", maxNameLength),
-		URL: testURL, Description: strings.Repeat("é", maxDescriptionLength)})
+	_, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{
+		OUID: "ou-1", Name: strings.Repeat("é", maxNameLength), URL: testURL,
+		Description: strings.Repeat("é", maxDescriptionLength)})
 	s.Nil(svcErr, "limits count characters, not bytes")
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestTimeoutBounds() {
 	for _, timeout := range []int{-1, maxTimeoutMS + 1} {
-		s.assertCreateRejected(HTTPConnection{Name: "Risk", URL: testURL, TimeoutMS: timeout}, ErrorInvalidTimeout)
+		s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL, TimeoutMS: timeout},
+			ErrorInvalidTimeout)
 	}
 	for _, timeout := range []int{1, maxTimeoutMS} {
 		stored := s.expectCreate()
-		_, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{Name: "Risk", URL: testURL,
+		_, svcErr := s.service.CreateHTTPConnection(s.ctx, HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL,
 			TimeoutMS: timeout})
 		s.Require().Nil(svcErr)
 		s.Equal(timeout, stored.TimeoutMS)
@@ -275,7 +289,8 @@ func (s *HTTPConnectionServiceTestSuite) TestInvalidHeadersAreRejected() {
 	}
 	for name, headers := range cases {
 		s.Run(name, func() {
-			s.assertCreateRejected(HTTPConnection{Name: "Risk", URL: testURL, Headers: headers}, ErrorInvalidHeaders)
+			s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL, Headers: headers},
+				ErrorInvalidHeaders)
 		})
 	}
 }
@@ -284,7 +299,7 @@ func (s *HTTPConnectionServiceTestSuite) TestNameConflictIsReported() {
 	s.mockStore.On("CreateHTTPConnection", mock.Anything, mock.Anything).
 		Return(errors.Join(errNameConflict, errors.New("unique index"))).Once()
 
-	s.assertCreateRejected(HTTPConnection{Name: "Risk", URL: testURL}, ErrorAlreadyExists)
+	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL}, ErrorAlreadyExists)
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestStoreFailuresAreServerErrors() {
@@ -292,15 +307,19 @@ func (s *HTTPConnectionServiceTestSuite) TestStoreFailuresAreServerErrors() {
 	s.mockStore.On("CreateHTTPConnection", mock.Anything, mock.Anything).Return(failure)
 	s.mockStore.On("ListHTTPConnections", mock.Anything).Return(nil, failure)
 	s.mockStore.On("GetHTTPConnection", mock.Anything, "id").Return(nil, failure)
+	s.mockStore.On("GetHTTPConnection", mock.Anything, "writable").
+		Return(&HTTPConnection{ID: "writable", OUID: "ou-1"}, nil)
 	s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.Anything).Return(failure)
 	s.mockStore.On("DeleteHTTPConnection", mock.Anything, "id").Return(failure)
 
-	s.assertCreateRejected(HTTPConnection{Name: "Risk", URL: testURL}, tidcommon.InternalServerError)
+	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL}, tidcommon.InternalServerError)
 	_, svcErr := s.service.ListHTTPConnections(s.ctx)
 	s.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
 	_, svcErr = s.service.GetHTTPConnection(s.ctx, "id")
 	s.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
 	_, svcErr = s.service.UpdateHTTPConnection(s.ctx, "id", HTTPConnection{Name: "Risk", URL: testURL})
+	s.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
+	_, svcErr = s.service.UpdateHTTPConnection(s.ctx, "writable", HTTPConnection{Name: "Risk", URL: testURL})
 	s.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
 	s.Equal(tidcommon.InternalServerError.Code, s.service.DeleteHTTPConnection(s.ctx, "id").Code)
 }
@@ -326,6 +345,8 @@ func (s *HTTPConnectionServiceTestSuite) TestGetAndList() {
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestUpdateValidatesAndStores() {
+	s.mockStore.On("GetHTTPConnection", mock.Anything, "id").
+		Return(&HTTPConnection{ID: "id", OUID: "ou-1"}, nil).Once()
 	s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.MatchedBy(func(c HTTPConnection) bool {
 		return c.ID == "id" && c.URL == "https://risk.example.com/v2"
 	})).Return(nil).Once()
@@ -342,8 +363,13 @@ func (s *HTTPConnectionServiceTestSuite) TestUpdateValidatesAndStores() {
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestUpdateAndDeleteReportMissingAndConflict() {
+	s.mockStore.On("GetHTTPConnection", mock.Anything, "missing").Return(nil, nil)
+	s.mockStore.On("GetHTTPConnection", mock.Anything, "gone").
+		Return(&HTTPConnection{ID: "gone", OUID: "ou-1"}, nil)
+	s.mockStore.On("GetHTTPConnection", mock.Anything, "taken").
+		Return(&HTTPConnection{ID: "taken", OUID: "ou-1"}, nil)
 	s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.MatchedBy(func(c HTTPConnection) bool {
-		return c.ID == "missing"
+		return c.ID == "gone"
 	})).Return(errConnectionNotFound)
 	s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.MatchedBy(func(c HTTPConnection) bool {
 		return c.ID == "taken"
@@ -352,6 +378,8 @@ func (s *HTTPConnectionServiceTestSuite) TestUpdateAndDeleteReportMissingAndConf
 	s.mockStore.On("DeleteHTTPConnection", mock.Anything, "id").Return(nil)
 
 	_, svcErr := s.service.UpdateHTTPConnection(s.ctx, "missing", HTTPConnection{Name: "Risk", URL: testURL})
+	s.Equal(ErrorNotFound.Code, svcErr.Code)
+	_, svcErr = s.service.UpdateHTTPConnection(s.ctx, "gone", HTTPConnection{Name: "Risk", URL: testURL})
 	s.Equal(ErrorNotFound.Code, svcErr.Code)
 	_, svcErr = s.service.UpdateHTTPConnection(s.ctx, "taken", HTTPConnection{Name: "Risk", URL: testURL})
 	s.Equal(ErrorAlreadyExists.Code, svcErr.Code)
@@ -363,10 +391,66 @@ func (s *HTTPConnectionServiceTestSuite) TestUpdateAndDeleteReportMissingAndConf
 func (s *HTTPConnectionServiceTestSuite) TestWritesAreRejectedInDeclarativeMode() {
 	initTestRuntime(s.T(), true)
 
-	s.assertCreateRejected(HTTPConnection{Name: "Risk", URL: testURL},
+	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL},
 		declarativeresource.ErrorDeclarativeResourceCreateOperation)
 	_, svcErr := s.service.UpdateHTTPConnection(s.ctx, "id", HTTPConnection{Name: "Risk", URL: testURL})
 	s.Equal(declarativeresource.ErrorDeclarativeResourceUpdateOperation.Code, svcErr.Code)
 	s.Equal(declarativeresource.ErrorDeclarativeResourceDeleteOperation.Code,
 		s.service.DeleteHTTPConnection(s.ctx, "id").Code)
+}
+
+func (s *HTTPConnectionServiceTestSuite) TestCreateResolvesOU() {
+	s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "missing").Return(false, nil).Once()
+	stored := s.expectCreate()
+
+	byID := s.connection("https://risk.example.com", s.noneAuth())
+	created, svcErr := s.service.CreateHTTPConnection(s.ctx, byID)
+	s.Nil(svcErr)
+	s.Equal("ou-1", created.OUID)
+	s.Equal("ou-1", stored.OUID)
+
+	noOU := s.connection("https://risk.example.com", s.noneAuth())
+	noOU.OUID = ""
+	s.assertCreateRejected(noOU, connectionou.ErrorOURequired)
+
+	unknown := s.connection("https://risk.example.com", s.noneAuth())
+	unknown.OUID = "missing"
+	s.assertCreateRejected(unknown, connectionou.ErrorInvalidOU)
+}
+
+func (s *HTTPConnectionServiceTestSuite) TestUpdateKeepsOU() {
+	for _, test := range []struct {
+		name      string
+		requested string
+		wantErr   *tidcommon.ServiceError
+	}{
+		{name: "omitted", requested: ""},
+		{name: "same", requested: "ou-1"},
+		{name: "changed", requested: "ou-2", wantErr: &connectionou.ErrorOUUpdateNotAllowed},
+	} {
+		s.Run(test.name, func() {
+			s.SetupTest()
+			current := s.connection("https://risk.example.com", s.noneAuth())
+			current.ID = "http-1"
+			s.mockStore.On("GetHTTPConnection", mock.Anything, "http-1").Return(&current, nil).Once()
+			if test.wantErr == nil {
+				s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.MatchedBy(func(c HTTPConnection) bool {
+					return c.OUID == "ou-1"
+				})).Return(nil).Once()
+			}
+			request := s.connection("https://risk.example.com", s.noneAuth())
+			request.OUID = test.requested
+
+			updated, svcErr := s.service.UpdateHTTPConnection(s.ctx, "http-1", request)
+
+			if test.wantErr != nil {
+				s.Nil(updated)
+				s.Require().NotNil(svcErr)
+				s.Equal(test.wantErr.Code, svcErr.Code)
+				return
+			}
+			s.Nil(svcErr)
+			s.Equal("ou-1", updated.OUID)
+		})
+	}
 }

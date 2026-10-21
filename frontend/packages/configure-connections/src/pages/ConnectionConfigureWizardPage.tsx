@@ -13,8 +13,9 @@ import ConnectionCreateHint from '../components/ConnectionCreateHint';
 import ConnectionForm from '../components/ConnectionForm';
 import {CONNECTION_FORM_FIELDS, fieldsForMode} from '../config/connectionFormFields';
 import {VENDOR_META_BY_TYPE} from '../config/connectionVendorMeta';
+import useCallerOuId from '../hooks/useCallerOuId';
 import useConnectionRoutes from '../hooks/useConnectionRoutes';
-import type {ConnectionResponse, ConnectionType} from '../models/connection';
+import type {ConnectionResponse, ConnectionType, CreateConnectionRequest} from '../models/connection';
 import {
   type ConnectionFormValues,
   emptyFormValues,
@@ -40,6 +41,9 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
 
   const [editedValues, setEditedValues] = useState<ConnectionFormValues>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  // A new connection is owned by the organization unit of the signed-in user, read from their token.
+  const {ouId, isLoading: isOuLoading} = useCallerOuId();
 
   useEffect(() => {
     if (!meta) {
@@ -79,9 +83,10 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
       return;
     }
     setGeneralError(null);
-    const payload = {
+    const payload: CreateConnectionRequest = {
       ...formValuesToRequest(values, fields, {mode: 'create', secretReplaced: true}),
       name: meta.displayName,
+      ouId,
     };
     createMutation.mutate(payload, {
       onSuccess: (created: ConnectionResponse) => void navigate(routes.connections.detail(connectionType, created.id)),
@@ -109,7 +114,7 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
         <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
           <Button
             variant="contained"
-            disabled={!formValid || createMutation.isPending}
+            disabled={!formValid || !ouId || createMutation.isPending}
             onClick={handleCreate}
             data-testid="wizard-create"
           >
@@ -158,6 +163,15 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
             onSecretReplacingChange={() => undefined}
           />
         </Paper>
+
+        {!isOuLoading && !ouId && (
+          <Alert severity="error" data-testid="wizard-ou-required">
+            {t(
+              'wizard.organizationUnit.required',
+              'Your session does not name an organization unit. Sign out and sign in again.',
+            )}
+          </Alert>
+        )}
 
         {generalError && (
           <Alert severity="error" onClose={clearCreateError} data-testid="wizard-create-error">

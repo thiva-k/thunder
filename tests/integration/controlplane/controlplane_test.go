@@ -183,8 +183,15 @@ func (ts *ControlPlaneTestSuite) TestADeclarativeNotificationSectionCanNameADecl
 	snapshot := filepath.Join(dir, "deployment.yaml")
 	ts.Require().NoError(os.WriteFile(snapshot, deployment, 0o600))
 	resourcesPath := filepath.Join(dir, "resources.yaml")
-	ts.Require().NoError(os.WriteFile(resourcesPath, []byte(`resource_type: connection
+	ts.Require().NoError(os.WriteFile(resourcesPath, []byte(`resource_type: organization_unit
+id: cp-declarative-ou
+handle: cp-declarative-ou
+name: Control Plane Declarative OU
+description: Owns the declarative sender
+---
+resource_type: connection
 id: `+senderID+`
+ouHandle: cp-declarative-ou
 type: email-smtp
 name: Control Plane Declarative Email Sender
 host: localhost

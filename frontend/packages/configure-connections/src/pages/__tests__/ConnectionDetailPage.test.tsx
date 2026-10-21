@@ -253,6 +253,10 @@ vi.mock('../../api/useGetConnectionUsages', () => ({
   default: () => ({data: {totalResults: 0, count: 0, summary: {}, usages: []}, isLoading: false}),
 }));
 
+vi.mock('../../components/OrganizationUnitSection', () => ({
+  default: ({ouId}: {ouId: string}) => <section aria-label="Organization unit" data-ou-id={ouId} />,
+}));
+
 vi.mock('../../components/ConnectionForm', () => ({
   default: function StubConnectionForm({
     onFieldChange,
@@ -451,6 +455,31 @@ describe('ConnectionDetailPage', () => {
     expect(screen.getByDisplayValue('g1')).toBeInTheDocument();
     expect(screen.getByText('Unique identifier for this connection.')).toBeInTheDocument();
     expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
+  });
+
+  it('shows the Organization unit card for the connection owner', () => {
+    mockConn.data = {...CONNECTION, ouId: 'ou-1'};
+    render(<ConnectionDetailPage />);
+    expect(screen.getByRole('region', {name: 'Organization unit'})).toHaveAttribute('data-ou-id', 'ou-1');
+  });
+
+  it.each([
+    ['google', CONNECTION],
+    ['oidc', OIDC_CONNECTION],
+    ['twilio', TWILIO_CONNECTION],
+    ['authzen-pdp', AUTHZEN_PDP_CONNECTION],
+    ['http', HTTP_CONNECTION],
+  ])('shows the Organization unit card for a %s connection', (type, connection) => {
+    mockParams.type = type;
+    mockParams.id = connection.id;
+    mockConn.data = {...connection, ouId: 'ou-9'};
+    render(<ConnectionDetailPage />);
+    expect(screen.getByRole('region', {name: 'Organization unit'})).toHaveAttribute('data-ou-id', 'ou-9');
+  });
+
+  it('omits the Organization unit card when the response carries no owner', () => {
+    render(<ConnectionDetailPage />);
+    expect(screen.queryByRole('region', {name: 'Organization unit'})).not.toBeInTheDocument();
   });
 
   it('sets the browser tab title to the connection name', async () => {

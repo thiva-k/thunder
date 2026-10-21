@@ -82,6 +82,8 @@ const (
 	ResourceTypeGroup                = "group"
 	ResourceTypeIDP                  = "idp"
 	ResourceTypeNotificationSender   = "notificationSender"
+	ResourceTypeAuthZENPDPConnection = "authzenPdpConnection"
+	ResourceTypeHTTPConnection       = "httpConnection"
 	ResourceTypeNotificationTemplate = "notificationTemplate"
 	ResourceTypeOU                   = "organizationUnit"
 	ResourceTypeProject              = "project"

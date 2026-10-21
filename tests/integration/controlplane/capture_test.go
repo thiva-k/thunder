@@ -276,6 +276,7 @@ func (ts *ControlPlaneTestSuite) TestAWrittenConnectionsSecretReachesTheDefaultG
 	idpID, err := testutils.CreateIDP(testutils.IDP{
 		Name: name,
 		Type: "GOOGLE",
+		OUID: ts.ouID,
 		Properties: []testutils.IDPProperty{
 			{Name: "client_id", Value: unique("cp-capture-google-client")},
 			{Name: "client_secret", Value: clientSecret, IsSecret: true},

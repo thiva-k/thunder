@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -27,6 +29,7 @@ import (
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/connection/authzenpdpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/connection/httpconnectionmock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/notification/notificationmock"
@@ -60,8 +63,18 @@ func newConnectionTestHandler(t *testing.T) (*handler, *idpmock.IDPServiceInterf
 	mockNotif := notificationmock.NewNotificationSenderMgtSvcInterfaceMock(t)
 	return newHandler(newService(
 		mockIDP, mockNotif, &testResourceServerLister{},
-		&authZENPDPServiceStub{}, newHTTPConnectionServiceMock(t),
+		newAuthZENPDPServiceMock(t), newHTTPConnectionServiceMock(t),
 	)), mockIDP, mockNotif
+}
+
+// newAuthZENPDPServiceMock returns an AuthZEN PDP service mock that lists no connections, for tests that list every
+// connection category.
+func newAuthZENPDPServiceMock(t *testing.T) *authzenpdpmock.AuthZENPDPServiceInterfaceMock {
+	t.Helper()
+	mockPDP := authzenpdpmock.NewAuthZENPDPServiceInterfaceMock(t)
+	mockPDP.On("ListAuthZENPDPs", mock.Anything).
+		Return([]authzenpdp.AuthZENPDPConnection{}, (*tidcommon.ServiceError)(nil)).Maybe()
+	return mockPDP
 }
 
 // newHTTPConnectionServiceMock returns an HTTP connection service mock that lists no connections,
@@ -92,7 +105,7 @@ type InitTestSuite struct {
 	mockIDP      *idpmock.IDPServiceInterfaceMock
 	mockNotif    *notificationmock.NotificationSenderMgtSvcInterfaceMock
 	mockResource *testResourceServerLister
-	authZENPDP   *authZENPDPServiceStub
+	authZENPDP   *authzenpdpmock.AuthZENPDPServiceInterfaceMock
 	mockHTTP     *httpconnectionmock.HTTPConnectionServiceInterfaceMock
 }
 
@@ -102,19 +115,58 @@ func TestInitSuite(t *testing.T) {
 
 func (s *InitTestSuite) SetupTest() {
 	initConfigWithTestCryptoKey(s.T())
-	s.authZENPDP = &authZENPDPServiceStub{}
+	s.authZENPDP = authzenpdpmock.NewAuthZENPDPServiceInterfaceMock(s.T())
 	s.mockIDP = idpmock.NewIDPServiceInterfaceMock(s.T())
 	s.mockNotif = notificationmock.NewNotificationSenderMgtSvcInterfaceMock(s.T())
 	s.mockResource = &testResourceServerLister{}
 	s.mockHTTP = httpconnectionmock.NewHTTPConnectionServiceInterfaceMock(s.T())
 	s.mux = http.NewServeMux()
-	_, err := Initialize(s.mux, nil, s.mockIDP, s.mockNotif, s.mockResource,
+	_, _, err := Initialize(s.mux, nil, s.mockIDP, s.mockNotif, s.mockResource,
 		s.authZENPDP, s.mockHTTP, nil)
 	s.Require().NoError(err)
 }
 
 func (s *InitTestSuite) TearDownTest() {
 	config.ResetServerRuntime()
+}
+
+func (s *InitTestSuite) TestInitializeFailsWhenDeclarativeResourcesCannotBeLoaded() {
+	testDir := s.T().TempDir()
+	connectionsDir := filepath.Join(testDir, "config", "resources", "connections")
+	s.Require().NoError(os.MkdirAll(connectionsDir, 0750))
+	s.Require().NoError(os.WriteFile(filepath.Join(connectionsDir, "invalid.yaml"),
+		[]byte("invalid yaml content: ["), 0600))
+
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(testDir, &config.Config{
+		DeclarativeResources: config.DeclarativeResources{Enabled: true},
+	}))
+
+	exporter, provider, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource,
+		s.authZENPDP, s.mockHTTP, nil)
+
+	s.ErrorContains(err, "failed to load connection resources")
+	s.Nil(exporter)
+	s.Nil(provider)
+}
+
+func (s *InitTestSuite) TestInitializeFailsWhenADeclarativeConnectionIsInvalid() {
+	testDir := s.T().TempDir()
+	connectionsDir := filepath.Join(testDir, "config", "resources", "connections")
+	s.Require().NoError(os.MkdirAll(connectionsDir, 0750))
+	pdpDoc := "id: pdp-1\ntype: authzen-pdp\nname: Production PDP\n" +
+		"endpoint: http://localhost:3592/access/v1/evaluation\n"
+	s.Require().NoError(os.WriteFile(filepath.Join(connectionsDir, "pdp.yaml"), []byte(pdpDoc), 0600))
+
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(testDir, &config.Config{
+		DeclarativeResources: config.DeclarativeResources{Enabled: true},
+	}))
+
+	_, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource, nil, s.mockHTTP, nil)
+
+	s.ErrorContains(err, "failed to load connection resources")
+	s.ErrorContains(err, "needs an organization unit")
 }
 
 func (s *InitTestSuite) TestRouteTable() {
@@ -190,15 +242,20 @@ func (s *InitTestSuite) TestRouteTable() {
 	s.mockNotif.On("GetSenderUsages", mock.Anything, "sm-1").
 		Return(emptyUsages, (*tidcommon.ServiceError)(nil))
 
-	s.authZENPDP.connection = &authzenpdp.AuthZENPDPConnection{
+	pdp := &authzenpdp.AuthZENPDPConnection{
 		ID:            "pdp-1",
 		Name:          "PDP",
 		Endpoint:      "https://pdp.example.com/access/v1/evaluation",
 		BatchEndpoint: "https://pdp.example.com/access/v1/evaluations",
 	}
-	s.authZENPDP.connections = []authzenpdp.AuthZENPDPConnection{*s.authZENPDP.connection}
-	s.authZENPDP.createResult = &authzenpdp.AuthZENPDPConnection{ID: "pdp-new", Name: "PDP-new"}
-	s.authZENPDP.updateResult = s.authZENPDP.connection
+	s.authZENPDP.On("GetAuthZENPDP", mock.Anything, "pdp-1").Return(pdp, (*tidcommon.ServiceError)(nil))
+	s.authZENPDP.On("ListAuthZENPDPs", mock.Anything).
+		Return([]authzenpdp.AuthZENPDPConnection{*pdp}, (*tidcommon.ServiceError)(nil))
+	s.authZENPDP.On("CreateAuthZENPDPConnection", mock.Anything, mock.Anything).
+		Return(&authzenpdp.AuthZENPDPConnection{ID: "pdp-new", Name: "PDP-new"}, (*tidcommon.ServiceError)(nil))
+	s.authZENPDP.On("UpdateAuthZENPDPConnection", mock.Anything, "pdp-1", mock.Anything).
+		Return(pdp, (*tidcommon.ServiceError)(nil))
+	s.authZENPDP.On("DeleteAuthZENPDPConnection", mock.Anything, "pdp-1").Return((*tidcommon.ServiceError)(nil))
 
 	httpConnection := &httpconnection.HTTPConnection{ID: "http-1", Name: "Risk",
 		URL: "https://risk.example.com/evaluate", TimeoutMS: 10000}

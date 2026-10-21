@@ -1777,7 +1777,7 @@ const translations = {
     'errors.OU-1004': 'An organization unit with the same name already exists under the same parent.',
     'errors.OU-1005': 'The selected parent organization unit could not be found.',
     'errors.OU-1006':
-      'This organization unit has child units, users, or groups and cannot be deleted while they exist.',
+      'This organization unit has child units, users, groups, or connections and cannot be deleted while they exist.',
     'errors.OU-1007': 'This parent selection would create a circular dependency in the organization hierarchy.',
     'errors.OU-1008': 'An organization unit with the same handle already exists under the same parent.',
     'errors.OU-1012': 'This organization unit is managed by configuration and cannot be modified or deleted.',
@@ -2210,6 +2210,7 @@ const translations = {
     'wizard.steps.type': 'Connection type',
     'wizard.steps.name': 'Details',
     'wizard.steps.configure': 'Configure',
+    'wizard.organizationUnit.required': 'Your session does not name an organization unit. Sign out and sign in again.',
     'wizard.type.heading': 'What kind of connection do you want to add?',
     'wizard.type.subheading':
       "Custom connections aren't in the vendor catalog. Pick the type of integration you want to wire up.",
@@ -2271,6 +2272,12 @@ const translations = {
     'detail.quickCopy.description': 'Copy connection identifiers for use in your integration.',
     'detail.connectionId': 'Connection ID',
     'detail.connectionId.hint': 'Unique identifier for this connection.',
+    'detail.organizationUnit.title': 'Organization unit',
+    'detail.organizationUnit.description': 'The organization unit this connection belongs to.',
+    'detail.organizationUnit.handleLabel': 'Handle',
+    'detail.organizationUnit.idLabel': 'ID',
+    'detail.organizationUnit.copyHandle': 'Copy handle',
+    'detail.organizationUnit.copyId': 'Copy organization unit ID',
     'detail.credentials.title': 'Credentials',
     'detail.credentials.description': 'Credentials and endpoints for this connection. Secrets are stored write-only.',
     'detail.configuration.title': 'Connection configuration',
@@ -2633,6 +2640,9 @@ const translations = {
     'errors.CON-1021':
       'The authentication settings are not valid. Check the method and enter every required credential. After changing the URL origin, enter the password again.',
     'errors.CON-1022': 'Enter a description of at most 500 characters.',
+    'errors.CON-1023': 'The selected organization unit no longer exists. Choose another one and try again.',
+    'errors.CON-1024': "A connection's organization unit can't be changed once it is created.",
+    'errors.CON-1025': 'Choose an organization unit for this connection.',
     'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
     'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
     'errors.IDP-1003': 'The identity provider name is invalid or missing.',
@@ -2647,12 +2657,18 @@ const translations = {
     'errors.IDP-1012': "This identity provider's attribute configuration is invalid.",
     'errors.IDP-1013':
       'This identity provider cannot be deleted because other resources depend on it. Remove or reassign them first.',
+    'errors.IDP-1014': 'The selected organization unit no longer exists. Choose another one and try again.',
+    'errors.IDP-1015': "An identity provider's organization unit can't be changed once it is created.",
+    'errors.IDP-1016': 'Choose an organization unit for this identity provider.',
     'errors.MNS-1001': 'This connection no longer exists. It may have already been deleted.',
     'errors.MNS-1002': 'The connection ID is invalid or missing.',
     'errors.MNS-1004': 'The selected SMS provider is invalid or unsupported.',
     'errors.MNS-1005': 'A connection with this name already exists.',
     'errors.MNS-1016':
       'This connection cannot be deleted because other resources depend on it. Remove or reassign them first.',
+    'errors.MNS-1018': 'The selected organization unit no longer exists. Choose another one and try again.',
+    'errors.MNS-1019': "A connection's organization unit can't be changed once it is created.",
+    'errors.MNS-1020': 'Choose an organization unit for this connection.',
   },
 
   // ============================================================================
@@ -2728,6 +2744,9 @@ const translations = {
     'errors.IDP-1012': "This trusted issuer's attribute configuration is invalid.",
     'errors.IDP-1013':
       'This trusted issuer cannot be deleted because other resources depend on it. Remove or reassign them first.',
+    'errors.IDP-1014': 'The selected organization unit no longer exists. Choose another one and try again.',
+    'errors.IDP-1015': "A trusted issuer's organization unit can't be changed once it is created.",
+    'errors.IDP-1016': 'Choose an organization unit for this trusted issuer.',
   },
 
   // ============================================================================

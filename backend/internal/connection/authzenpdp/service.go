@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -36,6 +37,7 @@ type AuthZENPDPServiceInterface interface {
 	DeleteAuthZENPDPConnection(ctx context.Context, id string) *tidcommon.ServiceError
 	ListAuthZENPDPs(ctx context.Context) ([]AuthZENPDPConnection, *tidcommon.ServiceError)
 	GetAuthZENPDP(ctx context.Context, id string) (*AuthZENPDPConnection, *tidcommon.ServiceError)
+	ResolveConnectionOU(ctx context.Context, connection *AuthZENPDPConnection) *tidcommon.ServiceError
 }
 
 // AuthZENPDPService provides storage operations for AuthZEN PDP connections.
@@ -44,6 +46,7 @@ type AuthZENPDPService struct {
 	defaults      config.AuthZENPDPConfig
 	transactioner providers.Transactioner
 	entityTypes   entitytype.EntityTypeServiceInterface
+	ouResolver    connectionou.ResolverInterface
 	logger        *log.Logger
 }
 
@@ -57,12 +60,14 @@ func newAuthZENPDPService(
 	defaults config.AuthZENPDPConfig,
 	transactioner providers.Transactioner,
 	entityTypes entitytype.EntityTypeServiceInterface,
+	ouResolver connectionou.ResolverInterface,
 ) *AuthZENPDPService {
 	return &AuthZENPDPService{
 		store:         store,
 		defaults:      defaults,
 		transactioner: transactioner,
 		entityTypes:   entityTypes,
+		ouResolver:    ouResolver,
 		logger:        log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthZENPDPService")),
 	}
 }
@@ -86,6 +91,9 @@ func (s *AuthZENPDPService) CreateAuthZENPDPConnection(
 		return nil, &ErrorInvalidEndpoint
 	}
 	if svcErr := s.validateSubjectAttributeMappings(ctx, connection.SubjectAttributeMappings); svcErr != nil {
+		return nil, svcErr
+	}
+	if svcErr := s.ResolveConnectionOU(ctx, &connection); svcErr != nil {
 		return nil, svcErr
 	}
 	if connection.ID == "" {
@@ -164,6 +172,12 @@ func (s *AuthZENPDPService) UpdateAuthZENPDPConnection(
 	if existing != nil && existing.ID != id {
 		return nil, &ErrorAlreadyExists
 	}
+	// An owner cannot change. Leaving it out keeps the one the connection has.
+	ouID, ouErr := s.ouResolver.ResolveForUpdate(ctx, connection.OUID, connection.OUHandle, current.OUID)
+	if ouErr != nil {
+		return nil, ouErr
+	}
+	connection.OUID = ouID
 	connection.ID = id
 	if err := s.store.UpdateAuthZENPDP(ctx, id, connection); err != nil {
 		if errors.Is(err, ErrAuthZENPDPIsImmutable) {
@@ -180,6 +194,20 @@ func (s *AuthZENPDPService) UpdateAuthZENPDPConnection(
 		return nil, &tidcommon.InternalServerError
 	}
 	return updated, nil
+}
+
+// ResolveConnectionOU sets the organization unit an AuthZEN PDP connection is owned by. The owner is named by id or by
+// handle, and a handle is resolved to the id of the unit it names; when both are given the id wins. A connection has to
+// name an organization unit, and it has to exist.
+func (s *AuthZENPDPService) ResolveConnectionOU(
+	ctx context.Context, connection *AuthZENPDPConnection,
+) *tidcommon.ServiceError {
+	ouID, svcErr := s.ouResolver.Resolve(ctx, connection.OUID, connection.OUHandle)
+	if svcErr != nil {
+		return svcErr
+	}
+	connection.OUID = ouID
+	return nil
 }
 
 // DeleteAuthZENPDPConnection deletes an AuthZEN PDP connection.
@@ -373,6 +401,8 @@ func ConnectionFromRequest(req ConnectionRequest, defaults config.AuthZENPDPConf
 		ID:                       req.ID,
 		Name:                     strings.TrimSpace(req.Name),
 		Description:              req.Description,
+		OUID:                     req.OUID,
+		OUHandle:                 req.OUHandle,
 		Endpoint:                 req.Endpoint,
 		BatchEndpoint:            req.BatchEndpoint,
 		TimeoutMS:                timeoutMS,

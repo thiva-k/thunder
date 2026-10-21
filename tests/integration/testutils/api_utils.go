@@ -311,6 +311,29 @@ func FindBootstrapOUID() (string, error) {
 	return "", errors.New("bootstrap organization unit with handle 'default' not found")
 }
 
+var (
+	connectionOUIDMu    sync.Mutex
+	connectionOUIDCache string
+)
+
+// DefaultConnectionOUID returns the organization unit that owns the identity-provider connections the shared
+// create helpers (CreateIDP) make when the caller names none. Every identity-provider connection needs an
+// owning organization unit, so these helpers use the long-lived bootstrap `default` one, which outlives every
+// suite and never blocks a suite's own OU cleanup. The id is looked up once per process.
+func DefaultConnectionOUID() (string, error) {
+	connectionOUIDMu.Lock()
+	defer connectionOUIDMu.Unlock()
+	if connectionOUIDCache != "" {
+		return connectionOUIDCache, nil
+	}
+	ouID, err := FindBootstrapOUID()
+	if err != nil {
+		return "", err
+	}
+	connectionOUIDCache = ouID
+	return ouID, nil
+}
+
 var errAgentTypeHandleConflict = errors.New("agent type handle conflict")
 
 func postAgentType(schema UserType) (string, error) {
@@ -930,6 +953,9 @@ func idpToConnectionBody(idp IDP) map[string]interface{} {
 		"name":        idp.Name,
 		"description": idp.Description,
 	}
+	if idp.OUID != "" {
+		body["ouId"] = idp.OUID
+	}
 	for _, prop := range idp.Properties {
 		switch prop.Name {
 		case "scopes":
@@ -963,6 +989,9 @@ func connectionBodyToIDP(idpType string, resp map[string]interface{}) *IDP {
 	if desc, ok := resp["description"].(string); ok {
 		idp.Description = desc
 	}
+	if ouID, ok := resp["ouId"].(string); ok {
+		idp.OUID = ouID
+	}
 	for propName, field := range idpPropertyToConnectionField {
 		if value, ok := resp[field].(string); ok && value != "" {
 			idp.Properties = append(idp.Properties, IDPProperty{Name: propName, Value: value})
@@ -995,6 +1024,12 @@ func CreateIDP(idp IDP) (string, error) {
 	vendor, err := idpVendorPath(idp.Type)
 	if err != nil {
 		return "", err
+	}
+
+	if idp.OUID == "" {
+		if idp.OUID, err = DefaultConnectionOUID(); err != nil {
+			return "", fmt.Errorf("failed to resolve the connection organization unit: %w", err)
+		}
 	}
 
 	bodyJSON, err := json.Marshal(idpToConnectionBody(idp))
@@ -2497,6 +2532,9 @@ func senderToConnectionBody(sender NotificationSender) (map[string]interface{}, 
 		"name":        sender.Name,
 		"description": sender.Description,
 	}
+	if sender.OUID != "" {
+		body["ouId"] = sender.OUID
+	}
 	for _, prop := range sender.Properties {
 		if prop.Name == "http_headers" {
 			body["httpHeaders"] = prop.Value
@@ -2515,6 +2553,12 @@ func CreateNotificationSender(sender NotificationSender) (string, error) {
 	vendor, err := senderVendorPath(sender.Provider)
 	if err != nil {
 		return "", err
+	}
+
+	if sender.OUID == "" {
+		if sender.OUID, err = DefaultConnectionOUID(); err != nil {
+			return "", fmt.Errorf("failed to resolve the connection organization unit: %w", err)
+		}
 	}
 
 	body, err := senderToConnectionBody(sender)
@@ -2606,6 +2650,13 @@ func CreateSTARTTLSEmailProvider(name, host string, port int, fromAddress, usern
 
 // createSMTPEmailProvider posts body to /connections/email-smtp and returns the new provider's ID.
 func createSMTPEmailProvider(body map[string]interface{}) (string, error) {
+	if _, ok := body["ouId"]; !ok {
+		ouID, err := DefaultConnectionOUID()
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve the connection organization unit: %w", err)
+		}
+		body["ouId"] = ouID
+	}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal SMTP connection body: %w", err)
@@ -2681,6 +2732,63 @@ func DeleteNotificationSender(senderID string) error {
 	senderVendorRegistryMu.Lock()
 	delete(senderVendorRegistry, senderID)
 	senderVendorRegistryMu.Unlock()
+	return nil
+}
+
+// CreateAuthZENPDPConnection creates an AuthZEN PDP connection owned by ouID via /connections/authzen-pdp and
+// returns its ID.
+func CreateAuthZENPDPConnection(name, ouID, endpoint string) (string, error) {
+	bodyJSON, err := json.Marshal(map[string]interface{}{"name": name, "ouId": ouID, "endpoint": endpoint})
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal connection body: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", TestServerURL+"/connections/authzen-pdp", bytes.NewReader(bodyJSON))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(bodyBytes, &created); err != nil || created.ID == "" {
+		return "", fmt.Errorf("response does not contain an id. Response: %s", string(bodyBytes))
+	}
+	return created.ID, nil
+}
+
+// DeleteAuthZENPDPConnection deletes an AuthZEN PDP connection by ID.
+func DeleteAuthZENPDPConnection(id string) error {
+	req, err := http.NewRequest("DELETE", TestServerURL+"/connections/authzen-pdp/"+id, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	resp, err := GetHTTPClient().Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete AuthZEN PDP connection: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 200 or 204, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
 	return nil
 }
 

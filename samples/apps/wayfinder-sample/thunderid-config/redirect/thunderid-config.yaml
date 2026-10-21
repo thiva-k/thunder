@@ -143,6 +143,7 @@ resources:
 resource_type: connection
 id: 0193b0a1-1002-7000-8000-000000000001
 name: Wayfinder Mock SMTP
+ouHandle: default
 description: Mock SMTP server that the Wayfinder sample's email steps send through
 type: email-smtp
 host: 127.0.0.1

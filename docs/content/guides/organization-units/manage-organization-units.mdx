@@ -338,7 +338,7 @@ curl -kL -G "https://localhost:8090/groups" \
 2. Click **Delete** and confirm.
 
 :::warning
-Deletion fails if the OU still contains users, groups, user types, agent types, or child OUs. Delete or reassign all contained resources before deleting the OU.
+Deletion fails if the OU still contains users, groups, user types, agent types, connections, or child OUs. Delete or reassign all contained resources before deleting the OU. A connection cannot be moved to another OU, so delete the connections the OU owns first.
 :::
 
 To delete an OU using the API by its ID:
@@ -360,3 +360,4 @@ curl -kL -X DELETE "https://localhost:8090/organization-units/tree/{path}" \
 - [User Types](../../users/user-types) - User types are scoped to an organization unit
 - [Users](../../users/manage-users) - Each user belongs to an organization unit
 - [Groups](../../users/manage-groups) - Each group belongs to an organization unit
+- [Connections](../../identity-providers/manage-identity-providers#organization-unit-ownership) - Each connection belongs to an organization unit

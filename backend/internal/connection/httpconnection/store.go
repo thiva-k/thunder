@@ -46,7 +46,7 @@ func (s *httpConnectionStore) CreateHTTPConnection(ctx context.Context, connecti
 		return err
 	}
 	_, err = dbClient.ExecuteContext(ctx, queryCreateHTTPConnection,
-		connection.ID, connection.Name, connection.Description, properties, deployment.Resolve(ctx))
+		connection.ID, connection.Name, connection.Description, connection.OUID, properties, deployment.Resolve(ctx))
 	return nameConflictOr(err)
 }
 
@@ -185,6 +185,7 @@ func buildHTTPConnectionFromRow(row map[string]interface{}) (HTTPConnection, err
 		ID:             sysutils.ConvertInterfaceValueToString(row["id"]),
 		Name:           sysutils.ConvertInterfaceValueToString(row["name"]),
 		Description:    sysutils.ConvertInterfaceValueToString(row["description"]),
+		OUID:           sysutils.ConvertInterfaceValueToString(row["ou_id"]),
 		URL:            properties.URL,
 		TimeoutMS:      properties.TimeoutMS,
 		Headers:        properties.Headers,

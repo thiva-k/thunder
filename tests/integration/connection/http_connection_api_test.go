@@ -69,6 +69,7 @@ type httpConnAuthentication struct {
 // explicit zero timeout use a map instead, since omitempty drops it.
 type httpConnRequest struct {
 	Name           string                  `json:"name"`
+	OUID           string                  `json:"ouId,omitempty"`
 	Description    string                  `json:"description,omitempty"`
 	URL            string                  `json:"url"`
 	TimeoutMS      int                     `json:"timeoutMs,omitempty"`
@@ -80,6 +81,7 @@ type httpConnRequest struct {
 type httpConnResponse struct {
 	ID             string                 `json:"id"`
 	Name           string                 `json:"name"`
+	OUID           string                 `json:"ouId"`
 	Description    string                 `json:"description"`
 	Type           string                 `json:"type"`
 	URL            string                 `json:"url"`
@@ -137,6 +139,7 @@ func noneConnAuth() *httpConnAuthentication {
 // connection yet, so AC2.2 is proven by the stored record, which only SQLite lets the harness read.
 type HTTPConnectionAPITestSuite struct {
 	suite.Suite
+	ouID       string
 	createdIDs []string
 }
 
@@ -152,6 +155,14 @@ func (s *HTTPConnectionAPITestSuite) TestStoredRowChecksNeedSQLite() {
 	}
 }
 
+func (s *HTTPConnectionAPITestSuite) SetupSuite() {
+	ouID, err := testutils.CreateOrganizationUnit(testutils.OrganizationUnit{
+		Handle: "http-conn-api-ou", Name: "HTTP Connection API OU",
+	})
+	s.Require().NoError(err, "failed to create organization unit")
+	s.ouID = ouID
+}
+
 func (s *HTTPConnectionAPITestSuite) TearDownSuite() {
 	// Connections a test already deleted answer 404 here, which is expected.
 	for i := len(s.createdIDs) - 1; i >= 0; i-- {
@@ -164,12 +175,17 @@ func (s *HTTPConnectionAPITestSuite) TearDownSuite() {
 			s.T().Logf("failed to delete HTTP connection %s: %d %s", s.createdIDs[i], res.status, string(res.body))
 		}
 	}
+	if s.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(s.ouID); err != nil {
+			s.T().Logf("failed to delete organization unit: %v", err)
+		}
+	}
 }
 
 // post sends a create request and tracks anything it created for teardown, whatever the test expected.
 func (s *HTTPConnectionAPITestSuite) post(body interface{}) httpResult {
 	s.T().Helper()
-	res, err := doRequest(http.MethodPost, httpConnPath, body)
+	res, err := doRequest(http.MethodPost, httpConnPath, ownedBy(s.T(), s.ouID, body))
 	s.Require().NoError(err, "Create HTTP connection request failed")
 	if res.status == http.StatusCreated {
 		var created httpConnResponse

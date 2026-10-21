@@ -6,8 +6,10 @@ package notification
 import (
 	"context"
 
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/notification/client"
 	notificationconfig "github.com/thunder-id/thunderid/internal/notification/config"
+	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -20,7 +22,8 @@ import (
 // type. This package no longer registers any HTTP routes; its services are consumed internally
 // by authn, flow executors, and the connection/importer packages. It also returns the handler of
 // the "notification" server-config section.
-func Initialize(jwtService jwt.JWTServiceInterface, cfg notificationconfig.Config) (
+func Initialize(jwtService jwt.JWTServiceInterface, cfg notificationconfig.Config,
+	ouService ou.OrganizationUnitServiceInterface) (
 	NotificationSenderMgtSvcInterface, OTPServiceInterface, NotificationSenderServiceInterface,
 	serverconfig.ServerConfigHandlerInterface, error) {
 	var notificationStore notificationStoreInterface
@@ -39,7 +42,12 @@ func Initialize(jwtService jwt.JWTServiceInterface, cfg notificationconfig.Confi
 		}
 	}
 
-	mgtService := newNotificationSenderMgtService(notificationStore, tx)
+	ouResolver := connectionou.Initialize(ouService, connectionou.Errors{
+		Required: ErrorSenderOURequired,
+		NotFound: ErrorInvalidSenderOU,
+		Changed:  ErrorSenderOUUpdateNotAllowed,
+	})
+	mgtService := newNotificationSenderMgtService(notificationStore, tx, ouResolver)
 
 	clientFactory := client.Initialize()
 	otpService := newOTPService(jwtService, cfg)

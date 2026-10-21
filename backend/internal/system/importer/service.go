@@ -20,11 +20,14 @@ import (
 	appmodel "github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/connection"
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	flowmgt "github.com/thunder-id/thunderid/internal/flow/mgt"
 	"github.com/thunder-id/thunderid/internal/group"
+	"github.com/thunder-id/thunderid/internal/idp"
+	"github.com/thunder-id/thunderid/internal/notification"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/notificationtemplate"
 	"github.com/thunder-id/thunderid/internal/ou"
@@ -59,6 +62,7 @@ type idpAdapter interface {
 		*tidcommon.ServiceError,
 	)
 	DeleteIdentityProvider(ctx context.Context, idpID string) *tidcommon.ServiceError
+	ResolveIdentityProviderOU(ctx context.Context, idp *providers.IDPDTO) *tidcommon.ServiceError
 }
 
 // senderAdapter is the subset of notification.NotificationSenderMgtSvcInterface the importer
@@ -74,6 +78,7 @@ type senderAdapter interface {
 		*tidcommon.ServiceError,
 	)
 	DeleteSender(ctx context.Context, id string) *tidcommon.ServiceError
+	ResolveSenderOU(ctx context.Context, sender *ncommon.NotificationSenderDTO) *tidcommon.ServiceError
 }
 
 // authZENPDPAdapter defines the AuthZEN PDP connection operations required by the importer.
@@ -89,6 +94,7 @@ type authZENPDPAdapter interface {
 		request authzenpdp.ConnectionRequest,
 	) (*authzenpdp.AuthZENPDPConnection, *tidcommon.ServiceError)
 	DeleteAuthZENPDPConnection(ctx context.Context, id string) *tidcommon.ServiceError
+	ResolveConnectionOU(ctx context.Context, connection *authzenpdp.AuthZENPDPConnection) *tidcommon.ServiceError
 }
 
 type flowAdapter interface {
@@ -657,6 +663,9 @@ func (s *importService) importConnectionAuthZENPDP(
 	if s.authZENPDPService == nil {
 		return unsupportedAdapterOutcome(resourceTypeConnection, "AuthZEN PDP")
 	}
+	if svcErr := s.authZENPDPService.ResolveConnectionOU(ctx, req); svcErr != nil {
+		return authZENPDPImportServiceError(req, operationCreate, svcErr)
+	}
 	if options.IsUpsertEnabled() && req.ID != "" {
 		existing, svcErr := s.authZENPDPService.GetAuthZENPDP(ctx, req.ID)
 		if svcErr != nil {
@@ -664,6 +673,11 @@ func (s *importService) importConnectionAuthZENPDP(
 		}
 		if existing != nil {
 			if dryRun {
+				// The owner cannot change, so an update that names another one is refused here as the real apply
+				// would refuse it.
+				if existing.OUID != req.OUID {
+					return authZENPDPImportServiceError(req, operationUpdate, &connectionou.ErrorOUUpdateNotAllowed)
+				}
 				return successOutcome(resourceTypeConnection, req.ID, req.Name, operationUpdate)
 			}
 			if _, svcErr := s.authZENPDPService.UpdateAuthZENPDPConnection(
@@ -690,6 +704,8 @@ func authZENPDPConnectionRequest(connection *authzenpdp.AuthZENPDPConnection) au
 		ID:                       connection.ID,
 		Name:                     connection.Name,
 		Description:              connection.Description,
+		OUID:                     connection.OUID,
+		OUHandle:                 connection.OUHandle,
 		Endpoint:                 connection.Endpoint,
 		BatchEndpoint:            connection.BatchEndpoint,
 		TimeoutMS:                connection.TimeoutMS,
@@ -725,10 +741,20 @@ func (s *importService) importConnectionIDP(
 		}
 	}
 
+	if svcErr := s.idpService.ResolveIdentityProviderOU(ctx, req); svcErr != nil {
+		return serviceErrorOutcome(resourceTypeConnection, req.ID, req.Name, operationCreate, svcErr)
+	}
+
 	if dryRun {
 		if options.IsUpsertEnabled() && req.ID != "" {
-			_, svcErr := s.idpService.GetIdentityProvider(ctx, req.ID)
+			existing, svcErr := s.idpService.GetIdentityProvider(ctx, req.ID)
 			if svcErr == nil {
+				// The owner cannot change, so an update that names another one is refused here as the real apply
+				// would refuse it.
+				if existing != nil && existing.OUID != req.OUID {
+					return serviceErrorOutcome(resourceTypeConnection, req.ID, req.Name, operationUpdate,
+						&idp.ErrorIDPOUUpdateNotAllowed)
+				}
 				return successOutcome(resourceTypeConnection, req.ID, req.Name, operationUpdate)
 			}
 
@@ -799,10 +825,18 @@ func (s *importService) importConnectionSender(
 		}
 	}
 
+	if svcErr := s.senderService.ResolveSenderOU(ctx, req); svcErr != nil {
+		return serviceErrorOutcome(resourceTypeConnection, req.ID, req.Name, operationCreate, svcErr)
+	}
+
 	if dryRun {
 		if options.IsUpsertEnabled() && req.ID != "" {
-			_, svcErr := s.senderService.GetSender(ctx, req.ID)
+			existing, svcErr := s.senderService.GetSender(ctx, req.ID)
 			if svcErr == nil {
+				if existing != nil && existing.OUID != req.OUID {
+					return serviceErrorOutcome(resourceTypeConnection, req.ID, req.Name, operationUpdate,
+						&notification.ErrorSenderOUUpdateNotAllowed)
+				}
 				return successOutcome(resourceTypeConnection, req.ID, req.Name, operationUpdate)
 			}
 

@@ -207,6 +207,7 @@ type IDP struct {
 	Name                   string                  `json:"name"`
 	Description            string                  `json:"description"`
 	Type                   string                  `json:"type"`
+	OUID                   string                  `json:"ouId,omitempty"`
 	Properties             []IDPProperty           `json:"properties"`
 	AttributeConfiguration *AttributeConfiguration `json:"attributeConfiguration,omitempty"`
 }
@@ -454,6 +455,7 @@ type NotificationSender struct {
 	Name        string           `json:"name"`
 	Description string           `json:"description"`
 	Provider    string           `json:"provider"`
+	OUID        string           `json:"ouId,omitempty"`
 	Properties  []SenderProperty `json:"properties"`
 }
 
