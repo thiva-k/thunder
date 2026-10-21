@@ -40,6 +40,7 @@ Controls the <ProductName /> server's network settings and identity.
 | `gateway.allow_private_addresses` | `false` | Whether a gateway may be registered at, and reached on, a loopback, link-local or private address such as `localhost`, `10.0.0.5` or `169.254.169.254`. Off, a base URL naming one is refused with `400` (`GTW-1027`), and a hostname that resolves to one is refused when the gateway is called, so this deployment's calls, which carry the gateway's key, cannot be pointed at something inside its own network. Turn it on for a local or single-host setup whose gateways sit on such addresses. A base URL must be `https` and carry no credentials whatever this is set to. |
 | `gateway.removal_confirmation_threshold` | `5` | How many resources an apply or revert may remove from a gateway without being confirmed. One that would remove more is refused with `409` (`GTW-1030`) unless the request sets `confirmRemovals`; a dry run shows the removals first. A rollback to a much smaller version is the usual case. `0` turns the check off. |
 | `gateway.store` | `composite` | Where gateways are read from. `mutable` is the database alone, and gateways declared in files are not read. `declarative` is files alone, and registration through the API is refused. `composite` is both: listings merge the two, registration writes to the database, and a gateway declared in a file cannot be changed or removed through the API, because the file is read again on every start and would undo it. |
+| `notification.template.store` | `composite` | Where notification templates are read from. `mutable` is the database alone, and templates are editable through the Console and API. `declarative` is files alone, and writes through the API are refused with `403`. `composite` is both: file-declared templates are read-only and are merged with editable database templates. |
 
 Resources are stored against this identifier, so it is fixed for the life of a deployment's data.
 
@@ -600,7 +601,7 @@ With environment variable substitution:
 Each document in the file must declare its type with a `resource_type: <type>` field. Supported types:
 
 ```text
-application, connection, flow, group, layout,
+application, connection, flow, group, layout, notification_template,
 organization_unit, resource_server, role, theme, translation, user, user_schema
 ```
 
@@ -702,7 +703,7 @@ declarativeResources:
 `singleFile.keys` and `configMap.items` / `secret.items` are mutually exclusive.
 :::
 
-Templates (email and other templated content) are now supported as a declarative resource. See the templates guide for schema, examples, and the configured directory location: [Template declarative resources](../guides/declarative-configurations/templates.mdx).
+Notification templates (email and SMS) are managed at runtime and are also supported as declarative resources (`resource_type: notification_template`). See [Notification Templates](../guides/notifications/templates.mdx) for authoring and Console management, and [Import Declarative Resources](../guides/declarative-configurations/import-resources.mdx#notification-templates) for the declarative schema.
 
 ## Resource Configuration
 
