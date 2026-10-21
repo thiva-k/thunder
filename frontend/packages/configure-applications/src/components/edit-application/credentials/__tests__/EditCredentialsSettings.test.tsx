@@ -306,6 +306,88 @@ describe('EditCredentialsSettings', () => {
       expect(screen.queryByDisplayValue('••••••••••••••••')).not.toBeInTheDocument();
     });
 
+    it('does not offer a Flow Secret to a JWT bearer-only mcp app', () => {
+      const jwtBearerOnlyConfig: OAuth2Config = {
+        clientId: 'jwt-bearer-123',
+        tokenEndpointAuthMethod: 'private_key_jwt',
+        publicClient: false,
+        grantTypes: ['urn:ietf:params:oauth:grant-type:jwt-bearer'],
+      } as OAuth2Config;
+
+      render(
+        <EditCredentialsSettings
+          application={buildApplication({type: 'mcp'})}
+          editedApp={{}}
+          oauth2Config={jwtBearerOnlyConfig}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.queryByLabelText('Flow secret')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('••••••••••••••••')).not.toBeInTheDocument();
+    });
+
+    it('does not offer a Flow Secret to a client_credentials and JWT bearer mcp app', () => {
+      const directTokenConfig: OAuth2Config = {
+        clientId: 'jwt-bearer-123',
+        tokenEndpointAuthMethod: 'private_key_jwt',
+        publicClient: false,
+        grantTypes: ['client_credentials', 'urn:ietf:params:oauth:grant-type:jwt-bearer'],
+      } as OAuth2Config;
+
+      render(
+        <EditCredentialsSettings
+          application={buildApplication({type: 'mcp'})}
+          editedApp={{}}
+          oauth2Config={directTokenConfig}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.queryByLabelText('Flow secret')).not.toBeInTheDocument();
+    });
+
+    it('offers a Flow Secret to a JWT bearer and token exchange mcp app', () => {
+      const exchangeConfig: OAuth2Config = {
+        clientId: 'jwt-bearer-123',
+        tokenEndpointAuthMethod: 'private_key_jwt',
+        publicClient: false,
+        grantTypes: ['urn:ietf:params:oauth:grant-type:jwt-bearer', 'urn:ietf:params:oauth:grant-type:token-exchange'],
+      } as OAuth2Config;
+
+      render(
+        <EditCredentialsSettings
+          application={buildApplication({type: 'mcp'})}
+          editedApp={{}}
+          oauth2Config={exchangeConfig}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByLabelText('Flow secret')).toBeInTheDocument();
+    });
+
+    it('shows the client secret, not a Flow Secret, for a confidential JWT bearer-only mcp app', () => {
+      const jwtBearerSecretConfig: OAuth2Config = {
+        clientId: 'jwt-bearer-123',
+        tokenEndpointAuthMethod: 'client_secret_basic',
+        publicClient: false,
+        grantTypes: ['urn:ietf:params:oauth:grant-type:jwt-bearer'],
+      } as OAuth2Config;
+
+      render(
+        <EditCredentialsSettings
+          application={buildApplication({type: 'mcp'})}
+          editedApp={{}}
+          oauth2Config={jwtBearerSecretConfig}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByLabelText('Client secret')).toHaveDisplayValue('••••••••••••••••');
+      expect(screen.queryByLabelText('Flow secret')).not.toBeInTheDocument();
+    });
+
     it('does not show a secret section for a redirect (authorization_code) app', () => {
       const redirectConfig: OAuth2Config = {
         clientId: 'redirect-123',

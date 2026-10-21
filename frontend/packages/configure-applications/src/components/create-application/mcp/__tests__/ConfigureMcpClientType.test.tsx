@@ -1,7 +1,8 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render, screen} from '@testing-library/react';
+import {render, screen, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
 import ConfigureMcpClientType from '../ConfigureMcpClientType';
 
@@ -217,8 +218,9 @@ describe('ConfigureMcpClientType', () => {
         />,
       );
 
-      expect(screen.getByText('Public client')).toBeInTheDocument();
-      expect(screen.queryByText('Confidential client')).not.toBeInTheDocument();
+      const userDelegatedPreview = screen.getByTestId('application-mcp-client-type-preview');
+      expect(within(userDelegatedPreview).getByText('Public client')).toBeInTheDocument();
+      expect(within(userDelegatedPreview).queryByText('Confidential client')).not.toBeInTheDocument();
 
       rerender(
         <ConfigureMcpClientType
@@ -229,8 +231,84 @@ describe('ConfigureMcpClientType', () => {
         />,
       );
 
-      expect(screen.queryByText('Public client')).not.toBeInTheDocument();
-      expect(screen.getByText('Confidential client')).toBeInTheDocument();
+      const m2mPreview = screen.getByTestId('application-mcp-client-type-preview');
+      expect(within(m2mPreview).queryByText('Public client')).not.toBeInTheDocument();
+      expect(within(m2mPreview).getByText('Confidential client')).toBeInTheDocument();
+    });
+  });
+
+  describe('confidential client switch', () => {
+    it('should show the confidential client switch, off by default, under the user-delegated card', () => {
+      render(
+        <ConfigureMcpClientType
+          selectedType="userDelegated"
+          onSelect={vi.fn()}
+          redirectUris={[]}
+          onRedirectUrisChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('checkbox', {name: 'Confidential client'})).not.toBeChecked();
+      expect(
+        screen.getByText(
+          'Turn on for clients with a backend that can keep a secret. Required to use identity assertions (ID-JAG).',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('should not show the confidential client switch for the machine-to-machine type', () => {
+      render(
+        <ConfigureMcpClientType
+          selectedType="m2m"
+          onSelect={vi.fn()}
+          redirectUris={[]}
+          onRedirectUrisChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByRole('checkbox', {name: 'Confidential client'})).not.toBeInTheDocument();
+    });
+
+    it('should report the new value when the confidential client switch is toggled', async () => {
+      const user = userEvent.setup();
+      const onConfidentialClientChange = vi.fn();
+      const onSelect = vi.fn();
+
+      render(
+        <ConfigureMcpClientType
+          selectedType="userDelegated"
+          onSelect={onSelect}
+          redirectUris={[]}
+          onRedirectUrisChange={vi.fn()}
+          confidentialClient={false}
+          onConfidentialClientChange={onConfidentialClientChange}
+        />,
+      );
+
+      await user.click(screen.getByRole('checkbox', {name: 'Confidential client'}));
+
+      expect(onConfidentialClientChange).toHaveBeenCalledWith(true);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('should preview a confidential client with an issued secret when the switch is on', () => {
+      render(
+        <ConfigureMcpClientType
+          selectedType="userDelegated"
+          onSelect={vi.fn()}
+          redirectUris={[]}
+          onRedirectUrisChange={vi.fn()}
+          confidentialClient
+          onConfidentialClientChange={vi.fn()}
+        />,
+      );
+
+      const preview = screen.getByTestId('application-mcp-client-type-preview');
+      expect(screen.getByRole('checkbox', {name: 'Confidential client'})).toBeChecked();
+      expect(within(preview).getByText('Confidential client')).toBeInTheDocument();
+      expect(within(preview).getByText('Client secret issued')).toBeInTheDocument();
+      expect(within(preview).queryByText('Public client')).not.toBeInTheDocument();
+      expect(within(preview).getByText('Refresh tokens')).toBeInTheDocument();
     });
   });
 });

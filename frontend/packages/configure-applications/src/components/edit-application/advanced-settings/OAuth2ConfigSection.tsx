@@ -40,6 +40,8 @@ import {
   getPublicClientCaption,
   hasUserAccess,
   isGrantItemDisabled,
+  isGrantLockedByIdJag,
+  isIdJagEnabled,
 } from '../../../utils/oauth2Rules';
 import BackchannelLogoutUriField from '../../common/BackchannelLogoutUriField';
 
@@ -305,8 +307,11 @@ export default function OAuth2ConfigSection({
     isPkceDisabledByGrants,
     isPkceForcedByPublicClient,
     isPublicClientDisabledByGrants,
+    isPublicClientDisabledByIdJag,
     isParDisabledByGrants,
   } = flags;
+  const isPublicClientDisallowed = isPublicClientDisabledByGrants || isPublicClientDisabledByIdJag;
+  const idJagEnabled = isIdJagEnabled(oauth2Config);
 
   return (
     <SettingsCard
@@ -335,16 +340,26 @@ export default function OAuth2ConfigSection({
               ) : (
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                   {selected.map((v) => (
-                    <Chip key={v} label={v} size="small" />
+                    <Chip key={v} label={getGrantTypeLabel(v, t)} size="small" />
                   ))}
                 </Stack>
               )
             }
           >
             {availableGrantTypes.map((grant) => (
-              <MenuItem key={grant} value={grant} disabled={isGrantItemDisabled(grant, grantTypes)}>
+              <MenuItem key={grant} value={grant} disabled={isGrantItemDisabled(grant, grantTypes, idJagEnabled)}>
                 <Checkbox checked={grantTypes.includes(grant)} size="small" />
-                <ListItemText primary={getGrantTypeLabel(grant, t)} />
+                <ListItemText
+                  primary={getGrantTypeLabel(grant, t)}
+                  secondary={
+                    isGrantLockedByIdJag(grant, grantTypes, idJagEnabled)
+                      ? t(
+                          'applications:edit.advanced.grantTypes.requiredByIdJag',
+                          'Required by identity assertions (ID-JAG)',
+                        )
+                      : undefined
+                  }
+                />
               </MenuItem>
             ))}
           </Select>
@@ -550,7 +565,7 @@ export default function OAuth2ConfigSection({
               <MenuItem
                 key={method}
                 value={method}
-                disabled={method === TokenEndpointAuthMethods.NONE && isPublicClientDisabledByGrants}
+                disabled={method === TokenEndpointAuthMethods.NONE && isPublicClientDisallowed}
               >
                 {method}
               </MenuItem>
@@ -623,7 +638,7 @@ export default function OAuth2ConfigSection({
             control={
               <Switch
                 checked={oauth2Config.publicClient ?? false}
-                disabled={!isEditable || isPublicClientLocked || isPublicClientDisabledByGrants}
+                disabled={!isEditable || isPublicClientLocked || isPublicClientDisallowed}
                 onChange={(e) => onOAuth2ConfigChange?.(applyPublicClientChange(oauth2Config, e.target.checked))}
                 inputProps={{'aria-label': t('applications:edit.advanced.labels.publicClient')}}
               />

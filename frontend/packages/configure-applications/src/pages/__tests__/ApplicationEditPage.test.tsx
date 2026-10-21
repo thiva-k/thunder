@@ -10,6 +10,7 @@ import useGetApplication from '../../api/useGetApplication';
 import useUpdateApplication from '../../api/useUpdateApplication';
 import EditAccessSettings from '../../components/edit-application/access/EditAccessSettings';
 import EditAdvancedSettings from '../../components/edit-application/advanced-settings/EditAdvancedSettings';
+import EditCredentialsSettings from '../../components/edit-application/credentials/EditCredentialsSettings';
 import EditCustomizationSettings from '../../components/edit-application/customization-settings/EditCustomizationSettings';
 import McpConnectTab from '../../components/edit-application/mcp/McpConnectTab';
 import EditOrganizationAccessSettings from '../../components/edit-application/organization-access/EditOrganizationAccessSettings';
@@ -171,14 +172,27 @@ vi.mock('../../components/edit-application/integration-guides/IntegrationGuides'
 }));
 
 vi.mock('../../components/edit-application/mcp/McpConnectTab', () => ({
-  default: vi.fn(({onValidationChange}: {onValidationChange?: (hasErrors: boolean) => void}) => (
-    <div data-testid="mcp-connect-tab">
-      Connect Tab
-      <button type="button" data-testid="mcp-connect-tab-report-invalid" onClick={() => onValidationChange?.(true)}>
-        Report invalid
-      </button>
-    </div>
-  )),
+  default: vi.fn(
+    ({
+      onValidationChange,
+      onGoToCredentials,
+    }: {
+      onValidationChange?: (hasErrors: boolean) => void;
+      onGoToCredentials?: () => void;
+    }) => (
+      <div data-testid="mcp-connect-tab">
+        Connect Tab
+        <button type="button" data-testid="mcp-connect-tab-report-invalid" onClick={() => onValidationChange?.(true)}>
+          Report invalid
+        </button>
+        {onGoToCredentials && (
+          <button type="button" data-testid="go-to-credentials" onClick={onGoToCredentials}>
+            Go to Credentials
+          </button>
+        )}
+      </div>
+    ),
+  ),
 }));
 
 vi.mock('@thunderid/components', async (importOriginal) => {
@@ -2161,7 +2175,13 @@ describe('ApplicationEditPage', () => {
       });
 
       const lastCallProps = vi.mocked(EditAdvancedSettings).mock.calls.at(-1)?.[0];
-      expect(lastCallProps?.allowedGrantTypes).toEqual(['authorization_code', 'refresh_token', 'client_credentials']);
+      expect(lastCallProps?.allowedGrantTypes).toEqual([
+        'authorization_code',
+        'refresh_token',
+        'client_credentials',
+        'urn:ietf:params:oauth:grant-type:token-exchange',
+        'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      ]);
     });
 
     it('should bump sectionResetKey passed to McpConnectTab when reset is clicked', async () => {
@@ -2281,6 +2301,219 @@ describe('ApplicationEditPage', () => {
 
       const lastCallProps = vi.mocked(EditAdvancedSettings).mock.calls.at(-1)?.[0];
       expect(lastCallProps?.oauth2Constraints).toBeUndefined();
+    });
+
+    describe('Credentials tab', () => {
+      const mockMcpCimdApplication: Application = {
+        ...mockMcpApplication,
+        inboundAuthConfig: [
+          {
+            type: 'oauth2',
+            config: {
+              responseTypes: ['code'],
+              clientId: 'https://vscode.dev/oauth/client-metadata.json',
+              clientIdMetadataDocument: true,
+              grantTypes: ['authorization_code', 'refresh_token'],
+              redirectUris: ['http://127.0.0.1/callback'],
+              pkceRequired: true,
+              publicClient: false,
+              tokenEndpointAuthMethod: 'private_key_jwt',
+            },
+          },
+        ],
+      };
+
+      const mockMcpPrivateKeyJwtApplication: Application = {
+        ...mockMcpApplication,
+        inboundAuthConfig: [
+          {
+            type: 'oauth2',
+            config: {
+              responseTypes: ['code'],
+              clientId: 'test-mcp-client-id',
+              grantTypes: ['authorization_code', 'refresh_token'],
+              redirectUris: ['http://127.0.0.1:8080/callback'],
+              pkceRequired: true,
+              publicClient: false,
+              tokenEndpointAuthMethod: 'private_key_jwt',
+            },
+          },
+        ],
+      };
+
+      const renameApplication = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+        const nameSection = screen.getByText('Test MCP Client').closest('div');
+        await user.click(nameSection!.querySelector('button')!);
+        const nameInput = screen.getByRole('textbox');
+        await user.clear(nameInput);
+        await user.type(nameInput, `${name}{Enter}`);
+      };
+
+      it('shows a Credentials tab right after General for a non-CIMD MCP client', () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        renderComponent();
+
+        const tabNames = screen.getAllByRole('tab').map((tab) => tab.textContent);
+        expect(tabNames.indexOf('Credentials')).toBe(tabNames.indexOf('General') + 1);
+      });
+
+      it('renders the shared credentials settings without attestation on the Credentials tab', async () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpM2mApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        const user = userEvent.setup();
+        renderComponent();
+
+        await user.click(screen.getByRole('tab', {name: 'Credentials'}));
+
+        expect(screen.getByTestId('edit-credentials-settings')).toBeInTheDocument();
+        const lastCallProps = vi.mocked(EditCredentialsSettings).mock.calls.at(-1)?.[0];
+        expect(lastCallProps?.showAttestation).toBe(false);
+        expect(lastCallProps?.oauth2Config?.clientId).toBe('test-mcp-m2m-client-id');
+      });
+
+      it('switches to the Credentials tab when the Connect tab asks for it', async () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpM2mApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        const user = userEvent.setup();
+        renderComponent();
+
+        await mountSectionTab(user, 'General', 'mcp-connect-tab');
+        await user.click(screen.getByTestId('go-to-credentials'));
+
+        expect(screen.getByTestId('edit-credentials-settings')).toBeInTheDocument();
+        expect(screen.getByRole('tab', {name: 'Credentials'})).toHaveAttribute('aria-selected', 'true');
+      });
+
+      it('has no Credentials tab, and no link to one, for a CIMD MCP client', async () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpCimdApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        const user = userEvent.setup();
+        renderComponent();
+
+        expect(screen.queryByRole('tab', {name: 'Credentials'})).not.toBeInTheDocument();
+
+        await mountSectionTab(user, 'General', 'mcp-connect-tab');
+
+        expect(screen.queryByTestId('go-to-credentials')).not.toBeInTheDocument();
+      });
+
+      it('requires a certificate for a non-CIMD MCP client using private_key_jwt', async () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpPrivateKeyJwtApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        const user = userEvent.setup();
+        renderComponent();
+
+        await renameApplication(user, 'Edited MCP Client');
+
+        await waitFor(() => {
+          expect(screen.getByTestId('unsaved-changes-bar')).toBeInTheDocument();
+        });
+        expect(screen.getByText('A certificate is required.')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Save Changes'})).toBeDisabled();
+      });
+
+      it('does not require a certificate for a CIMD MCP client, whose keys come from its document', async () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpCimdApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        const user = userEvent.setup();
+        renderComponent();
+
+        await renameApplication(user, 'Edited MCP Client');
+
+        await waitFor(() => {
+          expect(screen.getByTestId('unsaved-changes-bar')).toBeInTheDocument();
+        });
+        expect(screen.queryByText('A certificate is required.')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Save Changes'})).toBeEnabled();
+      });
+    });
+
+    describe('JWT bearer-only client', () => {
+      const mockMcpJwtBearerApplication: Application = {
+        ...mockMcpApplication,
+        inboundAuthConfig: [
+          {
+            type: 'oauth2',
+            config: {
+              responseTypes: [],
+              clientId: 'test-mcp-jwt-bearer-client-id',
+              grantTypes: ['urn:ietf:params:oauth:grant-type:jwt-bearer'],
+              redirectUris: [],
+              pkceRequired: false,
+              publicClient: false,
+              tokenEndpointAuthMethod: 'client_secret_basic',
+            },
+          },
+        ],
+      };
+
+      it('hides the Flows and Customization tabs', () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpJwtBearerApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        renderComponent();
+
+        expect(screen.getByRole('tab', {name: 'General'})).toBeInTheDocument();
+        expect(screen.getByRole('tab', {name: 'Credentials'})).toBeInTheDocument();
+        expect(screen.queryByRole('tab', {name: 'Flows'})).not.toBeInTheDocument();
+        expect(screen.queryByRole('tab', {name: 'Customization'})).not.toBeInTheDocument();
+      });
+
+      it('does not lock the PKCE constraint on the Advanced tab', async () => {
+        mockUseGetApplication.mockReturnValue({
+          data: mockMcpJwtBearerApplication,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as UseQueryResult<Application>);
+
+        const user = userEvent.setup();
+        renderComponent();
+
+        await user.click(screen.getByRole('tab', {name: 'Advanced'}));
+
+        await waitFor(() => {
+          expect(screen.getByTestId('edit-advanced-settings')).toBeInTheDocument();
+        });
+
+        const lastCallProps = vi.mocked(EditAdvancedSettings).mock.calls.at(-1)?.[0];
+        expect(lastCallProps?.oauth2Constraints).toBeUndefined();
+      });
     });
 
     it('keeps the generic tab set unchanged for non-mcp-client templates', () => {

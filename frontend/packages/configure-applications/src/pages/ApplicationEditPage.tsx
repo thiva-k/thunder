@@ -50,10 +50,8 @@ import ApplicationConstants from '../constants/application-constants';
 import TemplateConstants from '../constants/template-constants';
 import useApplicationRoutes from '../hooks/useApplicationRoutes';
 import type {Application} from '../models/application';
-import {McpClientTypes} from '../models/mcp-client';
 import type {OAuth2Config} from '../models/oauth';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods} from '../models/oauth';
-import deriveMcpClientType from '../utils/deriveMcpClientType';
 import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';
 import getTemplateFieldConstraints from '../utils/getTemplateFieldConstraints';
@@ -308,7 +306,6 @@ export default function ApplicationEditPage() {
   const isMcpClient = application.template === TemplateConstants.MCP_CLIENT_TEMPLATE_ID;
   // A metadata-document client's redirect URIs, authentication method, and keys come from its document.
   const isCimdClient = oauth2Config?.clientIdMetadataDocument === true;
-  const isMcpM2mOnly = deriveMcpClientType(oauth2Config?.grantTypes) === McpClientTypes.M2M;
 
   // User-facing tabs (Flows, Customization) and the general Access section only apply when the
   // client can act on behalf of a user. When it can't, they are frozen/hidden rather than removed.
@@ -321,13 +318,14 @@ export default function ApplicationEditPage() {
 
   // Page-level required checks, gated on the grant types they apply to, surfaced by name in the
   // save bar. Computed from state (not reported by the tabs) since inactive tabs are unmounted.
-  // MCP clients run their own validation via McpConnectTab, so these are skipped there.
+  // MCP clients validate their redirect URIs via McpConnectTab, so that check is skipped there. The
+  // certificate check applies to every client with a Credentials tab, which a CIMD MCP client lacks.
   const grantTypes = oauth2Config?.grantTypes ?? [];
   const hasAuthorizationCodeGrant = grantTypes.includes(OAuth2GrantTypes.AUTHORIZATION_CODE);
   const hasValidRedirectUri = (oauth2Config?.redirectUris ?? []).some((uri) => isValidRedirectUriFormat(uri));
   const isMissingRedirectUri = !isMcpClient && hasAuthorizationCodeGrant && !hasValidRedirectUri;
   const isMissingCertificate =
-    !isMcpClient &&
+    !(isMcpClient && isCimdClient) &&
     oauth2Config?.tokenEndpointAuthMethod === TokenEndpointAuthMethods.PRIVATE_KEY_JWT &&
     !oauth2Config?.certificate?.value;
   // The field shows only with a user-facing grant, so a hidden value never blocks saving. The field
@@ -368,8 +366,25 @@ export default function ApplicationEditPage() {
                 isReadOnly={application.isReadOnly === true}
                 onValidationChange={setMcpAccessInvalid}
                 sectionResetKey={sectionResetKey}
+                onGoToCredentials={isCimdClient ? undefined : () => setActiveTabKey('credentials')}
               />
             ),
+          },
+          {
+            key: 'credentials',
+            label: t('applications:edit.page.tabs.credentials', 'Credentials'),
+            panel: (
+              <EditCredentialsSettings
+                application={application}
+                editedApp={editedApp}
+                oauth2Config={oauth2Config}
+                onFieldChange={handleFieldChange}
+                showAttestation={false}
+                onValidationChange={setCredentialsSettingsInvalid}
+              />
+            ),
+            // A metadata-document client's keys come from its document.
+            hidden: isCimdClient,
           },
           {
             key: 'flows',
@@ -377,7 +392,7 @@ export default function ApplicationEditPage() {
             panel: (
               <EditFlowsSettings application={application} editedApp={editedApp} onFieldChange={handleFieldChange} />
             ),
-            hidden: isMcpM2mOnly,
+            hidden: !userAccessUnlocked,
           },
           {
             key: 'customization',
@@ -391,7 +406,7 @@ export default function ApplicationEditPage() {
                 sectionResetKey={sectionResetKey}
               />
             ),
-            hidden: isMcpM2mOnly,
+            hidden: !userAccessUnlocked,
           },
           {
             key: 'token',
@@ -422,9 +437,9 @@ export default function ApplicationEditPage() {
                 editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 // The backend rejects pkceRequired: true without the authorization_code grant, so
-                // the template's PKCE lock only applies to user-delegated clients — an M2M-only
-                // client is stored with pkceRequired: false and must remain editable.
-                oauth2Constraints={isMcpM2mOnly ? undefined : oauth2Constraints}
+                // the template's PKCE lock only applies while that grant is present. A client without
+                // it (machine-to-machine or JWT bearer only) is stored with pkceRequired: false.
+                oauth2Constraints={hasAuthorizationCodeGrant ? oauth2Constraints : undefined}
                 onFieldChange={handleFieldChange}
                 allowedGrantTypes={[...TemplateConstants.MCP_CLIENT_ALLOWED_GRANT_TYPES]}
                 // MCP clients manage their redirect URIs on their own Connect tab.
