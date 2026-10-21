@@ -61,6 +61,14 @@ type EntityServiceInterface interface {
 		ouIDs []string, filters map[string]interface{}) (int, error)
 	GetEntityListByOUIDs(ctx context.Context, category providers.EntityCategory,
 		ouIDs []string, limit, offset int, filters map[string]interface{}) ([]providers.Entity, error)
+	GetEntityListCountBySystemAttributes(ctx context.Context, category providers.EntityCategory,
+		sysQuery SystemAttributeQuery) (int, error)
+	GetEntityListBySystemAttributes(ctx context.Context, category providers.EntityCategory,
+		sysQuery SystemAttributeQuery, limit, offset int) ([]providers.Entity, error)
+	GetEntityListCountBySystemAttributesAndOUIDs(ctx context.Context, category providers.EntityCategory,
+		sysQuery SystemAttributeQuery, ouIDs []string) (int, error)
+	GetEntityListBySystemAttributesAndOUIDs(ctx context.Context, category providers.EntityCategory,
+		sysQuery SystemAttributeQuery, ouIDs []string, limit, offset int) ([]providers.Entity, error)
 
 	// Bulk
 	ValidateEntityIDs(ctx context.Context, entityIDs []string) ([]string, error)
@@ -663,6 +671,49 @@ func (s *entityService) GetEntityListCountByOUIDs(ctx context.Context, category 
 func (s *entityService) GetEntityListByOUIDs(ctx context.Context, category providers.EntityCategory,
 	ouIDs []string, limit, offset int, filters map[string]interface{}) ([]providers.Entity, error) {
 	entities, err := s.store.GetEntityListByOUIDs(ctx, string(category), ouIDs, limit, offset, filters)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.populateRuntime(ctx, entities); err != nil {
+		return nil, err
+	}
+	return entities, nil
+}
+
+// GetEntityListCountBySystemAttributes retrieves the number of entities a system attribute query selects.
+func (s *entityService) GetEntityListCountBySystemAttributes(ctx context.Context,
+	category providers.EntityCategory, sysQuery SystemAttributeQuery) (int, error) {
+	return s.store.GetEntityListCountBySystemAttributes(ctx, string(category), sysQuery)
+}
+
+// GetEntityListBySystemAttributes retrieves the entities a system attribute query selects.
+func (s *entityService) GetEntityListBySystemAttributes(ctx context.Context,
+	category providers.EntityCategory, sysQuery SystemAttributeQuery, limit, offset int) (
+	[]providers.Entity, error) {
+	entities, err := s.store.GetEntityListBySystemAttributes(ctx, string(category), sysQuery, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.populateRuntime(ctx, entities); err != nil {
+		return nil, err
+	}
+	return entities, nil
+}
+
+// GetEntityListCountBySystemAttributesAndOUIDs retrieves the number of entities a system attribute query
+// selects within the given organization units.
+func (s *entityService) GetEntityListCountBySystemAttributesAndOUIDs(ctx context.Context,
+	category providers.EntityCategory, sysQuery SystemAttributeQuery, ouIDs []string) (int, error) {
+	return s.store.GetEntityListCountBySystemAttributesAndOUIDs(ctx, string(category), sysQuery, ouIDs)
+}
+
+// GetEntityListBySystemAttributesAndOUIDs retrieves the entities a system attribute query selects within
+// the given organization units.
+func (s *entityService) GetEntityListBySystemAttributesAndOUIDs(ctx context.Context,
+	category providers.EntityCategory, sysQuery SystemAttributeQuery, ouIDs []string, limit, offset int) (
+	[]providers.Entity, error) {
+	entities, err := s.store.GetEntityListBySystemAttributesAndOUIDs(
+		ctx, string(category), sysQuery, ouIDs, limit, offset)
 	if err != nil {
 		return nil, err
 	}

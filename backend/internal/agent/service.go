@@ -547,14 +547,13 @@ func (s *agentService) GetResourceDependencies(
 	return usages, nil
 }
 
-// getAgentsByOwner returns the agents that list the given user as their owner. The owner is stored
-// in the agent entity's system attributes, which the entity list filter does not search (it only
-// matches the public attributes column), so agents are listed and matched on owner in memory. The
-// number of agents scanned is bounded by MaxCompositeStoreRecords.
+// getAgentsByOwner returns the agents that list the given user as their owner, found through the owner
+// in the agents' system attributes. The number of agents returned is bounded by MaxCompositeStoreRecords.
 func (s *agentService) getAgentsByOwner(
 	ctx context.Context, ownerID string) ([]resourcedependency.ResourceDependency, error) {
-	entities, err := s.entityService.GetEntityList(
-		ctx, providers.EntityCategoryAgent, serverconst.MaxCompositeStoreRecords, 0, nil)
+	entities, err := s.entityService.GetEntityListBySystemAttributes(ctx, providers.EntityCategoryAgent,
+		entity.SystemAttributeQuery{SystemAttributes: map[string]interface{}{fieldOwner: ownerID}},
+		serverconst.MaxCompositeStoreRecords, 0)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to list agents", log.Error(err))
 		return nil, err
@@ -563,13 +562,6 @@ func (s *agentService) getAgentsByOwner(
 	displayPaths := s.resolveDisplayPaths(ctx, entityTypes(entities))
 	usages := make([]resourcedependency.ResourceDependency, 0)
 	for _, e := range entities {
-		if e.Category != providers.EntityCategoryAgent {
-			continue
-		}
-		_, owner, _ := readSystemAttributes(e.SystemAttributes)
-		if owner != ownerID {
-			continue
-		}
 		// An agent cannot exist without its owner, so ownership blocks the owner's deletion.
 		usages = append(usages, resourcedependency.ResourceDependency{
 			ResourceType:     resourcedependency.ResourceTypeAgent,

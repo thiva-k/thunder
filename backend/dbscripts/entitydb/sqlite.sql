@@ -37,6 +37,9 @@ CREATE INDEX idx_entity_category_deployment ON "ENTITY" (DEPLOYMENT_ID, CATEGORY
 -- Composite index for OU-based entity listing
 CREATE INDEX idx_entity_ou_deployment ON "ENTITY" (DEPLOYMENT_ID, OU_ID);
 
+-- Expression index for looking up agents by their owner
+CREATE INDEX idx_entity_owner ON "ENTITY" (DEPLOYMENT_ID, json_extract(SYSTEM_ATTRIBUTES, '$.owner'));
+
 -- Table to store Groups
 CREATE TABLE "GROUP" (
     DEPLOYMENT_ID   VARCHAR(255) NOT NULL,

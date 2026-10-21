@@ -1032,6 +1032,74 @@ func (s *ServiceTestSuite) TestGetEntityListByOUIDs_Delegates() {
 	s.Len(list, 1)
 }
 
+func (s *ServiceTestSuite) TestGetEntityListBySystemAttributes_Delegates() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+	e := testEntity("sys-e1")
+	s.store.On("GetEntityListCountBySystemAttributes", mock.Anything, "agent", sysQuery).Return(1, nil)
+	s.store.On("GetEntityListBySystemAttributes", mock.Anything, "agent", sysQuery, 10, 0).
+		Return([]providers.Entity{*e}, nil)
+
+	count, err := s.svc.GetEntityListCountBySystemAttributes(s.ctx, providers.EntityCategoryAgent, sysQuery)
+	s.NoError(err)
+	s.Equal(1, count)
+	list, err := s.svc.GetEntityListBySystemAttributes(s.ctx, providers.EntityCategoryAgent, sysQuery, 10, 0)
+	s.NoError(err)
+	s.Len(list, 1)
+}
+
+func (s *ServiceTestSuite) TestGetEntityListBySystemAttributes_Errors() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+	s.store.On("GetEntityListBySystemAttributes", mock.Anything, "agent", sysQuery, 10, 0).
+		Return(nil, s.testErr).Once()
+	_, err := s.svc.GetEntityListBySystemAttributes(s.ctx, providers.EntityCategoryAgent, sysQuery, 10, 0)
+	s.ErrorIs(err, s.testErr, "store error")
+
+	svc, runtime := s.newServiceWithRuntimeMock()
+	e := testEntity("sys-read-fails")
+	s.store.On("GetEntityListBySystemAttributes", mock.Anything, "agent", sysQuery, 10, 0).
+		Return([]providers.Entity{*e}, nil)
+	runtime.On("GetRuntimeData", mock.Anything, []string{e.ID}).Return(nil, s.testErr)
+	_, err = svc.GetEntityListBySystemAttributes(s.ctx, providers.EntityCategoryAgent, sysQuery, 10, 0)
+	s.ErrorIs(err, s.testErr, "runtime read error")
+}
+
+func (s *ServiceTestSuite) TestGetEntityListBySystemAttributesAndOUIDs_Delegates() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+	ouIDs := []string{"ou1"}
+	e := testEntity("sys-ou-e1")
+	s.store.On("GetEntityListCountBySystemAttributesAndOUIDs", mock.Anything, "agent", sysQuery, ouIDs).
+		Return(1, nil)
+	s.store.On("GetEntityListBySystemAttributesAndOUIDs", mock.Anything, "agent", sysQuery, ouIDs, 10, 0).
+		Return([]providers.Entity{*e}, nil)
+
+	count, err := s.svc.GetEntityListCountBySystemAttributesAndOUIDs(
+		s.ctx, providers.EntityCategoryAgent, sysQuery, ouIDs)
+	s.NoError(err)
+	s.Equal(1, count)
+	list, err := s.svc.GetEntityListBySystemAttributesAndOUIDs(
+		s.ctx, providers.EntityCategoryAgent, sysQuery, ouIDs, 10, 0)
+	s.NoError(err)
+	s.Len(list, 1)
+}
+
+func (s *ServiceTestSuite) TestGetEntityListBySystemAttributesAndOUIDs_Errors() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+	ouIDs := []string{"ou1"}
+	s.store.On("GetEntityListBySystemAttributesAndOUIDs", mock.Anything, "agent", sysQuery, ouIDs, 10, 0).
+		Return(nil, s.testErr).Once()
+	_, err := s.svc.GetEntityListBySystemAttributesAndOUIDs(
+		s.ctx, providers.EntityCategoryAgent, sysQuery, ouIDs, 10, 0)
+	s.ErrorIs(err, s.testErr, "store error")
+
+	svc, runtime := s.newServiceWithRuntimeMock()
+	e := testEntity("sys-ou-read-fails")
+	s.store.On("GetEntityListBySystemAttributesAndOUIDs", mock.Anything, "agent", sysQuery, ouIDs, 10, 0).
+		Return([]providers.Entity{*e}, nil)
+	runtime.On("GetRuntimeData", mock.Anything, []string{e.ID}).Return(nil, s.testErr)
+	_, err = svc.GetEntityListBySystemAttributesAndOUIDs(s.ctx, providers.EntityCategoryAgent, sysQuery, ouIDs, 10, 0)
+	s.ErrorIs(err, s.testErr, "runtime read error")
+}
+
 func (s *ServiceTestSuite) TestValidateEntityIDs_Delegates() {
 	s.store.On("ValidateEntityIDs", mock.Anything, []string{"id1", "id2"}).Return([]string{}, nil)
 	invalid, err := s.svc.ValidateEntityIDs(s.ctx, []string{"id1", "id2"})

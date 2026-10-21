@@ -2530,24 +2530,23 @@ func (suite *AgentServiceTestSuite) TestGetResourceDependencies_FiltersOutNonAge
 	assert.Equal(suite.T(), "agent-1", result[0].ID)
 }
 
-// Owner dependencies are resolved by listing agents and matching the owner system attribute in
-// memory, because the entity list filter only searches the public attributes column.
+// ownerQuery is the system attribute query that finds the agents a user owns.
+func ownerQuery(ownerID string) entity.SystemAttributeQuery {
+	return entity.SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": ownerID}}
+}
+
+// Owner dependencies are resolved through the owner in the agents' system attributes.
 func (suite *AgentServiceTestSuite) TestGetResourceDependencies_ByOwner_Success() {
 	svc, mockEntity, _, _, _ := suite.setupService()
 	suite.withDisplayPaths(svc, "name")
-	clearMockCalls(mockEntity, "GetEntityList")
 
 	ownedSysAttrs, _ := json.Marshal(map[string]interface{}{"owner": "user-1"})
-	otherSysAttrs, _ := json.Marshal(map[string]interface{}{"owner": "user-2"})
 	ownedAttrs, _ := json.Marshal(map[string]interface{}{"name": "Agent One"})
-	otherAttrs, _ := json.Marshal(map[string]interface{}{"name": "Agent Two"})
-	mockEntity.On("GetEntityList", mock.Anything, providers.EntityCategoryAgent,
-		serverconst.MaxCompositeStoreRecords, 0, mock.Anything).
+	mockEntity.On("GetEntityListBySystemAttributes", mock.Anything, providers.EntityCategoryAgent,
+		ownerQuery("user-1"), serverconst.MaxCompositeStoreRecords, 0).
 		Return([]providers.Entity{
 			{ID: "agent-1", Category: providers.EntityCategoryAgent, Type: testAgentType,
 				Attributes: ownedAttrs, SystemAttributes: ownedSysAttrs},
-			{ID: "agent-2", Category: providers.EntityCategoryAgent, Type: testAgentType,
-				Attributes: otherAttrs, SystemAttributes: otherSysAttrs},
 		}, nil)
 
 	result, err := svc.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeUser, "user-1")
@@ -2561,14 +2560,9 @@ func (suite *AgentServiceTestSuite) TestGetResourceDependencies_ByOwner_Success(
 
 func (suite *AgentServiceTestSuite) TestGetResourceDependencies_ByOwner_Empty() {
 	svc, mockEntity, _, _, _ := suite.setupService()
-	clearMockCalls(mockEntity, "GetEntityList")
-
-	otherAttrs, _ := json.Marshal(map[string]interface{}{"name": "Agent Two", "owner": "user-2"})
-	mockEntity.On("GetEntityList", mock.Anything, providers.EntityCategoryAgent,
-		serverconst.MaxCompositeStoreRecords, 0, mock.Anything).
-		Return([]providers.Entity{
-			{ID: "agent-2", Category: providers.EntityCategoryAgent, SystemAttributes: otherAttrs},
-		}, nil)
+	mockEntity.On("GetEntityListBySystemAttributes", mock.Anything, providers.EntityCategoryAgent,
+		ownerQuery("user-1"), serverconst.MaxCompositeStoreRecords, 0).
+		Return([]providers.Entity{}, nil)
 
 	result, err := svc.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeUser, "user-1")
 	assert.NoError(suite.T(), err)
@@ -2577,9 +2571,8 @@ func (suite *AgentServiceTestSuite) TestGetResourceDependencies_ByOwner_Empty() 
 
 func (suite *AgentServiceTestSuite) TestGetResourceDependencies_ByOwner_Error() {
 	svc, mockEntity, _, _, _ := suite.setupService()
-	clearMockCalls(mockEntity, "GetEntityList")
-	mockEntity.On("GetEntityList", mock.Anything, providers.EntityCategoryAgent,
-		serverconst.MaxCompositeStoreRecords, 0, mock.Anything).
+	mockEntity.On("GetEntityListBySystemAttributes", mock.Anything, providers.EntityCategoryAgent,
+		ownerQuery("user-1"), serverconst.MaxCompositeStoreRecords, 0).
 		Return(nil, errors.New("store error"))
 
 	result, err := svc.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeUser, "user-1")
