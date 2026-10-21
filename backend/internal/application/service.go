@@ -2613,36 +2613,20 @@ func (as *applicationService) syncPasskeyOriginsToCORS(ctx context.Context, orig
 	}
 }
 
-// translateSharingError maps a sharing framework error into this service's own vocabulary.
-//
-// It logs nothing. The framework already logged its own failures, and a client error is the
-// caller's doing rather than an operational event.
-func translateSharingError(svcErr *tidcommon.ServiceError) *tidcommon.ServiceError {
-	if svcErr == nil {
-		return nil
-	}
-	if svcErr.Type != tidcommon.ClientErrorType {
-		return &tidcommon.InternalServerError
-	}
+// sharingErrors answers the sharing framework's client errors in this service's own codes.
+var sharingErrors = sharing.ErrorTranslation{
+	PolicyNotFound:  ErrorSharingPolicyNotFound,
+	PolicyExists:    ErrorSharingPolicyExists,
+	VersionMismatch: ErrorSharingPolicyVersionMismatch,
+	PolicyDeclared:  ErrorSharingPolicyDeclared,
+	InvalidLimit:    ErrorInvalidLimit,
+	InvalidOffset:   ErrorInvalidOffset,
+	InvalidPolicy:   ErrorInvalidSharingPolicy,
+}
 
-	var mapped tidcommon.ServiceError
-	switch svcErr.Code {
-	case sharing.ErrorPolicyNotFound.Code:
-		mapped = ErrorSharingPolicyNotFound
-	case sharing.ErrorPolicyExists.Code:
-		mapped = ErrorSharingPolicyExists
-	case sharing.ErrorVersionMismatch.Code:
-		mapped = ErrorSharingPolicyVersionMismatch
-	case sharing.ErrorPolicyDeclared.Code:
-		mapped = ErrorSharingPolicyDeclared
-	case sharing.ErrorInvalidLimit.Code:
-		mapped = ErrorInvalidLimit
-	case sharing.ErrorInvalidOffset.Code:
-		mapped = ErrorInvalidOffset
-	default:
-		mapped = ErrorInvalidSharingPolicy
-	}
-	return tidcommon.CustomServiceError(mapped, svcErr.ErrorDescription)
+// translateSharingError maps a sharing framework error into this service's own codes.
+func translateSharingError(svcErr *tidcommon.ServiceError) *tidcommon.ServiceError {
+	return sharingErrors.Translate(svcErr)
 }
 
 // requireSharing resolves the application a sharing call names and returns its owning organization
