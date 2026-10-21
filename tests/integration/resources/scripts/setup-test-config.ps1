@@ -95,7 +95,7 @@ if ($DbType -eq "postgres") {
     password: ""
     sslmode: ""
     path: "database/configdb.db"
-    options: "cache=shared"
+    options: "cache=shared&_pragma=foreign_keys(1)"
 
   runtime_transient:
     type: sqlite
@@ -106,7 +106,7 @@ if ($DbType -eq "postgres") {
     password: ""
     sslmode: ""
     path: "database/runtime_transient.db"
-    options: "cache=shared"
+    options: "cache=shared&_pragma=foreign_keys(1)"
 
   entity:
     type: sqlite
@@ -117,7 +117,7 @@ if ($DbType -eq "postgres") {
     password: ""
     sslmode: ""
     path: "database/entitydb.db"
-    options: "cache=shared"
+    options: "cache=shared&_pragma=foreign_keys(1)"
 
   runtime_persistent:
     type: sqlite
@@ -128,7 +128,7 @@ if ($DbType -eq "postgres") {
     password: ""
     sslmode: ""
     path: "database/runtime_persistent.db"
-    options: "cache=shared"
+    options: "cache=shared&_pragma=foreign_keys(1)"
 "@
 }
 
