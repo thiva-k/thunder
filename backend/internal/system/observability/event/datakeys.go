@@ -51,6 +51,8 @@ var DataKey = struct {
 
 	// Administration Keys. Records whether an operator note was given, never the note itself.
 	OperatorNoteRecorded string
+	// ConfigName is the server-config section a change targets.
+	ConfigName string
 
 	// Account Lock Keys. UnlockAt is set only for a lock that expires.
 	LockMethod    string
@@ -109,6 +111,7 @@ var DataKey = struct {
 
 	// Administration Keys
 	OperatorNoteRecorded: "operator_note_recorded",
+	ConfigName:           "config_name",
 
 	// Account Lock Keys
 	LockMethod:    "lock_method",

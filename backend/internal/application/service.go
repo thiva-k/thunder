@@ -15,6 +15,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/cert"
 	"github.com/thunder-id/thunderid/internal/entity"
+	"github.com/thunder-id/thunderid/internal/identitygovernance"
 	"github.com/thunder-id/thunderid/internal/inboundclient"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	oauthutils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
@@ -92,6 +93,8 @@ type applicationService struct {
 	resolveLifetime      artifactLifetimeResolver
 	valueCapturer        declarativeresource.ValueCapturer
 	sharingService       sharing.SharingServiceInterface
+	// governance derives the access status.
+	governance identitygovernance.IdentityGovernanceServiceInterface
 }
 
 // newApplicationService creates a new instance of ApplicationService.
@@ -105,6 +108,7 @@ func newApplicationService(
 	artifactLifetime artifactLifetimeResolver,
 	valueCapturer declarativeresource.ValueCapturer,
 	sharingService sharing.SharingServiceInterface,
+	governance identitygovernance.IdentityGovernanceServiceInterface,
 ) ApplicationServiceInterface {
 	return &applicationService{
 		logger:               log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService")),
@@ -117,6 +121,7 @@ func newApplicationService(
 		resolveLifetime:      artifactLifetime,
 		valueCapturer:        valueCapturer,
 		sharingService:       sharingService,
+		governance:           governance,
 	}
 }
 
@@ -365,6 +370,7 @@ func (as *applicationService) GetApplicationList(
 		}
 	}
 
+	statuses := as.accessStatuses(ctx, entities)
 	applicationList := make([]model.BasicApplicationResponse, 0, len(entities))
 	for i := range entities {
 		cfg := configMap[entities[i].ID]
@@ -373,7 +379,9 @@ func (as *applicationService) GetApplicationList(
 				log.String("appID", entities[i].ID))
 			continue
 		}
-		applicationList = append(applicationList, buildBasicApplicationResponse(*cfg, &entities[i]))
+		resp := buildBasicApplicationResponse(*cfg, &entities[i])
+		resp.Status = statuses[i]
+		applicationList = append(applicationList, resp)
 	}
 
 	return &model.ApplicationListResponse{
@@ -400,7 +408,7 @@ func (as *applicationService) GetOAuthApplication(
 		return nil, &ErrorApplicationNotFound
 	}
 
-	appEntity, entErr := as.entityService.GetEntity(ctx, client.ID)
+	appEntity, entErr := as.entityService.GetEntityProfile(ctx, client.ID)
 	if entErr != nil && !errors.Is(entErr, entity.ErrEntityNotFound) {
 		as.logger.Error(ctx, "Failed to load entity for OAuth client",
 			log.String("entityID", client.ID), log.Error(entErr))
@@ -520,6 +528,8 @@ func (as *applicationService) UpdateApplication(ctx context.Context, appID strin
 	}
 	returnDTO := buildReturnApplicationDTO(appID, &appForReturn, inboundClient.Assertion, processedDTO.Metadata,
 		inboundAuthConfig, oauthToken, userInfo, scopeClaims)
+	// The update changes no runtime state, so the status read before the write still holds.
+	returnDTO.Status = existingApp.Status
 
 	as.captureValues(ctx, returnDTO)
 	return returnDTO, nil
@@ -678,7 +688,7 @@ func (as *applicationService) DeleteApplication(ctx context.Context, appID strin
 		return &ErrorInvalidApplicationID
 	}
 
-	if existing, entErr := as.entityService.GetEntity(ctx, appID); entErr != nil {
+	if existing, entErr := as.entityService.GetEntityProfile(ctx, appID); entErr != nil {
 		if !errors.Is(entErr, entity.ErrEntityNotFound) {
 			as.logger.Error(ctx, "Failed to load entity before delete",
 				log.String("appID", appID), log.Error(entErr))
@@ -880,7 +890,7 @@ func (as *applicationService) loadApplicationEntity(ctx context.Context, appID s
 	if appID == "" {
 		return nil, &ErrorInvalidApplicationID
 	}
-	existing, entErr := as.entityService.GetEntity(ctx, appID)
+	existing, entErr := as.entityService.GetEntityProfile(ctx, appID)
 	if entErr != nil {
 		if errors.Is(entErr, entity.ErrEntityNotFound) {
 			return nil, &ErrorApplicationNotFound
@@ -1111,7 +1121,22 @@ func (as *applicationService) getApplication(
 	}
 
 	dto := toProcessedDTO(appEntity, inboundClient, oauthProfile)
+	if appEntity != nil {
+		access := as.governance.ReadEntityAccess(ctx, *appEntity)
+		dto.Status = &providers.ApplicationStatusReport{Value: access.Status.Value}
+	}
 	return dto, nil
+}
+
+// accessStatuses derives each application's status, in order, without the suspension details.
+func (as *applicationService) accessStatuses(ctx context.Context,
+	entities []providers.Entity) []*providers.ApplicationStatusReport {
+	reads := as.governance.ReadAccess(ctx, entities)
+	statuses := make([]*providers.ApplicationStatusReport, len(reads))
+	for i := range reads {
+		statuses[i] = &providers.ApplicationStatusReport{Value: reads[i].Status.Value}
+	}
+	return statuses
 }
 
 // mapEntityError maps entity service sentinel errors to application service errors. Schema
@@ -2184,6 +2209,7 @@ func buildApplicationResponse(dto *model.ApplicationProcessedDTO) *providers.App
 		OUID:        dto.OUID,
 		Name:        dto.Name,
 		Description: dto.Description,
+		Status:      dto.Status,
 		InboundAuthProfile: providers.InboundAuthProfile{
 			AuthFlowID:                dto.AuthFlowID,
 			RegistrationFlowID:        dto.RegistrationFlowID,

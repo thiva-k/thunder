@@ -421,7 +421,7 @@ func (p *defaultAuthnProvider) buildAuthnResult(
 func (p *defaultAuthnProvider) buildEntityAuthnResult(
 	ctx context.Context, entityID string,
 ) (*providers.AuthnResult, *tidcommon.ServiceError) {
-	entityResult, getErr := p.entitySvc.GetEntity(ctx, entityID)
+	entityResult, getErr := p.entitySvc.GetEntityProfile(ctx, entityID)
 	if getErr != nil {
 		return nil, p.logAndReturnServerError(ctx, "Failed to get entity after authentication",
 			log.String("error", getErr.Error()))
@@ -491,7 +491,7 @@ func (p *defaultAuthnProvider) resolveEntityFromToken(
 		entityID = *identifiedEntityID
 	}
 
-	entityResult, getErr := p.entitySvc.GetEntity(ctx, entityID)
+	entityResult, getErr := p.entitySvc.GetEntityProfile(ctx, entityID)
 	if getErr != nil {
 		return nil, p.logAndReturnServerError(ctx, "Failed to get entity attributes",
 			log.String("error", getErr.Error()))
