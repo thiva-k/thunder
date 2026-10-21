@@ -171,11 +171,12 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 	}
 
 	// Issue an Flow Secret only to applications that can initiate a flow directly via the Flow
-	// Execution API — i.e. backend / server-side apps. Public clients (browser SPAs, mobile apps)
-	// and redirect-based (authorization_code) clients initiate their flows through the OAuth
-	// component, so they have no use for an Flow Secret and never receive one — any caller-supplied
-	// value for such apps is ignored. For eligible apps, an explicitly provided value (e.g.
-	// declarative resources) is preserved; otherwise one is generated.
+	// Execution API — i.e. backend / server-side apps with the token-exchange grant, or with no OAuth
+	// config. Public clients (browser SPAs, mobile apps) and redirect-based (authorization_code)
+	// clients initiate their flows through the OAuth component, and clients without the
+	// token-exchange grant cannot redeem a flow assertion, so they have no use for an Flow Secret and
+	// never receive one — any caller-supplied value for such apps is ignored. For eligible apps, an
+	// explicitly provided value (e.g. declarative resources) is preserved; otherwise one is generated.
 	flowSecret := ""
 	if isFlowSecretEligible(app.Type, inboundAuthConfig) {
 		flowSecret = app.FlowSecret
@@ -552,9 +553,9 @@ func (as *applicationService) updateEntityDataForApplicationUpdate(ctx context.C
 
 	// Rotate the Flow Secret when a new value is supplied (e.g. a regenerate request). Only
 	// applications eligible to hold an Flow Secret — backend / server-side apps that are neither
-	// public nor redirect-based — may have one set; a value supplied for an ineligible app is
-	// ignored. Credential updates merge, so this preserves the stored client secret, and an empty
-	// value leaves the existing Flow Secret intact.
+	// public nor redirect-based and have the token-exchange grant — may have one set; a value
+	// supplied for an ineligible app is ignored. Credential updates merge, so this preserves the
+	// stored client secret, and an empty value leaves the existing Flow Secret intact.
 	if app.FlowSecret != "" && isFlowSecretEligible(app.Type, inboundAuthConfig) {
 		flowSecretJSON, marshalErr := buildSystemCredentials("", app.FlowSecret)
 		if marshalErr != nil {
@@ -604,7 +605,7 @@ func (as *applicationService) updateEntityDataForApplicationUpdate(ctx context.C
 
 // isFlowSecretEligible reports whether an application may hold a Flow Secret. Browser (public
 // redirect), mobile (attestation), and m2m (direct token) apps never hold one. Full-stack, custom,
-// and mcp apps derive eligibility from the OAuth config shape: only confidential, non-redirect
+// and mcp apps derive eligibility from the OAuth config shape: only confidential, flow-native
 // clients (or embedded apps with no OAuth config) are eligible.
 func isFlowSecretEligible(appType model.ApplicationType,
 	inboundAuthConfig *providers.InboundAuthConfigWithSecret) bool {
@@ -616,19 +617,8 @@ func isFlowSecretEligible(appType model.ApplicationType,
 			return true
 		}
 		oauthConfig := inboundAuthConfig.OAuthConfig
-		if oauthConfig.PublicClient {
-			return false
-		}
-		if slices.Contains(oauthConfig.GrantTypes, providers.GrantTypeAuthorizationCode) {
-			return false
-		}
-		return !isM2MGrantSet(oauthConfig.GrantTypes)
+		return !oauthConfig.PublicClient && model.IsFlowNativeGrantSet(oauthConfig.GrantTypes)
 	}
-}
-
-// isM2MGrantSet reports whether client_credentials is the only configured grant type.
-func isM2MGrantSet(grantTypes []providers.GrantType) bool {
-	return len(grantTypes) == 1 && grantTypes[0] == providers.GrantTypeClientCredentials
 }
 
 // seedClientSubTypeAttribute selects the sub_type claim for a new application that can use the
@@ -1766,6 +1756,18 @@ func translateOAuthValidationError(err error) *tidcommon.ServiceError {
 			Key: "error.applicationservice.idjag_cannot_use_none_auth_description",
 			DefaultValue: "ID-JAG configuration requires a confidential client and cannot use 'none' " +
 				"token endpoint authentication method",
+		})
+	case errors.Is(err, inboundclient.ErrOAuthClientIDJAGRequiresTokenExchange):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.applicationservice.idjag_requires_token_exchange_description",
+			DefaultValue: "ID-JAG configuration requires the " +
+				"urn:ietf:params:oauth:grant-type:token-exchange grant type",
+		})
+	case errors.Is(err, inboundclient.ErrOAuthClientIDJAGRequiresAllowedAudience):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.applicationservice.idjag_requires_allowed_audience_description",
+			DefaultValue: "ID-JAG configuration requires at least one allowed audience, and allowed " +
+				"audiences must not be blank",
 		})
 
 	// OAuth: public client

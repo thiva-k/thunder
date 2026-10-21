@@ -679,6 +679,19 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_ValidationFa
 	assert.ErrorIs(suite.T(), err, ErrOAuthInvalidGrantType)
 }
 
+func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_IDJAGWithoutTokenExchangeFails() {
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
+	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, "p1").Return(nil, ErrInboundClientNotFound)
+	svc := newServiceForTest(store)
+
+	p := validOAuthProfile()
+	p.Token = &providers.OAuthTokenConfig{IDJAG: &providers.IDJAGConfig{Enabled: true}}
+
+	err := svc.UpdateInboundClient(context.Background(), ptrInboundClient(), p, true, "")
+	assert.ErrorIs(suite.T(), err, ErrOAuthClientIDJAGRequiresTokenExchange)
+}
+
 func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_Succeeds() {
 	store := newInboundClientStoreInterfaceMock(suite.T())
 	store.EXPECT().IsDeclarative(mock.Anything, "p1").Return(false)
@@ -1719,6 +1732,98 @@ func (suite *InboundClientServiceTestSuite) TestValidateOAuthProfile_PropagatesU
 	}
 	assert.ErrorIs(suite.T(), validateOAuthProfile(context.Background(), p, true, suite.cryptoMock, suite.jweService),
 		ErrOAuthUserInfoUnsupportedSigningAlg)
+}
+
+func (suite *InboundClientServiceTestSuite) TestValidateOAuthProfile_IDJAGRequiresTokenExchange() {
+	p := &providers.OAuthProfile{
+		RedirectURIs:            []string{"https://app.example.com/cb"},
+		GrantTypes:              []string{"authorization_code"},
+		ResponseTypes:           []string{"code"},
+		TokenEndpointAuthMethod: "client_secret_basic",
+		Token: &providers.OAuthTokenConfig{
+			IDJAG: &providers.IDJAGConfig{Enabled: true},
+		},
+	}
+	assert.ErrorIs(suite.T(), validateOAuthProfile(context.Background(), p, true, suite.cryptoMock, suite.jweService),
+		ErrOAuthClientIDJAGRequiresTokenExchange)
+}
+
+func (suite *InboundClientServiceTestSuite) TestValidateIDJAGConfig() {
+	tokenExchange := string(providers.GrantTypeTokenExchange)
+	audiences := []string{"https://target-rs.example.com"}
+	cases := []struct {
+		name       string
+		grantTypes []string
+		token      *providers.OAuthTokenConfig
+		wantErr    error
+	}{
+		{name: "no token config", grantTypes: []string{"client_credentials"}},
+		{
+			name: "no ID-JAG config", grantTypes: []string{"client_credentials"},
+			token: &providers.OAuthTokenConfig{},
+		},
+		{
+			name: "ID-JAG disabled without token exchange or audiences", grantTypes: []string{"client_credentials"},
+			token: &providers.OAuthTokenConfig{IDJAG: &providers.IDJAGConfig{Enabled: false}},
+		},
+		{
+			name:       "ID-JAG enabled with token exchange and audiences",
+			grantTypes: []string{"client_credentials", tokenExchange},
+			token: &providers.OAuthTokenConfig{
+				IDJAG: &providers.IDJAGConfig{Enabled: true, AllowedAudiences: audiences},
+			},
+		},
+		{
+			name:       "ID-JAG enabled with token exchange and no audiences",
+			grantTypes: []string{"client_credentials", tokenExchange},
+			token:      &providers.OAuthTokenConfig{IDJAG: &providers.IDJAGConfig{Enabled: true}},
+			wantErr:    ErrOAuthClientIDJAGRequiresAllowedAudience,
+		},
+		{
+			name:       "ID-JAG enabled with token exchange and empty audiences",
+			grantTypes: []string{"client_credentials", tokenExchange},
+			token: &providers.OAuthTokenConfig{
+				IDJAG: &providers.IDJAGConfig{Enabled: true, AllowedAudiences: []string{}},
+			},
+			wantErr: ErrOAuthClientIDJAGRequiresAllowedAudience,
+		},
+		{
+			name:       "ID-JAG enabled with a blank audience",
+			grantTypes: []string{"client_credentials", tokenExchange},
+			token: &providers.OAuthTokenConfig{
+				IDJAG: &providers.IDJAGConfig{Enabled: true, AllowedAudiences: []string{audiences[0], "  "}},
+			},
+			wantErr: ErrOAuthClientIDJAGRequiresAllowedAudience,
+		},
+		{
+			name:       "ID-JAG enabled with only an empty audience",
+			grantTypes: []string{"client_credentials", tokenExchange},
+			token: &providers.OAuthTokenConfig{
+				IDJAG: &providers.IDJAGConfig{Enabled: true, AllowedAudiences: []string{""}},
+			},
+			wantErr: ErrOAuthClientIDJAGRequiresAllowedAudience,
+		},
+		{
+			name: "ID-JAG enabled without token exchange", grantTypes: []string{"client_credentials"},
+			token:   &providers.OAuthTokenConfig{IDJAG: &providers.IDJAGConfig{Enabled: true}},
+			wantErr: ErrOAuthClientIDJAGRequiresTokenExchange,
+		},
+		{
+			name: "ID-JAG enabled with jwt-bearer only", grantTypes: []string{string(providers.GrantTypeJWTBearer)},
+			token:   &providers.OAuthTokenConfig{IDJAG: &providers.IDJAGConfig{Enabled: true}},
+			wantErr: ErrOAuthClientIDJAGRequiresTokenExchange,
+		},
+	}
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			err := validateIDJAGConfig(&providers.OAuthProfile{GrantTypes: tc.grantTypes, Token: tc.token})
+			if tc.wantErr != nil {
+				assert.ErrorIs(suite.T(), err, tc.wantErr)
+				return
+			}
+			assert.NoError(suite.T(), err)
+		})
+	}
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateOAuthProfile_NilProfile() {

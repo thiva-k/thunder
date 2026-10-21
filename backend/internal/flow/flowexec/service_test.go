@@ -2650,6 +2650,7 @@ func (s *ServiceTestSuite) TestSetApplicationToContext_BuildApplicationError() {
 func (s *ServiceTestSuite) TestResolveFlowInitiationMode_ByType() {
 	const appID = "test-app"
 	tokenExchange := string(providers.GrantTypeTokenExchange)
+	jwtBearer := string(providers.GrantTypeJWTBearer)
 
 	cases := []struct {
 		name          string
@@ -2718,6 +2719,31 @@ func (s *ServiceTestSuite) TestResolveFlowInitiationMode_ByType() {
 			profile:    &providers.OAuthProfile{GrantTypes: []string{"client_credentials"}},
 			expectMode: flowInitiationNotPermitted,
 		},
+		{
+			name: "mcp jwt-bearer only not permitted", appType: model.ApplicationTypeMCP,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{jwtBearer}},
+			expectMode: flowInitiationNotPermitted,
+		},
+		{
+			name: "mcp client_credentials and jwt-bearer not permitted", appType: model.ApplicationTypeMCP,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{"client_credentials", jwtBearer}},
+			expectMode: flowInitiationNotPermitted,
+		},
+		{
+			name: "mcp jwt-bearer with token exchange uses flow secret", appType: model.ApplicationTypeMCP,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{jwtBearer, tokenExchange}},
+			expectMode: flowInitiationFlowSecret,
+		},
+		{
+			name: "fullstack ciba only not permitted", appType: model.ApplicationTypeFullStack,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{string(providers.GrantTypeCIBA)}},
+			expectMode: flowInitiationNotPermitted,
+		},
+		{
+			name: "fullstack redirect with token exchange not permitted", appType: model.ApplicationTypeFullStack,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{"authorization_code", tokenExchange}},
+			expectMode: flowInitiationNotPermitted,
+		},
 	}
 
 	for _, tc := range cases {
@@ -2773,6 +2799,9 @@ func (s *ServiceTestSuite) TestExecute_NewFlow_GuardRejections() {
 		{"redirect-based app blocked", providers.FlowTypeAuthentication, []string{"authorization_code"}, "",
 			ErrorDirectFlowInitiationNotPermitted.Code},
 		{"m2m app blocked", providers.FlowTypeAuthentication, []string{"client_credentials"}, "",
+			ErrorDirectFlowInitiationNotPermitted.Code},
+		{"jwt-bearer only app blocked", providers.FlowTypeAuthentication,
+			[]string{"urn:ietf:params:oauth:grant-type:jwt-bearer"}, "",
 			ErrorDirectFlowInitiationNotPermitted.Code},
 		{"flow-native app without secret", providers.FlowTypeAuthentication,
 			[]string{"client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"}, "",
