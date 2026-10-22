@@ -4953,7 +4953,7 @@ const translations = {
     'notificationTemplatePreview.warnings.designNotAllowed':
       'Design token "{{token}}" is only allowed in the email body, not here.',
     'notificationTemplatePreview.warnings.designUnresolved':
-      'Design token "{{token}}" does not match any value in the selected theme; it is shown as-is and may not render.',
+      'Design token "{{token}}" is not a recognized design token; it may not render as expected.',
     'notificationTemplatePreview.warnings.missingTranslation':
       'No translation for "{{token}}" in any language; the template will fail to send until it is added.',
     'notificationTemplatePreview.warnings.unknownContext':
@@ -5410,7 +5410,7 @@ const translations = {
     'editor.preview.language': 'Language',
     'editor.preview.languageDefault': 'English (US)',
     'editor.preview.designTheme': 'Design theme',
-    'editor.preview.designThemeDefault': 'Default design theme',
+    'editor.preview.designThemeNone': 'No Theme',
     'update.success': 'Template updated successfully.',
     'update.error': 'Failed to save template. Please try again.',
     'delete.title': 'Delete template',
