@@ -1341,3 +1341,25 @@ func detectOSAndArchitecture() (string, string) {
 
 	return goos, goarch
 }
+
+// WithoutTopLevelKey drops one top-level key and its block from a YAML document, leaving the rest of
+// the text as it was so an export's template placeholders survive. A blank line inside the block
+// does not end it.
+func WithoutTopLevelKey(content, key string) string {
+	var out []string
+	skipping := false
+	for _, line := range strings.Split(content, "\n") {
+		if skipping {
+			if line == "" || strings.HasPrefix(line, " ") || strings.HasPrefix(line, "- ") || line == "-" {
+				continue
+			}
+			skipping = false
+		}
+		if strings.HasPrefix(line, key+":") {
+			skipping = true
+			continue
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "\n")
+}

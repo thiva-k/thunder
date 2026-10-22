@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
+	"slices"
 	"testing"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -18,6 +20,8 @@ import (
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/identitygovernance"
 	oupkg "github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/sharing"
+	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/security"
@@ -28,6 +32,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/entitytypemock"
 	"github.com/thunder-id/thunderid/tests/mocks/identitygovernancemock"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
+	"github.com/thunder-id/thunderid/tests/mocks/sharingmock"
 	"github.com/thunder-id/thunderid/tests/mocks/sysauthzmock"
 )
 
@@ -928,6 +933,7 @@ func TestUserService_DeleteUser(t *testing.T) {
 		entityService:      storeMock,
 		authzService:       newAllowAllAuthz(t),
 		dependencyRegistry: newNoBlockingDepsRegistry(),
+		sharingService:     newPurgingSharing(t, userID),
 	}
 
 	err := service.DeleteUser(context.Background(), userID)
@@ -1587,6 +1593,7 @@ func TestUserService_UpdateUser_AuthzBranches(t *testing.T) {
 				entityTypeService: entityTypeMock,
 				authzService:      authzMock,
 				governance:        activeGovernance(t),
+				sharingService:    unsharedSharing(t),
 			}
 
 			updatedUser := providers.User{
@@ -1972,7 +1979,7 @@ func TestUserService_GetUsersByPath_WithIncludeDisplay_BatchFetchError(t *testin
 }
 
 func TestNewFunctions(t *testing.T) {
-	svc := newUserService(nil, nil, nil, nil, nil, nil)
+	svc := newUserService(nil, nil, nil, nil, nil, nil, nil)
 	require.NotNil(t, svc)
 
 	handler := newUserHandler(svc)
@@ -2008,6 +2015,7 @@ func TestUserService_MoreErrorCases(t *testing.T) {
 		entityTypeService:  entityTypeMock,
 		authzService:       authzMock,
 		dependencyRegistry: newNoBlockingDepsRegistry(),
+		sharingService:     newPurgingSharing(t, "u1"),
 	}
 	ctx := context.Background()
 
@@ -3066,6 +3074,7 @@ func TestUserService_DeleteUser_AllowedWhenOnlyNonBlockingDependencies(t *testin
 		entityService:      storeMock,
 		authzService:       newAllowAllAuthz(t),
 		dependencyRegistry: registry,
+		sharingService:     newPurgingSharing(t, userID),
 	}
 
 	err := service.DeleteUser(context.Background(), userID)
@@ -3719,6 +3728,7 @@ func TestUserService_DeleteUser_NotFoundOnDelete(t *testing.T) {
 		entityService:      storeMock,
 		authzService:       newAllowAllAuthz(t),
 		dependencyRegistry: newNoBlockingDepsRegistry(),
+		sharingService:     newPurgingSharing(t, userID),
 	}
 
 	err := service.DeleteUser(context.Background(), userID)
@@ -4049,6 +4059,703 @@ func TestGetUserMetadata_GetEntityTypeSchemaError(t *testing.T) {
 	require.Nil(t, schema)
 	require.NotNil(t, svcErr)
 	require.Equal(t, entitytype.ErrorEntityTypeNotFound.Code, svcErr.Code)
+}
+
+// unsharedSharing returns a sharing service that reports the user holds no sharing policy.
+func unsharedSharing(t *testing.T) *sharingmock.SharingServiceInterfaceMock {
+	sharingMock := sharingmock.NewSharingServiceInterfaceMock(t)
+	sharingMock.On("ListPolicies", mock.Anything, UserSharingType, mock.Anything).
+		Return([]sharing.Policy{}, (*tidcommon.ServiceError)(nil)).Maybe()
+	return sharingMock
+}
+
+// A shared user stays in its organization unit, since its policies were issued against that unit.
+func TestSharingPolicy_ASharedUserCannotMove(t *testing.T) {
+	storeMock := entitymock.NewEntityServiceInterfaceMock(t)
+	storeMock.On("GetEntityProfile", mock.Anything, svcTestUserID1).Return(&providers.Entity{
+		Category: providers.EntityCategoryUser, ID: svcTestUserID1, OUID: shareOwnerOU, Type: testUserType,
+	}, nil).Once()
+	storeMock.On("IsEntityDeclarative", mock.Anything, svcTestUserID1).Return(false, nil).Maybe()
+	sharingMock := sharingmock.NewSharingServiceInterfaceMock(t)
+	sharingMock.On("ListPolicies", mock.Anything, UserSharingType, svcTestUserID1).
+		Return([]sharing.Policy{userPolicy(shareOwnerOU)}, (*tidcommon.ServiceError)(nil)).Once()
+	service := &userService{
+		entityService:  storeMock,
+		authzService:   newAllowAllAuthz(t),
+		sharingService: sharingMock,
+		governance:     activeGovernance(t),
+	}
+
+	_, err := service.UpdateUser(context.Background(), svcTestUserID1,
+		&providers.User{OUID: shareChildOU, Type: testUserType})
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorSharedUserCannotMove.Code, err.Code)
+}
+
+// newPurgingSharing returns a sharing service that expects the policy purge a user delete runs.
+func newPurgingSharing(t *testing.T, userID string) *sharingmock.SharingServiceInterfaceMock {
+	sharingMock := sharingmock.NewSharingServiceInterfaceMock(t)
+	sharingMock.On("DeletePoliciesForResource", mock.Anything, UserSharingType, userID).
+		Return((*tidcommon.ServiceError)(nil)).Once()
+	return sharingMock
+}
+
+const (
+	shareOwnerOU  = "ou-owner"
+	shareChildOU  = "ou-child"
+	shareOtherOU  = "ou-other"
+	sharePolicyID = "policy-1"
+)
+
+// sharingFixture is a user service wired for sharing calls. Its caller may act only in the
+// organization units listed per action, and every check it makes is recorded.
+type sharingFixture struct {
+	service *userService
+	sharing *sharingmock.SharingServiceInterfaceMock
+	checks  []*sysauthz.ActionContext
+	// userDeclared says whether the fixture's user is declared in a resource file.
+	userDeclared bool
+}
+
+// withUserStore runs the rest of the test with users in the given store mode; empty is the default.
+func withUserStore(t *testing.T, mode string) {
+	t.Helper()
+	config.ResetServerRuntime()
+	require.NoError(t, config.InitializeServerRuntime("test", &config.Config{User: config.UserConfig{Store: mode}}))
+	t.Cleanup(config.ResetServerRuntime)
+}
+
+func newSharingFixture(t *testing.T, allowed map[security.Action][]string) *sharingFixture {
+	f := &sharingFixture{sharing: sharingmock.NewSharingServiceInterfaceMock(t)}
+	withUserStore(t, "")
+
+	store := entitymock.NewEntityServiceInterfaceMock(t)
+	store.On("GetEntity", mock.Anything, svcTestUserID1).Return(&providers.Entity{
+		Category: providers.EntityCategoryUser, ID: svcTestUserID1, OUID: shareOwnerOU,
+	}, nil).Maybe()
+	store.On("GetEntity", mock.Anything, mock.Anything).Return(nil, entitypkg.ErrEntityNotFound).Maybe()
+	store.EXPECT().IsEntityDeclarative(mock.Anything, svcTestUserID1).RunAndReturn(
+		func(context.Context, string) (bool, error) { return f.userDeclared, nil }).Maybe()
+
+	authz := sysauthzmock.NewSystemAuthorizationServiceInterfaceMock(t)
+	authz.EXPECT().IsActionAllowed(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(
+		func(ctx context.Context, action security.Action, ac *sysauthz.ActionContext) (bool, *tidcommon.ServiceError) {
+			if security.IsRuntimeContext(ctx) {
+				return true, nil
+			}
+			f.checks = append(f.checks, ac)
+			return slices.Contains(allowed[action], ac.OUID), nil
+		}).Maybe()
+
+	f.service = &userService{
+		governance: activeGovernance(t), entityService: store, authzService: authz, sharingService: f.sharing}
+	return f
+}
+
+// userPolicy is a policy over the fixture's user, made by the given organization unit.
+func userPolicy(initiatingOUID string) sharing.Policy {
+	return sharing.Policy{
+		ID: sharePolicyID, ResourceType: UserSharingType, ResourceID: svcTestUserID1,
+		OwningOUID: shareOwnerOU, InitiatingOUID: initiatingOUID, Version: 1,
+	}
+}
+
+func TestSharingPolicy_CreateIsAuthorizedForTheInitiatingOU(t *testing.T) {
+	cases := []struct {
+		name       string
+		allowedIn  string
+		initiating string
+		allowed    bool
+	}{
+		{name: "OwnerSharesItsUser", allowedIn: shareOwnerOU, allowed: true},
+		{name: "ChildReshares", allowedIn: shareChildOU, initiating: shareChildOU, allowed: true},
+		{name: "ChildCannotShareForTheOwner", allowedIn: shareChildOU},
+		{name: "OwnerCannotReshareForTheChild", allowedIn: shareOwnerOU, initiating: shareChildOU},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {tc.allowedIn}})
+			req := sharing.PolicyRequest{InitiatingOUID: tc.initiating}
+			if tc.allowed {
+				f.sharing.On("CreatePolicy", mock.Anything, UserSharingType, svcTestUserID1, shareOwnerOU, req).
+					Return(userPolicy(tc.allowedIn), (*tidcommon.ServiceError)(nil)).Once()
+			}
+
+			_, err := f.service.CreateSharingPolicy(context.Background(), svcTestUserID1, req)
+
+			if tc.allowed {
+				require.Nil(t, err)
+				return
+			}
+			require.NotNil(t, err)
+			require.Equal(t, tidcommon.ErrorUnauthorized.Code, err.Code)
+		})
+	}
+}
+
+// A declared user's own sharing is declared with it, so the owner's policy is refused here.
+func TestSharingPolicy_ADeclaredUsersOwnPolicyIsRefused(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {shareOwnerOU}})
+	f.userDeclared = true
+
+	_, err := f.service.CreateSharingPolicy(context.Background(), svcTestUserID1, sharing.PolicyRequest{})
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorCannotModifyDeclarativeResource.Code, err.Code)
+}
+
+// A unit a declared user is shared into may still reshare: there is nowhere else to record that.
+func TestSharingPolicy_AUnitMayReshareADeclaredUser(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {shareChildOU}})
+	f.userDeclared = true
+	req := sharing.PolicyRequest{InitiatingOUID: shareChildOU}
+	f.sharing.On("CreatePolicy", mock.Anything, UserSharingType, svcTestUserID1, shareOwnerOU, req).
+		Return(userPolicy(shareChildOU), (*tidcommon.ServiceError)(nil)).Once()
+
+	_, err := f.service.CreateSharingPolicy(context.Background(), svcTestUserID1, req)
+
+	require.Nil(t, err)
+}
+
+// Users that load from resource files only have all their sharing declared there, so no policy is
+// written, changed or removed here.
+func TestSharingPolicy_UsersFromFilesOnlyRefuseEveryWrite(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {shareOwnerOU}})
+	withUserStore(t, "declarative")
+	f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).
+		Return(userPolicy(shareOwnerOU), (*tidcommon.ServiceError)(nil))
+	ctx := context.Background()
+
+	_, createErr := f.service.CreateSharingPolicy(ctx, svcTestUserID1, sharing.PolicyRequest{})
+	_, updateErr := f.service.UpdateSharingPolicy(ctx, svcTestUserID1, sharePolicyID, sharing.PolicyRequest{})
+	deleteErr := f.service.DeleteSharingPolicy(ctx, svcTestUserID1, sharePolicyID)
+
+	for _, err := range []*tidcommon.ServiceError{createErr, updateErr, deleteErr} {
+		require.NotNil(t, err)
+		require.Equal(t, ErrorCannotModifyDeclarativeResource.Code, err.Code)
+	}
+}
+
+func TestSharingPolicy_ChecksNeverNameTheUser(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {shareOwnerOU}})
+	f.sharing.On("CreatePolicy", mock.Anything, UserSharingType, svcTestUserID1, shareOwnerOU, mock.Anything).
+		Return(userPolicy(shareOwnerOU), (*tidcommon.ServiceError)(nil)).Once()
+
+	_, err := f.service.CreateSharingPolicy(context.Background(), svcTestUserID1, sharing.PolicyRequest{})
+
+	require.Nil(t, err)
+	require.NotEmpty(t, f.checks)
+	for _, check := range f.checks {
+		require.Empty(t, check.ResourceID, "a sharing check must not let users act on their own record")
+	}
+}
+
+func TestSharingPolicy_UnknownUserAnswersNotFound(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {shareOwnerOU}})
+
+	_, err := f.service.CreateSharingPolicy(context.Background(), "missing-user", sharing.PolicyRequest{})
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorUserNotFound.Code, err.Code)
+}
+
+func TestSharingPolicy_AnotherUsersPolicyIsNotFound(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {shareOwnerOU}})
+	foreign := userPolicy(shareOwnerOU)
+	foreign.ResourceID = "user-2"
+	f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).Return(foreign, (*tidcommon.ServiceError)(nil)).Once()
+
+	_, err := f.service.GetSharingPolicy(context.Background(), svcTestUserID1, sharePolicyID)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorSharingPolicyNotFound.Code, err.Code)
+}
+
+func TestSharingPolicy_GetIsReadableByTheOwnerOrTheInitiator(t *testing.T) {
+	cases := []struct {
+		name      string
+		allowedIn string
+		readable  bool
+	}{
+		{name: "OwnerReadsAReshare", allowedIn: shareOwnerOU, readable: true},
+		{name: "ChildReadsItsOwnReshare", allowedIn: shareChildOU, readable: true},
+		{name: "UnrelatedUnitCannotRead", allowedIn: shareOtherOU},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {tc.allowedIn}})
+			f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).
+				Return(userPolicy(shareChildOU), (*tidcommon.ServiceError)(nil)).Once()
+
+			_, err := f.service.GetSharingPolicy(context.Background(), svcTestUserID1, sharePolicyID)
+
+			if tc.readable {
+				require.Nil(t, err)
+				return
+			}
+			require.NotNil(t, err)
+			require.Equal(t, tidcommon.ErrorUnauthorized.Code, err.Code)
+		})
+	}
+}
+
+func TestSharingPolicy_OnlyTheInitiatorChangesAPolicy(t *testing.T) {
+	cases := []struct {
+		name       string
+		allowedIn  string
+		initiating string
+		allowed    bool
+	}{
+		{name: "ChildChangesItsReshare", allowedIn: shareChildOU, initiating: shareChildOU, allowed: true},
+		{name: "OwnerCannotChangeTheChildsReshare", allowedIn: shareOwnerOU, initiating: shareChildOU},
+		{name: "ChildCannotChangeTheOwnersShare", allowedIn: shareChildOU, initiating: shareOwnerOU},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name+"/Update", func(t *testing.T) {
+			f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {tc.allowedIn}})
+			f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).
+				Return(userPolicy(tc.initiating), (*tidcommon.ServiceError)(nil)).Once()
+			if tc.allowed {
+				f.sharing.On("UpdatePolicy", mock.Anything, sharePolicyID, mock.Anything).
+					Return(userPolicy(tc.initiating), (*tidcommon.ServiceError)(nil)).Once()
+			}
+
+			_, err := f.service.UpdateSharingPolicy(
+				context.Background(), svcTestUserID1, sharePolicyID, sharing.PolicyRequest{Version: 1})
+
+			if tc.allowed {
+				require.Nil(t, err)
+				return
+			}
+			require.NotNil(t, err)
+			require.Equal(t, tidcommon.ErrorUnauthorized.Code, err.Code)
+		})
+		t.Run(tc.name+"/Delete", func(t *testing.T) {
+			f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {tc.allowedIn}})
+			f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).
+				Return(userPolicy(tc.initiating), (*tidcommon.ServiceError)(nil)).Once()
+			if tc.allowed {
+				f.sharing.On("DeletePolicy", mock.Anything, sharePolicyID).Return((*tidcommon.ServiceError)(nil)).Once()
+			}
+
+			err := f.service.DeleteSharingPolicy(context.Background(), svcTestUserID1, sharePolicyID)
+
+			if tc.allowed {
+				require.Nil(t, err)
+				return
+			}
+			require.NotNil(t, err)
+			require.Equal(t, tidcommon.ErrorUnauthorized.Code, err.Code)
+		})
+	}
+}
+
+func TestSharingPolicy_DeletingAnAbsentPolicySucceeds(t *testing.T) {
+	f := newSharingFixture(t, nil)
+	f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).
+		Return(sharing.Policy{}, &sharing.ErrorPolicyNotFound).Once()
+
+	err := f.service.DeleteSharingPolicy(context.Background(), svcTestUserID1, sharePolicyID)
+
+	require.Nil(t, err)
+}
+
+func TestSharingPolicy_DeleteRefusesADeclaredPolicy(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionUpdateUser: {shareOwnerOU}})
+	declared := userPolicy(shareOwnerOU)
+	declared.Declared = true
+	f.sharing.On("GetPolicy", mock.Anything, sharePolicyID).Return(declared, (*tidcommon.ServiceError)(nil)).Once()
+
+	err := f.service.DeleteSharingPolicy(context.Background(), svcTestUserID1, sharePolicyID)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorSharingPolicyDeclared.Code, err.Code)
+}
+
+func TestSharingPolicy_OwnerListsThroughTheFrameworkPage(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {shareOwnerOU}})
+	page := sharing.PolicyList{TotalResults: 1, StartIndex: 1, Count: 1, Policies: []sharing.Policy{
+		userPolicy(shareOwnerOU),
+	}}
+	f.sharing.On("GetPolicyList", mock.Anything, UserSharingType, svcTestUserID1, 30, 0).
+		Return(page, (*tidcommon.ServiceError)(nil)).Once()
+
+	list, err := f.service.ListSharingPolicies(context.Background(), svcTestUserID1, 30, 0)
+
+	require.Nil(t, err)
+	require.Equal(t, page, list)
+}
+
+func TestSharingPolicy_OtherUnitsListOnlyTheirOwnPolicies(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {shareChildOU, shareOtherOU}})
+	f.sharing.On("ListPolicies", mock.Anything, UserSharingType, svcTestUserID1).Return([]sharing.Policy{
+		userPolicy(shareOwnerOU), userPolicy(shareChildOU), userPolicy(shareOtherOU),
+	}, (*tidcommon.ServiceError)(nil)).Once()
+
+	list, err := f.service.ListSharingPolicies(context.Background(), svcTestUserID1, 1, 1)
+
+	require.Nil(t, err)
+	require.Equal(t, 2, list.TotalResults)
+	require.Equal(t, 2, list.StartIndex)
+	require.Equal(t, 1, list.Count)
+	require.Equal(t, shareOtherOU, list.Policies[0].InitiatingOUID)
+}
+
+func TestSharingPolicy_InMemoryListingPastTheLastPageIsEmpty(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {shareChildOU}})
+	f.sharing.On("ListPolicies", mock.Anything, UserSharingType, svcTestUserID1).Return([]sharing.Policy{
+		userPolicy(shareOwnerOU), userPolicy(shareChildOU),
+	}, (*tidcommon.ServiceError)(nil)).Once()
+
+	list, err := f.service.ListSharingPolicies(context.Background(), svcTestUserID1, 30, 5)
+
+	require.Nil(t, err)
+	require.Empty(t, list.Policies)
+	require.Equal(t, 1, list.TotalResults)
+	require.Equal(t, 6, list.StartIndex)
+}
+
+func TestSharingPolicy_AUnitWithNoPoliciesCannotList(t *testing.T) {
+	f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {shareOtherOU}})
+	f.sharing.On("ListPolicies", mock.Anything, UserSharingType, svcTestUserID1).Return([]sharing.Policy{
+		userPolicy(shareOwnerOU),
+	}, (*tidcommon.ServiceError)(nil)).Once()
+
+	_, err := f.service.ListSharingPolicies(context.Background(), svcTestUserID1, 30, 0)
+
+	require.NotNil(t, err)
+	require.Equal(t, tidcommon.ErrorUnauthorized.Code, err.Code)
+}
+
+// Both listings check the page: the owner's, which the framework pages, and another unit's, paged in
+// memory. The framework mock expects no call, so an unchecked page fails the test.
+func TestSharingPolicy_ListingValidatesThePage(t *testing.T) {
+	cases := []struct {
+		name          string
+		limit, offset int
+		expected      string
+	}{
+		{name: "ZeroLimit", limit: 0, offset: 0, expected: ErrorInvalidLimit.Code},
+		{name: "LimitAboveMaximum", limit: 1000000, offset: 0, expected: ErrorInvalidLimit.Code},
+		{name: "NegativeOffset", limit: 10, offset: -1, expected: ErrorInvalidOffset.Code},
+		{name: "OffsetThatWouldOverflow", limit: 10, offset: math.MaxInt, expected: ErrorInvalidOffset.Code},
+	}
+	callers := map[string]string{"Owner": shareOwnerOU, "OtherUnit": shareChildOU}
+	for caller, ouID := range callers {
+		for _, tc := range cases {
+			t.Run(caller+"/"+tc.name, func(t *testing.T) {
+				f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {ouID}})
+
+				_, err := f.service.ListSharingPolicies(context.Background(), svcTestUserID1, tc.limit, tc.offset)
+
+				require.NotNil(t, err)
+				require.Equal(t, tc.expected, err.Code)
+			})
+		}
+	}
+}
+
+func TestSharingPolicy_ResolveOverlay(t *testing.T) {
+	visible := sharing.ResolvedOverlay{OUID: shareChildOU, Visible: true}
+	cases := []struct {
+		name      string
+		allowedIn string
+		ouID      string
+		overlay   sharing.ResolvedOverlay
+		svcErr    *tidcommon.ServiceError
+		expected  string
+	}{
+		{name: "MissingOU", allowedIn: shareOwnerOU, expected: ErrorMissingOUIDParameter.Code},
+		{name: "ChildAsksAboutItself", allowedIn: shareChildOU, ouID: shareChildOU, overlay: visible},
+		{name: "OwnerAsksAboutAnUnreachedUnit", allowedIn: shareOwnerOU, ouID: shareOtherOU,
+			overlay: sharing.ResolvedOverlay{OUID: shareOtherOU}, expected: ErrorUserNotSharedToOU.Code},
+		{name: "OwnerAsksAboutAnUnknownUnit", allowedIn: shareOwnerOU, ouID: "ou-unknown",
+			svcErr: &oupkg.ErrorOrganizationUnitNotFound, expected: ErrorUserNotSharedToOU.Code},
+		{name: "UnrelatedUnitCannotAsk", allowedIn: shareOtherOU, ouID: shareChildOU,
+			expected: tidcommon.ErrorUnauthorized.Code},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newSharingFixture(t, map[security.Action][]string{security.ActionReadUser: {tc.allowedIn}})
+			if tc.ouID != "" && tc.expected != tidcommon.ErrorUnauthorized.Code {
+				f.sharing.On("ResolveOverlayRules", mock.Anything, UserSharingType, svcTestUserID1, tc.ouID).
+					Return(tc.overlay, tc.svcErr).Once()
+			}
+
+			overlay, err := f.service.ResolveSharingOverlay(context.Background(), svcTestUserID1, tc.ouID)
+
+			if tc.expected == "" {
+				require.Nil(t, err)
+				require.True(t, overlay.Visible)
+				return
+			}
+			require.NotNil(t, err)
+			require.Equal(t, tc.expected, err.Code)
+		})
+	}
+}
+
+func TestTranslateSharingError(t *testing.T) {
+	cases := []struct {
+		name     string
+		in       tidcommon.ServiceError
+		expected string
+	}{
+		{name: "PolicyNotFound", in: sharing.ErrorPolicyNotFound, expected: ErrorSharingPolicyNotFound.Code},
+		{name: "PolicyExists", in: sharing.ErrorPolicyExists, expected: ErrorSharingPolicyExists.Code},
+		{name: "VersionMismatch", in: sharing.ErrorVersionMismatch, expected: ErrorSharingPolicyVersionMismatch.Code},
+		{name: "PolicyDeclared", in: sharing.ErrorPolicyDeclared, expected: ErrorSharingPolicyDeclared.Code},
+		{name: "InvalidLimit", in: sharing.ErrorInvalidLimit, expected: ErrorInvalidLimit.Code},
+		{name: "InvalidOffset", in: sharing.ErrorInvalidOffset, expected: ErrorInvalidOffset.Code},
+		{name: "AnyOtherRefusal", in: sharing.ErrorDeclaredPolicyIDConflict, expected: ErrorInvalidSharingPolicy.Code},
+		{name: "ServerError", in: tidcommon.InternalServerError, expected: tidcommon.InternalServerError.Code},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := tc.in
+			out := translateSharingError(&in)
+			require.Equal(t, tc.expected, out.Code)
+			if in.Type == tidcommon.ClientErrorType {
+				require.Equal(t, in.ErrorDescription, out.ErrorDescription, "the framework's reason must survive")
+			}
+		})
+	}
+	require.Nil(t, translateSharingError(nil))
+}
+
+func TestUserService_DeleteUser_AbortedWhenSharingPurgeFails(t *testing.T) {
+	userID := svcTestUserID1
+	storeMock := newDeletableUserStore(t)
+	sharingMock := sharingmock.NewSharingServiceInterfaceMock(t)
+	sharingMock.On("DeletePoliciesForResource", mock.Anything, UserSharingType, userID).
+		Return(&tidcommon.InternalServerError).Once()
+
+	service := &userService{
+		governance:         activeGovernance(t),
+		entityService:      storeMock,
+		authzService:       newAllowAllAuthz(t),
+		dependencyRegistry: newNoBlockingDepsRegistry(),
+		sharingService:     sharingMock,
+	}
+
+	err := service.DeleteUser(context.Background(), userID)
+
+	require.NotNil(t, err)
+	require.Equal(t, tidcommon.InternalServerError.Code, err.Code)
+	storeMock.AssertNotCalled(t, "DeleteEntity", mock.Anything, mock.Anything)
+}
+
+// accessTree is the organization unit tree behind the accessible-units tests, laid out as the cloud
+// case: users live in the Customers OU and are shared into the customers' OUs beneath it.
+//
+//	ou-r             (root, not accessible)
+//	└── ou-p         (the user's own: the Customers OU)
+//	    ├── ou-c     (shared: a customer's OU)
+//	    │   └── ou-g (shared)
+//	    └── ou-c2    (shared: the same customer's other OU)
+//	ou-x             (another tree's root, shared)
+//	ou-y             (another tree's root, shared)
+var accessTree = map[string]*string{
+	"ou-r":  nil,
+	"ou-p":  strPtr("ou-r"),
+	"ou-c":  strPtr("ou-p"),
+	"ou-c2": strPtr("ou-p"),
+	"ou-g":  strPtr("ou-c"),
+	"ou-x":  nil,
+	"ou-y":  nil,
+}
+
+func strPtr(s string) *string { return &s }
+
+// newAccessFixture returns a user service whose user lives in ou-p and is shared into the given
+// units, called as that user from the given organization unit.
+func newAccessFixture(t *testing.T, tokenOU string, reached ...string) (*userService, context.Context) {
+	store := entitymock.NewEntityServiceInterfaceMock(t)
+	store.On("GetEntity", mock.Anything, svcTestUserID1).Return(&providers.Entity{
+		Category: providers.EntityCategoryUser, ID: svcTestUserID1, OUID: "ou-p",
+	}, nil).Maybe()
+
+	sharingMock := sharingmock.NewSharingServiceInterfaceMock(t)
+	sharingMock.On("ListResourceSharedOUIDs", mock.Anything, UserSharingType, svcTestUserID1).
+		Return(reached, (*tidcommon.ServiceError)(nil)).Maybe()
+
+	ouMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
+	ouMock.EXPECT().GetOrganizationUnit(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, id string) (oupkg.OrganizationUnit, *tidcommon.ServiceError) {
+			parent, ok := accessTree[id]
+			if !ok {
+				return oupkg.OrganizationUnit{}, &oupkg.ErrorOrganizationUnitNotFound
+			}
+			return oupkg.OrganizationUnit{ID: id, Handle: id, Name: id, Parent: parent}, nil
+		}).Maybe()
+
+	service := &userService{
+		governance:    activeGovernance(t),
+		entityService: store, authzService: newAllowAllAuthz(t),
+		sharingService: sharingMock, ouService: ouMock,
+	}
+	ctx := security.WithSecurityContextTest(context.Background(),
+		security.NewSecurityContextForTest(svcTestUserID1, tokenOU, "", nil, nil))
+	return service, ctx
+}
+
+// unitIDs returns the ids of the listed units, in order.
+func unitIDs(list *AccessibleOrganizationUnitListResponse) []string {
+	ids := make([]string, 0, len(list.OrganizationUnits))
+	for _, ou := range list.OrganizationUnits {
+		ids = append(ids, ou.ID)
+	}
+	return ids
+}
+
+func TestGetAccessibleOrganizationUnits_Scopes(t *testing.T) {
+	cases := []struct {
+		name, tokenOU, scope string
+		expected             []string
+	}{
+		{name: "EveryUnitWhenScopeIsOmitted", tokenOU: "ou-c", scope: "",
+			expected: []string{"ou-p", "ou-c", "ou-c2", "ou-g", "ou-x", "ou-y"}},
+		{name: "SiblingsOfACustomerUnitLeaveOutTheParent", tokenOU: "ou-c", scope: "siblings",
+			expected: []string{"ou-c", "ou-c2"}},
+		{name: "SiblingsOfTheOwnUnit", tokenOU: "ou-p", scope: "siblings", expected: []string{"ou-p"}},
+		{name: "SiblingsOfATopLevelUnitAreTheOtherTopLevelUnits", tokenOU: "ou-x", scope: "siblings",
+			expected: []string{"ou-x", "ou-y"}},
+		{name: "AnOnlyChildIsItsOwnSibling", tokenOU: "ou-g", scope: "siblings", expected: []string{"ou-g"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			service, ctx := newAccessFixture(t, tc.tokenOU, "ou-c", "ou-c2", "ou-g", "ou-x", "ou-y")
+
+			list, err := service.GetAccessibleOrganizationUnits(ctx, tc.scope, 30, 0)
+
+			require.Nil(t, err)
+			require.Equal(t, tc.tokenOU, list.Current)
+			require.Equal(t, tc.expected, unitIDs(list))
+			require.Equal(t, len(tc.expected), list.TotalResults)
+		})
+	}
+}
+
+func TestGetAccessibleOrganizationUnits_OwnUnitFirstThenTheReachByID(t *testing.T) {
+	service, ctx := newAccessFixture(t, "ou-p", "ou-x", "ou-g", "ou-c")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "", 30, 0)
+
+	require.Nil(t, err)
+	require.Equal(t, []string{"ou-p", "ou-c", "ou-g", "ou-x"}, unitIDs(list))
+}
+
+func TestGetAccessibleOrganizationUnits_CurrentFallsBackToTheUsersOwnUnit(t *testing.T) {
+	service, ctx := newAccessFixture(t, "", "ou-c")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "siblings", 30, 0)
+
+	require.Nil(t, err)
+	require.Equal(t, "ou-p", list.Current)
+	require.Equal(t, []string{"ou-p"}, unitIDs(list))
+}
+
+func TestGetAccessibleOrganizationUnits_NoSiblingsWhenTheCurrentUnitIsGone(t *testing.T) {
+	service, ctx := newAccessFixture(t, "ou-removed", "ou-c")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "siblings", 30, 0)
+
+	require.Nil(t, err)
+	require.Empty(t, list.OrganizationUnits)
+	require.Equal(t, 0, list.TotalResults)
+}
+
+func TestGetAccessibleOrganizationUnits_SkipsARemovedUnit(t *testing.T) {
+	service, ctx := newAccessFixture(t, "ou-p", "ou-c", "ou-removed")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "", 30, 0)
+
+	require.Nil(t, err)
+	require.Equal(t, []string{"ou-p", "ou-c"}, unitIDs(list))
+}
+
+func TestGetAccessibleOrganizationUnits_Pages(t *testing.T) {
+	service, ctx := newAccessFixture(t, "ou-p", "ou-c", "ou-g", "ou-x")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "", 2, 1)
+
+	require.Nil(t, err)
+	require.Equal(t, []string{"ou-c", "ou-g"}, unitIDs(list))
+	require.Equal(t, 4, list.TotalResults)
+	require.Equal(t, 2, list.StartIndex)
+	require.Equal(t, 2, list.Count)
+	rels := make([]string, 0, len(list.Links))
+	for _, link := range list.Links {
+		rels = append(rels, link.Rel)
+	}
+	require.Contains(t, rels, "next")
+	require.Contains(t, rels, "prev")
+}
+
+func TestGetAccessibleOrganizationUnits_PastTheLastPageIsEmpty(t *testing.T) {
+	service, ctx := newAccessFixture(t, "ou-p", "ou-c")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "", 30, 5)
+
+	require.Nil(t, err)
+	require.Empty(t, list.OrganizationUnits)
+	require.Equal(t, 2, list.TotalResults)
+	require.Equal(t, 6, list.StartIndex)
+}
+
+func TestGetAccessibleOrganizationUnits_PageLinksKeepTheScope(t *testing.T) {
+	service, ctx := newAccessFixture(t, "ou-c", "ou-c", "ou-c2")
+
+	list, err := service.GetAccessibleOrganizationUnits(ctx, "siblings", 1, 0)
+
+	require.Nil(t, err)
+	require.Equal(t, []string{"ou-c"}, unitIDs(list))
+	require.Equal(t, 2, list.TotalResults)
+	var next string
+	for _, link := range list.Links {
+		if link.Rel == "next" {
+			next = link.Href
+		}
+	}
+	require.Contains(t, next, "/users/me/ous?")
+	require.Contains(t, next, "scope=siblings")
+}
+
+func TestGetAccessibleOrganizationUnits_RefusesACallerWithNoSubject(t *testing.T) {
+	service, _ := newAccessFixture(t, "ou-p")
+	ctx := security.WithSecurityContextTest(context.Background(),
+		security.NewSecurityContextForTest("", "ou-p", "", nil, nil))
+
+	_, err := service.GetAccessibleOrganizationUnits(ctx, "", 30, 0)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorAuthenticationFailed.Code, err.Code)
+}
+
+func TestGetAccessibleOrganizationUnits_RefusesABadRequest(t *testing.T) {
+	cases := []struct {
+		name          string
+		scope         string
+		limit, offset int
+		expected      string
+	}{
+		{name: "DroppedScopeChildren", scope: "children", limit: 30, expected: ErrorInvalidScope.Code},
+		{name: "DroppedScopeAll", scope: "all", limit: 30, expected: ErrorInvalidScope.Code},
+		{name: "ZeroLimit", limit: 0, expected: ErrorInvalidLimit.Code},
+		{name: "NegativeOffset", limit: 30, offset: -1, expected: ErrorInvalidOffset.Code},
+		{name: "OffsetThatWouldOverflow", limit: 30, offset: math.MaxInt, expected: ErrorInvalidOffset.Code},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			service, ctx := newAccessFixture(t, "ou-p")
+
+			_, err := service.GetAccessibleOrganizationUnits(ctx, tc.scope, tc.limit, tc.offset)
+
+			require.NotNil(t, err)
+			require.Equal(t, tc.expected, err.Code)
+		})
+	}
 }
 
 // lockedRead returns an access read reporting LOCKED, without details.

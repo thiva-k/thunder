@@ -37,6 +37,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	"github.com/thunder-id/thunderid/internal/user"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 
 	"github.com/stretchr/testify/assert"
@@ -4212,4 +4213,116 @@ func TestImportApplicationRefusesPoliciesWithoutASharingAdapter(t *testing.T) {
 	require.Len(t, resp.Results, 1)
 	assert.Equal(t, statusFailed, resp.Results[0].Status)
 	assert.Contains(t, resp.Results[0].Message, "sharing")
+}
+
+// userDocWithPolicies is a user document in ou-1 that carries one sharing policy.
+func userDocWithPolicies(id string) string {
+	return strings.Join([]string{
+		"resource_type: user",
+		"id: " + id,
+		"type: person",
+		"ouId: ou-1",
+		"attributes:",
+		"  username: " + id,
+		"sharingPolicies:",
+		"  - childUnits:",
+		"      mode: all",
+		"",
+	}, "\n")
+}
+
+// newTestUserImportWithSharing is an import service with a user adapter and, when given, a sharing
+// adapter installed the way Initialize installs the real one.
+func newTestUserImportWithSharing(
+	userSvc *fakeUserService, sharingSvc *fakeSharingService,
+) ImportServiceInterface {
+	svc := newImportService(
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, userSvc, nil, nil, nil, nil, nil, nil, nil)
+	if sharingSvc != nil {
+		svc.(*importService).sharingService = sharingSvc
+	}
+	return svc
+}
+
+// A user's sharing is replayed by the importer once the user exists, against the unit it lives in.
+func TestImportUserAppliesSharingPolicies(t *testing.T) {
+	userSvc := &fakeUserService{}
+	sharingSvc := &fakeSharingService{}
+	svc := newTestUserImportWithSharing(userSvc, sharingSvc)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: userDocWithPolicies("user-1"), Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, sharingSvc.calls, 1, "the importer replayed the document's policies")
+	assert.Equal(t, user.UserSharingType, sharingSvc.calls[0].resourceType)
+	assert.Equal(t, "user-1", sharingSvc.calls[0].resourceID)
+	assert.Equal(t, "ou-1", sharingSvc.calls[0].owningOUID)
+	assert.Len(t, sharingSvc.calls[0].policies, 1)
+}
+
+// An update replays the document's policies too.
+func TestImportUserReplaysPoliciesOnUpdate(t *testing.T) {
+	sharingSvc := &fakeSharingService{}
+	svc := newTestUserImportWithSharing(&fakeUserService{}, sharingSvc)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: userDocWithPolicies("user-2"), Options: &ImportOptions{Upsert: boolPtr(true)}})
+
+	require.Nil(t, err)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Equal(t, operationUpdate, resp.Results[0].Operation)
+	require.Len(t, sharingSvc.calls, 1)
+	assert.Equal(t, "user-2", sharingSvc.calls[0].resourceID)
+}
+
+// A document carrying no policies asks the sharing adapter nothing.
+func TestImportUserWithoutPoliciesAsksTheAdapterNothing(t *testing.T) {
+	sharingSvc := &fakeSharingService{}
+	svc := newTestUserImportWithSharing(&fakeUserService{}, sharingSvc)
+
+	content := strings.Join([]string{
+		"resource_type: user", "id: user-3", "type: person", "ouId: ou-1", "attributes:", "  username: u3", "",
+	}, "\n")
+	resp, err := svc.ImportResources(context.Background(),
+		&ImportRequest{Content: content, Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Nil(t, err)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Empty(t, sharingSvc.calls)
+}
+
+// A refused policy undoes the create, so a retry does not meet a half-imported user.
+func TestImportUserUndoesTheCreateWhenPoliciesAreRefused(t *testing.T) {
+	userSvc := &fakeUserService{}
+	sharingSvc := &fakeSharingService{failure: &sharing.PolicyReplayError{
+		Index: 0, InitiatingOUID: "ou-1", Err: &sharing.ErrorInvalidRequestFormat}}
+	svc := newTestUserImportWithSharing(userSvc, sharingSvc)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: userDocWithPolicies("user-4"), Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Contains(t, resp.Results[0].Message, "sharing policy 1 (organization unit ou-1)")
+	assert.Equal(t, []string{"user-4"}, userSvc.deleted, "the user the refused document created was removed")
+}
+
+// A deployment with no sharing adapter says so rather than importing the user and dropping its
+// policies.
+func TestImportUserRefusesPoliciesWithoutASharingAdapter(t *testing.T) {
+	userSvc := &fakeUserService{}
+	svc := newTestUserImportWithSharing(userSvc, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: userDocWithPolicies("user-5"), Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Contains(t, resp.Results[0].Message, "sharing")
+	assert.Equal(t, []string{"user-5"}, userSvc.deleted)
 }
