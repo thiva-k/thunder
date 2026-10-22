@@ -939,6 +939,8 @@ var defaultMessages = map[string]string{
 	"error.identitygovernanceservice.missing_subject_description": "An identity is required",
 	"error.identitygovernanceservice.not_applicable": "Operation does not apply",
 	"error.identitygovernanceservice.not_applicable_description": "The operation does not apply to the identity's current state",
+	"error.identitygovernanceservice.operator_note_too_long": "Invalid request",
+	"error.identitygovernanceservice.operator_note_too_long_description": "The operator note must be at most 100 characters",
 	"error.idpservice.attribute_configuration_duplicate_target_description": "local attribute name '{{param(attribute)}}' appears as a mapping target more than once",
 	"error.idpservice.attribute_configuration_duplicate_user_type_description": "user type '{{param(userType)}}' is configured more than once",
 	"error.idpservice.attribute_configuration_empty_claim_description": "attribute mapping must not contain empty attribute names",

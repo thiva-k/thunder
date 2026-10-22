@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -792,6 +793,19 @@ func (s *ServiceTestSuite) TestSuspendWritesOneAtomicSuspension() {
 	s.Require().Nil(s.svc.Suspend(s.ctx, "e1", "Credential exposure"))
 	s.Equal([]string{"document"}, order)
 	s.port.AssertNotCalled(s.T(), "ClearAccessState", mock.Anything, mock.Anything, mock.Anything)
+}
+
+// The note limit counts characters, not bytes, and a longer note is refused before anything is written.
+func (s *ServiceTestSuite) TestSuspendTakesANoteUpToTheLimit() {
+	longest := strings.Repeat("é", maxOperatorNoteLength)
+	s.expectRead(s.activeEntity())
+	s.port.On("SetSuspension", mock.Anything, "e1", s.now, longest).Return(true, nil).Once()
+	s.Require().Nil(s.svc.Suspend(s.ctx, "e1", longest))
+	s.Require().Nil(s.svc.ValidateSuspend(s.ctx, "e1", longest))
+
+	s.requireServiceError(s.svc.Suspend(s.ctx, "e1", longest+"é"), ErrorOperatorNoteTooLong)
+	s.requireServiceError(s.svc.ValidateSuspend(s.ctx, "e1", longest+"é"), ErrorOperatorNoteTooLong)
+	s.port.AssertNumberOfCalls(s.T(), "SetSuspension", 1)
 }
 
 // An unknown identity is a client error, not a failed read.
@@ -1711,7 +1725,7 @@ func (s *ServiceTestSuite) TestLifecycleAuthorization() {
 			authz := sysauthzmock.NewSystemAuthorizationServiceInterfaceMock(s.T())
 			authz.EXPECT().IsActionAllowed(mock.Anything, tc.action, &sysauthz.ActionContext{
 				ResourceType: tc.resource, OUID: "ou-a", ResourceID: "e1",
-			}).Return(false, nil).Times(4)
+			}).Return(false, nil).Times(6)
 			svc := newTestService(s.T(), port, accountAccessValue{}, nil, authz)
 			for _, operation := range []struct {
 				name string
@@ -1719,7 +1733,15 @@ func (s *ServiceTestSuite) TestLifecycleAuthorization() {
 			}{
 				{"suspend", func() *tidcommon.ServiceError { return svc.Suspend(callerContext("operator"), "e1", "") }},
 				{"validate suspend", func() *tidcommon.ServiceError {
-					return svc.ValidateSuspend(callerContext("operator"), "e1")
+					return svc.ValidateSuspend(callerContext("operator"), "e1", "")
+				}},
+				// Authorized before the note is checked, so the limit cannot be probed from outside.
+				{"suspend with an over-long note", func() *tidcommon.ServiceError {
+					return svc.Suspend(callerContext("operator"), "e1", strings.Repeat("n", maxOperatorNoteLength+1))
+				}},
+				{"validate suspend with an over-long note", func() *tidcommon.ServiceError {
+					return svc.ValidateSuspend(callerContext("operator"), "e1",
+						strings.Repeat("n", maxOperatorNoteLength+1))
 				}},
 				{"unsuspend", func() *tidcommon.ServiceError { return svc.Unsuspend(callerContext("operator"), "e1") }},
 				{"unlock", func() *tidcommon.ServiceError { return svc.Unlock(callerContext("operator"), "e1") }},
@@ -1757,9 +1779,9 @@ func (s *ServiceTestSuite) TestValidateSuspendWritesNothing() {
 	authz := s.authorizer(true)
 	svc := newTestService(s.T(), port, accountAccessValue{}, nil, authz)
 
-	s.Require().Nil(svc.ValidateSuspend(callerContext("operator"), "e1"))
+	s.Require().Nil(svc.ValidateSuspend(callerContext("operator"), "e1", ""))
 	authz.AssertNumberOfCalls(s.T(), "IsActionAllowed", 1)
-	s.requireServiceError(svc.ValidateSuspend(callerContext("operator"), ""), ErrorMissingSubject)
+	s.requireServiceError(svc.ValidateSuspend(callerContext("operator"), "", ""), ErrorMissingSubject)
 	port.AssertNotCalled(s.T(), "SetSuspension", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
@@ -2115,9 +2137,19 @@ func (s *ServiceTestSuite) TestARefusedLifecycleOperationIsPublishedAsAFailure()
 			event.EventTypeIdentitySuspensionFailed, "not_authorized"},
 		{"suspend pre-check outside the boundary", agent, false,
 			func(s *identityGovernanceService) *tidcommon.ServiceError {
-				return s.ValidateSuspend(callerContext("operator"), "e1")
+				return s.ValidateSuspend(callerContext("operator"), "e1", "")
 			},
 			event.EventTypeIdentitySuspensionFailed, "not_authorized"},
+		{"suspend with an over-long note", agent, true,
+			func(s *identityGovernanceService) *tidcommon.ServiceError {
+				return s.Suspend(callerContext("operator"), "e1", strings.Repeat("n", maxOperatorNoteLength+1))
+			},
+			event.EventTypeIdentitySuspensionFailed, "note_too_long"},
+		{"suspend pre-check with an over-long note", agent, true,
+			func(s *identityGovernanceService) *tidcommon.ServiceError {
+				return s.ValidateSuspend(callerContext("operator"), "e1", strings.Repeat("n", maxOperatorNoteLength+1))
+			},
+			event.EventTypeIdentitySuspensionFailed, "note_too_long"},
 		{"unsuspend on an active identity", agent, true,
 			func(s *identityGovernanceService) *tidcommon.ServiceError {
 				return s.Unsuspend(callerContext("operator"), "e1")
@@ -2209,7 +2241,7 @@ func (s *ServiceTestSuite) TestAPassingSuspendPreCheckIsNotPublished() {
 		Return(new(governedSubject(providers.EntityCategoryUser)), nil)
 	svc, published := auditedService(s.T(), port, authorizerAllowing(s.T(), true))
 
-	s.Require().Nil(svc.ValidateSuspend(callerContext("operator"), "e1"))
+	s.Require().Nil(svc.ValidateSuspend(callerContext("operator"), "e1", ""))
 	s.Require().Empty(*published)
 }
 
@@ -2991,7 +3023,7 @@ func (s *ServiceTestSuite) TestAnUnknownIdentityIsPublishedAsNotFound() {
 			return svc.Suspend(s.ctx, "x", "")
 		},
 		"validate suspend": func(svc *identityGovernanceService) *tidcommon.ServiceError {
-			return svc.ValidateSuspend(s.ctx, "x")
+			return svc.ValidateSuspend(s.ctx, "x", "")
 		},
 		"unsuspend": func(svc *identityGovernanceService) *tidcommon.ServiceError {
 			return svc.Unsuspend(s.ctx, "x")

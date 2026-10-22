@@ -28,6 +28,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/internal/runtimestore"
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	systemconfig "github.com/thunder-id/thunderid/internal/system/config"
@@ -143,7 +144,8 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 
 	// Initialize flow core services.
 	flowConfig := flowconfig.Config{
-		Flow: engineCtx.flowConfig,
+		Flow:        engineCtx.flowConfig,
+		TokenLeeway: time.Duration(engineCtx.jwtConfig.Leeway) * time.Second,
 	}
 	flowFactory, graphCache := core.Initialize(engineCtx.cacheManager)
 	engineCtx.flowFactory = flowFactory
@@ -156,6 +158,20 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 	if engineCtx.identityGovernance == nil {
 		logger.Debug(ctx, "No identity governance provider is set, so account suspensions and locks are not enforced")
 	}
+	oauthConfig := oauthconfig.Config{
+		DeploymentID:               engineCtx.serverConfig.Identifier,
+		RuntimeTransientDBType:     engineCtx.runtimeTransientDBType,
+		BaseURL:                    engineconfig.GetServerURL(&engineCtx.serverConfig),
+		JWT:                        engineCtx.jwtConfig,
+		OAuth:                      engineCtx.oauthConfig,
+		GateClient:                 engineCtx.gateClientConfig,
+		EnableOUQualifiedEndpoints: engineCtx.serverConfig.EnableOUQualifiedEndpoints,
+	}
+	// With no SSO session store there is no session termination to deliver, so back-channel logout is
+	// off: no dispatcher is built and discovery does not advertise it.
+	backchannelOff := false
+	oauthConfig.OAuth.Logout.Backchannel.Enabled = &backchannelOff
+
 	execDeps := executor.ExecutorDependencies{
 		FlowFactory:        engineCtx.flowFactory,
 		AttributeCacheSvc:  engineCtx.attributeCacheService,
@@ -170,15 +186,22 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		UserMgtProvider:    engineCtx.userMgtProvider,
 		AgentMgtProvider:   engineCtx.agentMgtProvider,
 		IdentityGovernance: engineCtx.identityGovernance,
+		ArtifactLifetime: func(client *providers.OAuthClient) time.Duration {
+			return tokenservice.ArtifactLifetime(oauthConfig, client)
+		},
 	}
 	interceptorDeps := interceptor.InterceptorDependencies{
 		FlowFactory:    engineCtx.flowFactory,
 		CaptchaService: engineCtx.captchaValidationProvider,
 	}
 
-	engineCtx.execRegistry, err = executor.Initialize(execDeps, flowConfig.Flow)
+	engineCtx.execRegistry, err = executor.Initialize(execDeps, flowConfig)
 	if err != nil {
 		logger.Fatal(ctx, "Failed to register flow executors", log.Error(err))
+	}
+	err = executor.SetActorProvider(engineCtx.execRegistry, engineCtx.actorProvider)
+	if err != nil {
+		logger.Fatal(ctx, "Failed to inject the actor provider into the flow executors", log.Error(err))
 	}
 	err = engineCtx.applyCustomExecutors()
 	if err != nil {
@@ -200,20 +223,6 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 	if err != nil {
 		logger.Fatal(ctx, "Failed to initialize flow execution service", log.Error(err))
 	}
-
-	oauthConfig := oauthconfig.Config{
-		DeploymentID:               engineCtx.serverConfig.Identifier,
-		RuntimeTransientDBType:     engineCtx.runtimeTransientDBType,
-		BaseURL:                    engineconfig.GetServerURL(&engineCtx.serverConfig),
-		JWT:                        engineCtx.jwtConfig,
-		OAuth:                      engineCtx.oauthConfig,
-		GateClient:                 engineCtx.gateClientConfig,
-		EnableOUQualifiedEndpoints: engineCtx.serverConfig.EnableOUQualifiedEndpoints,
-	}
-	// With no SSO session store there is no session termination to deliver, so back-channel logout is
-	// off: no dispatcher is built and discovery does not advertise it.
-	backchannelOff := false
-	oauthConfig.OAuth.Logout.Backchannel.Enabled = &backchannelOff
 
 	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider),
 		engineCtx.runtimeCryptoSvc)

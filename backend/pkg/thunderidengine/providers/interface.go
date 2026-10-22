@@ -350,14 +350,16 @@ type IdentityGovernanceProvider interface {
 	Unlock(ctx context.Context, entityID string) *common.ServiceError
 
 	// Suspend places an administrative hold. It writes state only, so the caller composes revocation,
-	// and writes nothing for an identity already suspended. operatorNote is optional and never disclosed.
+	// and writes nothing for an identity already suspended. operatorNote is optional, at most 100
+	// characters, and never disclosed.
 	Suspend(ctx context.Context, entityID, operatorNote string) *common.ServiceError
 
-	// ValidateSuspend checks that the caller may suspend the identity, and writes nothing. An identity
-	// already suspended passes.
-	ValidateSuspend(ctx context.Context, entityID string) *common.ServiceError
+	// ValidateSuspend checks that the caller may suspend the identity with operatorNote, and writes
+	// nothing. An identity already suspended passes.
+	ValidateSuspend(ctx context.Context, entityID, operatorNote string) *common.ServiceError
 
 	// Unsuspend releases the hold. A user is left with a non-expiring entity-wide lock, which a
-	// recovery or an unlock clears; an agent or application returns to ACTIVE.
+	// recovery or an unlock clears; an agent keeps any automatic lock still in force, and an
+	// application becomes active.
 	Unsuspend(ctx context.Context, entityID string) *common.ServiceError
 }

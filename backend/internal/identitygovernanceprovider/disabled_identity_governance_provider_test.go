@@ -25,16 +25,19 @@ func (s *DisabledIdentityGovernanceProviderTestSuite) TestDisabledProviderReject
 	ctx := context.Background()
 	provider := newDisabledIdentityGovernanceProvider()
 	for _, operation := range []func(context.Context, string) *tidcommon.ServiceError{
-		provider.Unlock, provider.Unsuspend, provider.ValidateSuspend,
+		provider.Unlock, provider.Unsuspend,
 	} {
 		err := operation(ctx, "e1")
 		s.Require().NotNil(err)
 		s.Equal(errGovernanceUnavailable.Code, err.Code)
 	}
-
-	err := provider.Suspend(ctx, "e1", "")
-	s.Require().NotNil(err)
-	s.Equal(errGovernanceUnavailable.Code, err.Code)
+	for _, operation := range []func(context.Context, string, string) *tidcommon.ServiceError{
+		provider.Suspend, provider.ValidateSuspend,
+	} {
+		err := operation(ctx, "e1", "")
+		s.Require().NotNil(err)
+		s.Equal(errGovernanceUnavailable.Code, err.Code)
+	}
 }
 
 func (s *DisabledIdentityGovernanceProviderTestSuite) TestDisabledProviderAdmitsEveryCheck() {

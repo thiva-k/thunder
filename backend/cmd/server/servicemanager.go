@@ -359,12 +359,15 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize runtime store")
 
 	// Initialize passkey service
-	passkeyService := passkey.Initialize(entityService, runtimeStoreProvider)
+	passkeyService := passkey.Initialize(entityService, runtimeStoreProvider, governanceService)
 
 	// Shared DPoP verifier (and its JTI replay cache) so OAuth and OpenID4VCI
 	// share JTI replay protection.
 	oauthCfg := oauthconfig.FromServerRuntime()
 	dpopVerifier := dpop.Initialize(oauthCfg, jti.Initialize(runtimeStoreProvider), runtimeCryptoSvc)
+	artifactLifetime := func(client *providers.OAuthClient) time.Duration {
+		return tokenservice.ArtifactLifetime(oauthCfg, client)
+	}
 
 	openid4vpSvc, openid4vpDefSvc, openid4vciCredSvc, exporters :=
 		initializeVCServices(ctx, logger, mux, runtimeCryptoSvc, configCryptoSvc, jwtService,
@@ -446,6 +449,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 			CriteriaRevoker:       revocationSvc,
 			ResourceMgtService:    resourceService,
 			IdentityGovernance:    governanceProvider,
+			ArtifactLifetime:      artifactLifetime,
 		},
 		interceptor.InterceptorDependencies{},
 		flowConfig,
@@ -488,11 +492,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	applicationService, applicationExporter, err := application.Initialize(
 		mux, mcpServer, entityService, inboundClientService, ouService, i18nService,
-		runtimeCryptoSvc, serverConfigService,
-		func(client *providers.OAuthClient) time.Duration {
-			return tokenservice.ArtifactLifetime(oauthCfg, client)
-		},
-		sharingService, nil, governanceService)
+		runtimeCryptoSvc, serverConfigService, artifactLifetime, sharingService, nil, governanceService)
 	fatalOnError(ctx, logger, err, "Failed to initialize ApplicationService")
 	// Two-phase initialization: inject the application service into the executors that act on it.
 	fatalOnError(ctx, logger, executor.SetApplicationProvider(execRegistry, applicationService),
@@ -537,6 +537,10 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	actorProvider := actorprovider.Initialize(
 		inboundClientService, entityProvider, authnProvider, roleService, entityTypeService)
+	// Two-phase initialization: inject the actor provider into the executors that resolve an actor's
+	// OAuth client.
+	fatalOnError(ctx, logger, executor.SetActorProvider(execRegistry, actorProvider),
+		"Failed to inject the actor provider into the flow executors")
 
 	// Initialize flow metadata service
 	_ = flowmeta.Initialize(mux, actorProvider, ouProvider, designResolveService, i18nService)
@@ -742,7 +746,7 @@ func initializeFlowCoreAndExecutor(
 	interceptorDeps.FlowFactory = flowFactory
 
 	// Initialize flow executor registry
-	execRegistry, err := executor.Initialize(execDeps, flowConfig.Flow)
+	execRegistry, err := executor.Initialize(execDeps, flowConfig)
 	fatalOnError(ctx, logger, err, "Failed to register flow executors")
 	interceptorRegistry, err := interceptor.Initialize(interceptorDeps, flowConfig.Flow)
 	fatalOnError(ctx, logger, err, "Failed to initialize Interceptor registry")

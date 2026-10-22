@@ -52,6 +52,19 @@ var (
 			DefaultValue: "No identity exists with the given ID",
 		},
 	}
+	// ErrorOperatorNoteTooLong is returned when a suspension's operator note exceeds the limit.
+	ErrorOperatorNoteTooLong = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "IGS-1004",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.identitygovernanceservice.operator_note_too_long",
+			DefaultValue: "Invalid request",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.identitygovernanceservice.operator_note_too_long_description",
+			DefaultValue: "The operator note must be at most 100 characters",
+		},
+	}
 )
 
 // errNoEntityStateProvider is returned when the service is built without an entity state provider.

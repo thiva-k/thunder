@@ -54,8 +54,8 @@ func (p *defaultIdentityGovernanceProvider) Suspend(ctx context.Context,
 
 // ValidateSuspend runs the suspend checks without writing.
 func (p *defaultIdentityGovernanceProvider) ValidateSuspend(ctx context.Context,
-	entityID string) *tidcommon.ServiceError {
-	return p.governance.ValidateSuspend(ctx, entityID)
+	entityID, operatorNote string) *tidcommon.ServiceError {
+	return p.governance.ValidateSuspend(ctx, entityID, operatorNote)
 }
 
 // Unsuspend releases the hold.

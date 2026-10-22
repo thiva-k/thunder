@@ -75,12 +75,12 @@ func (s *DefaultIdentityGovernanceProviderTestSuite) TestLifecycleOperationsKeep
 	notRuntime := mock.MatchedBy(func(ctx context.Context) bool { return !security.IsRuntimeContext(ctx) })
 	s.svc.EXPECT().Unlock(notRuntime, "e1").Return(nil).Once()
 	s.svc.EXPECT().Suspend(notRuntime, "e1", "Credential exposure").Return(nil).Once()
-	s.svc.EXPECT().ValidateSuspend(notRuntime, "e1").Return(nil).Once()
+	s.svc.EXPECT().ValidateSuspend(notRuntime, "e1", "note").Return(nil).Once()
 	s.svc.EXPECT().Unsuspend(notRuntime, "e1").Return(nil).Once()
 
 	s.Nil(s.provider.Unlock(s.ctx, "e1"))
 	s.Nil(s.provider.Suspend(s.ctx, "e1", "Credential exposure"))
-	s.Nil(s.provider.ValidateSuspend(s.ctx, "e1"))
+	s.Nil(s.provider.ValidateSuspend(s.ctx, "e1", "note"))
 	s.Nil(s.provider.Unsuspend(s.ctx, "e1"))
 }
 

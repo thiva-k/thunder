@@ -2966,9 +2966,10 @@ func DeleteResource(resourceServerID, resourceID string) error {
 }
 
 // ExecuteFlowRaw posts one request to /flow/execute and returns the HTTP status and the raw answer,
-// whatever they are. It goes through the raw client, since the shared clients treat /flow/execute as
-// public, and sends the bearer token when one is given.
-func ExecuteFlowRaw(token string, body map[string]interface{}) (int, []byte, error) {
+// whatever they are. It goes through client when one is given, such as a browser's carrying its
+// cookies, and otherwise through the raw client, since the shared clients treat /flow/execute as
+// public; it sends the bearer token when one is given.
+func ExecuteFlowRaw(client *http.Client, token string, body map[string]interface{}) (int, []byte, error) {
 	payload, err := json.Marshal(body)
 	if err != nil {
 		return 0, nil, err
@@ -2982,7 +2983,10 @@ func ExecuteFlowRaw(token string, body map[string]interface{}) (int, []byte, err
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	resp, err := GetRawHTTPClient().Do(req)
+	if client == nil {
+		client = GetRawHTTPClient()
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"slices"
 
+	authncommon "github.com/thunder-id/thunderid/internal/authn/common"
 	"github.com/thunder-id/thunderid/internal/authn/otp"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -78,4 +79,13 @@ func refusal(decision providers.AccessDecision) *tidcommon.ServiceError {
 		return newClientError(authnprovidercm.ErrorCodeAuthenticationFailed,
 			"Authentication failed", "Invalid credentials provided")
 	}
+}
+
+// passkeyEnrollmentRefusal maps a passkey enrolment refused for a suspension to the suspended error, or
+// returns nil for any other error.
+func passkeyEnrollmentRefusal(svcErr *tidcommon.ServiceError) *tidcommon.ServiceError {
+	if svcErr.Code != authncommon.ErrorAccountSuspended.Code {
+		return nil
+	}
+	return refusal(providers.AccessDecision{Reason: providers.AccessRefusalReasonSuspended})
 }
