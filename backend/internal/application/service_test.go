@@ -2045,55 +2045,77 @@ func (suite *ServiceTestSuite) TestCreateApplication_IssuesFlowSecretForEmbedded
 	assert.Equal(suite.T(), result.FlowSecret, creds[fieldFlowSecret])
 }
 
-func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForM2MClient() {
-	testConfig := &config.Config{DeclarativeResources: config.DeclarativeResources{Enabled: false}}
-	config.ResetServerRuntime()
-	require.NoError(suite.T(), config.InitializeServerRuntime("/tmp/test", testConfig))
-	defer config.ResetServerRuntime()
-
-	service, mockStore := suite.setupTestService()
-
-	// A machine-to-machine app using client_credentials only. It obtains tokens directly and cannot
-	// consume a flow assertion, so it gets no Flow Secret. A caller-supplied FlowSecret is ignored.
-	app := &model.ApplicationDTO{
-		Type:       model.ApplicationTypeM2M,
-		Name:       "M2M App",
-		OUID:       testOUID,
-		FlowSecret: "caller-supplied-secret",
-		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
-			{
-				Type: providers.OAuthInboundAuthType,
-				OAuthConfig: &providers.OAuthConfigWithSecret{
-					ClientID:                testClientID,
-					GrantTypes:              []providers.GrantType{providers.GrantTypeClientCredentials},
-					TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodClientSecretBasic,
-					PublicClient:            false,
-				},
-			},
+func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretWithoutTokenExchange() {
+	// Clients without the token-exchange grant cannot redeem a flow assertion, so they never run a
+	// sign-in flow themselves and get no Flow Secret. A caller-supplied FlowSecret is ignored.
+	cases := []struct {
+		name       string
+		appType    model.ApplicationType
+		grantTypes []providers.GrantType
+	}{
+		{
+			name: "CustomClientCredentialsOnly", appType: model.ApplicationTypeCustom,
+			grantTypes: []providers.GrantType{providers.GrantTypeClientCredentials},
+		},
+		{
+			name: "MCPJWTBearerOnly", appType: model.ApplicationTypeMCP,
+			grantTypes: []providers.GrantType{providers.GrantTypeJWTBearer},
+		},
+		{
+			name: "FullStackCIBAOnly", appType: model.ApplicationTypeFullStack,
+			grantTypes: []providers.GrantType{providers.GrantTypeCIBA},
 		},
 	}
 
-	var capturedCreds json.RawMessage
-	ep := resetEntityServiceMethod(service, "CreateEntity")
-	ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			capturedCreds = args.Get(2).(json.RawMessage)
-		}).
-		Return(&providers.Entity{}, nil)
-	mockStore.On("CreateInboundClient",
-		mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			testConfig := &config.Config{DeclarativeResources: config.DeclarativeResources{Enabled: false}}
+			config.ResetServerRuntime()
+			require.NoError(suite.T(), config.InitializeServerRuntime("/tmp/test", testConfig))
+			defer config.ResetServerRuntime()
 
-	result, svcErr := service.CreateApplication(context.Background(), app)
+			service, mockStore := suite.setupTestService()
 
-	require.Nil(suite.T(), svcErr)
-	require.NotNil(suite.T(), result)
-	// M2M apps never receive a Flow Secret.
-	assert.Empty(suite.T(), result.FlowSecret)
-	if capturedCreds != nil {
-		var creds map[string]interface{}
-		require.NoError(suite.T(), json.Unmarshal(capturedCreds, &creds))
-		_, hasFlowSecret := creds[fieldFlowSecret]
-		assert.False(suite.T(), hasFlowSecret)
+			app := &model.ApplicationDTO{
+				Type:       tc.appType,
+				Name:       "No Token Exchange App",
+				OUID:       testOUID,
+				FlowSecret: "caller-supplied-secret",
+				InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+					{
+						Type: providers.OAuthInboundAuthType,
+						OAuthConfig: &providers.OAuthConfigWithSecret{
+							ClientID:                testClientID,
+							GrantTypes:              tc.grantTypes,
+							TokenEndpointAuthMethod: providers.TokenEndpointAuthMethodClientSecretBasic,
+							PublicClient:            false,
+						},
+					},
+				},
+			}
+
+			var capturedCreds json.RawMessage
+			ep := resetEntityServiceMethod(service, "CreateEntity")
+			ep.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					capturedCreds = args.Get(2).(json.RawMessage)
+				}).
+				Return(&providers.Entity{}, nil)
+			mockStore.On("CreateInboundClient",
+				mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+			result, svcErr := service.CreateApplication(context.Background(), app)
+
+			require.Nil(suite.T(), svcErr)
+			require.NotNil(suite.T(), result)
+			assert.Empty(suite.T(), result.FlowSecret)
+			if capturedCreds != nil {
+				var creds map[string]interface{}
+				require.NoError(suite.T(), json.Unmarshal(capturedCreds, &creds))
+				_, hasFlowSecret := creds[fieldFlowSecret]
+				assert.False(suite.T(), hasFlowSecret)
+			}
+		})
 	}
 }
 
@@ -3583,6 +3605,18 @@ func (suite *ServiceTestSuite) TestTranslateOAuthValidationError() {
 			err:         inboundclient.ErrOAuthClientIDJAGCannotUseNoneAuth,
 			wantCode:    ErrorInvalidOAuthConfiguration.Code,
 			wantDescKey: "error.applicationservice.idjag_cannot_use_none_auth_description",
+		},
+		{
+			name:        "ClientIDJAGRequiresTokenExchange",
+			err:         inboundclient.ErrOAuthClientIDJAGRequiresTokenExchange,
+			wantCode:    ErrorInvalidOAuthConfiguration.Code,
+			wantDescKey: "error.applicationservice.idjag_requires_token_exchange_description",
+		},
+		{
+			name:        "ClientIDJAGRequiresAllowedAudience",
+			err:         inboundclient.ErrOAuthClientIDJAGRequiresAllowedAudience,
+			wantCode:    ErrorInvalidOAuthConfiguration.Code,
+			wantDescKey: "error.applicationservice.idjag_requires_allowed_audience_description",
 		},
 		{
 			name:        "PublicClientMustUseNoneAuth",

@@ -1779,6 +1779,18 @@ func translateOAuthValidationError(err error) *tidcommon.ServiceError {
 			Key:          "error.agentservice.response_types_require_authorization_code_description",
 			DefaultValue: "Response types can only be configured with the authorization_code grant type",
 		})
+	case errors.Is(err, inboundclient.ErrOAuthClientIDJAGRequiresTokenExchange):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.agentservice.idjag_requires_token_exchange_description",
+			DefaultValue: "ID-JAG configuration requires the " +
+				"urn:ietf:params:oauth:grant-type:token-exchange grant type",
+		})
+	case errors.Is(err, inboundclient.ErrOAuthClientIDJAGRequiresAllowedAudience):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.agentservice.idjag_requires_allowed_audience_description",
+			DefaultValue: "ID-JAG configuration requires at least one allowed audience, and allowed " +
+				"audiences must not be blank",
+		})
 
 	// OAuth: token endpoint auth method
 	case errors.Is(err, inboundclient.ErrOAuthInvalidTokenEndpointAuthMethod):
@@ -1812,6 +1824,18 @@ func translateOAuthValidationError(err error) *tidcommon.ServiceError {
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key:          "error.agentservice.client_credentials_cannot_use_none_auth_description",
 			DefaultValue: "client_credentials grant type cannot use 'none' authentication method",
+		})
+	case errors.Is(err, inboundclient.ErrOAuthClientJWTBearerCannotUseNoneAuth):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.agentservice.jwt_bearer_cannot_use_none_auth_description",
+			DefaultValue: "jwt-bearer grant type requires a confidential client and cannot use 'none' " +
+				"token endpoint authentication method",
+		})
+	case errors.Is(err, inboundclient.ErrOAuthClientIDJAGCannotUseNoneAuth):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.agentservice.idjag_cannot_use_none_auth_description",
+			DefaultValue: "ID-JAG configuration requires a confidential client and cannot use 'none' " +
+				"token endpoint authentication method",
 		})
 
 	// OAuth: public client

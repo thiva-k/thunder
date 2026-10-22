@@ -954,6 +954,9 @@ func validateOAuthProfile(ctx context.Context, p *providers.OAuthProfile, hasCli
 	if err := validateTokenEndpointAuthMethod(p, hasClientSecret); err != nil {
 		return err
 	}
+	if err := validateIDJAGConfig(p); err != nil {
+		return err
+	}
 	if p.PublicClient {
 		if err := validatePublicClient(p); err != nil {
 			return err
@@ -1002,6 +1005,24 @@ func validateBackchannelLogoutURI(p *providers.OAuthProfile) error {
 	default:
 		return ErrOAuthInvalidBackchannelLogoutURI
 	}
+}
+
+// validateIDJAGConfig checks that a profile enabling ID-JAG issuance has the token-exchange grant,
+// through which ID-JAGs are issued, and at least one allowed audience to issue them for, none blank.
+func validateIDJAGConfig(p *providers.OAuthProfile) error {
+	if p.Token == nil || p.Token.IDJAG == nil || !p.Token.IDJAG.Enabled {
+		return nil
+	}
+	if !slices.Contains(p.GrantTypes, string(providers.GrantTypeTokenExchange)) {
+		return ErrOAuthClientIDJAGRequiresTokenExchange
+	}
+	audiences := p.Token.IDJAG.AllowedAudiences
+	if len(audiences) == 0 || slices.ContainsFunc(audiences, func(a string) bool {
+		return strings.TrimSpace(a) == ""
+	}) {
+		return ErrOAuthClientIDJAGRequiresAllowedAudience
+	}
+	return nil
 }
 
 // maxDefaultAudienceLength bounds the access token default audience, a single audience identifier
