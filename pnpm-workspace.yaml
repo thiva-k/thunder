@@ -52,7 +52,7 @@ catalog:
   babel-plugin-react-compiler: 19.1.0-rc.3
   clsx: 2.1.1
   dayjs: 1.11.18
-  dompurify: 3.4.12
+  dompurify: 3.4.17
   eslint: 9.39.5
   framer-motion: 12.39.0
   globals: 16.4.0
