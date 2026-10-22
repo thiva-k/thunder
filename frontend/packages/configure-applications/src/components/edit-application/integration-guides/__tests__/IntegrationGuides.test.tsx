@@ -19,7 +19,7 @@ const documentationLinks: Record<string, string> = {
   'applications.templates.react.docs':
     'https://thunderid.dev/docs/next/guides/getting-started/connect-your-application/react/',
   'applications.templates.react.playground':
-    'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/react/quickstart?file=README.md',
+    'https://stackblitz.com/fork/github/thunder-id/samples/tree/main/quickstarts/react?file=README.md',
   'applications.templates.react.llmPrompt.redirectBased': 'https://thunderid.dev/prompts/react/redirect-based.txt',
   'applications.templates.nextjs.llmPrompt.redirectBased': 'https://thunderid.dev/prompts/nextjs/redirect-based.txt',
   'applications.templates.ios.docs':
@@ -204,7 +204,7 @@ describe('IntegrationGuides', () => {
     const stackblitzLink = screen.getByRole('link', {name: /Open on StackBlitz/i});
     expect(stackblitzLink).toHaveAttribute(
       'href',
-      'https://stackblitz.com/fork/github/thunder-id/javascript-sdks/tree/main/samples/react/quickstart?file=README.md',
+      'https://stackblitz.com/fork/github/thunder-id/samples/tree/main/quickstarts/react?file=README.md',
     );
   });
 
