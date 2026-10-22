@@ -80,7 +80,7 @@ type RenderInput struct {
 	// Data holds the runtime values substituted into {{ctx(<key>)}} placeholders.
 	Data map[string]string
 	// ThemeID is the theme whose color scheme resolves {{design(<token>)}} placeholders (email body
-	// only). Empty means no theme is available, so a template that embeds a design token fails closed.
+	// only). Empty means no theme is available, so any design token is stripped to empty (not failed).
 	ThemeID string
 }
 
