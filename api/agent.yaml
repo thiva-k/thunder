@@ -33,7 +33,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/limitQueryParam'
         - $ref: '#/components/parameters/offsetQueryParam'
-        - $ref: '#/components/parameters/filterParam'
+        - $ref: '#/components/parameters/agentFilterParam'
         - $ref: '#/components/parameters/includeQueryParam'
       responses:
         "200":
@@ -1805,7 +1805,7 @@ components:
           - display
       description: |
         Pass `display` to populate the `display` and `ouHandle` fields in the response.
-    filterParam:
+    agentFilterParam:
       in: query
       name: filter
       required: false

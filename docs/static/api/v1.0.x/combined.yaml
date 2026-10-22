@@ -134,7 +134,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/limitQueryParam"
         - $ref: "#/components/parameters/offsetQueryParam"
-        - $ref: "#/components/parameters/filterParam"
+        - $ref: "#/components/parameters/agentFilterParam"
         - $ref: "#/components/parameters/includeQueryParam"
       responses:
         "200":
@@ -24421,6 +24421,23 @@ components:
         Optional parameter to include additional display information in the
         response. The exact fields included depend on the endpoint. See each
         endpoint's response schema for details on which fields are enriched.
+    agentFilterParam:
+      in: query
+      name: filter
+      required: false
+      description: |
+        Filter agents by a custom attribute value. Only keys inside the
+        `attributes` JSON object are filterable; system fields (`name`,
+        `description`, `type`, `ouId`, `owner`, `clientId`) are not supported.
+
+        Supported operators: `eq`.
+
+        Format: `attribute operator "value"`. The value must be wrapped in
+        double quotes.
+
+        Example: `region eq "us-east-1"`.
+      schema:
+        type: string
     filterParam:
       in: query
       name: filter
