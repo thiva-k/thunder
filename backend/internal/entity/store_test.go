@@ -663,6 +663,104 @@ func (s *DBStoreTestSuite) TestGetEntityListByOUIDs_Success() {
 	s.Len(list, 1)
 }
 
+func (s *DBStoreTestSuite) TestGetEntityListCountBySystemAttributes() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+
+	s.expectClientError()
+	_, err := s.store.GetEntityListCountBySystemAttributes(s.ctx, "agent", sysQuery)
+	s.Error(err, "provider error")
+
+	s.SetupTest()
+	s.expectClient()
+	_, err = s.store.GetEntityListCountBySystemAttributes(s.ctx, "agent", SystemAttributeQuery{})
+	s.Error(err, "build error")
+
+	s.SetupTest()
+	s.expectClient()
+	s.onQueryAny([]map[string]interface{}{{"total": int64(2)}}, nil)
+	count, err := s.store.GetEntityListCountBySystemAttributes(s.ctx, "agent", sysQuery)
+	s.NoError(err)
+	s.Equal(2, count)
+}
+
+func (s *DBStoreTestSuite) TestGetEntityListBySystemAttributes() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+
+	s.expectClientError()
+	_, err := s.store.GetEntityListBySystemAttributes(s.ctx, "agent", sysQuery, 10, 0)
+	s.Error(err, "provider error")
+
+	s.SetupTest()
+	s.expectClient()
+	_, err = s.store.GetEntityListBySystemAttributes(s.ctx, "agent", SystemAttributeQuery{}, 10, 0)
+	s.Error(err, "build error")
+
+	s.SetupTest()
+	s.expectClient()
+	s.onQueryAny(nil, errors.New("query failed"))
+	_, err = s.store.GetEntityListBySystemAttributes(s.ctx, "agent", sysQuery, 10, 0)
+	s.Error(err, "query error")
+
+	s.SetupTest()
+	s.expectClient()
+	s.onQueryAny([]map[string]interface{}{dbEntityRow()}, nil)
+	list, err := s.store.GetEntityListBySystemAttributes(s.ctx, "agent", sysQuery, 10, 0)
+	s.NoError(err)
+	s.Len(list, 1)
+}
+
+func (s *DBStoreTestSuite) TestGetEntityListCountBySystemAttributesAndOUIDs() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+
+	count, err := s.store.GetEntityListCountBySystemAttributesAndOUIDs(s.ctx, "agent", sysQuery, []string{})
+	s.NoError(err)
+	s.Zero(count, "an empty OU list matches nothing without a query")
+
+	s.expectClientError()
+	_, err = s.store.GetEntityListCountBySystemAttributesAndOUIDs(s.ctx, "agent", sysQuery, []string{"ou1"})
+	s.Error(err, "provider error")
+
+	s.SetupTest()
+	s.expectClient()
+	_, err = s.store.GetEntityListCountBySystemAttributesAndOUIDs(
+		s.ctx, "agent", SystemAttributeQuery{}, []string{"ou1"})
+	s.Error(err, "build error")
+
+	s.SetupTest()
+	s.expectClient()
+	s.onQueryAny([]map[string]interface{}{{"total": int64(3)}}, nil)
+	count, err = s.store.GetEntityListCountBySystemAttributesAndOUIDs(s.ctx, "agent", sysQuery, []string{"ou1"})
+	s.NoError(err)
+	s.Equal(3, count)
+}
+
+func (s *DBStoreTestSuite) TestGetEntityListBySystemAttributesAndOUIDs() {
+	sysQuery := SystemAttributeQuery{SystemAttributes: map[string]interface{}{"owner": "u1"}}
+	ouIDs := []string{"ou1"}
+
+	s.expectClientError()
+	_, err := s.store.GetEntityListBySystemAttributesAndOUIDs(s.ctx, "agent", sysQuery, ouIDs, 10, 0)
+	s.Error(err, "provider error")
+
+	s.SetupTest()
+	s.expectClient()
+	_, err = s.store.GetEntityListBySystemAttributesAndOUIDs(s.ctx, "agent", SystemAttributeQuery{}, ouIDs, 10, 0)
+	s.Error(err, "build error")
+
+	s.SetupTest()
+	s.expectClient()
+	s.onQueryAny(nil, errors.New("query failed"))
+	_, err = s.store.GetEntityListBySystemAttributesAndOUIDs(s.ctx, "agent", sysQuery, ouIDs, 10, 0)
+	s.Error(err, "query error")
+
+	s.SetupTest()
+	s.expectClient()
+	s.onQueryAny([]map[string]interface{}{dbEntityRow()}, nil)
+	list, err := s.store.GetEntityListBySystemAttributesAndOUIDs(s.ctx, "agent", sysQuery, ouIDs, 10, 0)
+	s.NoError(err)
+	s.Len(list, 1)
+}
+
 func (s *DBStoreTestSuite) TestValidateEntityIDs_Empty() {
 	invalid, err := s.store.ValidateEntityIDs(s.ctx, []string{})
 	s.NoError(err)

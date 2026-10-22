@@ -26,6 +26,15 @@ type EntityIdentifier struct {
 	Source   string `json:"source"`
 }
 
+// SystemAttributeQuery selects the entities of a category whose system attributes hold the given
+// values.
+type SystemAttributeQuery struct {
+	// SystemAttributes are matched against the system attributes only. At least one is required.
+	SystemAttributes map[string]interface{}
+	// Attributes are matched the way the list filters match them.
+	Attributes map[string]interface{}
+}
+
 // AuthenticateResult represents the result of an entity authentication.
 type AuthenticateResult struct {
 	EntityID       string                   `json:"entityId"`

@@ -1113,6 +1113,184 @@ func (_c *EntityServiceInterfaceMock_GetEntityListByOUIDs_Call) RunAndReturn(run
 	return _c
 }
 
+// GetEntityListBySystemAttributes provides a mock function for the type EntityServiceInterfaceMock
+func (_mock *EntityServiceInterfaceMock) GetEntityListBySystemAttributes(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, limit int, offset int) ([]providers.Entity, error) {
+	ret := _mock.Called(ctx, category, sysQuery, limit, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEntityListBySystemAttributes")
+	}
+
+	var r0 []providers.Entity
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, int, int) ([]providers.Entity, error)); ok {
+		return returnFunc(ctx, category, sysQuery, limit, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, int, int) []providers.Entity); ok {
+		r0 = returnFunc(ctx, category, sysQuery, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]providers.Entity)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, int, int) error); ok {
+		r1 = returnFunc(ctx, category, sysQuery, limit, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEntityListBySystemAttributes'
+type EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call struct {
+	*mock.Call
+}
+
+// GetEntityListBySystemAttributes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - category providers.EntityCategory
+//   - sysQuery entity.SystemAttributeQuery
+//   - limit int
+//   - offset int
+func (_e *EntityServiceInterfaceMock_Expecter) GetEntityListBySystemAttributes(ctx any, category any, sysQuery any, limit any, offset any) *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call {
+	return &EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call{Call: _e.mock.On("GetEntityListBySystemAttributes", ctx, category, sysQuery, limit, offset)}
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call) Run(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, limit int, offset int)) *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 providers.EntityCategory
+		if args[1] != nil {
+			arg1 = args[1].(providers.EntityCategory)
+		}
+		var arg2 entity.SystemAttributeQuery
+		if args[2] != nil {
+			arg2 = args[2].(entity.SystemAttributeQuery)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call) Return(entitys []providers.Entity, err error) *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call {
+	_c.Call.Return(entitys, err)
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call) RunAndReturn(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, limit int, offset int) ([]providers.Entity, error)) *EntityServiceInterfaceMock_GetEntityListBySystemAttributes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEntityListBySystemAttributesAndOUIDs provides a mock function for the type EntityServiceInterfaceMock
+func (_mock *EntityServiceInterfaceMock) GetEntityListBySystemAttributesAndOUIDs(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, ouIDs []string, limit int, offset int) ([]providers.Entity, error) {
+	ret := _mock.Called(ctx, category, sysQuery, ouIDs, limit, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEntityListBySystemAttributesAndOUIDs")
+	}
+
+	var r0 []providers.Entity
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, []string, int, int) ([]providers.Entity, error)); ok {
+		return returnFunc(ctx, category, sysQuery, ouIDs, limit, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, []string, int, int) []providers.Entity); ok {
+		r0 = returnFunc(ctx, category, sysQuery, ouIDs, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]providers.Entity)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, []string, int, int) error); ok {
+		r1 = returnFunc(ctx, category, sysQuery, ouIDs, limit, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEntityListBySystemAttributesAndOUIDs'
+type EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call struct {
+	*mock.Call
+}
+
+// GetEntityListBySystemAttributesAndOUIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - category providers.EntityCategory
+//   - sysQuery entity.SystemAttributeQuery
+//   - ouIDs []string
+//   - limit int
+//   - offset int
+func (_e *EntityServiceInterfaceMock_Expecter) GetEntityListBySystemAttributesAndOUIDs(ctx any, category any, sysQuery any, ouIDs any, limit any, offset any) *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call {
+	return &EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call{Call: _e.mock.On("GetEntityListBySystemAttributesAndOUIDs", ctx, category, sysQuery, ouIDs, limit, offset)}
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call) Run(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, ouIDs []string, limit int, offset int)) *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 providers.EntityCategory
+		if args[1] != nil {
+			arg1 = args[1].(providers.EntityCategory)
+		}
+		var arg2 entity.SystemAttributeQuery
+		if args[2] != nil {
+			arg2 = args[2].(entity.SystemAttributeQuery)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		var arg5 int
+		if args[5] != nil {
+			arg5 = args[5].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call) Return(entitys []providers.Entity, err error) *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call {
+	_c.Call.Return(entitys, err)
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call) RunAndReturn(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, ouIDs []string, limit int, offset int) ([]providers.Entity, error)) *EntityServiceInterfaceMock_GetEntityListBySystemAttributesAndOUIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetEntityListCount provides a mock function for the type EntityServiceInterfaceMock
 func (_mock *EntityServiceInterfaceMock) GetEntityListCount(ctx context.Context, category providers.EntityCategory, filters map[string]interface{}) (int, error) {
 	ret := _mock.Called(ctx, category, filters)
@@ -1259,6 +1437,156 @@ func (_c *EntityServiceInterfaceMock_GetEntityListCountByOUIDs_Call) Return(n in
 }
 
 func (_c *EntityServiceInterfaceMock_GetEntityListCountByOUIDs_Call) RunAndReturn(run func(ctx context.Context, category providers.EntityCategory, ouIDs []string, filters map[string]interface{}) (int, error)) *EntityServiceInterfaceMock_GetEntityListCountByOUIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEntityListCountBySystemAttributes provides a mock function for the type EntityServiceInterfaceMock
+func (_mock *EntityServiceInterfaceMock) GetEntityListCountBySystemAttributes(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery) (int, error) {
+	ret := _mock.Called(ctx, category, sysQuery)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEntityListCountBySystemAttributes")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery) (int, error)); ok {
+		return returnFunc(ctx, category, sysQuery)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery) int); ok {
+		r0 = returnFunc(ctx, category, sysQuery)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery) error); ok {
+		r1 = returnFunc(ctx, category, sysQuery)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEntityListCountBySystemAttributes'
+type EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call struct {
+	*mock.Call
+}
+
+// GetEntityListCountBySystemAttributes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - category providers.EntityCategory
+//   - sysQuery entity.SystemAttributeQuery
+func (_e *EntityServiceInterfaceMock_Expecter) GetEntityListCountBySystemAttributes(ctx any, category any, sysQuery any) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call {
+	return &EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call{Call: _e.mock.On("GetEntityListCountBySystemAttributes", ctx, category, sysQuery)}
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call) Run(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery)) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 providers.EntityCategory
+		if args[1] != nil {
+			arg1 = args[1].(providers.EntityCategory)
+		}
+		var arg2 entity.SystemAttributeQuery
+		if args[2] != nil {
+			arg2 = args[2].(entity.SystemAttributeQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call) Return(n int, err error) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call) RunAndReturn(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery) (int, error)) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEntityListCountBySystemAttributesAndOUIDs provides a mock function for the type EntityServiceInterfaceMock
+func (_mock *EntityServiceInterfaceMock) GetEntityListCountBySystemAttributesAndOUIDs(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, ouIDs []string) (int, error) {
+	ret := _mock.Called(ctx, category, sysQuery, ouIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEntityListCountBySystemAttributesAndOUIDs")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, []string) (int, error)); ok {
+		return returnFunc(ctx, category, sysQuery, ouIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, []string) int); ok {
+		r0 = returnFunc(ctx, category, sysQuery, ouIDs)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, providers.EntityCategory, entity.SystemAttributeQuery, []string) error); ok {
+		r1 = returnFunc(ctx, category, sysQuery, ouIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEntityListCountBySystemAttributesAndOUIDs'
+type EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call struct {
+	*mock.Call
+}
+
+// GetEntityListCountBySystemAttributesAndOUIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - category providers.EntityCategory
+//   - sysQuery entity.SystemAttributeQuery
+//   - ouIDs []string
+func (_e *EntityServiceInterfaceMock_Expecter) GetEntityListCountBySystemAttributesAndOUIDs(ctx any, category any, sysQuery any, ouIDs any) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call {
+	return &EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call{Call: _e.mock.On("GetEntityListCountBySystemAttributesAndOUIDs", ctx, category, sysQuery, ouIDs)}
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call) Run(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, ouIDs []string)) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 providers.EntityCategory
+		if args[1] != nil {
+			arg1 = args[1].(providers.EntityCategory)
+		}
+		var arg2 entity.SystemAttributeQuery
+		if args[2] != nil {
+			arg2 = args[2].(entity.SystemAttributeQuery)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call) Return(n int, err error) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call) RunAndReturn(run func(ctx context.Context, category providers.EntityCategory, sysQuery entity.SystemAttributeQuery, ouIDs []string) (int, error)) *EntityServiceInterfaceMock_GetEntityListCountBySystemAttributesAndOUIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

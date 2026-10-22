@@ -19,6 +19,9 @@ const (
 	// SystemAttributesColumn represents the SYSTEM_ATTRIBUTES column name in the database.
 	SystemAttributesColumn = "SYSTEM_ATTRIBUTES"
 
+	// entityCountByCategoryBaseQuery counts the entities of a category; the builders add their conditions.
+	entityCountByCategoryBaseQuery = `SELECT COUNT(*) as total FROM "ENTITY" WHERE CATEGORY = $1`
+
 	// MaxIndexedAttributesCount is the maximum number of indexed attributes allowed.
 	MaxIndexedAttributesCount = 20
 
@@ -185,7 +188,7 @@ func buildEntityCountQueryByOUIDs(
 	deploymentID string,
 ) (model.DBQuery, []interface{}, error) {
 	queryID := "ASQ-ENTITY_MGT-20"
-	baseQuery := `SELECT COUNT(*) as total FROM "ENTITY" WHERE CATEGORY = $1`
+	baseQuery := entityCountByCategoryBaseQuery
 	args := []interface{}{category}
 
 	if len(filters) > 0 {
@@ -261,6 +264,136 @@ func buildEntityListQueryByOUIDs(
 		PostgresQuery: postgresQuery,
 		SQLiteQuery:   sqliteQuery,
 	}, args, nil
+}
+
+// buildEntityCountQueryBySystemAttributes constructs a query to count the entities a system attribute
+// query selects.
+func buildEntityCountQueryBySystemAttributes(
+	category string, sysQuery SystemAttributeQuery, indexedAttrs map[string]bool, deploymentID string,
+) (model.DBQuery, []interface{}, error) {
+	query, args, err := buildSystemAttributeConditions(
+		"ASQ-ENTITY_MGT-32", entityCountByCategoryBaseQuery, category, sysQuery, indexedAttrs)
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	query, args = utils.AppendDeploymentIDToFilterQuery(query, args, deploymentID)
+	return query, args, nil
+}
+
+// buildEntityListQueryBySystemAttributes constructs a paginated query to list the entities a system
+// attribute query selects.
+func buildEntityListQueryBySystemAttributes(
+	category string, sysQuery SystemAttributeQuery, indexedAttrs map[string]bool,
+	limit, offset int, deploymentID string,
+) (model.DBQuery, []interface{}, error) {
+	baseQuery := `SELECT ID, OU_ID, CATEGORY, TYPE, ATTRIBUTES, SYSTEM_ATTRIBUTES ` +
+		`FROM "ENTITY" WHERE CATEGORY = $1`
+	query, args, err := buildSystemAttributeConditions(
+		"ASQ-ENTITY_MGT-33", baseQuery, category, sysQuery, indexedAttrs)
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	query, args = utils.AppendDeploymentIDToFilterQuery(query, args, deploymentID)
+	postgresQuery, err := buildPaginatedQuery(query.PostgresQuery, len(args), "$")
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	sqliteQuery, err := buildPaginatedQuery(query.SQLiteQuery, len(args), "?")
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+
+	args = append(args, limit, offset)
+	return model.DBQuery{
+		ID:            query.ID,
+		Query:         postgresQuery,
+		PostgresQuery: postgresQuery,
+		SQLiteQuery:   sqliteQuery,
+	}, args, nil
+}
+
+// buildEntityCountQueryBySystemAttributesAndOUIDs constructs a query to count the entities a system
+// attribute query selects within the given organization units.
+func buildEntityCountQueryBySystemAttributesAndOUIDs(
+	category string, sysQuery SystemAttributeQuery, ouIDs []string, indexedAttrs map[string]bool,
+	deploymentID string,
+) (model.DBQuery, []interface{}, error) {
+	query, args, err := buildSystemAttributeConditions(
+		"ASQ-ENTITY_MGT-34", entityCountByCategoryBaseQuery, category, sysQuery, indexedAttrs)
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	query, args = appendOUIDsINClause(query, args, ouIDs)
+	query, args = utils.AppendDeploymentIDToFilterQuery(query, args, deploymentID)
+	return query, args, nil
+}
+
+// buildEntityListQueryBySystemAttributesAndOUIDs constructs a paginated query to list the entities a
+// system attribute query selects within the given organization units.
+func buildEntityListQueryBySystemAttributesAndOUIDs(
+	category string, sysQuery SystemAttributeQuery, ouIDs []string, indexedAttrs map[string]bool,
+	limit, offset int, deploymentID string,
+) (model.DBQuery, []interface{}, error) {
+	baseQuery := `SELECT ID, OU_ID, CATEGORY, TYPE, ATTRIBUTES, SYSTEM_ATTRIBUTES ` +
+		`FROM "ENTITY" WHERE CATEGORY = $1`
+	query, args, err := buildSystemAttributeConditions(
+		"ASQ-ENTITY_MGT-35", baseQuery, category, sysQuery, indexedAttrs)
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	query, args = appendOUIDsINClause(query, args, ouIDs)
+	query, args = utils.AppendDeploymentIDToFilterQuery(query, args, deploymentID)
+	postgresQuery, err := buildPaginatedQuery(query.PostgresQuery, len(args), "$")
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	sqliteQuery, err := buildPaginatedQuery(query.SQLiteQuery, len(args), "?")
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+
+	args = append(args, limit, offset)
+	return model.DBQuery{
+		ID:            query.ID,
+		Query:         postgresQuery,
+		PostgresQuery: postgresQuery,
+		SQLiteQuery:   sqliteQuery,
+	}, args, nil
+}
+
+// buildSystemAttributeConditions appends the conditions of a system attribute query to a base query
+// that selects a category. The system attribute keys are validated and written in as literals, so the
+// expression indexes on them apply.
+func buildSystemAttributeConditions(
+	queryID, baseQuery, category string, sysQuery SystemAttributeQuery, indexedAttrs map[string]bool,
+) (model.DBQuery, []interface{}, error) {
+	if len(sysQuery.SystemAttributes) == 0 {
+		return model.DBQuery{}, nil, fmt.Errorf("at least one system attribute filter is required")
+	}
+
+	args := []interface{}{category}
+	query, filterArgs, err := buildFilterQueryWithOffset(
+		queryID, baseQuery, sysQuery.Attributes, indexedAttrs, len(args))
+	if err != nil {
+		return model.DBQuery{}, nil, err
+	}
+	args = append(args, filterArgs...)
+
+	keys := make([]string, 0, len(sysQuery.SystemAttributes))
+	for key := range sysQuery.SystemAttributes {
+		if err := utils.ValidateKey(key); err != nil {
+			return model.DBQuery{}, nil, fmt.Errorf("invalid system attribute filter key: %w", err)
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		query.PostgresQuery += utils.BuildPostgresJSONCondition(SystemAttributesColumn, key, len(args)+1)
+		query.SQLiteQuery += utils.BuildSQLiteJSONCondition(SystemAttributesColumn, key)
+		args = append(args, sysQuery.SystemAttributes[key])
+	}
+	query.Query = query.PostgresQuery
+	return query, args, nil
 }
 
 // buildIdentifyQuery constructs a query to identify an entity based on the provided filters.
