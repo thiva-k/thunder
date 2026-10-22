@@ -17,6 +17,7 @@ import { Page, Locator, expect } from "@playwright/test";
 import { ConsoleRoutes } from "../../configs/routes/console-routes";
 import { BasePage } from "../base.page";
 import { Timeouts } from "../../constants/timeouts";
+import { OrganizationAccessSettings } from "../components/organization-access";
 
 export type UserFormData = {
   username: string;
@@ -85,6 +86,9 @@ export class UsersPage extends BasePage {
   readonly confirmCredentialValueInput: Locator;
   readonly confirmResetPasswordButton: Locator;
   readonly cancelResetPasswordButton: Locator;
+
+  // Affiliations tab: the shared Organization Access screen
+  readonly organizationAccess: OrganizationAccessSettings;
 
   constructor(page: Page, baseUrl: string) {
     super(page);
@@ -193,6 +197,8 @@ export class UsersPage extends BasePage {
     this.confirmCredentialValueInput = this.credentialResetDialog.locator("#credential-confirm-password");
     this.confirmResetPasswordButton = this.credentialResetDialog.getByRole("button", { name: /^reset password$/i });
     this.cancelResetPasswordButton = this.credentialResetDialog.getByRole("button", { name: /^cancel$/i });
+
+    this.organizationAccess = new OrganizationAccessSettings(page);
   }
 
   /**

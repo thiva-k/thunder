@@ -214,6 +214,7 @@ vi.mock('@thunderid/components', async (importOriginal) => {
         savingLabel,
         isSaving,
         saveDisabled,
+        resetDisabled,
         error,
         onReset,
         onSave,
@@ -224,6 +225,7 @@ vi.mock('@thunderid/components', async (importOriginal) => {
         savingLabel: string;
         isSaving: boolean;
         saveDisabled?: boolean;
+        resetDisabled?: boolean;
         error?: string;
         onReset: () => void;
         onSave: () => void;
@@ -231,7 +233,7 @@ vi.mock('@thunderid/components', async (importOriginal) => {
         <div data-testid="unsaved-changes-bar">
           {error && <div role="alert">{error}</div>}
           <span>{message}</span>
-          <button type="button" onClick={onReset}>
+          <button type="button" onClick={onReset} disabled={resetDisabled}>
             {resetLabel}
           </button>
           <button type="button" onClick={onSave} disabled={isSaving || saveDisabled}>
@@ -2675,6 +2677,35 @@ describe('ApplicationEditPage', () => {
       await user.click(screen.getByRole('button', {name: /reset/i}));
 
       expect(mockOrganizationAccess.reset).toHaveBeenCalled();
+    });
+
+    it('keeps Save and Reset disabled until the whole save has finished', async () => {
+      const user = userEvent.setup();
+      mockUseUpdateApplication.mockReturnValue({
+        mutateAsync: vi.fn(),
+        isPending: false,
+        error: null,
+        reset: vi.fn(),
+      } as unknown as UseMutationResult<Application, Error, unknown>);
+      mockOrganizationAccess.hasChanges = true;
+      let finishSave: () => void = () => undefined;
+      mockOrganizationAccess.save.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishSave = resolve;
+          }),
+      );
+      renderComponent();
+
+      await user.click(screen.getByRole('button', {name: /save changes/i}));
+
+      // A Reset now would discard a draft the running save still sends; a second Save would send it twice.
+      expect(screen.getByRole('button', {name: /reset/i})).toBeDisabled();
+      expect(screen.getByRole('button', {name: /saving/i})).toBeDisabled();
+
+      finishSave();
+      await waitFor(() => expect(screen.getByRole('button', {name: /reset/i})).not.toBeDisabled());
+      expect(mockOrganizationAccess.save).toHaveBeenCalledTimes(1);
     });
   });
 

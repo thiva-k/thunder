@@ -28,7 +28,7 @@ import {
   DialogContent,
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
-import {useState, useCallback, useEffect, useMemo, type SyntheticEvent} from 'react';
+import {useState, useCallback, useEffect, useMemo, useRef, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import useGetApplication from '../api/useGetApplication';
@@ -118,6 +118,8 @@ export default function ApplicationEditPage() {
   const organizationAccess = useOrganizationAccess({
     resourcePath: `applications/${applicationId}`,
     enabled: Boolean(applicationId) && offersOrganizationAccess,
+    // The tab's sentences say what access means for an application: `applications:organizationAccess.*`.
+    wordingNamespace: 'applications',
   });
 
   // Resolves an error through the `applications` catalog. `t` defaults to the `common` namespace,
@@ -213,8 +215,13 @@ export default function ApplicationEditPage() {
   );
   const hasChanges = hasApplicationChanges || organizationAccess.hasChanges;
 
+  // One flag over the whole save (application update, refetch, then access save), so the bar's Save and
+  // Reset stay disabled between the steps. The ref also drops a second click before the re-render lands.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+
   const handleSave = useCallback(async () => {
-    if (!application || !applicationId) return;
+    if (submittingRef.current || !application || !applicationId) return;
 
     const {certificate, ...updatedData} = {
       ...application,
@@ -224,6 +231,8 @@ export default function ApplicationEditPage() {
 
     // The application is saved first, so a refused organization access change leaves the
     // application's own settings saved and only the access draft waiting to be retried.
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
       if (hasApplicationChanges) {
         await updateApplication.mutateAsync({
@@ -240,6 +249,9 @@ export default function ApplicationEditPage() {
       }
     } catch {
       logger.error('Failed to update application');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   }, [
     application,
@@ -814,7 +826,8 @@ export default function ApplicationEditPage() {
           resetLabel={t('applications:edit.page.reset')}
           saveLabel={t('applications:edit.page.save')}
           savingLabel={t('applications:edit.page.saving')}
-          isSaving={updateApplication.isPending || organizationAccess.isSaving}
+          isSaving={isSubmitting || updateApplication.isPending || organizationAccess.isSaving}
+          resetDisabled={isSubmitting || updateApplication.isPending || organizationAccess.isSaving}
           saveDisabled={
             hasValidationErrors ||
             mcpAccessInvalid ||
