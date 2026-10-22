@@ -2758,6 +2758,9 @@ const translations = {
     'onboarding.mcp.clientType.m2m.description':
       'A client that authenticates with its own credentials without user interaction. Uses client credentials.',
     'onboarding.mcp.clientType.preview.label': 'What you get',
+    'onboarding.mcp.clientType.confidentialClient.label': 'Confidential client',
+    'onboarding.mcp.clientType.confidentialClient.description':
+      'Turn on for clients with a backend that can keep a secret. Required to use identity assertions (ID-JAG).',
     'onboarding.mcp.connection.title': 'Add a redirect URI',
     'onboarding.mcp.connection.subtitle': 'Where should users be sent after they authorize this client?',
     'onboarding.mcp.connection.redirectUris.label': 'Redirect URIs',
@@ -3140,6 +3143,10 @@ const translations = {
     'edit.advanced.publicClient.requiresAuthorizationCode':
       'Available only for clients using the authorization code flow.',
     'edit.advanced.publicClient.incompatibleWithClientCredentials': 'Not available for machine-to-machine clients.',
+    'edit.advanced.publicClient.incompatibleWithJwtBearer':
+      'Not available with the JWT bearer grant, which requires a confidential client.',
+    'edit.advanced.publicClient.incompatibleWithIdJag':
+      'Not available while identity assertions (ID-JAG) are on, since they require a confidential client.',
     'edit.advanced.responseTypes.codeRequiredHint': 'Required for the authorization code flow.',
     'edit.advanced.responseTypes.notApplicable': 'Response types apply only to the authorization code flow.',
     'edit.advanced.tokenEndpointAuthMethod.placeholder': 'Select authentication method',
@@ -3237,12 +3244,16 @@ const translations = {
       'These settings apply only to user-facing flows. Enable a user-facing grant (e.g. authorization code) in the Advanced tab to configure them.',
 
     'edit.mcp.connect.sections.identity': 'Connection',
-    'edit.mcp.connect.sections.identity.description': 'Client identity and credentials for connecting to MCP servers.',
+    'edit.mcp.connect.sections.identity.description': 'Client identity for connecting to MCP servers.',
     'edit.mcp.connect.profileBadge.userDelegated': 'On behalf of a user (authorization code + PKCE)',
     'edit.mcp.connect.profileBadge.m2m': 'On its own behalf (client credentials)',
+    'edit.mcp.connect.profileBadge.jwtBearer': 'On behalf of a user (JWT bearer with ID-JAG)',
+    'edit.mcp.connect.credentialsPointer':
+      'Manage the client secret and keys on the <credentialsLink>Credentials tab</credentialsLink>.',
+    'edit.mcp.connect.redirectUris.optionalHint':
+      'Each URI must be a loopback address (http://localhost or http://127.0.0.1) or use HTTPS. Needed only for the authorization code grant.',
     'edit.mcp.connect.sections.endpoints': 'Endpoints',
     'edit.mcp.connect.sections.endpoints.description': 'ThunderID OAuth 2.1 endpoints for this client.',
-    'edit.mcp.connect.generateSecret': 'Generate',
     'edit.mcp.connect.clientUri.label': 'Client URI',
     'edit.mcp.connect.clientUri.hint': 'Public homepage of this client (optional).',
     'edit.mcp.connect.clientUri.error.invalid': 'Please enter a valid URL',
@@ -3565,6 +3576,7 @@ const translations = {
     'edit.advanced.grantTypes.labels.ciba': 'CIBA (Client-Initiated Backchannel Authentication)',
     'edit.advanced.grantTypes.labels.tokenExchange': 'Token exchange',
     'edit.advanced.grantTypes.labels.jwtBearer': 'JWT bearer',
+    'edit.advanced.grantTypes.requiredByIdJag': 'Required by identity assertions (ID-JAG)',
     'edit.advanced.idJag.title': 'Identity assertions (ID-JAG)',
     'edit.advanced.idJag.description':
       "Issue signed assertions of the signed-in user's identity that external services accept for token issuance.",

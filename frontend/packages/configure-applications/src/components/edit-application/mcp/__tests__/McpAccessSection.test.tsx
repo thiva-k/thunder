@@ -398,6 +398,90 @@ describe('McpAccessSection', () => {
       expect(mockOnValidationChange).toHaveBeenCalledWith(false);
     });
 
+    describe('without the authorization_code grant', () => {
+      const jwtBearerOnlyConfig: OAuth2Config = {
+        clientId: 'mcp-client-id',
+        grantTypes: ['urn:ietf:params:oauth:grant-type:jwt-bearer'],
+        responseTypes: [],
+        redirectUris: [],
+      } as OAuth2Config;
+
+      it('reports no validation errors when the redirect URI list is empty', () => {
+        render(
+          <McpAccessSection
+            application={buildApplication(jwtBearerOnlyConfig)}
+            oauth2Config={jwtBearerOnlyConfig}
+            onFieldChange={mockOnFieldChange}
+            isReadOnly={false}
+            onValidationChange={mockOnValidationChange}
+          />,
+        );
+
+        expect(mockOnValidationChange).toHaveBeenLastCalledWith(false);
+      });
+
+      it('describes redirect URIs as optional', () => {
+        render(
+          <McpAccessSection
+            application={buildApplication(jwtBearerOnlyConfig)}
+            oauth2Config={jwtBearerOnlyConfig}
+            onFieldChange={mockOnFieldChange}
+            isReadOnly={false}
+            onValidationChange={mockOnValidationChange}
+          />,
+        );
+
+        expect(screen.getByText(/Needed only for the authorization code grant\./)).toBeInTheDocument();
+        expect(screen.queryByText(/At least one is required\./)).not.toBeInTheDocument();
+      });
+
+      it('still reports validation errors for an invalid redirect URI', () => {
+        const invalidUriConfig: OAuth2Config = {...jwtBearerOnlyConfig, redirectUris: ['not a url']} as OAuth2Config;
+
+        render(
+          <McpAccessSection
+            application={buildApplication(invalidUriConfig)}
+            oauth2Config={invalidUriConfig}
+            onFieldChange={mockOnFieldChange}
+            isReadOnly={false}
+            onValidationChange={mockOnValidationChange}
+          />,
+        );
+
+        expect(mockOnValidationChange).toHaveBeenLastCalledWith(true);
+      });
+
+      it('does not flag an empty redirect URI row on blur', () => {
+        const oneUriConfig: OAuth2Config = {
+          ...jwtBearerOnlyConfig,
+          redirectUris: ['http://127.0.0.1:8080/callback'],
+        } as OAuth2Config;
+
+        render(
+          <McpAccessSection
+            application={buildApplication(oneUriConfig)}
+            oauth2Config={oneUriConfig}
+            onFieldChange={mockOnFieldChange}
+            isReadOnly={false}
+            onValidationChange={mockOnValidationChange}
+          />,
+        );
+
+        const uriInput = screen.getByDisplayValue('http://127.0.0.1:8080/callback');
+        fireEvent.change(uriInput, {target: {value: ''}});
+        fireEvent.blur(uriInput);
+
+        expect(screen.queryByText('Enter a redirect URI.')).not.toBeInTheDocument();
+        expect(mockOnFieldChange).toHaveBeenCalledWith(
+          'inboundAuthConfig',
+          expect.arrayContaining([
+            expect.objectContaining({config: expect.objectContaining({redirectUris: []}) as unknown}),
+          ]),
+        );
+        expect(mockOnValidationChange).toHaveBeenLastCalledWith(false);
+      });
+    });
+
     it('reports validation errors once the client URI becomes invalid', async () => {
       render(
         <McpAccessSection

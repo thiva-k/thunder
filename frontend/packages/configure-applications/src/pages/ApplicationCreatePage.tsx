@@ -129,6 +129,8 @@ export default function ApplicationCreatePage(): JSX.Element {
 
   const isCimdTemplate = selectedTemplateConfig?.id === TemplateConstants.CIMD_TEMPLATE_ID;
   const [mcpIdentityMode, setMcpIdentityMode] = useState<McpClientIdentityMode | null>(null);
+  // Whether a user-delegated MCP client is created confidential (issued a client secret) rather than public.
+  const [mcpConfidentialClient, setMcpConfidentialClient] = useState(false);
   const [cimdPreview, setCimdPreview] = useState<CimdPreview | null>(null);
 
   // The approved metadata document supplies the client's name, so the Details step starts from it.
@@ -672,8 +674,9 @@ export default function ApplicationCreatePage(): JSX.Element {
 
     // The mcp-client template branches the oauth2 config off the template-seeded config (never
     // rebuilt from scratch): user-delegated keeps the seeded authorization_code/refresh_token/PKCE/
-    // public-client shape and adds the collected redirect URIs; machine-to-machine overrides it to a
-    // confidential client_credentials shape with no redirect URIs.
+    // public-client shape and adds the collected redirect URIs, switching to a confidential client
+    // when chosen; machine-to-machine overrides it to a confidential client_credentials shape with
+    // no redirect URIs.
     const mcpOAuth2Config: OAuth2Config | null =
       isMcpClientTemplate && oauthConfig
         ? mcpClientType === McpClientTypes.M2M
@@ -686,7 +689,14 @@ export default function ApplicationCreatePage(): JSX.Element {
               publicClient: false,
               tokenEndpointAuthMethod: TokenEndpointAuthMethods.CLIENT_SECRET_BASIC,
             }
-          : {...oauthConfig, redirectUris: mcpRedirectUris.filter((uri) => uri.trim() !== '')}
+          : {
+              ...oauthConfig,
+              redirectUris: mcpRedirectUris.filter((uri) => uri.trim() !== ''),
+              ...(mcpConfidentialClient && {
+                publicClient: false,
+                tokenEndpointAuthMethod: TokenEndpointAuthMethods.CLIENT_SECRET_BASIC,
+              }),
+            }
         : null;
 
     const applicationData: CreateApplicationRequest = {
@@ -767,17 +777,6 @@ export default function ApplicationCreatePage(): JSX.Element {
               },
             },
           );
-        }
-
-        // The mcp-client template has no completion step of its own, so it always goes straight
-        // to the created application's detail page.
-        if (isMcpClientTemplate) {
-          (async () => {
-            await navigate(routes.applications.detail(createdApp.id));
-          })().catch((_error: unknown) => {
-            logger.error('Failed to navigate to application details', {error: _error, applicationId: createdApp.id});
-          });
-          return;
         }
 
         const oauth2Config = createdApp.inboundAuthConfig?.find((config) => config.type === 'oauth2');
@@ -1062,6 +1061,8 @@ export default function ApplicationCreatePage(): JSX.Element {
             onSelect={setMcpClientType}
             redirectUris={mcpRedirectUris}
             onRedirectUrisChange={setMcpRedirectUris}
+            confidentialClient={mcpConfidentialClient}
+            onConfidentialClientChange={setMcpConfidentialClient}
             onReadyChange={handleClientTypeStepReadyChange}
           />
         );
