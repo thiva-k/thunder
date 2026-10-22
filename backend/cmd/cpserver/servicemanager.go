@@ -25,6 +25,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/agent"
 	"github.com/thunder-id/thunderid/internal/application"
+	authzdetailmgt "github.com/thunder-id/thunderid/internal/authzdetail/mgt"
 	"github.com/thunder-id/thunderid/internal/cert"
 	"github.com/thunder-id/thunderid/internal/cimd"
 	"github.com/thunder-id/thunderid/internal/connection"
@@ -191,6 +192,11 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	resourceService, resourceExporter, err := resource.Initialize(mux, ouService, authZENPDPService, valueCapture)
 	fatalOnError(ctx, logger, err, "Failed to initialize Resource Service")
 	exporters = append(exporters, resourceExporter)
+
+	// Initialize authorization details type management.
+	authzDetailMgtService, authzDetailExporter, err := authzdetailmgt.Initialize(mux, mcpServer, valueCapture)
+	fatalOnError(ctx, logger, err, "Failed to initialize AuthorizationDetailMgtService")
+	exporters = append(exporters, authzDetailExporter)
 
 	// Notification: only the sender-management (CRUD) service and the notification section handler are
 	// kept. The OTP and sender runtime services this returns are data plane concerns and are dropped.
@@ -395,6 +401,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		notifTemplateSvc,
 		authZENPDPService,
 		sharingService,
+		authzDetailMgtService,
 		// A control plane keeps configuration as references and holds no values, so none are resolved.
 		nil,
 	)

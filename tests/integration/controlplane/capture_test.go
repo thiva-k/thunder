@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -386,4 +387,55 @@ func (ts *ControlPlaneTestSuite) TestAWrittenResourceServersIdentifierReachesThe
 	ts.True(g.holdsValueSoon("variables", changed), "the changed identifier did not replace the captured one")
 	held, _ = g.held("variables", variable)
 	ts.Equal(changed, held, "the changed identifier was captured under another name")
+}
+
+// An authorization details type written on the control plane leaves its processor credential in the default
+// gateway's secrets, under the name its export refers to, and a new credential sent with a moved processor
+// replaces it there.
+func (ts *ControlPlaneTestSuite) TestAWrittenAuthorizationDetailTypesProcessorCredentialReachesTheDefaultGateway() {
+	g := ts.withDefaultGateway()
+	name := unique("CP Capture Payment")
+	credential := unique("cp-capture-processor-token")
+	value := "https://types.example.com/" + unique("cp-capture-payment")
+	schema := map[string]any{"type": "object", "required": []string{"amount"},
+		"properties": map[string]any{"amount": map[string]any{"type": "number"}}}
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	status, raw := ts.call(http.MethodPost, "/authorization-detail-types", map[string]any{
+		"type": value, "name": name, "schema": schema,
+		"processor": map[string]any{"endpoint": "https://processor.example.com/rar",
+			"authentication": map[string]any{"type": "bearer", "properties": map[string]any{"token": credential}}},
+	}, &created)
+	ts.Require().Equal(http.StatusCreated, status, string(raw))
+	ts.T().Cleanup(func() { ts.call(http.MethodDelete, "/authorization-detail-types/"+created.ID, nil, nil) })
+	ts.NotContains(string(raw), credential, "the credential was returned")
+
+	ts.True(g.holdsValueSoon("secrets", credential), "the processor credential was not captured")
+	ts.False(g.holdsValue("variables", credential), "the processor credential was captured as a variable")
+
+	var exported struct {
+		Resources string `json:"resources"`
+	}
+	status, raw = ts.call(http.MethodPost, "/export",
+		map[string]any{"authorizationDetailTypes": []string{created.ID}}, &exported)
+	ts.Require().Equal(http.StatusOK, status, string(raw))
+	ts.NotContains(exported.Resources, credential, "the export carried the credential")
+	variable := regexp.MustCompile(`token: "?sec:([A-Z0-9_]+)`).FindStringSubmatch(exported.Resources)
+	ts.Require().Len(variable, 2, exported.Resources)
+	held, ok := g.held("secrets", variable[1])
+	ts.True(ok, "the credential was captured under another name than the export refers to")
+	ts.Equal(credential, held)
+
+	moved := unique("cp-capture-processor-token-moved")
+	status, raw = ts.call(http.MethodPut, "/authorization-detail-types/"+created.ID, map[string]any{
+		"type": value, "name": name, "schema": schema,
+		"processor": map[string]any{"endpoint": "https://elsewhere.example.com/rar",
+			"authentication": map[string]any{"type": "bearer", "properties": map[string]any{"token": moved}}},
+	}, nil)
+	ts.Require().Equal(http.StatusOK, status, string(raw))
+	ts.True(g.holdsValueSoon("secrets", moved), "the new credential did not replace the captured one")
+	held, _ = g.held("secrets", variable[1])
+	ts.Equal(moved, held, "the new credential was captured under another name")
 }

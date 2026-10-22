@@ -36,6 +36,7 @@ import (
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
 	"github.com/thunder-id/thunderid/internal/authnprovider/restprovider"
 	"github.com/thunder-id/thunderid/internal/authz"
+	authzdetailmgt "github.com/thunder-id/thunderid/internal/authzdetail/mgt"
 	"github.com/thunder-id/thunderid/internal/authzen"
 	"github.com/thunder-id/thunderid/internal/cert"
 	"github.com/thunder-id/thunderid/internal/cimd"
@@ -264,6 +265,11 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// and the flow executor depend only on providers.ResourceServerProvider, not on serverConfigService.
 	// The base resourceService is still used for resource-management APIs and server-config validation.
 	resourceServerProvider := resource.NewDefaultAwareResourceServerProvider(resourceService, serverConfigService)
+
+	// Initialize authorization details type management.
+	authzDetailMgtService, authzDetailExporter, err := authzdetailmgt.Initialize(mux, mcpServer, nil)
+	fatalOnError(ctx, logger, err, "Failed to initialize AuthorizationDetailMgtService")
+	exporters = append(exporters, authzDetailExporter)
 
 	// The security-headers middleware reads the deny-first CSP policy from the server-config csp section.
 	csp.InitializeConfigReader(serverConfigService)
@@ -583,6 +589,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		notifTemplateSvc,
 		authZENPDPService,
 		sharingService,
+		authzDetailMgtService,
 		// References in imported configuration are replaced with what this deployment's store holds. A
 		// secret is put only where an export of the resource keeps one, which its exporter names.
 		secretresolver.New(variablestore.Lookup(references)).
