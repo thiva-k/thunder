@@ -5443,7 +5443,7 @@ const translations = {
     'create.handle.duplicate': 'A template with this handle already exists.',
     'create.handle.invalid': 'Use lowercase letters, numbers, hyphens and underscores.',
     'errors.NTM-1009': 'A template with this handle already exists in this channel.',
-    'errors.NTM-1010': 'This template is used by a flow and cannot be deleted.',
+    'errors.NTM-1010': 'The template cannot be deleted because {{usages}} depend on it. Remove or reassign them first.',
     'errors.NTM-1011': 'The handle must be a lowercase kebab-case identifier.',
     'errors.NTM-1012': 'A subject cannot be set for this channel.',
     'errors.NTM-1013': 'A design cannot be set for this channel.',

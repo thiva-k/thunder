@@ -1155,7 +1155,7 @@ var defaultMessages = map[string]string{
 	"error.notificationtemplateservice.subject_not_allowed": "Subject not allowed",
 	"error.notificationtemplateservice.subject_not_allowed_description": "A subject cannot be set for this channel",
 	"error.notificationtemplateservice.template_in_use": "Template in use",
-	"error.notificationtemplateservice.template_in_use_description": "The template is referenced by a flow and cannot be deleted",
+	"error.notificationtemplateservice.template_in_use_description": "The template is in use and cannot be deleted",
 	"error.ouservice.cannot_modify_declarative_resource": "Cannot modify declarative resource",
 	"error.ouservice.cannot_modify_declarative_resource_description": "The organization unit is declarative and cannot be modified or deleted",
 	"error.ouservice.circular_dependency_detected": "Circular dependency detected",
