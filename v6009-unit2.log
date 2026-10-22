@@ -1,0 +1,285 @@
+ok  	github.com/thunder-id/thunderid/cmd/cpserver	2.760s
+ok  	github.com/thunder-id/thunderid/cmd/server	1.686s
+ok  	github.com/thunder-id/thunderid/internal/actorprovider	2.944s
+ok  	github.com/thunder-id/thunderid/internal/agent	3.660s
+?   	github.com/thunder-id/thunderid/internal/agent/model	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/agentmgtprovider	4.281s
+ok  	github.com/thunder-id/thunderid/internal/application	4.908s
+ok  	github.com/thunder-id/thunderid/internal/application/model	5.529s
+ok  	github.com/thunder-id/thunderid/internal/attestation	6.143s
+ok  	github.com/thunder-id/thunderid/internal/attributecache	6.737s
+ok  	github.com/thunder-id/thunderid/internal/authn	7.383s
+ok  	github.com/thunder-id/thunderid/internal/authn/assert	7.869s
+ok  	github.com/thunder-id/thunderid/internal/authn/common	8.304s
+ok  	github.com/thunder-id/thunderid/internal/authn/config	7.664s
+ok  	github.com/thunder-id/thunderid/internal/authn/consent	7.325s
+ok  	github.com/thunder-id/thunderid/internal/authn/github	7.821s
+ok  	github.com/thunder-id/thunderid/internal/authn/google	7.766s
+ok  	github.com/thunder-id/thunderid/internal/authn/magiclink	7.609s
+ok  	github.com/thunder-id/thunderid/internal/authn/nextjssdk	7.497s
+ok  	github.com/thunder-id/thunderid/internal/authn/oauth	7.579s
+ok  	github.com/thunder-id/thunderid/internal/authn/oidc	7.568s
+ok  	github.com/thunder-id/thunderid/internal/authn/openid4vp	7.751s
+ok  	github.com/thunder-id/thunderid/internal/authn/otp	7.493s
+ok  	github.com/thunder-id/thunderid/internal/authn/passkey	7.651s
+ok  	github.com/thunder-id/thunderid/internal/authn/reactsdk	7.573s
+ok  	github.com/thunder-id/thunderid/internal/authnprovider/common	7.543s
+ok  	github.com/thunder-id/thunderid/internal/authnprovider/defaultprovider	7.245s
+ok  	github.com/thunder-id/thunderid/internal/authnprovider/manager	7.279s
+ok  	github.com/thunder-id/thunderid/internal/authnprovider/restprovider	7.264s
+ok  	github.com/thunder-id/thunderid/internal/authz	7.359s
+ok  	github.com/thunder-id/thunderid/internal/authz/engine	7.384s
+ok  	github.com/thunder-id/thunderid/internal/authzdetail/common	7.147s
+ok  	github.com/thunder-id/thunderid/internal/authzdetail/mgt	6.885s
+ok  	github.com/thunder-id/thunderid/internal/authzen	7.196s
+ok  	github.com/thunder-id/thunderid/internal/cert	7.937s
+ok  	github.com/thunder-id/thunderid/internal/cimd	7.901s
+ok  	github.com/thunder-id/thunderid/internal/connection	7.434s
+ok  	github.com/thunder-id/thunderid/internal/connection/authzenpdp	7.759s
+ok  	github.com/thunder-id/thunderid/internal/connection/httpconnection	8.261s
+ok  	github.com/thunder-id/thunderid/internal/consent	7.955s
+?   	github.com/thunder-id/thunderid/internal/design/common	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/design/layout/mgt	8.080s
+ok  	github.com/thunder-id/thunderid/internal/design/resolve	7.931s
+ok  	github.com/thunder-id/thunderid/internal/design/theme/mgt	7.977s
+ok  	github.com/thunder-id/thunderid/internal/entity	8.293s
+ok  	github.com/thunder-id/thunderid/internal/entityprovider	8.048s
+ok  	github.com/thunder-id/thunderid/internal/entitytype	7.963s
+ok  	github.com/thunder-id/thunderid/internal/entitytype/model	7.572s
+ok  	github.com/thunder-id/thunderid/internal/flow/common	7.549s
+ok  	github.com/thunder-id/thunderid/internal/flow/config	7.390s
+ok  	github.com/thunder-id/thunderid/internal/flow/core	7.415s
+ok  	github.com/thunder-id/thunderid/internal/flow/executor	5.649s
+ok  	github.com/thunder-id/thunderid/internal/flow/executormeta	5.850s
+ok  	github.com/thunder-id/thunderid/internal/flow/flowexec	6.676s
+ok  	github.com/thunder-id/thunderid/internal/flow/flowmeta	7.247s
+ok  	github.com/thunder-id/thunderid/internal/flow/graphbuilder	7.929s
+ok  	github.com/thunder-id/thunderid/internal/flow/interceptor	7.684s
+ok  	github.com/thunder-id/thunderid/internal/flow/mgt	8.031s
+ok  	github.com/thunder-id/thunderid/internal/flow/session	7.913s
+ok  	github.com/thunder-id/thunderid/internal/gateway	8.668s
+ok  	github.com/thunder-id/thunderid/internal/group	7.836s
+ok  	github.com/thunder-id/thunderid/internal/identitygovernance	7.977s
+ok  	github.com/thunder-id/thunderid/internal/idp	7.709s
+ok  	github.com/thunder-id/thunderid/internal/inboundclient	7.360s
+ok  	github.com/thunder-id/thunderid/internal/inboundclient/model	7.579s
+ok  	github.com/thunder-id/thunderid/internal/notification	7.864s
+ok  	github.com/thunder-id/thunderid/internal/notification/client	7.882s
+ok  	github.com/thunder-id/thunderid/internal/notification/common	7.485s
+ok  	github.com/thunder-id/thunderid/internal/notification/config	7.479s
+ok  	github.com/thunder-id/thunderid/internal/notificationtemplate	7.253s
+?   	github.com/thunder-id/thunderid/internal/oauth	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/oauth/config	7.352s
+ok  	github.com/thunder-id/thunderid/internal/oauth/jwks	7.015s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/authz	7.159s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/authz/requestvalidator	7.132s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/callback	7.393s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/ciba	7.391s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/clientauth	8.527s
+?   	github.com/thunder-id/thunderid/internal/oauth/oauth2/constants	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/dcr	7.566s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/discovery	7.242s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop	8.853s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/granthandlers	7.688s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/introspect	7.558s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/jti	7.711s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/jwksresolver	8.073s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/logout	7.525s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/logout/backchannel	9.709s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/model	7.696s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/par	7.583s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/pkce	6.772s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/resourceindicators	7.234s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation	8.227s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/token	6.767s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice	6.908s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/userinfo	9.382s
+ok  	github.com/thunder-id/thunderid/internal/oauth/oauth2/utils	7.421s
+ok  	github.com/thunder-id/thunderid/internal/oauth/scope	7.214s
+ok  	github.com/thunder-id/thunderid/internal/openid4vci	7.925s
+ok  	github.com/thunder-id/thunderid/internal/ou	6.928s
+ok  	github.com/thunder-id/thunderid/internal/resource	6.988s
+ok  	github.com/thunder-id/thunderid/internal/revocation	7.177s
+ok  	github.com/thunder-id/thunderid/internal/role	7.545s
+?   	github.com/thunder-id/thunderid/internal/runtimestore	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/runtimestore/dbstore	7.758s
+ok  	github.com/thunder-id/thunderid/internal/runtimestore/inmemory	6.963s
+ok  	github.com/thunder-id/thunderid/internal/runtimestore/redisstore	7.556s
+ok  	github.com/thunder-id/thunderid/internal/scim	7.094s
+ok  	github.com/thunder-id/thunderid/internal/scim/common	6.917s
+?   	github.com/thunder-id/thunderid/internal/scim/config	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/scim/discovery	6.951s
+ok  	github.com/thunder-id/thunderid/internal/scim/groups	6.820s
+ok  	github.com/thunder-id/thunderid/internal/scim/users	7.243s
+ok  	github.com/thunder-id/thunderid/internal/serverconfig	7.402s
+ok  	github.com/thunder-id/thunderid/internal/sharing	7.485s
+ok  	github.com/thunder-id/thunderid/internal/system/bootstrap	7.714s
+ok  	github.com/thunder-id/thunderid/internal/system/cache	11.109s
+ok  	github.com/thunder-id/thunderid/internal/system/cmodels	7.620s
+ok  	github.com/thunder-id/thunderid/internal/system/config	7.709s
+?   	github.com/thunder-id/thunderid/internal/system/constants	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/context	7.588s
+ok  	github.com/thunder-id/thunderid/internal/system/cors	7.563s
+?   	github.com/thunder-id/thunderid/internal/system/cors/corstest	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/cryptolib	10.612s
+ok  	github.com/thunder-id/thunderid/internal/system/csp	7.412s
+ok  	github.com/thunder-id/thunderid/internal/system/database/model	7.674s
+ok  	github.com/thunder-id/thunderid/internal/system/database/provider	7.394s
+ok  	github.com/thunder-id/thunderid/internal/system/database/utils	7.297s
+ok  	github.com/thunder-id/thunderid/internal/system/declarative_resource	7.071s
+ok  	github.com/thunder-id/thunderid/internal/system/declarative_resource/entity	7.055s
+ok  	github.com/thunder-id/thunderid/internal/system/deployment	6.468s
+?   	github.com/thunder-id/thunderid/internal/system/error/apierror	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/eventlistener	6.507s
+ok  	github.com/thunder-id/thunderid/internal/system/export	5.832s
+ok  	github.com/thunder-id/thunderid/internal/system/filter	6.074s
+ok  	github.com/thunder-id/thunderid/internal/system/healthcheck/handler	6.346s
+?   	github.com/thunder-id/thunderid/internal/system/healthcheck/model	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/healthcheck/service	6.730s
+ok  	github.com/thunder-id/thunderid/internal/system/http	8.621s
+ok  	github.com/thunder-id/thunderid/internal/system/i18n/core	6.572s
+ok  	github.com/thunder-id/thunderid/internal/system/i18n/mgt	6.900s
+ok  	github.com/thunder-id/thunderid/internal/system/importer	5.903s
+ok  	github.com/thunder-id/thunderid/internal/system/jose	6.655s
+?   	github.com/thunder-id/thunderid/internal/system/jose/config	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/jose/jwe	7.576s
+ok  	github.com/thunder-id/thunderid/internal/system/jose/jws	7.505s
+ok  	github.com/thunder-id/thunderid/internal/system/jose/jwt	8.353s
+ok  	github.com/thunder-id/thunderid/internal/system/jose/sdjwt	7.310s
+?   	github.com/thunder-id/thunderid/internal/system/kmprovider	[no test files]
+?   	github.com/thunder-id/thunderid/internal/system/kmprovider/common	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm	8.399s
+ok  	github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki	7.592s
+ok  	github.com/thunder-id/thunderid/internal/system/log	7.459s
+ok  	github.com/thunder-id/thunderid/internal/system/log/rollingfile	6.736s
+ok  	github.com/thunder-id/thunderid/internal/system/mcp	6.412s
+ok  	github.com/thunder-id/thunderid/internal/system/mcp/auth	6.518s
+ok  	github.com/thunder-id/thunderid/internal/system/mcp/tool	6.858s
+ok  	github.com/thunder-id/thunderid/internal/system/middleware	6.910s
+ok  	github.com/thunder-id/thunderid/internal/system/observability	6.433s
+ok  	github.com/thunder-id/thunderid/internal/system/observability/adapter	14.405s
+ok  	github.com/thunder-id/thunderid/internal/system/observability/event	6.770s
+ok  	github.com/thunder-id/thunderid/internal/system/observability/formatter	7.459s
+ok  	github.com/thunder-id/thunderid/internal/system/observability/opentelemetry	6.989s
+ok  	github.com/thunder-id/thunderid/internal/system/observability/publisher	8.237s
+ok  	github.com/thunder-id/thunderid/internal/system/observability/subscriber	7.605s
+ok  	github.com/thunder-id/thunderid/internal/system/outboundauth	7.580s
+ok  	github.com/thunder-id/thunderid/internal/system/outboundauth/httpauth	7.543s
+ok  	github.com/thunder-id/thunderid/internal/system/outboundauth/smtpauth	7.588s
+ok  	github.com/thunder-id/thunderid/internal/system/resourcedependency	7.609s
+ok  	github.com/thunder-id/thunderid/internal/system/revocationcache	7.624s
+ok  	github.com/thunder-id/thunderid/internal/system/secretresolver	7.313s
+ok  	github.com/thunder-id/thunderid/internal/system/security	7.136s
+?   	github.com/thunder-id/thunderid/internal/system/services	[no test files]
+ok  	github.com/thunder-id/thunderid/internal/system/sysauthz	6.791s
+ok  	github.com/thunder-id/thunderid/internal/system/transaction	6.632s
+ok  	github.com/thunder-id/thunderid/internal/system/userlookup	5.753s
+ok  	github.com/thunder-id/thunderid/internal/system/utils	6.306s
+ok  	github.com/thunder-id/thunderid/internal/system/valuecompare	6.485s
+ok  	github.com/thunder-id/thunderid/internal/system/valueref	6.389s
+ok  	github.com/thunder-id/thunderid/internal/system/varname	6.329s
+ok  	github.com/thunder-id/thunderid/internal/user	6.481s
+ok  	github.com/thunder-id/thunderid/internal/usermgtprovider	6.437s
+ok  	github.com/thunder-id/thunderid/internal/variablestore	6.717s
+ok  	github.com/thunder-id/thunderid/internal/vc/credential	6.733s
+ok  	github.com/thunder-id/thunderid/internal/vc/presentation	7.183s
+ok  	github.com/thunder-id/thunderid/pkg/thunderidengine	7.125s
+ok  	github.com/thunder-id/thunderid/pkg/thunderidengine/common	7.447s
+ok  	github.com/thunder-id/thunderid/pkg/thunderidengine/config	7.534s
+ok  	github.com/thunder-id/thunderid/pkg/thunderidengine/providers	7.704s
+?   	github.com/thunder-id/thunderid/tests/mocks/actorprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/agentmgtprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/agentmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/applicationmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/attestationprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/attributecachemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/assertmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/authnmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/commonmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/githubmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/googlemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/magiclinkmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/oauthmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/oidcmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/otpmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authn/passkeymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authnprovider/providermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authz/engine	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authzdetailmgtmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/authzmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/cachemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/captchamock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/certmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/cimdmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/connection/httpconnectionmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/consentmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/consentprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/corsmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/crypto/hashmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/crypto/pki/pkimock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/database/modelmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/database/providermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/design/layoutmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/design/resolvemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/design/thememock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/designprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/entitymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/entityprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/entitytypemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/coremock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/executormock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/flowexecmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/flowmetamock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/flowmgt_legacymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/flowmgtmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/interceptormock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/flow/sessionmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/groupmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/healthcheck/servicemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/httpmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/i18n/mgtmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/i18nprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/identitygovernancemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/idp/idpmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/idpprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/inboundclientmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/jose/jwemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/notification/clientmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/notification/notificationmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/authzmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/cibamock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/discoverymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/dpopmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/granthandlersmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/introspectmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/jtimock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/revocationmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/tokenmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/tokenservicemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oauth/scopemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/observability/adaptermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/observability/observabilitymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/observabilityprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/oumock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/ouprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/outboundauth/smtpauthmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/resourcedependencymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/resourcemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/resourceserverprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/rolemock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/scim/discoverymock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/scim/groupsmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/scim/usersmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/serverconfigmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/sharingmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/sysauthzmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/transactionmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/usermgtprovidermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/usermock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/vc/credentialmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/mocks/vc/presentationmock	[no test files]
+?   	github.com/thunder-id/thunderid/tests/testhelpers	[no test files]

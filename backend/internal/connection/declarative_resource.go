@@ -232,53 +232,18 @@ func (e *connectionExporter) GetResourceRulesForResource(
 // identity provider client secret, each message vendor's own secret, and the credential fields of
 // every outbound authentication method an email connection can use.
 func (e *connectionExporter) SecretFields() []string {
-	keys := outboundauth.CredentialFieldKeys()
-	fields := make([]string, 0, 3+len(keys))
-	fields = append(fields, "clientSecret", "authToken", "apiSecret")
-	for _, key := range keys {
-		fields = append(fields, "authentication.properties."+key)
-	}
-	return fields
+	return append([]string{"clientSecret", "authToken", "apiSecret"},
+		outboundauth.SecretFieldPaths("authentication.properties")...)
 }
 
 // authenticationResourceRules externalizes each secret field of a connection's outbound
-// authentication to a template variable. The field names are not statically known, since they
-// come from the registered method, so the paths are derived rather than hardcoded. That is what
-// keeps a new authentication method from needing a change here.
+// authentication to a template variable.
 func authenticationResourceRules(
 	auth *outboundauth.Authentication) *declarativeresource.ResourceRules {
-	if auth == nil {
-		return &declarativeresource.ResourceRules{}
-	}
-
-	authType, ok := outboundauth.ParseType(auth.Type)
-	if !ok {
-		return &declarativeresource.ResourceRules{}
-	}
-	method, ok := outboundauth.GetMethod(authType)
-	if !ok {
-		return &declarativeresource.ResourceRules{}
-	}
-
-	var variables []string
-	for _, field := range method.Fields {
-		// An empty value has nothing to externalize, matching how an unset vendor secret is
-		// left out rather than exported as a blank variable.
-		if field.Credential && auth.Properties[field.Key] != "" {
-			variables = append(variables, "Authentication.Properties."+field.Key)
-		}
-	}
-	if method.AdditionalProperties != nil && method.AdditionalProperties.Credential {
-		for name, value := range auth.Properties {
-			if value != "" {
-				variables = append(variables, "Authentication.Properties."+name)
-			}
-		}
-	}
+	variables := outboundauth.SecretVariablePaths(auth, "Authentication.Properties")
 	if len(variables) == 0 {
 		return &declarativeresource.ResourceRules{}
 	}
-
 	return &declarativeresource.ResourceRules{SecretVariables: variables}
 }
 

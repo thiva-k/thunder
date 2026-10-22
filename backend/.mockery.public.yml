@@ -562,6 +562,15 @@ packages:
       pkgname: resourcemock
       filename: "{{.InterfaceName}}_mock.go"
 
+  github.com/thunder-id/thunderid/internal/authzdetail/mgt:
+    interfaces:
+      AuthorizationDetailMgtServiceInterface:
+        config:
+          dir: tests/mocks/authzdetailmgtmock
+          structname: '{{.InterfaceName}}Mock'
+          pkgname: authzdetailmgtmock
+          filename: "{{.InterfaceName}}_mock.go"
+
   github.com/thunder-id/thunderid/internal/serverconfig:
     interfaces:
       ServerConfigService:
