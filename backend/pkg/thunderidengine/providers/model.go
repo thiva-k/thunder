@@ -767,6 +767,10 @@ type Agent struct {
 	Owner       string          `json:"owner,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
+	// Delegated marks an agent that acts on behalf of a signed-in user. It selects the OAuth grant
+	// types applied and checked when the agent is created and is not stored.
+	Delegated bool `json:"delegated,omitempty"`
+
 	// The service-level model carries the full internal profile.
 	InboundAuthProfile
 	InboundAuthConfig []InboundAuthConfigWithSecret `json:"inboundAuthConfig,omitempty"`

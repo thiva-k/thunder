@@ -105,6 +105,8 @@ var defaultMessages = map[string]string{
 	"error.agentservice.layout_not_found_description": "The specified layout does not exist",
 	"error.agentservice.missing_agent_id": "Missing agent ID",
 	"error.agentservice.missing_agent_id_description": "The agent ID is required",
+	"error.agentservice.missing_delegation_grant_type": "Missing required grant types for a delegated agent",
+	"error.agentservice.missing_delegation_grant_type_description": "A delegated agent needs at least one of these grant types: {{param(grantTypes)}}",
 	"error.agentservice.multiple_oauth_configs": "Multiple OAuth inbound auth configs are not allowed",
 	"error.agentservice.multiple_oauth_configs_description": "An entity may have at most one inbound auth config per protocol",
 	"error.agentservice.none_auth_method_cannot_have_secret_description": "'none' authentication method cannot have a client secret",
