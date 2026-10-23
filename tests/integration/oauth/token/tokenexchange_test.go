@@ -28,6 +28,9 @@ const (
 	tokenExchangeTestEmail    = "te_test@example.com"
 	tokenExchangeMockOIDCPort = 8094
 	tokenExchangeRedirectURI  = "https://localhost:3000"
+	// The server caches an issuer's JWKS by URL, so a second mock in the same run, which signs with a
+	// new key, needs its own port.
+	tokenExchangeActMockOIDCPort = 8104
 )
 
 type TokenExchangeTestSuite struct {
@@ -603,6 +606,90 @@ func (ts *TokenExchangeTestSuite) TestTokenExchange_ExternalIDP_WithTrustedToken
 		claims.Additional["grant_type"],
 		"Issued token should record token exchange grant type",
 	)
+}
+
+// TestTokenExchange_ExternalSubjectActNotCarried verifies that an act claim inside an external issuer's
+// subject_token is not nested under the actor, since that issuer names its actors in its own namespace.
+func (ts *TokenExchangeTestSuite) TestTokenExchange_ExternalSubjectActNotCarried() {
+	const (
+		externalClientID     = "external-act-oidc-client-id"
+		externalClientSecret = "mock-oidc-secret"
+		externalSubject      = "external-act-oidc-subject"
+		redirectURI          = "https://localhost:3000/callback"
+	)
+
+	mockOIDCServer, err := testutils.NewMockOIDCServer(
+		tokenExchangeActMockOIDCPort, externalClientID, externalClientSecret)
+	ts.Require().NoError(err, "Failed to create mock OIDC server")
+
+	mockOIDCServer.AddUser(&testutils.OIDCUserInfo{
+		Sub:    externalSubject,
+		Name:   "External Delegated User",
+		Custom: map[string]interface{}{"act": map[string]interface{}{"sub": "external-agent"}},
+	})
+
+	err = mockOIDCServer.Start()
+	ts.Require().NoError(err, "Failed to start mock OIDC server")
+	defer func() {
+		if stopErr := mockOIDCServer.Stop(); stopErr != nil {
+			ts.T().Logf("Failed to stop mock OIDC server: %v", stopErr)
+		}
+	}()
+
+	idpID, err := testutils.CreateIDP(testutils.IDP{
+		Name:        fmt.Sprintf("Token Exchange External Act IdP %d", time.Now().UnixNano()),
+		Description: "Mock OIDC IdP whose tokens carry an act claim",
+		Type:        "OIDC",
+		Properties: []testutils.IDPProperty{
+			{Name: "issuer", Value: mockOIDCServer.GetURL(), IsSecret: false},
+			{Name: "jwks_endpoint", Value: mockOIDCServer.GetJWKSURL(), IsSecret: false},
+			{Name: "token_exchange_enabled", Value: "true", IsSecret: false},
+			{Name: "trusted_token_audience", Value: externalClientID, IsSecret: false},
+		},
+	})
+	ts.Require().NoError(err, "Failed to create mock OIDC IdP")
+	defer func() {
+		if deleteErr := testutils.DeleteIDP(idpID); deleteErr != nil {
+			ts.T().Logf("Failed to delete mock OIDC IdP: %v", deleteErr)
+		}
+	}()
+
+	authHeader := "Basic " + basicAuth(tokenExchangeClientID, tokenExchangeClientSecret)
+
+	// A token this server issued for the suite's user acts as the actor_token.
+	actorForm := url.Values{}
+	actorForm.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+	actorForm.Set("subject_token", ts.assertionToken)
+	actorForm.Set("subject_token_type", "urn:ietf:params:oauth:token-type:jwt")
+	actorResp, statusCode, err := ts.exchangeToken(actorForm.Encode(), authHeader)
+	ts.Require().NoError(err)
+	ts.Require().Equal(http.StatusOK, statusCode, "%s: %s", actorResp.Error, actorResp.ErrorDescription)
+	ts.Require().NotEmpty(actorResp.AccessToken)
+
+	externalIDToken := ts.getMockOIDCIDToken(mockOIDCServer, externalClientID, externalClientSecret, redirectURI)
+	externalClaims, err := testutils.DecodeJWT(externalIDToken)
+	ts.Require().NoError(err)
+	ts.Require().Contains(externalClaims.Additional, "act", "External token should carry an act claim")
+
+	formData := url.Values{}
+	formData.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+	formData.Set("subject_token", externalIDToken)
+	formData.Set("subject_token_type", "urn:ietf:params:oauth:token-type:jwt")
+	formData.Set("actor_token", actorResp.AccessToken)
+	formData.Set("actor_token_type", "urn:ietf:params:oauth:token-type:access_token")
+	formData.Set("resource", "https://resource.example.com")
+
+	resp, statusCode, err := ts.exchangeToken(formData.Encode(), authHeader)
+	ts.Require().NoError(err)
+	ts.Require().Equal(http.StatusOK, statusCode, "%s: %s", resp.Error, resp.ErrorDescription)
+
+	claims, err := testutils.DecodeJWT(resp.AccessToken)
+	ts.Require().NoError(err)
+	ts.Equal(externalSubject, claims.Sub)
+	act, ok := claims.Additional["act"].(map[string]interface{})
+	ts.Require().True(ok, "Issued token should carry an act claim for the actor_token")
+	ts.Equal(ts.userID, act["sub"], "act.sub should identify the actor_token's subject")
+	ts.NotContains(act, "act", "The external subject_token's act claim should not be nested")
 }
 
 // TestTokenExchange_WithAudience tests that audience does not drive the issued access-token audience.
