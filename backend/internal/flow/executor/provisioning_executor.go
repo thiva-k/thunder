@@ -77,7 +77,6 @@ func newProvisioningExecutor(
 				providers.FlowTypeAdministration,
 			},
 			SupportedProperties: []providers.ExecutorSupportedProperties{
-				{Property: propertyKeyProvisioningMode},
 				{Property: propertyKeyDelegated},
 				{Property: propertyKeyDynamicInputsIncludeOptional},
 				{Property: propertyKeyDynamicInputsIncludeOptionalCredentials},
@@ -126,19 +125,21 @@ func (p *provisioningExecutor) Execute(ctx *providers.NodeContext) (*providers.E
 		AuthUser:       ctx.AuthUser,
 	}
 
-	category, err := categoryFromMode(ctx)
+	category, err := categoryFromContext(ctx)
 	if err != nil {
 		return execResp, err
 	}
 
-	// Agents do not self-register yet. The capability is not blocked anywhere structural, so
-	// lifting this is a matter of deleting the guard once the rules for it are settled.
-	if category == entitytype.TypeCategoryAgent && ctx.FlowType == providers.FlowTypeRegistration {
-		logger.Debug(ctx.Context, "Agent provisioning is not available in a registration flow")
-		execResp.Status = providers.ExecFailure
-		execResp.Error = &ErrSelfRegNotSupportedForAgents
+	// An agent is created by an administrator, so only an administration flow provisions one.
+	if category == entitytype.TypeCategoryAgent && ctx.FlowType != providers.FlowTypeAdministration {
+		if ctx.FlowType == providers.FlowTypeRegistration {
+			logger.Debug(ctx.Context, "Agent provisioning is not available in a registration flow")
+			execResp.Status = providers.ExecFailure
+			execResp.Error = &ErrSelfRegNotSupportedForAgents
 
-		return execResp, nil
+			return execResp, nil
+		}
+		return execResp, fmt.Errorf("agent provisioning is not supported in a %s flow", ctx.FlowType)
 	}
 
 	// A resolved user needs no provisioning. Checked before required inputs so the user is not
@@ -190,9 +191,8 @@ func (p *provisioningExecutor) Execute(ctx *providers.NodeContext) (*providers.E
 		}
 	}
 
-	// Authentication only auto-provisions the categories it can authenticate, and only when it
-	// marked the entity eligible.
-	if ctx.FlowType == providers.FlowTypeAuthentication && traitsFor(category).autoProvisionedAtAuthentication {
+	// Authentication auto-provisions only an entity it marked eligible.
+	if ctx.FlowType == providers.FlowTypeAuthentication {
 		eligible, ok := ctx.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning]
 		if !ok || eligible != dataValueTrue {
 			logger.Debug(ctx.Context, "Entity is not eligible for auto provisioning, skipping execution")
@@ -289,16 +289,16 @@ func (p *provisioningExecutor) applyExistingLinkHolderRules(ctx *providers.NodeC
 	return nil
 }
 
-// categoryFromMode maps the node's mode property onto the entity category it works on. A mode is
-// the category name, and a node that sets none works on the default category.
-func categoryFromMode(ctx *providers.NodeContext) (entitytype.TypeCategory, error) {
-	mode, ok := ctx.NodeProperties[propertyKeyProvisioningMode].(string)
-	if !ok || mode == "" {
+// categoryFromContext resolves the category a provisioning node works on: the one a type resolver
+// put in the runtime data, or the default category when no resolver ran.
+func categoryFromContext(ctx *providers.NodeContext) (entitytype.TypeCategory, error) {
+	name := ctx.RuntimeData[categoryNameKey]
+	if name == "" {
 		return defaultProvisioningCategory, nil
 	}
-	category := entitytype.TypeCategory(mode)
+	category := entitytype.TypeCategory(name)
 	if !category.IsValid() {
-		return "", fmt.Errorf("invalid provisioning mode: %s", mode)
+		return "", fmt.Errorf("invalid category: %s", name)
 	}
 	return category, nil
 }
@@ -470,7 +470,7 @@ func (p *provisioningExecutor) completeProvisioning(ctx *providers.NodeContext,
 	execResp.Status = providers.ExecComplete
 
 	// Record the auto-provisioning so later nodes can tell it from an ordinary sign-in.
-	if ctx.FlowType == providers.FlowTypeAuthentication && traitsFor(category).autoProvisionedAtAuthentication {
+	if ctx.FlowType == providers.FlowTypeAuthentication {
 		execResp.RuntimeData[common.RuntimeKeyUserAutoProvisioned] = dataValueTrue
 	}
 
@@ -617,7 +617,7 @@ func (p *provisioningExecutor) resolveAmbiguousEntityForProvisioning(ctx *provid
 // the category once and calls hasRequiredInputs with it directly.
 func (p *provisioningExecutor) HasRequiredInputs(ctx *providers.NodeContext,
 	execResp *providers.ExecutorResponse) bool {
-	category, err := categoryFromMode(ctx)
+	category, err := categoryFromContext(ctx)
 	if err != nil {
 		p.logger.With(log.String(log.LoggerKeyExecutionID, ctx.ExecutionID)).
 			Warn(ctx.Context, "Failed to resolve the provisioning category", log.Any("error", err))
