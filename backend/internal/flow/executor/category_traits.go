@@ -25,6 +25,8 @@ type categoryTraits struct {
 	autoProvisionedAtAuthentication bool
 	// applicationAllowedTypes returns the entity types the application admits for the category.
 	applicationAllowedTypes func(ctx *providers.NodeContext) []string
+	// allowedTypesProperty names the node property that narrows the category's types.
+	allowedTypesProperty string
 	// recordFields are carried on the entity's own record rather than in its schema.
 	recordFields []string
 	// missingRecordFields reports which record fields the flow still has to collect.
@@ -42,6 +44,7 @@ var categoryTraitsByCategory = map[entitytype.TypeCategory]categoryTraits{
 		applicationAllowedTypes: func(ctx *providers.NodeContext) []string {
 			return ctx.Application.AllowedUserTypes
 		},
+		allowedTypesProperty: propertyKeyAllowedUserTypes,
 	},
 	entitytype.TypeCategoryAgent: {
 		groupMemberType:       group.MemberTypeAgent,
@@ -50,6 +53,7 @@ var categoryTraitsByCategory = map[entitytype.TypeCategory]categoryTraits{
 		applicationAllowedTypes: func(ctx *providers.NodeContext) []string {
 			return ctx.Application.AllowedAgentTypes
 		},
+		allowedTypesProperty: propertyKeyAllowedAgentTypes,
 		recordFields: []string{
 			ownerIDKey, delegatedKey, redirectURIsKey, authFlowIDKey, allowedUserTypesKey,
 		},

@@ -19,13 +19,10 @@ type defaultAgentMgtProvider struct {
 }
 
 // newDefaultAgentMgtProvider creates a new default agent provider.
-func newDefaultAgentMgtProvider() AgentMgtProviderService {
-	return &defaultAgentMgtProvider{}
-}
-
-// SetAgentService injects the agent service. See AgentMgtProviderService.
-func (p *defaultAgentMgtProvider) SetAgentService(agentSvc agent.AgentServiceInterface) {
-	p.agentSvc = agentSvc
+func newDefaultAgentMgtProvider(agentSvc agent.AgentServiceInterface) providers.AgentMgtProvider {
+	return &defaultAgentMgtProvider{
+		agentSvc: agentSvc,
+	}
 }
 
 // CreateAgent provisions an agent through the agent service, which owns the defaults and validation.
@@ -34,9 +31,6 @@ func (p *defaultAgentMgtProvider) CreateAgent(
 ) (*providers.Agent, *tidcommon.ServiceError) {
 	if agent == nil {
 		return nil, &ErrorInvalidRequestFormat
-	}
-	if p.agentSvc == nil {
-		return nil, &ErrorAgentProvisioningDisabled
 	}
 
 	created, svcErr := p.agentSvc.CreateAgent(security.WithRuntimeContext(ctx), agent)

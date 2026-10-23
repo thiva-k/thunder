@@ -2528,6 +2528,8 @@ func (suite *ProvisioningExecutorTestSuite) TestCategoryPrincipalTypes() {
 	// Federated authentication creates users on the fly; an agent is never provisioned that way.
 	assert.True(suite.T(), userTraits.autoProvisionedAtAuthentication)
 	assert.False(suite.T(), agentTraits.autoProvisionedAtAuthentication)
+	assert.Equal(suite.T(), propertyKeyAllowedUserTypes, userTraits.allowedTypesProperty)
+	assert.Equal(suite.T(), propertyKeyAllowedAgentTypes, agentTraits.allowedTypesProperty)
 	// An unrecognized category behaves as the user category did before any other was supported.
 	// Compared field by field: the traits carry funcs, and funcs are never equal to one another.
 	unknown := traitsFor(entitytype.TypeCategory("unknown"))
@@ -2535,6 +2537,7 @@ func (suite *ProvisioningExecutorTestSuite) TestCategoryPrincipalTypes() {
 	assert.Equal(suite.T(), userTraits.roleAssigneeType, unknown.roleAssigneeType)
 	assert.Equal(suite.T(), userTraits.attributeConflictCode, unknown.attributeConflictCode)
 	assert.Equal(suite.T(), userTraits.autoProvisionedAtAuthentication, unknown.autoProvisionedAtAuthentication)
+	assert.Equal(suite.T(), userTraits.allowedTypesProperty, unknown.allowedTypesProperty)
 }
 
 func (suite *ProvisioningExecutorTestSuite) TestHasRequiredInputs_AllAttributesInRuntimeData() {
