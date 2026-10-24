@@ -43,7 +43,7 @@ func (p *disabledIdentityGovernanceProvider) Suspend(_ context.Context, _, _ str
 }
 
 // ValidateSuspend is unavailable without governance.
-func (p *disabledIdentityGovernanceProvider) ValidateSuspend(_ context.Context, _ string,
+func (p *disabledIdentityGovernanceProvider) ValidateSuspend(_ context.Context, _, _ string,
 ) *tidcommon.ServiceError {
 	return &errGovernanceUnavailable
 }

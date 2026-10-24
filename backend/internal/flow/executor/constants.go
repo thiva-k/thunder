@@ -4,6 +4,8 @@
 package executor
 
 import (
+	"time"
+
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/flow/executormeta"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -65,6 +67,7 @@ const (
 	ExecutorNameOwnerResolver                = executormeta.ExecutorNameOwnerResolver
 	ExecutorNameAgentTypeResolver            = executormeta.ExecutorNameAgentTypeResolver
 	ExecutorNameIdentityGovernance           = executormeta.ExecutorNameIdentityGovernance
+	ExecutorNamePreSuspend                   = executormeta.ExecutorNamePreSuspend
 )
 
 // Executor mode constants
@@ -86,7 +89,9 @@ const (
 	ExecutorModeRevoke        = executormeta.ExecutorModeRevoke
 	ExecutorModeAdvanceCutoff = executormeta.ExecutorModeAdvanceCutoff
 
-	ExecutorModeUnlock = executormeta.ExecutorModeUnlock
+	ExecutorModeUnlock    = executormeta.ExecutorModeUnlock
+	ExecutorModeSuspend   = executormeta.ExecutorModeSuspend
+	ExecutorModeUnsuspend = executormeta.ExecutorModeUnsuspend
 )
 
 // defaultProvisioningCategory is the entity default category a provisioning node provisions into when its
@@ -129,6 +134,8 @@ const (
 	revocationInputResourceServer = "targetResourceServerId"
 	revocationInputResource       = "targetResourceId"
 	revocationInputAction         = "targetActionId"
+
+	governanceInputOperatorNote = "operatorNote"
 
 	ouIDKey        = "ouId"
 	defaultOUIDKey = "defaultOUID"
@@ -218,6 +225,10 @@ const (
 	// element is optional.
 	propertyKeyConsentFailOnDeny = "failOnDeny"
 )
+
+// suspensionRevocationTTL is how long a suspension's revocation rows are kept.
+// TODO(#5805): use the server-wide maximum token lifetime once it is introduced.
+const suspensionRevocationTTL = 7 * 24 * time.Hour
 
 // nonSearchableInputs contains the list of user inputs/ attributes that are non-searchable.
 var nonSearchableInputs = []string{

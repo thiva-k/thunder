@@ -933,6 +933,34 @@ func (s *ManagerTestSuite) TestInitiateEnrollment_RoutesToDefaultProvider() {
 	s.Equal(expected, result)
 }
 
+func (s *ManagerTestSuite) TestInitiateEnrollment_StatesOnlyASuspension() {
+	cases := []struct {
+		name         string
+		providerCode string
+		expectedCode string
+	}{
+		{name: "locked", providerCode: authnprovidercm.ErrorCodeAccountLocked,
+			expectedCode: authnprovidercm.ErrorCodeAccountLocked},
+		{name: "suspended", providerCode: authnprovidercm.ErrorCodeAccountSuspended,
+			expectedCode: ErrorAccountSuspended.Code},
+		{name: "enrollment failed", providerCode: authnprovidercm.ErrorCodeEnrollmentFailed,
+			expectedCode: authnprovidercm.ErrorCodeEnrollmentFailed},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			s.mockProvider.On("InitiateEnrollment", context.Background(), "passkey", mock.Anything, mock.Anything).
+				Return(nil, &tidcommon.ServiceError{Type: tidcommon.ClientErrorType, Code: tc.providerCode}).Once()
+
+			result, svcErr := s.mgr.InitiateEnrollment(context.Background(), "passkey", nil, nil)
+
+			s.Nil(result)
+			s.Require().NotNil(svcErr)
+			s.Equal(tc.expectedCode, svcErr.Code)
+		})
+	}
+}
+
 func (s *ManagerTestSuite) TestEnroll_Success() {
 	credentials := map[string]interface{}{"passkey": "cred"}
 	meta := &providers.AuthnMetadata{}
@@ -997,6 +1025,8 @@ func (s *ManagerTestSuite) TestEnroll_ClientErrorMapping() {
 		{authnprovidercm.ErrorCodeUserNotFound, ErrorUserNotFound.Code},
 		{authnprovidercm.ErrorCodeInvalidRequest, ErrorInvalidRequest.Code},
 		{authnprovidercm.ErrorCodeEnrollmentFailed, ErrorEnrollmentFailed.Code},
+		{authnprovidercm.ErrorCodeAccountLocked, ErrorEnrollmentFailed.Code},
+		{authnprovidercm.ErrorCodeAccountSuspended, ErrorAccountSuspended.Code},
 		{"SOMETHING_ELSE", ErrorEnrollmentFailed.Code},
 	}
 	for _, tc := range cases {
@@ -1010,6 +1040,18 @@ func (s *ManagerTestSuite) TestEnroll_ClientErrorMapping() {
 		s.NotNil(svcErr)
 		s.Equal(tc.expectedCode, svcErr.Code, "provider code %s", tc.providerCode)
 	}
+}
+
+func (s *ManagerTestSuite) TestEnroll_SuspensionCodeWithoutAClientTypeFailsTheEnrollment() {
+	credentials := map[string]interface{}{"passkey": "cred"}
+	s.mockProvider.On("Enroll", context.Background(), mock.Anything, credentials, mock.Anything).
+		Return(nil, &tidcommon.ServiceError{Code: authnprovidercm.ErrorCodeAccountSuspended})
+
+	authUser, _, svcErr := s.mgr.Enroll(context.Background(), nil, credentials, nil, nil, providers.AuthUser{})
+
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorEnrollmentFailed.Code, svcErr.Code)
+	s.False(authUser.IsAuthenticated())
 }
 
 func (s *ManagerTestSuite) TestEnroll_EmptyCredentials() {

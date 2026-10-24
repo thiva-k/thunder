@@ -56,10 +56,10 @@ type IdentityGovernanceServiceInterface interface {
 	Suspend(ctx context.Context, entityID, operatorNote string) *tidcommon.ServiceError
 
 	// ValidateSuspend runs Suspend's checks without writing.
-	ValidateSuspend(ctx context.Context, entityID string) *tidcommon.ServiceError
+	ValidateSuspend(ctx context.Context, entityID, operatorNote string) *tidcommon.ServiceError
 
-	// Unsuspend releases the hold. A user is left under a permanent entity-wide lock; an agent or an
-	// application becomes active.
+	// Unsuspend releases the hold. A user is left under a permanent entity-wide lock; an agent keeps
+	// any automatic lock still in force, and an application becomes active.
 	Unsuspend(ctx context.Context, entityID string) *tidcommon.ServiceError
 
 	// RecordLogin stamps when access was last granted, if enabled for the entity's category.
@@ -281,6 +281,9 @@ func (s *identityGovernanceService) Suspend(ctx context.Context,
 	if svcErr != nil {
 		return svcErr
 	}
+	if isOperatorNoteTooLong(operatorNote) {
+		return &ErrorOperatorNoteTooLong
+	}
 	// Already suspended: write nothing and keep the first placement time and note.
 	if isSuspended(entity.State, entity.AccessState) {
 		record.message = messageSuspensionInPlace
@@ -300,7 +303,7 @@ func (s *identityGovernanceService) Suspend(ctx context.Context,
 
 // ValidateSuspend runs Suspend's checks without writing. Only a refusal is audited.
 func (s *identityGovernanceService) ValidateSuspend(ctx context.Context,
-	entityID string) (svcErr *tidcommon.ServiceError) {
+	entityID, operatorNote string) (svcErr *tidcommon.ServiceError) {
 	record := lifecycleAudit{failed: event.EventTypeIdentitySuspensionFailed, entityID: entityID}
 	defer func() {
 		if svcErr != nil {
@@ -308,8 +311,13 @@ func (s *identityGovernanceService) ValidateSuspend(ctx context.Context,
 		}
 	}()
 
-	_, svcErr = s.governedForLifecycle(ctx, entityID, &record)
-	return svcErr
+	if _, svcErr = s.governedForLifecycle(ctx, entityID, &record); svcErr != nil {
+		return svcErr
+	}
+	if isOperatorNoteTooLong(operatorNote) {
+		return &ErrorOperatorNoteTooLong
+	}
+	return nil
 }
 
 // Unsuspend releases the hold and, for a user, writes a permanent entity-wide lock in the same

@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package authn
@@ -2124,6 +2124,31 @@ func (suite *AuthenticationServiceTestSuite) TestFinishPasskeyRegistration_Clien
 		suite.Equal(ErrorPasskeyEnrollmentFailed.Code, err.Code)
 	}
 	suite.mockAuthnProvider.AssertExpectations(suite.T())
+}
+
+func (suite *AuthenticationServiceTestSuite) TestPasskeyRegistrationStatesOnlyASuspension() {
+	credential := PasskeyPublicKeyCredentialDTO{ID: "credential-id-123", Type: "public-key"}
+	for _, held := range []struct{ stated, want tidcommon.ServiceError }{
+		{stated: authnprovidermgr.ErrorAccountSuspended, want: common.ErrorAccountSuspended},
+		{stated: authnprovidermgr.ErrorAccountLocked, want: ErrorPasskeyEnrollmentFailed},
+	} {
+		heldErr := held.stated
+		assertion := suite.createTestAssertion(testUserID)
+		suite.mockJWTService.On("VerifyJWT", mock.Anything, assertion, "", mock.Anything).Return(nil).Once()
+		suite.mockAuthnProvider.On("InitiateEnrollment", mock.Anything, passkey.CredentialType, mock.Anything,
+			mock.Anything).Return(nil, &heldErr).Once()
+		suite.mockAuthnProvider.On("Enroll", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+			mock.Anything).Return(providers.AuthUser{}, providers.AuthenticatedClaims(nil), &heldErr).Once()
+
+		_, err := suite.service.StartPasskeyRegistration(
+			context.Background(), testUserID, testRelyingPartyID, testRelyingPartyName, nil, "", assertion)
+		suite.Require().NotNil(err)
+		suite.Equal(held.want.Code, err.Code)
+
+		_, err = suite.service.FinishPasskeyRegistration(context.Background(), credential, testSessionTkn, false, "")
+		suite.Require().NotNil(err)
+		suite.Equal(held.want.Code, err.Code)
+	}
 }
 
 func (suite *AuthenticationServiceTestSuite) TestFinishPasskeyRegistration_ServerError() {

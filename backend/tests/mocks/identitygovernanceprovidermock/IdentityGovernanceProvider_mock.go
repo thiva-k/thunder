@@ -380,16 +380,16 @@ func (_c *IdentityGovernanceProviderMock_Unsuspend_Call) RunAndReturn(run func(c
 }
 
 // ValidateSuspend provides a mock function for the type IdentityGovernanceProviderMock
-func (_mock *IdentityGovernanceProviderMock) ValidateSuspend(ctx context.Context, entityID string) *common.ServiceError {
-	ret := _mock.Called(ctx, entityID)
+func (_mock *IdentityGovernanceProviderMock) ValidateSuspend(ctx context.Context, entityID string, operatorNote string) *common.ServiceError {
+	ret := _mock.Called(ctx, entityID, operatorNote)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ValidateSuspend")
 	}
 
 	var r0 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *common.ServiceError); ok {
-		r0 = returnFunc(ctx, entityID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, entityID, operatorNote)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*common.ServiceError)
@@ -406,11 +406,12 @@ type IdentityGovernanceProviderMock_ValidateSuspend_Call struct {
 // ValidateSuspend is a helper method to define mock.On call
 //   - ctx context.Context
 //   - entityID string
-func (_e *IdentityGovernanceProviderMock_Expecter) ValidateSuspend(ctx any, entityID any) *IdentityGovernanceProviderMock_ValidateSuspend_Call {
-	return &IdentityGovernanceProviderMock_ValidateSuspend_Call{Call: _e.mock.On("ValidateSuspend", ctx, entityID)}
+//   - operatorNote string
+func (_e *IdentityGovernanceProviderMock_Expecter) ValidateSuspend(ctx any, entityID any, operatorNote any) *IdentityGovernanceProviderMock_ValidateSuspend_Call {
+	return &IdentityGovernanceProviderMock_ValidateSuspend_Call{Call: _e.mock.On("ValidateSuspend", ctx, entityID, operatorNote)}
 }
 
-func (_c *IdentityGovernanceProviderMock_ValidateSuspend_Call) Run(run func(ctx context.Context, entityID string)) *IdentityGovernanceProviderMock_ValidateSuspend_Call {
+func (_c *IdentityGovernanceProviderMock_ValidateSuspend_Call) Run(run func(ctx context.Context, entityID string, operatorNote string)) *IdentityGovernanceProviderMock_ValidateSuspend_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -420,9 +421,14 @@ func (_c *IdentityGovernanceProviderMock_ValidateSuspend_Call) Run(run func(ctx 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -433,7 +439,7 @@ func (_c *IdentityGovernanceProviderMock_ValidateSuspend_Call) Return(serviceErr
 	return _c
 }
 
-func (_c *IdentityGovernanceProviderMock_ValidateSuspend_Call) RunAndReturn(run func(ctx context.Context, entityID string) *common.ServiceError) *IdentityGovernanceProviderMock_ValidateSuspend_Call {
+func (_c *IdentityGovernanceProviderMock_ValidateSuspend_Call) RunAndReturn(run func(ctx context.Context, entityID string, operatorNote string) *common.ServiceError) *IdentityGovernanceProviderMock_ValidateSuspend_Call {
 	_c.Call.Return(run)
 	return _c
 }

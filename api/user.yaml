@@ -2923,10 +2923,17 @@ components:
             `ACTIVE`, `LOCKED` or `SUSPENDED`. When the user is both suspended and locked,
             `SUSPENDED` is reported.
 
-            `SUSPENDED` is an administrative hold. `LOCKED` is an automatic hold after repeated
-            failed authentication attempts, reported under the `accountAccess` policy in force. A
-            lock does not expire when its duration is `0` or it forms at `maxConsecutiveFailures`;
-            other locks expire on their own.
+            `SUSPENDED` is an administrative hold placed by the suspend flow. While suspended, the
+            user cannot authenticate, use existing sessions, get new or refreshed tokens, or recover
+            the account, but the record can still be updated. The unsuspend flow removes the
+            suspension and leaves the user `LOCKED` until self-service recovery or the unlock flow
+            clears the lock.
+
+            `LOCKED` is a hold after repeated failed sign-ins or after a suspension is released.
+            The suspension release lock does not expire, even when automatic locking is disabled.
+            An automatic lock does not expire when its duration is `0` or it forms at
+            `maxConsecutiveFailures`; other automatic locks expire on their own. Self-service
+            recovery with an unlock step or the administration unlock flow clears a lock earlier.
           example: "ACTIVE"
         details:
           type: object
@@ -2935,7 +2942,7 @@ components:
             Why the status applies and how it is cleared. Absent for `ACTIVE`.
 
             An authentication refusal states only that the account is locked or suspended. The
-            locked methods, expiry times and operator note are returned only here, to callers
+            locked methods, expiry times, and operator note are returned only here, to callers
             allowed to read the user.
           properties:
             reason:
@@ -2944,9 +2951,9 @@ components:
               enum: [FAILED_ATTEMPTS, SUSPENSION_RELEASE_LOCK, ADMINISTRATIVE_SUSPENSION]
               description: |
                 What caused the status. `FAILED_ATTEMPTS` is an automatic lock after repeated failed
-                authentication attempts. `SUSPENSION_RELEASE_LOCK` is the account-wide lock left when
-                a suspension is released, which does not expire. `ADMINISTRATIVE_SUSPENSION` is a
-                suspension placed by an operator.
+                sign-ins. `SUSPENSION_RELEASE_LOCK` is the account-wide lock the unsuspend flow
+                leaves, which does not expire. `ADMINISTRATIVE_SUSPENSION` is a suspension placed by
+                an operator.
 
                 One reason covers every entry in `lockedMethods`. A suspension release lock is never
                 reported together with authentication method locks.
@@ -2959,9 +2966,10 @@ components:
             operatorNote:
               type: string
               readOnly: true
+              maxLength: 100
               description: |
                 The note the operator entered when placing the hold. Absent when none was entered.
-                Never included in an authentication refusal.
+                Never included in an authentication refusal or in `/users/me` responses.
               example: "Credential exposure reported by the security team"
             lockedMethods:
               type: array
