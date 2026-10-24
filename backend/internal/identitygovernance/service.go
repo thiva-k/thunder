@@ -119,7 +119,7 @@ type identityGovernanceService struct {
 	entityState entityStateProvider
 	source      accountAccessSourceInterface
 	// notifier is optional; locks form the same without it.
-	notifier lockNotifierInterface
+	notifier LockNotifierInterface
 	// authorizer is optional; nil permits.
 	authorizer sysauthz.SystemAuthorizationServiceInterface
 	// observability receives lifecycle audit events. Optional.
@@ -130,7 +130,7 @@ type identityGovernanceService struct {
 
 // newIdentityGovernanceService builds the governance service.
 func newIdentityGovernanceService(entityState entityStateProvider, source accountAccessSourceInterface,
-	notifier lockNotifierInterface, authorizer sysauthz.SystemAuthorizationServiceInterface,
+	notifier LockNotifierInterface, authorizer sysauthz.SystemAuthorizationServiceInterface,
 	observability providers.ObservabilityProvider) *identityGovernanceService {
 	return &identityGovernanceService{
 		entityState:   entityState,

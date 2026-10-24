@@ -68,7 +68,7 @@ const (
 	// noticeTimeout bounds one delivery attempt: profile read, render and send.
 	noticeTimeout = 30 * time.Second
 
-	// noticeShutdownBudget bounds Close. The server's graceful shutdown has five seconds in total.
+	// noticeShutdownBudget bounds Stop. The server's graceful shutdown has five seconds in total.
 	noticeShutdownBudget = 2 * time.Second
 )
 

@@ -148,3 +148,11 @@ func failDirectOTP(t *testing.T, server *testutils.MockNotificationServer, sende
 			"the wrong code must be refused on attempt %d", i+1)
 	}
 }
+
+// requireNoCodeSent requires that the step just taken sent nothing. The SMS executor sends before its
+// step returns (the notification sender service posts to the provider within the request), so a sent
+// code is already at the mock by then.
+func requireNoCodeSent(t *testing.T, server *testutils.MockNotificationServer, msg string) {
+	t.Helper()
+	require.Empty(t, server.GetMessages(), msg)
+}

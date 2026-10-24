@@ -25,41 +25,42 @@ func TestInitTestSuite(t *testing.T) {
 }
 
 func (s *InitTestSuite) TestInitializeRequiresAnEntityStateProvider() {
-	svc, stop, err := Initialize(nil, serverconfigmock.NewServerConfigServiceMock(s.T()), Config{}, nil, nil, nil)
+	svc, notifier, err := Initialize(nil, serverconfigmock.NewServerConfigServiceMock(s.T()), Config{}, nil, nil, nil)
 	s.Require().ErrorIs(err, errNoEntityStateProvider)
 	s.Nil(svc)
-	s.Nil(stop)
+	s.Nil(notifier)
 }
 
 func (s *InitTestSuite) TestInitializeRequiresAServerConfigService() {
-	svc, stop, err := Initialize(newEntityStateProviderMock(s.T()), nil, Config{}, nil, nil, nil)
+	svc, notifier, err := Initialize(newEntityStateProviderMock(s.T()), nil, Config{}, nil, nil, nil)
 	s.Require().ErrorIs(err, errNoServerConfigService)
 	s.Nil(svc)
-	s.Nil(stop)
+	s.Nil(notifier)
 }
 
-// Without notification dependencies the service is built and the stop function does nothing.
+// Without notification dependencies the service is built and there is no notifier to stop.
 func (s *InitTestSuite) TestInitializeWithoutNotificationsBuildsTheService() {
-	svc, stop, err := Initialize(newEntityStateProviderMock(s.T()), serverconfigmock.NewServerConfigServiceMock(s.T()),
-		Config{}, nil, nil, nil)
+	svc, notifier, err := Initialize(newEntityStateProviderMock(s.T()),
+		serverconfigmock.NewServerConfigServiceMock(s.T()), Config{}, nil, nil, nil)
 	s.Require().NoError(err)
 	s.NotNil(svc)
-	s.Require().NotNil(stop)
-	s.NotPanics(stop)
+	s.Nil(notifier)
 }
 
-// With notification dependencies the stop function closes the notifier, so a later notice is dropped.
-func (s *InitTestSuite) TestStopClosesTheNotifier() {
-	svc, stop, err := Initialize(newEntityStateProviderMock(s.T()), serverconfigmock.NewServerConfigServiceMock(s.T()),
-		Config{}, s.notificationDependencies(), nil, nil)
+// With notification dependencies the returned notifier stops the workers, so a later notice is dropped.
+func (s *InitTestSuite) TestTheReturnedNotifierStops() {
+	svc, notifier, err := Initialize(newEntityStateProviderMock(s.T()),
+		serverconfigmock.NewServerConfigServiceMock(s.T()), Config{}, s.notificationDependencies(), nil, nil)
 	s.Require().NoError(err)
+	s.Require().NotNil(notifier)
 
-	stop()
+	notifier.Stop()
 
-	notifier, ok := svc.(*identityGovernanceService).notifier.(*lockEmailNotifier)
+	emailNotifier, ok := svc.(*identityGovernanceService).notifier.(*lockEmailNotifier)
 	s.Require().True(ok)
-	s.True(notifier.closed)
-	s.NotPanics(stop, "stopping twice is safe")
+	s.Same(emailNotifier, notifier)
+	s.True(emailNotifier.closed)
+	s.NotPanics(notifier.Stop, "stopping twice is safe")
 }
 
 // The lock email needs every notification dependency, so with any one missing no notifier is built.
@@ -77,13 +78,12 @@ func (s *InitTestSuite) TestInitializeBuildsNoNotifierWithoutEveryDependency() {
 			deps := s.notificationDependencies()
 			tc.remove(deps)
 
-			svc, stop, err := Initialize(newEntityStateProviderMock(s.T()),
+			svc, notifier, err := Initialize(newEntityStateProviderMock(s.T()),
 				serverconfigmock.NewServerConfigServiceMock(s.T()), Config{}, deps, nil, nil)
 
 			s.Require().NoError(err)
 			s.Nil(svc.(*identityGovernanceService).notifier)
-			s.Require().NotNil(stop)
-			s.NotPanics(stop)
+			s.Nil(notifier)
 		})
 	}
 }
@@ -94,16 +94,16 @@ func (s *InitTestSuite) TestTheSectionAndTheSenderAreReadThroughTheServerConfigS
 	reader := serverconfigmock.NewServerConfigServiceMock(s.T())
 	reader.EXPECT().GetMergedConfig(mock.Anything, string(serverconfig.ConfigNameAccountAccess)).
 		Return(section, nil).Once()
-	svc, stop, err := Initialize(newEntityStateProviderMock(s.T()), reader,
+	svc, notifier, err := Initialize(newEntityStateProviderMock(s.T()), reader,
 		Config{AccountAccess: testAccountAccessConfig()}, s.notificationDependencies(), nil, nil)
 	s.Require().NoError(err)
-	defer stop()
+	defer notifier.Stop()
 
 	governance := svc.(*identityGovernanceService)
 	s.Equal(section, governance.source.Current(context.Background()))
-	notifier, ok := governance.notifier.(*lockEmailNotifier)
+	emailNotifier, ok := governance.notifier.(*lockEmailNotifier)
 	s.Require().True(ok)
-	s.Same(reader, notifier.serverConfig)
+	s.Same(reader, emailNotifier.serverConfig)
 }
 
 // notificationDependencies returns every dependency the lock email needs, as mocks.

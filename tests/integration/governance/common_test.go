@@ -298,9 +298,9 @@ func runtimeRevision(t *testing.T, entityID string) string {
 	return revision
 }
 
-// servedRung returns the duration of the lock the runtime row holds for a method: its unlock time
-// less the failure that formed it, both written from one clock reading, so the answer does not depend
-// on how long the test took to read it.
+// servedRung returns the duration of the lock the runtime row holds for a method ("entity" for the
+// entity-wide entry): its unlock time less the failure that formed it, both written from one clock
+// reading, so the answer does not depend on how long the test took to read it.
 func servedRung(t *testing.T, entityID, method string) time.Duration {
 	t.Helper()
 	unlockAt, failedAt := storedLock(t, entityID, method)
@@ -315,8 +315,8 @@ func storedExpiry(t *testing.T, entityID, method string) time.Time {
 	return unlockAt
 }
 
-// storedLock returns the unlock time of the lock the runtime row holds for a method, and the time of
-// the failure that formed it.
+// storedLock returns the unlock time of the lock the runtime row holds for a method ("entity" for the
+// entity-wide entry), and the time of the failure that formed it.
 func storedLock(t *testing.T, entityID, method string) (time.Time, time.Time) {
 	t.Helper()
 	raw := runtimeColumn(t, entityID, "RUNTIME_ATTRIBUTES")
@@ -328,6 +328,7 @@ func storedLock(t *testing.T, entityID, method string) (time.Time, time.Time) {
 	var row struct {
 		AccessState struct {
 			Lock struct {
+				Entity                *lockEntry           `json:"entity"`
 				AuthenticationMethods map[string]lockEntry `json:"authenticationMethods"`
 			} `json:"lock"`
 		} `json:"accessState"`
@@ -335,6 +336,9 @@ func storedLock(t *testing.T, entityID, method string) (time.Time, time.Time) {
 	require.NoError(t, json.Unmarshal([]byte(raw), &row), "unreadable runtime row: %s", raw)
 
 	entry, recorded := row.AccessState.Lock.AuthenticationMethods[method]
+	if method == "entity" && row.AccessState.Lock.Entity != nil {
+		entry, recorded = *row.AccessState.Lock.Entity, true
+	}
 	require.True(t, recorded, "the runtime row must hold a %s lock: %s", method, raw)
 	unlockAt, err := time.Parse(time.RFC3339, entry.UnlockAt)
 	require.NoError(t, err, "the %s lock must have a finite unlock time: %s", method, raw)
@@ -361,6 +365,31 @@ func getManagement(t *testing.T, path string) []byte {
 	require.Equal(t, http.StatusOK, resp.StatusCode, "an administrator must be able to read %s: %s",
 		path, string(body))
 	return body
+}
+
+// readLastLoginAt returns the lastLoginAt a management read of a user or agent reports, empty when
+// absent.
+func readLastLoginAt(t *testing.T, collection, entityID string) string {
+	t.Helper()
+
+	body := getManagement(t, "/"+collection+"/"+entityID)
+	var read struct {
+		LastLoginAt string `json:"lastLoginAt"`
+	}
+	require.NoError(t, json.Unmarshal(body, &read), "unreadable %s response: %s", collection, string(body))
+	return read.LastLoginAt
+}
+
+// awaitTheSecondAfter waits until the clock has passed the second a stamp names, since a stamp has
+// second precision and only a later access could show a moved one, and returns that second.
+func awaitTheSecondAfter(t *testing.T, stamp string) time.Time {
+	t.Helper()
+
+	at, err := time.Parse(time.RFC3339, stamp)
+	require.NoError(t, err, "lastLoginAt must be an RFC 3339 instant, got %q", stamp)
+	now := func() time.Time { return time.Now().UTC().Truncate(time.Second) }
+	require.Eventually(t, func() bool { return now().After(at) }, 2*time.Second, 50*time.Millisecond)
+	return now()
 }
 
 // statusReport is the effective access status a management read carries.
@@ -748,14 +777,14 @@ func uniqueSuffix() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-// userFixture is an organization unit and a user type of its own, and the accounts created in them. It
+// userFixture is an organization unit and user types of its own, and the accounts created in them. It
 // deletes them when the test that built it ends, after the suite's own teardown.
 type userFixture struct {
 	name     string
 	suffix   string
 	ouID     string
 	userType string
-	typeID   string
+	typeIDs  []string
 	userIDs  []string
 }
 
@@ -775,16 +804,31 @@ func newUserFixture(t *testing.T, name string, userType testutils.UserType) *use
 	f.ouID = ouID
 
 	userType.Handle = f.userType
+	f.addUserType(t, userType)
+	return f
+}
+
+// addUserType creates a further user type in the fixture's organization unit.
+func (f *userFixture) addUserType(t *testing.T, userType testutils.UserType) {
+	t.Helper()
+
 	userType.DisplayName = userType.Handle
 	userType.OUID = f.ouID
-	f.typeID, err = testutils.CreateUserType(userType)
+	typeID, err := testutils.CreateUserType(userType)
 	require.NoError(t, err, "failed to create user type %s", userType.Handle)
-	return f
+	f.typeIDs = append(f.typeIDs, typeID)
 }
 
 // newUser creates an account of the fixture's type that no other test touches, named after label,
 // with a password and any extra attributes, and returns its id, username and password.
 func (f *userFixture) newUser(t *testing.T, label string, extra map[string]interface{}) (
+	userID, username, password string) {
+	t.Helper()
+	return f.newUserOfType(t, f.userType, label, extra)
+}
+
+// newUserOfType is newUser for another of the fixture's user types.
+func (f *userFixture) newUserOfType(t *testing.T, userType, label string, extra map[string]interface{}) (
 	userID, username, password string) {
 	t.Helper()
 
@@ -797,7 +841,7 @@ func (f *userFixture) newUser(t *testing.T, label string, extra map[string]inter
 	raw, err := json.Marshal(attributes)
 	require.NoError(t, err)
 
-	userID, err = testutils.CreateUser(testutils.User{Type: f.userType, OUID: f.ouID, Attributes: raw})
+	userID, err = testutils.CreateUser(testutils.User{Type: userType, OUID: f.ouID, Attributes: raw})
 	require.NoError(t, err, "failed to create %s", username)
 	f.userIDs = append(f.userIDs, userID)
 	return userID, username, password
@@ -816,9 +860,9 @@ func (f *userFixture) tearDown(t *testing.T) {
 			t.Logf("teardown: failed to delete user %s: %v", userID, err)
 		}
 	}
-	if f.typeID != "" {
-		if err := testutils.DeleteUserType(f.typeID); err != nil {
-			t.Logf("teardown: failed to delete user type %s: %v", f.typeID, err)
+	for _, typeID := range f.typeIDs {
+		if err := testutils.DeleteUserType(typeID); err != nil {
+			t.Logf("teardown: failed to delete user type %s: %v", typeID, err)
 		}
 	}
 	if f.ouID != "" {
@@ -1052,36 +1096,6 @@ func copyShippedFlowWithSender(t *testing.T, handle, flowType, nodeID, senderID 
 	return flowID, flow.Handle
 }
 
-// cleanupRole deletes the role when t ends.
-func cleanupRole(t *testing.T, roleID string) {
-	t.Helper()
-	t.Cleanup(func() {
-		if err := testutils.DeleteRole(roleID); err != nil {
-			t.Logf("teardown: failed to delete role %s: %v", roleID, err)
-		}
-	})
-}
-
-// cleanupApplication deletes the application when t ends.
-func cleanupApplication(t *testing.T, appID string) {
-	t.Helper()
-	t.Cleanup(func() {
-		if err := testutils.DeleteApplication(appID); err != nil {
-			t.Logf("teardown: failed to delete application %s: %v", appID, err)
-		}
-	})
-}
-
-// cleanupFlow deletes the flow when t ends.
-func cleanupFlow(t *testing.T, flowID string) {
-	t.Helper()
-	t.Cleanup(func() {
-		if err := testutils.DeleteFlow(flowID); err != nil {
-			t.Logf("teardown: failed to delete flow %s: %v", flowID, err)
-		}
-	})
-}
-
 // putManagement writes one management resource as the administrator and returns the status and the
 // body, whatever they are.
 func putManagement(t *testing.T, path string, body interface{}) (int, string) {
@@ -1134,6 +1148,83 @@ func newShippedFlowApp(t *testing.T, users *userFixture, name string) string {
 		}
 	})
 	return appID
+}
+
+// publicClientRedirectURI is where a public client created by newPublicClientApp is registered.
+const publicClientRedirectURI = "https://localhost:3000/public-callback"
+
+// newPublicClientApp creates a public application in the fixture's organization unit: it presents no
+// secret at the token endpoint and proves its codes with PKCE, so no secret check can refuse it. It is
+// deleted when t ends, and its entity and client IDs are returned.
+func newPublicClientApp(t *testing.T, users *userFixture, name string) (appID, clientID string) {
+	t.Helper()
+
+	clientID = fmt.Sprintf("governance_public_%s_%s", name, users.suffix)
+	appID, err := testutils.CreateApplication(testutils.Application{
+		OUID:             users.ouID,
+		Name:             fmt.Sprintf("Governance Public %s %s", name, users.suffix),
+		Description:      "Public client that authenticates without a secret",
+		AllowedUserTypes: []string{users.userType},
+		InboundAuthConfig: []map[string]interface{}{{
+			"type": "oauth2",
+			"config": map[string]interface{}{
+				"clientId":                clientID,
+				"redirectUris":            []string{publicClientRedirectURI},
+				"grantTypes":              []string{"authorization_code"},
+				"responseTypes":           []string{"code"},
+				"tokenEndpointAuthMethod": "none",
+				"publicClient":            true,
+				"pkceRequired":            true,
+			},
+		}},
+	})
+	require.NoError(t, err, "failed to create the %s public application", name)
+	cleanupApplication(t, appID)
+	return appID, clientID
+}
+
+// redeemUnknownCode redeems a code the server never issued as a public client, with a code verifier
+// and no secret, and returns the answer whatever it is. A client that authenticates answers
+// invalid_grant; one refused at client authentication answers invalid_client.
+func redeemUnknownCode(t *testing.T, clientID string) *testutils.TokenHTTPResult {
+	t.Helper()
+
+	verifier, err := testutils.GenerateCodeVerifier()
+	require.NoError(t, err)
+	result, err := testutils.RequestTokenWithPKCE(clientID, "", "governance-never-issued-code",
+		publicClientRedirectURI, "authorization_code", verifier)
+	require.NoError(t, err, "the token request itself must reach the server")
+	return result
+}
+
+// cleanupRole deletes the role when t ends.
+func cleanupRole(t *testing.T, roleID string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if err := testutils.DeleteRole(roleID); err != nil {
+			t.Logf("teardown: failed to delete role %s: %v", roleID, err)
+		}
+	})
+}
+
+// cleanupApplication deletes the application when t ends.
+func cleanupApplication(t *testing.T, appID string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if err := testutils.DeleteApplication(appID); err != nil {
+			t.Logf("teardown: failed to delete application %s: %v", appID, err)
+		}
+	})
+}
+
+// cleanupFlow deletes the flow when t ends.
+func cleanupFlow(t *testing.T, flowID string) {
+	t.Helper()
+	t.Cleanup(func() {
+		if err := testutils.DeleteFlow(flowID); err != nil {
+			t.Logf("teardown: failed to delete flow %s: %v", flowID, err)
+		}
+	})
 }
 
 // awaitDelivered polls take until it hands back a message, and fails the test if none arrives within

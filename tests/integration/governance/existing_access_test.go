@@ -32,11 +32,21 @@ const (
 	continueAction = "action_continue"
 )
 
-// nativeRevocationOff names the tests that run with the native APIs' revocation switch off. Every
-// other test runs with it on, as shipped.
-var nativeRevocationOff = map[string]bool{
-	"TestWithNativeRevocationOffTheRESTAPIMissesTheSuspension":     true,
-	"TestWithNativeRevocationOffTheSelfUpdateReportsTheSuspension": true,
+// revocationSwitches are the two deployment switches that decide where a suspension's revocation is
+// enforced: OAuth (introspection and the token endpoint) and the native APIs.
+type revocationSwitches struct {
+	oauth  bool
+	native bool
+}
+
+// switchesOn is the shipped deployment.
+var switchesOn = revocationSwitches{oauth: true, native: true}
+
+// switchesFor names the tests that run with a switch off. Every other test runs with both on.
+var switchesFor = map[string]revocationSwitches{
+	"TestWithOAuthRevocationOffIntrospectionMissesTheSuspension":   {oauth: false, native: true},
+	"TestWithNativeRevocationOffTheRESTAPIMissesTheSuspension":     {oauth: true, native: false},
+	"TestWithNativeRevocationOffTheSelfUpdateReportsTheSuspension": {oauth: true, native: false},
 }
 
 // ExistingAccessTestSuite checks what each hold does to existing sessions and refresh grants: a
@@ -48,10 +58,11 @@ type ExistingAccessTestSuite struct {
 	appID      string
 	authFlowID string
 
-	// The deployment's server section as the suite found it, and whether the running server enforces
-	// revocation on the native APIs.
-	pristineServer   map[string]interface{}
-	nativeRevocation bool
+	// The deployment's oauth and server sections as the suite found them, and the revocation switches
+	// the running server has.
+	pristineOAuth  map[string]interface{}
+	pristineServer map[string]interface{}
+	switches       revocationSwitches
 }
 
 func TestExistingAccessTestSuite(t *testing.T) {
@@ -60,7 +71,8 @@ func TestExistingAccessTestSuite(t *testing.T) {
 
 func (ts *ExistingAccessTestSuite) SetupSuite() {
 	applyLockoutPolicy(ts.T())
-	ts.nativeRevocation = true
+	ts.switches = switchesOn
+	ts.pristineOAuth = ts.deploymentSection("oauth")
 	ts.pristineServer = ts.deploymentSection("server")
 
 	ts.users = newUserFixture(ts.T(), "existing_access",
@@ -77,16 +89,19 @@ func (ts *ExistingAccessTestSuite) SetupSuite() {
 	ts.appID = appID
 }
 
-// BeforeTest puts the native revocation switch as the test needs it. The server restarts only when
-// that changes it, so the two switched tests cost one restart and the restore one more.
+// BeforeTest puts the revocation switches as the test needs them. The server restarts only when that
+// changes them, so the two switched tests cost one restart each and the restore one more.
 func (ts *ExistingAccessTestSuite) BeforeTest(_, testName string) {
-	ts.Require().NoError(ts.useNativeRevocation(!nativeRevocationOff[testName]),
-		"failed to set the native revocation switch")
+	want, listed := switchesFor[testName]
+	if !listed {
+		want = switchesOn
+	}
+	ts.Require().NoError(ts.useSwitches(want), "failed to set the revocation switches")
 }
 
 func (ts *ExistingAccessTestSuite) TearDownSuite() {
-	if err := ts.useNativeRevocation(true); err != nil {
-		ts.T().Errorf("teardown: failed to restore the native revocation switch: %v", err)
+	if err := ts.useSwitches(switchesOn); err != nil {
+		ts.T().Errorf("teardown: failed to restore the revocation switches: %v", err)
 	}
 	if ts.appID != "" {
 		if err := testutils.DeleteApplication(ts.appID); err != nil {
@@ -398,6 +413,18 @@ func (ts *ExistingAccessTestSuite) TestTokenClaimsStayStandard() {
 	ts.True(ts.tokenActive(token.AccessToken), "the access token introspects as active")
 }
 
+// With OAuth revocation off, an access token issued before a suspension still introspects as active,
+// while refresh is still refused by its live check.
+func (ts *ExistingAccessTestSuite) TestWithOAuthRevocationOffIntrospectionMissesTheSuspension() {
+	userID, username, password := ts.newUser("oauth_switch_off")
+	token := ts.browser().login(username, password, "oauth_switch_off")
+	runAdministrationFlow(ts.T(), suspendFlowHandle, userID)
+
+	ts.True(ts.tokenActive(token.AccessToken),
+		"with OAuth revocation off, introspection does not consult the suspension's record")
+	ts.False(ts.refreshSucceeds(token.RefreshToken), "refresh is still refused by its live check")
+}
+
 // With native API revocation off, `/users/me` still accepts a token issued before a suspension, and
 // reports the suspension without the operator note, while OAuth introspection rejects the token.
 func (ts *ExistingAccessTestSuite) TestWithNativeRevocationOffTheRESTAPIMissesTheSuspension() {
@@ -463,16 +490,19 @@ func (ts *ExistingAccessTestSuite) TestWithNativeRevocationOffTheSelfUpdateRepor
 		"the self update must report the suspension a read reports, without the note")
 }
 
-// useNativeRevocation restarts the server with native API revocation on or off, unless it already is.
-func (ts *ExistingAccessTestSuite) useNativeRevocation(enabled bool) error {
-	if enabled == ts.nativeRevocation {
+// useSwitches restarts the server with the revocation switches as wanted, unless it already has them.
+func (ts *ExistingAccessTestSuite) useSwitches(want revocationSwitches) error {
+	if want == ts.switches {
 		return nil
 	}
-	server := ts.pristineServer
-	if !enabled {
+	oauth, server := ts.pristineOAuth, ts.pristineServer
+	if !want.oauth {
+		oauth = withKey(oauth, []string{"token_revocation", "enabled"}, false)
+	}
+	if !want.native {
 		server = withKey(server, []string{"security", "token_revocation", "enabled"}, false)
 	}
-	if err := testutils.PatchDeploymentConfig(map[string]interface{}{"server": server}); err != nil {
+	if err := testutils.PatchDeploymentConfig(map[string]interface{}{"oauth": oauth, "server": server}); err != nil {
 		return err
 	}
 	if err := testutils.RestartServer(); err != nil {
@@ -481,7 +511,7 @@ func (ts *ExistingAccessTestSuite) useNativeRevocation(enabled bool) error {
 	if err := testutils.ObtainAdminAccessToken(); err != nil {
 		return err
 	}
-	ts.nativeRevocation = enabled
+	ts.switches = want
 	return nil
 }
 

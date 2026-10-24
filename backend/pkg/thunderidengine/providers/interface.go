@@ -333,7 +333,7 @@ type RuntimeCryptoProvider interface {
 	GetSupportedEncryptionAlgorithms() []string
 }
 
-// IdentityGovernanceProvider checks access and applies lifecycle operations.
+// IdentityGovernanceProvider checks access, records granted activity, and applies lifecycle operations.
 type IdentityGovernanceProvider interface {
 	// EvaluateAccess reports whether the identity may be used at the plane and authentication method;
 	// a refusal names its hold in the decision. An empty or unknown entityID is admitted. An error
@@ -344,6 +344,10 @@ type IdentityGovernanceProvider interface {
 	// AdmitSignIn is EvaluateAccess at AccessPlaneSession for a completing sign-in. When it admits, it
 	// also clears a lapsed entity-wide failure record.
 	AdmitSignIn(ctx context.Context, entityID string) (AccessDecision, *common.ServiceError)
+
+	// RecordLogin stamps when the identity was last granted access. Callers do not fail the grant on
+	// its error.
+	RecordLogin(ctx context.Context, entityID string) *common.ServiceError
 
 	// Unlock releases every automatic lock. It does not release a suspension.
 	Unlock(ctx context.Context, entityID string) *common.ServiceError
