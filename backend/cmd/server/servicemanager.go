@@ -128,7 +128,7 @@ var observabilitySvc observability.ObservabilityServiceInterface
 // complexity is low.
 func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterface) (
 	jwt.JWTServiceInterface, kmprovider.RuntimeCryptoProvider, importer.ImportServiceInterface, *mcpsdk.Server,
-	backchannel.DispatcherInterface) {
+	backchannel.DispatcherInterface, identitygovernance.LockNotifierInterface) {
 	logger := log.GetLogger()
 
 	// Service registration runs during application startup, outside any request.
@@ -213,6 +213,16 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// Initialize entity provider
 	entityProvider := entityprovider.InitializeEntityProvider(entityService)
 
+	// The notification services are built before governance, which sends the lock email through them.
+	notifSenderMgtSvc, notifOTPService, notifSenderSvc, notificationConfigHandler, err :=
+		notification.Initialize(jwtService, notificationconfig.FromServerRuntime())
+	fatalOnError(ctx, logger, err, "Failed to initialize NotificationService")
+
+	notifTemplateSvc, notifTemplateRenderer, notifTemplateExporter, err :=
+		notificationtemplate.Initialize(mux, cacheManager, ouService, i18nService)
+	fatalOnError(ctx, logger, err, "Failed to initialize NotificationTemplateService")
+	exporters = append(exporters, notifTemplateExporter)
+
 	// The accountAccess handler is built over the deployment policy, which must be valid on its own.
 	governanceCfg := identitygovernance.FromServerRuntime()
 	err = governanceCfg.Validate()
@@ -224,10 +234,6 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	resourceService, resourceExporter, err := resource.Initialize(mux, ouService, authZENPDPService, nil)
 	fatalOnError(ctx, logger, err, "Failed to initialize Resource Service")
 	exporters = append(exporters, resourceExporter)
-
-	notifSenderMgtSvc, notifOTPService, notifSenderSvc, notificationConfigHandler, err :=
-		notification.Initialize(jwtService, notificationconfig.FromServerRuntime())
-	fatalOnError(ctx, logger, err, "Failed to initialize NotificationService")
 
 	// Create the flow server-config handler early so it can be registered before serverconfig is
 	// initialized. The handle-existence validator is injected in a second phase after flowMgtService
@@ -262,10 +268,14 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// The security-headers middleware reads the deny-first CSP policy from the server-config csp section.
 	csp.InitializeConfigReader(serverConfigService)
 
-	// Identity governance reads the accountAccess section through the server-config service. The OU
-	// boundary on lifecycle writes is wired here only, as the embeddable engine has no authz service.
-	governanceService, _, err := identitygovernance.Initialize(
-		entityService, serverConfigService, governanceCfg, nil, ouAuthzService, observabilitySvc)
+	// Identity governance reads the accountAccess section and the lock email's default sender through
+	// the server-config service.
+	governanceService, lockNotifier, err := identitygovernance.Initialize(
+		entityService, serverConfigService, governanceCfg, &identitygovernance.NotificationDependencies{
+			Templates:   notifTemplateRenderer,
+			Senders:     notifSenderSvc,
+			EntityTypes: entityTypeService,
+		}, ouAuthzService, observabilitySvc)
 	fatalOnError(ctx, logger, err, "Failed to initialize IdentityGovernanceService")
 	governanceProvider := identitygovernanceprovider.Initialize(governanceService,
 		runtime.Config.IdentityGovernanceProvider)
@@ -322,11 +332,6 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	idpService, err := idp.Initialize(cacheManager, entityTypeService, roleService, groupService, resourceService)
 	fatalOnError(ctx, logger, err, "Failed to initialize IDPService")
-
-	notifTemplateSvc, notifTemplateRenderer, notifTemplateExporter, err :=
-		notificationtemplate.Initialize(mux, cacheManager, ouService, i18nService)
-	fatalOnError(ctx, logger, err, "Failed to initialize NotificationTemplateService")
-	exporters = append(exporters, notifTemplateExporter)
 
 	// Register the /connections API as a thin layer over the identity-provider and
 	// notification-sender services.
@@ -403,7 +408,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	// AuthZEN access-evaluation endpoints are Direct API endpoints, so they reuse the Direct Auth
 	// guard created by the authn service.
-	authzen.Initialize(mux, authZService, entityProvider, resourceService, directAuthGuard)
+	authzen.Initialize(mux, authZService, entityProvider, governanceService, resourceService, directAuthGuard)
 
 	attributeCacheService := attributecache.Initialize(runtimeStoreProvider, runtimeCryptoSvc,
 		runtime.Config.AttributeCache.Encryption.Enabled)
@@ -590,7 +595,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	ssoTransport := flowsession.NewHandleTransport(flowsession.TransportConfig{SecureCookies: flowConfig.SecureCookies})
 	flowExecService, err := flowexec.Initialize(mux, flowMgtService, actorProvider,
 		execRegistry, interceptorRegistry, observabilitySvc, runtimeCryptoSvc, attestationProvider,
-		graphBuilder, jwtService, runtimeStoreProvider, transactioner, serverConfigService, ssoTransport, flowConfig)
+		graphBuilder, jwtService, runtimeStoreProvider, transactioner, serverConfigService, ssoTransport,
+		governanceProvider, flowConfig)
 	fatalOnError(ctx, logger, err, "Failed to initialize flow execution service")
 
 	// Initialize OAuth services.
@@ -598,7 +604,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		flowExecService, observabilitySvc, runtimeCryptoSvc, ouProvider, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
 		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc,
-		sessionService, ssoTransport, flowMgtService, oauthCfg)
+		sessionService, ssoTransport, flowMgtService, governanceProvider, oauthCfg)
 	fatalOnError(ctx, logger, err, "Failed to initialize OAuth services")
 	if dispatcher != nil {
 		err = terminationHook.Add(dispatcher)
@@ -621,7 +627,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	healthSvc := healthcheckservice.Initialize(dbprovider.GetDBProvider(), dbprovider.GetRedisProvider())
 	services.NewHealthCheckService(mux, healthSvc)
 
-	return jwtService, runtimeCryptoSvc, importService, mcpServer, dispatcher
+	return jwtService, runtimeCryptoSvc, importService, mcpServer, dispatcher, lockNotifier
 }
 
 // initAttestationProvider initializes the platform attestation provider, terminating server startup

@@ -47,7 +47,7 @@ func (s *ServiceTestSuite) SetupTest() {
 }
 
 // newTestService builds the service over a source that always serves cfg.
-func newTestService(t *testing.T, port entityStateProvider, cfg accountAccessValue, notifier lockNotifierInterface,
+func newTestService(t *testing.T, port entityStateProvider, cfg accountAccessValue, notifier LockNotifierInterface,
 	authorizer sysauthz.SystemAuthorizationServiceInterface) *identityGovernanceService {
 	source := newAccountAccessSourceInterfaceMock(t)
 	source.EXPECT().Current(mock.Anything).Return(cfg).Maybe()
@@ -1493,16 +1493,31 @@ func (s *ServiceTestSuite) TestRecordLoginSkipsEntityReadsWhenNoCategoryRecords(
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
-// Once any category records, the entity's own category decides.
+// Once any category records, the entity's own category decides, and an application never records.
 func (s *ServiceTestSuite) TestRecordLoginWritesNothingWhenThisCategoryDoesNot() {
-	s.source.EXPECT().Current(mock.Anything).Return(recordingConfig(0)).Once()
-	s.port.On("GetEntityProfile", mock.Anything, "e1").
-		Return(&providers.Entity{Category: providers.EntityCategoryAgent}, nil).Once()
+	everyCategoryRecords := recordingConfig(0)
+	everyCategoryRecords.Agent = &accountAccessCategory{RecordLastLogin: new(true)}
+	testCases := []struct {
+		name     string
+		config   accountAccessValue
+		category providers.EntityCategory
+	}{
+		{name: "agent", config: recordingConfig(0), category: providers.EntityCategoryAgent},
+		{name: "application", config: everyCategoryRecords, category: providers.EntityCategoryApp},
+	}
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			s.source.EXPECT().Current(mock.Anything).Return(tc.config).Once()
+			s.port.On("GetEntityProfile", mock.Anything, "e1").
+				Return(&providers.Entity{Category: tc.category}, nil).Once()
 
-	s.Require().Nil(s.svc.RecordLogin(s.ctx, "e1"))
+			s.Require().Nil(s.svc.RecordLogin(s.ctx, "e1"))
 
-	s.port.AssertNotCalled(s.T(), "RecordLogin",
-		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			s.port.AssertNotCalled(s.T(), "RecordLogin",
+				mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
 }
 
 // The window is passed to the write, so the store compares without a read-modify-write.
@@ -1841,8 +1856,8 @@ func lockFormationConfig() accountAccessValue {
 
 // notifyingService builds the service over lockFormationConfig with a notifier mock. Only the writer
 // that commits a new lock notifies.
-func (s *ServiceTestSuite) notifyingService() (*identityGovernanceService, *lockNotifierInterfaceMock) {
-	notifier := newLockNotifierInterfaceMock(s.T())
+func (s *ServiceTestSuite) notifyingService() (*identityGovernanceService, *LockNotifierInterfaceMock) {
+	notifier := NewLockNotifierInterfaceMock(s.T())
 	svc := newTestService(s.T(), s.port, lockFormationConfig(), notifier, nil)
 	svc.now = func() time.Time { return s.now }
 	return svc, notifier

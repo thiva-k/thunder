@@ -22,7 +22,8 @@ type UserType struct {
 // UserTypeSystemAttributes carries the system-level settings of a user type, such as the
 // attribute used to render a human-readable display name.
 type UserTypeSystemAttributes struct {
-	Display string `json:"display,omitempty"`
+	Display      string `json:"display,omitempty"`
+	PrimaryEmail string `json:"primaryEmail,omitempty"`
 }
 
 // User represents a user in the system
@@ -439,10 +440,11 @@ type FlowErrorResponse struct {
 
 // Flow represents a flow definition
 type Flow struct {
-	Name     string      `json:"name"`
-	FlowType string      `json:"flowType"`
-	Handle   string      `json:"handle"`
-	Nodes    interface{} `json:"nodes"`
+	Name         string      `json:"name"`
+	FlowType     string      `json:"flowType"`
+	Handle       string      `json:"handle"`
+	Interceptors interface{} `json:"interceptors,omitempty"`
+	Nodes        interface{} `json:"nodes"`
 }
 
 // NotificationSender represents a notification sender in the system

@@ -8,9 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -26,13 +23,13 @@ import (
 	syscontext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/deployment"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/log/rollingfile"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/entitytypemock"
 	"github.com/thunder-id/thunderid/tests/mocks/notification/notificationmock"
 	"github.com/thunder-id/thunderid/tests/mocks/serverconfigmock"
+	"github.com/thunder-id/thunderid/tests/testhelpers"
 )
 
 type NotifierTestSuite struct {
@@ -111,7 +108,7 @@ func (s *NotifierTestSuite) newNotifier(settings accountAccessLockEmail) *lockEm
 // notifierFor builds a notifier with newNotifier and closes it when the test ends.
 func (s *NotifierTestSuite) notifierFor(settings accountAccessLockEmail) *lockEmailNotifier {
 	notifier := s.newNotifier(settings)
-	s.T().Cleanup(notifier.Close)
+	s.T().Cleanup(notifier.Stop)
 	return notifier
 }
 
@@ -162,23 +159,6 @@ func (s *NotifierTestSuite) awaitSend() notifcommon.EmailData {
 		s.FailNow("timed out waiting for the lock notification to be sent")
 		return notifcommon.EmailData{}
 	}
-}
-
-// captureLogs runs fn with the logger writing to a file at the given level and returns what it wrote.
-func (s *NotifierTestSuite) captureLogs(level string, fn func()) string {
-	dir := s.T().TempDir()
-	logger := log.GetLogger()
-	s.Require().NoError(logger.Configure(log.OutputOptions{FileEnabled: true,
-		File: rollingfile.Config{Path: filepath.Join(dir, "notifier.log")}}))
-	s.Require().NoError(logger.SetLevel(level))
-	defer func() {
-		s.Require().NoError(logger.SetLevel("info"))
-		s.Require().NoError(logger.Configure(log.OutputOptions{ConsoleEnabled: true}))
-	}()
-	fn()
-	out, err := fs.ReadFile(os.DirFS(dir), "notifier.log")
-	s.Require().NoError(err)
-	return string(out)
 }
 
 // The lock email is sent as HTML to the primary email, with the configured template and the method.
@@ -281,10 +261,10 @@ func (s *NotifierTestSuite) TestAnUnusableRecipientIsNotSent() {
 			s.expectProfileJSON(entity, tc.profile)
 			notifier := s.newNotifier(enabledLockEmail())
 
-			logs := s.captureLogs("debug", func() {
+			logs := testhelpers.CaptureLogs(s.T(), "debug", func() {
 				notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential,
 					testLockEpisode())
-				notifier.Close()
+				notifier.Stop()
 			})
 
 			s.Contains(logs, "outcome="+string(tc.outcome))
@@ -321,10 +301,10 @@ func (s *NotifierTestSuite) TestSwitchedOffBeforeDeliveryIsNotSent() {
 	s.assertNothingSent()
 }
 
-// A notice after Close is dropped instead of sending on the closed queue.
-func (s *NotifierTestSuite) TestANoticeAfterCloseIsDropped() {
+// A notice after Stop is dropped instead of sending on the closed queue.
+func (s *NotifierTestSuite) TestANoticeAfterStopIsDropped() {
 	notifier := s.notifierFor(enabledLockEmail())
-	notifier.Close()
+	notifier.Stop()
 
 	s.NotPanics(func() {
 		notifier.NotifyLockFormed(context.Background(), testUser(), providers.AuthenticationMethodCredential,
@@ -334,9 +314,9 @@ func (s *NotifierTestSuite) TestANoticeAfterCloseIsDropped() {
 	s.assertNothingSent()
 }
 
-// Close waits only its budget for sends that do not return. It then cancels them, records the notice
+// Stop waits only its budget for sends that do not return. It then cancels them, records the notice
 // still queued as dropped instead of delivering it, and drops a notice that comes after.
-func (s *NotifierTestSuite) TestCloseIsBoundedWhenSendsBlock() {
+func (s *NotifierTestSuite) TestStopIsBoundedWhenSendsBlock() {
 	s.profiles.EXPECT().GetEntityProfile(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, id string) (*providers.Entity, error) {
 			return &providers.Entity{ID: id, Type: testUser().Type,
@@ -351,7 +331,7 @@ func (s *NotifierTestSuite) TestCloseIsBoundedWhenSendsBlock() {
 			<-ctx.Done()
 			return &tidcommon.InternalServerError
 		})
-	// Not closed on cleanup: if Close hangs, a second Close would wait on the first.
+	// Not closed on cleanup: if Stop hangs, a second Stop would wait on the first.
 	notifier := s.newNotifier(enabledLockEmail())
 	notifier.shutdownBudget = 100 * time.Millisecond
 
@@ -370,16 +350,16 @@ func (s *NotifierTestSuite) TestCloseIsBoundedWhenSendsBlock() {
 		}
 	}
 
-	logs := s.captureLogs("debug", func() {
+	logs := testhelpers.CaptureLogs(s.T(), "debug", func() {
 		closed := make(chan struct{})
 		go func() {
-			notifier.Close()
+			notifier.Stop()
 			close(closed)
 		}()
 		select {
 		case <-closed:
 		case <-time.After(5 * time.Second):
-			s.FailNow("Close did not return after its shutdown budget")
+			s.FailNow("Stop did not return after its shutdown budget")
 		}
 		notifier.NotifyLockFormed(context.Background(), testUser(), providers.AuthenticationMethodCredential,
 			testLockEpisode())
@@ -389,7 +369,7 @@ func (s *NotifierTestSuite) TestCloseIsBoundedWhenSendsBlock() {
 	s.senders.AssertNumberOfCalls(s.T(), "SendEmail", noticeWorkers)
 	s.Equal(noticeWorkers, strings.Count(logs, "outcome="+string(outcomeSendFailed)), "the cancelled sends")
 	s.Equal(1, strings.Count(logs, "outcome="+string(outcomeShutdown)), "the queued notice")
-	s.Equal(1, strings.Count(logs, "outcome="+string(outcomeClosed)), "the notice after Close")
+	s.Equal(1, strings.Count(logs, "outcome="+string(outcomeClosed)), "the notice after Stop")
 }
 
 // When disabled, nothing is queued and no profile is read.
@@ -398,7 +378,7 @@ func (s *NotifierTestSuite) TestDisabledIsNotEvenQueued() {
 	notifier.NotifyLockFormed(context.Background(), testUser(), providers.AuthenticationMethodCredential,
 		testLockEpisode())
 
-	notifier.Close()
+	notifier.Stop()
 	s.profiles.AssertNotCalled(s.T(), "GetEntityProfile", mock.Anything, mock.Anything)
 }
 
@@ -407,10 +387,10 @@ func (s *NotifierTestSuite) TestProfileReadFailureSkipsDelivery() {
 	s.profiles.EXPECT().GetEntityProfile(mock.Anything, "user-1").Return(nil, errors.New("store down")).Once()
 	notifier := s.newNotifier(enabledLockEmail())
 
-	logs := s.captureLogs("info", func() {
+	logs := testhelpers.CaptureLogs(s.T(), "info", func() {
 		notifier.NotifyLockFormed(context.Background(), testUser(), providers.AuthenticationMethodCredential,
 			testLockEpisode())
-		notifier.Close()
+		notifier.Stop()
 	})
 
 	s.Contains(logs, "outcome="+string(outcomeReadFailed))
@@ -429,7 +409,7 @@ func (s *NotifierTestSuite) TestTemplateFailureSendsNothing() {
 	notifier := s.notifierFor(enabledLockEmail())
 	notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential, testLockEpisode())
 
-	notifier.Close()
+	notifier.Stop()
 	s.assertNothingSent()
 }
 
@@ -438,10 +418,10 @@ func (s *NotifierTestSuite) TestNoTemplateSendsNothing() {
 	notifier := s.newNotifier(accountAccessLockEmail{Enabled: new(true), Templates: &accountAccessLockTemplates{
 		lockEmailTemplatePair: lockEmailTemplatePair{Permanent: "lock-permanent"}}})
 
-	logs := s.captureLogs("info", func() {
+	logs := testhelpers.CaptureLogs(s.T(), "info", func() {
 		notifier.NotifyLockFormed(context.Background(), testUser(), providers.AuthenticationMethodCredential,
 			testLockEpisode())
-		notifier.Close()
+		notifier.Stop()
 	})
 
 	s.Contains(logs, "outcome="+string(outcomeNoTemplate))
@@ -463,7 +443,7 @@ func (s *NotifierTestSuite) TestSendFailureIsNotRetried() {
 	notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential, testLockEpisode())
 
 	s.awaitSend()
-	notifier.Close()
+	notifier.Stop()
 	s.senders.AssertNumberOfCalls(s.T(), "SendEmail", 1)
 }
 
@@ -478,7 +458,7 @@ func (s *NotifierTestSuite) TestNoDefaultSenderSendsNothing() {
 	notifier := s.newNotifier(enabledLockEmail())
 	notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential, testLockEpisode())
 
-	notifier.Close()
+	notifier.Stop()
 	s.templates.AssertNotCalled(s.T(), "Resolve", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	s.assertNothingSent()
 }
@@ -492,10 +472,10 @@ func (s *NotifierTestSuite) TestAnUnreadableSenderSectionSendsNothing() {
 		Return(nil, &tidcommon.InternalServerError).Once()
 	notifier := s.newNotifier(enabledLockEmail())
 
-	logs := s.captureLogs("info", func() {
+	logs := testhelpers.CaptureLogs(s.T(), "info", func() {
 		notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential,
 			testLockEpisode())
-		notifier.Close()
+		notifier.Stop()
 	})
 
 	s.Contains(logs, "outcome="+string(outcomeNoSender))
@@ -600,10 +580,10 @@ func (s *NotifierTestSuite) TestNoPrimaryEmailSendsNothing() {
 			s.expectProfile(entity, tc.profile)
 			notifier := s.newNotifier(enabledLockEmail())
 
-			logs := s.captureLogs("debug", func() {
+			logs := testhelpers.CaptureLogs(s.T(), "debug", func() {
 				notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential,
 					testLockEpisode())
-				notifier.Close()
+				notifier.Stop()
 			})
 
 			s.Contains(logs, "outcome="+string(outcomeMissingContact))
@@ -619,10 +599,10 @@ func (s *NotifierTestSuite) TestAProfileWithoutATypeSendsNothing() {
 	s.expectProfile(entity, map[string]string{"email": "personal@example.com"})
 	notifier := s.newNotifier(enabledLockEmail())
 
-	logs := s.captureLogs("debug", func() {
+	logs := testhelpers.CaptureLogs(s.T(), "debug", func() {
 		notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential,
 			testLockEpisode())
-		notifier.Close()
+		notifier.Stop()
 	})
 
 	s.Contains(logs, "outcome="+string(outcomeMissingContact))
@@ -638,10 +618,10 @@ func (s *NotifierTestSuite) TestAnUnreadableTypeSendsNothing() {
 	s.expectProfile(entity, map[string]string{"email": "personal@example.com", "workEmail": "work@example.com"})
 	notifier := s.newNotifier(enabledLockEmail())
 
-	logs := s.captureLogs("info", func() {
+	logs := testhelpers.CaptureLogs(s.T(), "info", func() {
 		notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential,
 			testLockEpisode())
-		notifier.Close()
+		notifier.Stop()
 	})
 
 	s.Contains(logs, "outcome="+string(outcomeReadFailed))
@@ -658,6 +638,6 @@ func (s *NotifierTestSuite) TestAnUnusablePrimaryEmailNeverFallsBack() {
 	notifier := s.notifierFor(enabledLockEmail())
 	notifier.NotifyLockFormed(context.Background(), entity, providers.AuthenticationMethodCredential, testLockEpisode())
 
-	notifier.Close()
+	notifier.Stop()
 	s.assertNothingSent()
 }

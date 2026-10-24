@@ -12,6 +12,9 @@ import (
 )
 
 const (
+	failClosedGovernanceClientID     = "governance_fail_closed_client"
+	failClosedGovernanceClientSecret = "governance_fail_closed_secret"
+
 	// noRevocationStorePath points database.runtime_persistent at a SQLite file holding only the
 	// runtime table, so governance reads and writes work while every revocation write fails. It has no
 	// directory component, so it resolves against the server home under every database profile.
@@ -33,6 +36,7 @@ var unreadableEntitySignIn = flowAnswer{status: http.StatusOK, flowStatus: "ERRO
 type FailClosedTestSuite struct {
 	suite.Suite
 	users        *userFixture
+	appID        string
 	shippedAppID string
 	events       *testutils.EventLogReader
 
@@ -49,6 +53,24 @@ func (ts *FailClosedTestSuite) SetupSuite() {
 	ts.users = newUserFixture(ts.T(), "fail_closed", testutils.UserType{Schema: credentialsSchema(nil)})
 	ts.events = testutils.NewEventLogReader(failClosedEventLogPath())
 
+	appID, err := testutils.CreateApplication(testutils.Application{
+		OUID:        ts.users.ouID,
+		Name:        "Governance Fail Closed Client",
+		Description: "Client for the governance fail-closed tests",
+		InboundAuthConfig: []map[string]interface{}{{
+			"type": "oauth2",
+			"config": map[string]interface{}{
+				"clientId":                failClosedGovernanceClientID,
+				"clientSecret":            failClosedGovernanceClientSecret,
+				"redirectUris":            []string{"https://localhost:3000"},
+				"grantTypes":              []string{"client_credentials"},
+				"tokenEndpointAuthMethod": "client_secret_basic",
+			},
+		}},
+	})
+	ts.Require().NoError(err, "failed to create the client")
+	ts.appID = appID
+	cleanupApplication(ts.T(), appID)
 	ts.shippedAppID = newShippedFlowApp(ts.T(), ts.users, "fail_closed")
 }
 
@@ -106,6 +128,51 @@ func (ts *FailClosedTestSuite) TestAnUnreadableRuntimeRecordFailsTheSignInFlow()
 	ts.Equal("COMPLETE",
 		answerOf(submitSignIn(ts.T(), ts.shippedAppID, shippedSignInAction, username, password)).flowStatus,
 		"the account must sign in again once its record is readable")
+}
+
+// At OAuth client authentication, an application whose runtime document cannot be read is
+// refused as invalid_client, the answer for an unreadable client.
+func (ts *FailClosedTestSuite) TestAnUnreadableApplicationRecordRefusesClientAuthentication() {
+	result := clientCredentials(ts.T(), failClosedGovernanceClientID, failClosedGovernanceClientSecret, "")
+	ts.Require().Equal(http.StatusOK, result.StatusCode,
+		"the client must authenticate while its record is readable: %s", result.Body)
+
+	ts.corruptRuntimeRecord(ts.appID)
+	defer ts.repairRuntimeRecord(ts.appID)
+
+	result = clientCredentials(ts.T(), failClosedGovernanceClientID, failClosedGovernanceClientSecret, "")
+	ts.Equal(http.StatusUnauthorized, result.StatusCode, "an unreadable client record must refuse: %s", result.Body)
+	ts.Contains(string(result.Body), "invalid_client", "the refusal must be invalid_client")
+
+	ts.repairRuntimeRecord(ts.appID)
+	result = clientCredentials(ts.T(), failClosedGovernanceClientID, failClosedGovernanceClientSecret, "")
+	ts.Equal(http.StatusOK, result.StatusCode,
+		"the client must authenticate again once its record is readable: %s", result.Body)
+}
+
+// A public client presents no secret, so its unreadable runtime document is refused at client
+// authentication itself, as invalid_client, rather than reaching the grant.
+func (ts *FailClosedTestSuite) TestAnUnreadablePublicClientRecordRefusesClientAuthentication() {
+	appID, clientID := newPublicClientApp(ts.T(), ts.users, "fail_closed")
+	admitted := redeemUnknownCode(ts.T(), clientID)
+	ts.Require().Equal(http.StatusBadRequest, admitted.StatusCode,
+		"precondition: the public client must authenticate and reach the grant: %s", admitted.Body)
+	ts.Require().Contains(string(admitted.Body), "invalid_grant",
+		"precondition: the unknown code must be the grant's refusal")
+
+	ts.corruptRuntimeRecord(appID)
+	defer ts.repairRuntimeRecord(appID)
+
+	refused := redeemUnknownCode(ts.T(), clientID)
+	ts.Equal(http.StatusUnauthorized, refused.StatusCode,
+		"an unreadable public client record must refuse at client authentication: %s", refused.Body)
+	ts.Contains(string(refused.Body), "invalid_client", "the refusal must be invalid_client")
+
+	ts.repairRuntimeRecord(appID)
+	admitted = redeemUnknownCode(ts.T(), clientID)
+	ts.Equal(http.StatusBadRequest, admitted.StatusCode,
+		"the public client must authenticate again once its record is readable: %s", admitted.Body)
+	ts.Contains(string(admitted.Body), "invalid_grant", "the repaired client must reach the grant again")
 }
 
 // Containment runs before the hold: when the revocation store cannot be written, the suspend

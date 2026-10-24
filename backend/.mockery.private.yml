@@ -215,7 +215,7 @@ packages:
     interfaces:
       entityStateProvider:
       accountAccessSourceInterface:
-      lockNotifierInterface:
+      LockNotifierInterface:
       notificationTemplateRenderer:
 
   github.com/thunder-id/thunderid/internal/user:

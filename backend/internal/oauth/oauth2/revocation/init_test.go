@@ -72,7 +72,7 @@ func (suite *InitTestSuite) TestInitialize_RegistersRoutes() {
 	_, revocationService, err := Initialize(revocationConfig(10), suite.mockJWTService, nil)
 	assert.NoError(suite.T(), err)
 
-	RegisterRoutes(mux, suite.mockJWTService, nil, nil, suite.mockDiscoveryService, revocationService, nil,
+	RegisterRoutes(mux, suite.mockJWTService, nil, nil, suite.mockDiscoveryService, revocationService, nil, nil,
 		engineconfig.ClientAssertionConfig{}, 0)
 
 	// The pattern includes the method because of CORS middleware wrapping.
