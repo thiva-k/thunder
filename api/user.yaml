@@ -39,7 +39,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/limitQueryParam'
         - $ref: '#/components/parameters/offsetQueryParam'
-        - $ref: '#/components/parameters/filterParam'
+        - $ref: '#/components/parameters/userFilterParam'
         - $ref: '#/components/parameters/includeQueryParam'
       responses:
         "200":
@@ -1185,7 +1185,7 @@ paths:
           example: "engineering/frontend"
         - $ref: '#/components/parameters/limitQueryParam'
         - $ref: '#/components/parameters/offsetQueryParam'
-        - $ref: '#/components/parameters/filterParam'
+        - $ref: '#/components/parameters/userFilterParam'
         - $ref: '#/components/parameters/includeQueryParam'
       responses:
         "200":
@@ -2465,7 +2465,7 @@ components:
           - display
       description: |
         Optional parameter to include additional display information in the response. The exact fields included depend on the endpoint. See each endpoint's response schema for details on which fields are enriched.
-    filterParam:
+    userFilterParam:
       in: query
       name: filter
       required: false

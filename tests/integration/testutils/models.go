@@ -323,6 +323,26 @@ type TokenHTTPResult struct {
 	Token      *TokenResponse
 }
 
+// AccessStatus is the effective access status a management read of a user, an agent or an
+// application reports.
+type AccessStatus struct {
+	Value   string               `json:"value"`
+	Details *AccessStatusDetails `json:"details"`
+}
+
+// AccessStatusDetails says what produced a hold. An application read carries none.
+type AccessStatusDetails struct {
+	Reason        string         `json:"reason"`
+	Since         string         `json:"since"`
+	LockedMethods []LockedMethod `json:"lockedMethods"`
+}
+
+// LockedMethod is one live lock, with its expiry, empty for a lock that does not lapse.
+type LockedMethod struct {
+	Method    string `json:"method"`
+	ExpiresAt string `json:"expiresAt"`
+}
+
 // AuthorizationResponse represents the response from authorization completion
 type AuthorizationResponse struct {
 	RedirectURI string `json:"redirect_uri"`

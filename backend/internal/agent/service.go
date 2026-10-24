@@ -99,6 +99,10 @@ func (s *agentService) CreateAgent(ctx context.Context, agent *providers.Agent) 
 	}
 	normalizeLoginConsent(agent.LoginConsent)
 
+	if svcErr := applyGrantTypes(agent); svcErr != nil {
+		return nil, svcErr
+	}
+
 	// ValidateAgent resolves ouHandle to an OU ID, so the authz check runs after it to evaluate
 	// against the resolved target OU.
 	clientID, clientSecret, _, svcErr := s.ValidateAgent(ctx, agent, "")
@@ -331,6 +335,12 @@ func (s *agentService) UpdateAgent(ctx context.Context, agentID string,
 	_, currentOwner, currentClientID := readSystemAttributes(existing.SystemAttributes)
 
 	normalizeLoginConsent(req.LoginConsent)
+
+	grantedConfigs, svcErr := resolveGrantTypes(req.InboundAuthConfig, req.Delegated)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	req.InboundAuthConfig = grantedConfigs
 
 	var existingOAuthMethod string
 	existingOAuth, oauthErr := s.inboundClientService.GetOAuthProfileByEntityID(ctx, agentID)

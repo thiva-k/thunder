@@ -49,6 +49,7 @@ import ShowClientSecret from '../components/ShowClientSecret';
 import AgentConstants from '../constants/agent-constants';
 import useAgentRoutes from '../hooks/useAgentRoutes';
 import type {Agent, OAuthAgentConfig} from '../models/agent';
+import isDelegatedAgent from '../utils/isDelegatedAgent';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -157,7 +158,10 @@ export default function AgentEditPage(): JSX.Element {
     const attributes = dropNonConformingOptionalAttributes(updatedData.attributes ?? {}, agentTypeDetails?.schema);
 
     try {
-      await updateAgent.mutateAsync({agentId, data: {...updatedData, attributes}});
+      await updateAgent.mutateAsync({
+        agentId,
+        data: {...updatedData, attributes, delegated: isDelegatedAgent(updatedData.inboundAuthConfig)},
+      });
       setEditedAgent({});
       await refetch();
       setSectionResetKey((key) => key + 1);

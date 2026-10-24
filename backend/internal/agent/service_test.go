@@ -607,6 +607,100 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_WithOAuth_Success() {
 	assert.NotEmpty(suite.T(), resp.InboundAuthConfig[0].OAuthConfig.ClientSecret)
 }
 
+// captureCreatedOAuthProfile stubs inbound client creation and returns a pointer to the OAuth profile
+// the service hands it.
+func (suite *AgentServiceTestSuite) captureCreatedOAuthProfile(
+	mockEntity *entitymock.EntityServiceInterfaceMock,
+	mockInbound *inboundclientmock.InboundClientServiceInterfaceMock,
+) **providers.OAuthProfile {
+	clearMockCalls(mockEntity, "CreateEntity")
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(buildAgentEntityFixture(testAgentName, "", "", "cid-xxx"), nil)
+
+	captured := new(*providers.OAuthProfile)
+	clearMockCalls(mockInbound, "CreateInboundClient")
+	mockInbound.On("CreateInboundClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) { *captured = args.Get(2).(*providers.OAuthProfile) }).
+		Return(nil)
+	return captured
+}
+
+func (suite *AgentServiceTestSuite) TestCreateAgent_DelegatedGetsTheDefaultGrants() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+	profile := suite.captureCreatedOAuthProfile(mockEntity, mockInbound)
+
+	req := &providers.Agent{
+		Type:      testAgentType,
+		OUID:      testOUID,
+		Delegated: true,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				Type:        providers.OAuthInboundAuthType,
+				OAuthConfig: &providers.OAuthConfigWithSecret{RedirectURIs: []string{"https://app.example.com/cb"}},
+			},
+		},
+	}
+	resp, svcErr := svc.CreateAgent(context.Background(), req)
+
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(resp)
+	suite.Require().NotNil(*profile)
+	assert.Equal(suite.T(), []string{"client_credentials", "authorization_code", "refresh_token"},
+		(*profile).GrantTypes)
+	assert.Equal(suite.T(), []string{"code"}, (*profile).ResponseTypes)
+	assert.True(suite.T(), (*profile).PKCERequired)
+	assert.Equal(suite.T(), []string{"https://app.example.com/cb"}, (*profile).RedirectURIs)
+}
+
+func (suite *AgentServiceTestSuite) TestCreateAgent_NotDelegatedAlwaysHoldsClientCredentials() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+	profile := suite.captureCreatedOAuthProfile(mockEntity, mockInbound)
+
+	req := &providers.Agent{
+		Type: testAgentType,
+		OUID: testOUID,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				Type: providers.OAuthInboundAuthType,
+				OAuthConfig: &providers.OAuthConfigWithSecret{
+					GrantTypes: []providers.GrantType{providers.GrantTypeRefreshToken},
+				},
+			},
+		},
+	}
+	_, svcErr := svc.CreateAgent(context.Background(), req)
+
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(*profile)
+	assert.Equal(suite.T(), []string{"client_credentials", "refresh_token"}, (*profile).GrantTypes)
+}
+
+func (suite *AgentServiceTestSuite) TestCreateAgent_DelegatedWithoutADelegationGrantIsRejected() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	req := &providers.Agent{
+		Type:      testAgentType,
+		OUID:      testOUID,
+		Delegated: true,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				Type: providers.OAuthInboundAuthType,
+				OAuthConfig: &providers.OAuthConfigWithSecret{
+					GrantTypes: []providers.GrantType{providers.GrantTypeRefreshToken},
+				},
+			},
+		},
+	}
+	resp, svcErr := svc.CreateAgent(context.Background(), req)
+
+	assert.Nil(suite.T(), resp)
+	suite.Require().NotNil(svcErr)
+	assert.Equal(suite.T(), ErrorMissingDelegationGrantType.Code, svcErr.Code)
+	mockEntity.AssertNotCalled(suite.T(), "CreateEntity", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockInbound.AssertNotCalled(suite.T(), "Validate", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything)
+}
+
 func (suite *AgentServiceTestSuite) TestCreateAgent_EntityCreationFails() {
 	svc, mockEntity, _, _, _ := suite.setupService()
 
@@ -2082,6 +2176,101 @@ func (suite *AgentServiceTestSuite) TestUpdateAgent_WantsInbound_NoExisting_Crea
 	assert.Equal(suite.T(), "new-flow-id", resp.AuthFlowID)
 	mockInbound.AssertCalled(suite.T(), "CreateInboundClient",
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+// captureUpdatedOAuthProfile stubs the entity read and update and the inbound client creation, and
+// returns a pointer to the OAuth profile the service hands the inbound client service.
+func (suite *AgentServiceTestSuite) captureUpdatedOAuthProfile(
+	mockEntity *entitymock.EntityServiceInterfaceMock,
+	mockInbound *inboundclientmock.InboundClientServiceInterfaceMock,
+) **providers.OAuthProfile {
+	clearMockCalls(mockEntity, "GetEntityProfile")
+	mockEntity.On("GetEntityProfile", mock.Anything, testAgentID).
+		Return(buildAgentEntityFixture("old-name", "", "", ""), nil)
+	clearMockCalls(mockEntity, "UpdateEntity")
+	mockEntity.On("UpdateEntity", mock.Anything, testAgentID, mock.Anything).
+		Return(&providers.Entity{}, nil)
+
+	captured := new(*providers.OAuthProfile)
+	clearMockCalls(mockInbound, "CreateInboundClient")
+	mockInbound.On("CreateInboundClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) { *captured = args.Get(2).(*providers.OAuthProfile) }).
+		Return(nil)
+	return captured
+}
+
+func (suite *AgentServiceTestSuite) TestUpdateAgent_DelegatedGetsTheDefaultGrants() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+	profile := suite.captureUpdatedOAuthProfile(mockEntity, mockInbound)
+
+	_, svcErr := svc.UpdateAgent(context.Background(), testAgentID, &model.UpdateAgentRequest{
+		Type:      testAgentType,
+		Delegated: true,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				Type:        providers.OAuthInboundAuthType,
+				OAuthConfig: &providers.OAuthConfigWithSecret{RedirectURIs: []string{"https://app.example.com/cb"}},
+			},
+		},
+	})
+
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(*profile)
+	assert.Equal(suite.T(), []string{"client_credentials", "authorization_code", "refresh_token"},
+		(*profile).GrantTypes)
+	assert.Equal(suite.T(), []string{"code"}, (*profile).ResponseTypes)
+	assert.True(suite.T(), (*profile).PKCERequired)
+}
+
+func (suite *AgentServiceTestSuite) TestUpdateAgent_NotDelegatedAlwaysHoldsClientCredentials() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+	profile := suite.captureUpdatedOAuthProfile(mockEntity, mockInbound)
+
+	_, svcErr := svc.UpdateAgent(context.Background(), testAgentID, &model.UpdateAgentRequest{
+		Type: testAgentType,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				Type: providers.OAuthInboundAuthType,
+				OAuthConfig: &providers.OAuthConfigWithSecret{
+					GrantTypes: []providers.GrantType{providers.GrantTypeRefreshToken},
+				},
+			},
+		},
+	})
+
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(*profile)
+	assert.Equal(suite.T(), []string{"client_credentials", "refresh_token"}, (*profile).GrantTypes)
+}
+
+func (suite *AgentServiceTestSuite) TestUpdateAgent_DelegatedWithoutADelegationGrantIsRejectedBeforeAnyWrite() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	clearMockCalls(mockEntity, "GetEntityProfile")
+	mockEntity.On("GetEntityProfile", mock.Anything, testAgentID).
+		Return(buildAgentEntityFixture("old-name", "", "", ""), nil)
+
+	resp, svcErr := svc.UpdateAgent(context.Background(), testAgentID, &model.UpdateAgentRequest{
+		Type:      testAgentType,
+		Delegated: true,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				Type: providers.OAuthInboundAuthType,
+				OAuthConfig: &providers.OAuthConfigWithSecret{
+					GrantTypes: []providers.GrantType{providers.GrantTypeRefreshToken},
+				},
+			},
+		},
+	})
+
+	assert.Nil(suite.T(), resp)
+	suite.Require().NotNil(svcErr)
+	assert.Equal(suite.T(), ErrorMissingDelegationGrantType.Code, svcErr.Code)
+	mockEntity.AssertNotCalled(suite.T(), "UpdateEntity", mock.Anything, mock.Anything, mock.Anything)
+	mockInbound.AssertNotCalled(suite.T(), "CreateInboundClient",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockInbound.AssertNotCalled(suite.T(), "UpdateInboundClient",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func (suite *AgentServiceTestSuite) TestUpdateAgent_SetsLogoProperty() {

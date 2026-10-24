@@ -98,15 +98,14 @@ type ActorProvider interface {
 // AgentMgtProvider provisions agents on behalf of runtime capabilities. The rules and semantics of an
 // agent remain owned by the agent management service; this exposes only what the runtime needs.
 type AgentMgtProvider interface {
-	// CreateAgent provisions the supplied agent, deriving its inbound auth profile and OAuth client
-	// configuration. Redirect URIs are the one OAuth value a caller may supply; any other
-	// authentication field left unset is the provider's to fill. Delegated is separate because it
-	// selects the authentication shape rather than describing the agent.
+	// CreateAgent provisions the supplied agent through the agent management service, which applies
+	// its OAuth defaults and validates the agent. Agent.Delegated selects the grant types the agent
+	// is given and allowed.
 	//
 	// The returned agent carries the generated identifier and, on InboundAuthConfig, the generated
 	// client credentials. Fields the agent service does not echo come back zero, so the result is
 	// not a full round-trip. Owner falls back to the authenticated caller when unset.
-	CreateAgent(ctx context.Context, agent *Agent, delegated bool) (*Agent, *common.ServiceError)
+	CreateAgent(ctx context.Context, agent *Agent) (*Agent, *common.ServiceError)
 }
 
 // UserMgtProvider provisions users on behalf of runtime capabilities. The rules and semantics of a
