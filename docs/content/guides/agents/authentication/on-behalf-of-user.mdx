@@ -165,7 +165,7 @@ A resource reads `sub` to apply the user's permissions and `act` to see which ag
 | `aud` | The resolved resource server, or the agent's default audience (its client ID when none is set) when the request carries no permission scopes or `resource`. |
 | `scope` | A subset of the user's scopes, never more than the user's own token held. |
 | `client_id` | The agent's client ID. |
-| `act` | The agent acting for the user, on the access token only and never the ID token. It is appended automatically on the `authorization_code` and CIBA grants, and built from the `actor_token` on a token exchange. |
+| `act` | The agent acting for the user, on the access token only and never the ID token. It is appended automatically on the `authorization_code` and CIBA grants. On a token exchange it names the `actor_token`'s subject, or the agent itself when the request has no `actor_token`. Earlier actors in a `subject_token` that <ProductName /> issued stay nested beneath it. See [The nested act claim](../agent-to-agent#the-nested-act-claim). |
 | `exp`, `iat`, `nbf`, `jti` | Standard JWT lifetime and identity claims. |
 
 ## Troubleshooting
