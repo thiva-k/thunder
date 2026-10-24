@@ -17,12 +17,16 @@ import (
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/identitygovernance"
+	"github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/hashmock"
 	"github.com/thunder-id/thunderid/tests/mocks/entitytypemock"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
+	"github.com/thunder-id/thunderid/tests/mocks/sharingmock"
 	"github.com/thunder-id/thunderid/tests/mocks/transactionmock"
 )
 
@@ -54,7 +58,7 @@ func (s *ServiceTestSuite) SetupTest() {
 			Salt: "testsalt", Iterations: 1, KeySize: 32,
 		},
 	}, nil).Maybe()
-	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner())
+	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner(), nil)
 	s.ctx = context.Background()
 	s.testErr = errors.New("store error")
 }
@@ -365,7 +369,7 @@ func (s *ServiceTestSuite) TestUpdateEntity_AppliesTheRuntimeRowReadBeforeTheTra
 			s.store.On("LockEntity", mock.Anything, e.ID).Return(*e, nil).Once()
 			s.store.On("UpdateEntity", mock.Anything, e).Return(nil).Once()
 			s.store.On("GetEntity", mock.Anything, e.ID).Return(stored, nil).Once()
-			svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transactioner)
+			svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transactioner, nil)
 
 			updated, err := svc.UpdateEntity(s.ctx, e.ID, e)
 
@@ -600,7 +604,7 @@ func (s *ServiceTestSuite) TestCreateEntity_WritesTheRuntimeRowAfterTheCommit() 
 	var events []string
 	transactioner, txCtx := s.passingTransactioner(&committed, &events)
 	runtime := newEntityRuntimeStoreInterfaceMock(s.T())
-	svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transactioner)
+	svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transactioner, nil)
 	e := testEntity("create-after")
 	e.State = providers.EntityStateSuspended
 	s.store.On("IsEntityDeclarative", mock.Anything, e.ID).Return(false, ErrEntityNotFound).Once()
@@ -637,7 +641,7 @@ func (s *ServiceTestSuite) TestDeleteEntity_DeletesTheRuntimeRowAfterTheCommit()
 	var events []string
 	transactioner, txCtx := s.passingTransactioner(&committed, &events)
 	runtime := newEntityRuntimeStoreInterfaceMock(s.T())
-	svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transactioner)
+	svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transactioner, nil)
 	s.store.On("DeleteEntity", txCtx, "del-after").Return(nil).Once()
 	runtime.On("DeleteRuntimeData", s.ctx, "del-after").
 		Run(func(mock.Arguments) { events = append(events, "runtime row deleted") }).Return(nil).Once()
@@ -651,7 +655,7 @@ func (s *ServiceTestSuite) TestDeleteEntity_DeletesTheRuntimeRowAfterTheCommit()
 // expectations, for tests that make one runtime call fail.
 func (s *ServiceTestSuite) newServiceWithRuntimeMock() (EntityServiceInterface, *entityRuntimeStoreInterfaceMock) {
 	runtime := newEntityRuntimeStoreInterfaceMock(s.T())
-	svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner())
+	svc := newEntityService(s.store, runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner(), nil)
 	return svc, runtime
 }
 
@@ -703,7 +707,7 @@ func (s *ServiceTestSuite) TestUpdateEntity_Success() {
 
 func (s *ServiceTestSuite) newSvcWithEntityType() (*entityService, *entitytypemock.EntityTypeServiceInterfaceMock) {
 	ets := entitytypemock.NewEntityTypeServiceInterfaceMock(s.T())
-	svc := newEntityService(s.store, s.runtime, s.hashService, ets, nil, transaction.NewNoOpTransactioner())
+	svc := newEntityService(s.store, s.runtime, s.hashService, ets, nil, transaction.NewNoOpTransactioner(), nil)
 	return svc.(*entityService), ets
 }
 
@@ -1030,6 +1034,210 @@ func (s *ServiceTestSuite) TestGetEntityListByOUIDs_Delegates() {
 	list, err := s.svc.GetEntityListByOUIDs(s.ctx, providers.EntityCategoryUser, []string{"ou1"}, 10, 0, nil)
 	s.NoError(err)
 	s.Len(list, 1)
+}
+
+// testUserSharingType is the sharing resource type the page tests give users.
+const testUserSharingType sharing.ResourceType = "user"
+
+// withUserSharing makes users shareable through a sharing service mock, which the caller sets up.
+func (s *ServiceTestSuite) withUserSharing() *sharingmock.SharingServiceInterfaceMock {
+	sharingService := sharingmock.NewSharingServiceInterfaceMock(s.T())
+	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner(),
+		sharingService)
+	s.svc.RegisterSharedCategory(providers.EntityCategoryUser, testUserSharingType)
+	return sharingService
+}
+
+// shareUsers makes the sharing service answer with sharedIDs for the users shared into ou1.
+func (s *ServiceTestSuite) shareUsers(sharedIDs []string, svcErr *tidcommon.ServiceError) {
+	s.withUserSharing().On("ListVisibleResourceIDs", mock.Anything, testUserSharingType, "ou1").
+		Return(sharedIDs, svcErr).Once()
+}
+
+func (s *ServiceTestSuite) TestGetSharedResourceType() {
+	s.svc.RegisterSharedCategory(providers.EntityCategoryUser, testUserSharingType)
+
+	resourceType, ok := s.svc.GetSharedResourceType(providers.EntityCategoryUser)
+	s.True(ok)
+	s.Equal(testUserSharingType, resourceType)
+
+	_, ok = s.svc.GetSharedResourceType(providers.EntityCategoryAgent)
+	s.False(ok, "a category nothing registered is not shareable")
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_PageSpansOwnedAndShared() {
+	s.shareUsers([]string{"shared-1", "shared-2"}, nil)
+	owned := testEntity("owned-3")
+	shared := testEntity("shared-1")
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", []string{"ou1"}, mock.Anything).
+		Return(3, nil).Once()
+	s.store.On("GetEntityListByOUIDs", mock.Anything, "user", []string{"ou1"}, 1, 2, mock.Anything).
+		Return([]providers.Entity{*owned}, nil).Once()
+	s.store.On("GetEntitiesByIDs", mock.Anything, []string{"shared-1"}).
+		Return([]providers.Entity{*shared}, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeAll, 2, 2, nil)
+
+	s.Require().NoError(err)
+	s.Equal(5, page.TotalResults)
+	s.Require().Len(page.Owned, 1)
+	s.Equal("owned-3", page.Owned[0].ID)
+	s.Require().Len(page.Shared, 1)
+	s.Equal("shared-1", page.Shared[0].ID)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_PastOwned_ReadsOnlyShared() {
+	s.shareUsers([]string{"shared-a", "shared-b", "shared-app", "shared-c"}, nil)
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", []string{"ou1"}, mock.Anything).
+		Return(2, nil).Once()
+	app := testEntity("shared-app")
+	app.Category = providers.EntityCategoryApp
+	s.store.On("GetEntitiesByIDs", mock.Anything, []string{"shared-b", "shared-app", "shared-c"}).
+		Return([]providers.Entity{*testEntity("shared-c"), *app, *testEntity("shared-b")}, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeAll, 3, 3, nil)
+
+	s.Require().NoError(err)
+	s.Equal(6, page.TotalResults)
+	s.Empty(page.Owned)
+	s.Require().Len(page.Shared, 2, "an entity of another category is left out")
+	s.Equal([]string{"shared-b", "shared-c"}, []string{page.Shared[0].ID, page.Shared[1].ID})
+	s.store.AssertNotCalled(s.T(), "GetEntityListByOUIDs", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_OwnedScope_ListsNoShared() {
+	s.withUserSharing()
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", []string{"ou1"}, mock.Anything).
+		Return(1, nil).Once()
+	s.store.On("GetEntityListByOUIDs", mock.Anything, "user", []string{"ou1"}, 1, 0, mock.Anything).
+		Return([]providers.Entity{*testEntity("owned-1")}, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeOwned, 10, 0, nil)
+
+	s.Require().NoError(err)
+	s.Equal(1, page.TotalResults)
+	s.Len(page.Owned, 1)
+	s.Empty(page.Shared)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_SharedScope_ListsNoOwned() {
+	s.shareUsers([]string{"shared-1"}, nil)
+	s.store.On("GetEntitiesByIDs", mock.Anything, []string{"shared-1"}).
+		Return([]providers.Entity{*testEntity("shared-1")}, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeShared, 10, 0, nil)
+
+	s.Require().NoError(err)
+	s.Equal(1, page.TotalResults)
+	s.Empty(page.Owned)
+	s.Len(page.Shared, 1)
+	s.store.AssertNotCalled(s.T(), "GetEntityListCountByOUIDs", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything)
+}
+
+// A category with no sharing resource type is never shared, so only its owned entities are listed.
+func (s *ServiceTestSuite) TestGetEntityPageInOU_UnsharedCategory_ListsOwned() {
+	s.withUserSharing()
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "agent", []string{"ou1"}, mock.Anything).
+		Return(0, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryAgent, "ou1", OUEntityScopeAll, 10, 0, nil)
+
+	s.Require().NoError(err)
+	s.Zero(page.TotalResults)
+	s.Empty(page.Owned)
+	s.Empty(page.Shared)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_UnknownOU_ListsNothing() {
+	s.shareUsers(nil, &ou.ErrorOrganizationUnitNotFound)
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", []string{"ou1"}, mock.Anything).
+		Return(0, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeAll, 10, 0, nil)
+
+	s.Require().NoError(err)
+	s.Zero(page.TotalResults)
+	s.Empty(page.Owned)
+	s.Empty(page.Shared)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_SharingFailure() {
+	s.shareUsers(nil, &tidcommon.InternalServerError)
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", []string{"ou1"}, mock.Anything).
+		Return(0, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeAll, 10, 0, nil)
+
+	s.Error(err)
+	s.Nil(page)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_FiltersNarrowOwned() {
+	filters := map[string]interface{}{"username": "alice"}
+	s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", []string{"ou1"}, filters).
+		Return(1, nil).Once()
+	s.store.On("GetEntityListByOUIDs", mock.Anything, "user", []string{"ou1"}, 1, 0, filters).
+		Return([]providers.Entity{*testEntity("owned-1")}, nil).Once()
+
+	page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeOwned, 10, 0,
+		filters)
+
+	s.Require().NoError(err)
+	s.Equal(1, page.TotalResults)
+	s.Len(page.Owned, 1)
+	s.Empty(page.Shared)
+}
+
+// Filters cannot narrow shared entities yet, so a scope that lists them refuses filters rather than
+// listing shared entities a filter would have left out.
+func (s *ServiceTestSuite) TestGetEntityPageInOU_FiltersRefusedWithShared() {
+	s.withUserSharing()
+	filters := map[string]interface{}{"username": "alice"}
+	for _, scope := range []OUEntityScope{OUEntityScopeAll, OUEntityScopeShared} {
+		page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", scope, 10, 0, filters)
+
+		s.ErrorIs(err, errSharedEntityFilterUnsupported)
+		s.Nil(page)
+	}
+	s.store.AssertNotCalled(s.T(), "GetEntityListCountByOUIDs", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestGetEntityPageInOU_Errors() {
+	for _, tc := range []struct {
+		name    string
+		arrange func()
+	}{
+		{"count", func() {
+			s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", mock.Anything, mock.Anything).
+				Return(0, s.testErr).Once()
+		}},
+		{"owned list", func() {
+			s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", mock.Anything, mock.Anything).
+				Return(1, nil).Once()
+			s.store.On("GetEntityListByOUIDs", mock.Anything, "user", mock.Anything, 1, 0, mock.Anything).
+				Return(nil, s.testErr).Once()
+		}},
+		{"shared load", func() {
+			s.shareUsers([]string{"shared-1"}, nil)
+			s.store.On("GetEntityListCountByOUIDs", mock.Anything, "user", mock.Anything, mock.Anything).
+				Return(0, nil).Once()
+			s.store.On("GetEntitiesByIDs", mock.Anything, []string{"shared-1"}).Return(nil, s.testErr).Once()
+		}},
+	} {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			tc.arrange()
+
+			page, err := s.svc.GetEntityPageInOU(s.ctx, providers.EntityCategoryUser, "ou1", OUEntityScopeAll,
+				10, 0, nil)
+
+			s.ErrorIs(err, s.testErr)
+			s.Nil(page)
+		})
+	}
 }
 
 func (s *ServiceTestSuite) TestGetEntityListBySystemAttributes_Delegates() {
@@ -1740,7 +1948,8 @@ func (s *ServiceTestSuite) TestResolveLinkedAccounts_RejectsEmptyArguments() {
 // Every holder of the subject is returned with its OU handle, for the user to pick between them.
 func (s *ServiceTestSuite) TestGetLinkedEntities_ReturnsHoldersWithOUHandles() {
 	ouService := oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
-	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, ouService, transaction.NewNoOpTransactioner())
+	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, ouService,
+		transaction.NewNoOpTransactioner(), nil)
 	first, second := testEntity("e-holder-1"), testEntity("e-holder-2")
 	second.OUID = "ou-2"
 	s.store.On("ResolveLinkedAccounts", mock.Anything, "idp-a", "sub-1").
@@ -2062,7 +2271,7 @@ func (s *ServiceTestSuite) governedRead(e *providers.Entity, state providers.Ent
 	s.runtime = newEntityRuntimeStoreInterfaceMock(s.T())
 	s.runtime.On("GetRuntimeData", mock.Anything, []string{e.ID}).
 		Return(map[string]entityRuntimeData{e.ID: row}, nil).Once()
-	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner())
+	s.svc = newEntityService(s.store, s.runtime, s.hashService, nil, nil, transaction.NewNoOpTransactioner(), nil)
 }
 
 // The governed read carries the category, the parsed lock state and the runtime row's revision.
@@ -2202,7 +2411,7 @@ func (s *ServiceTestSuite) newServiceWithIndexedEmail() (*entityService, *entity
 	runtime := newEntityRuntimeStoreInterfaceMock(s.T())
 	installRuntimeFixture(runtime)
 	svc := newEntityService(store, runtime, s.hashService, ets, nil,
-		transaction.NewNoOpTransactioner()).(*entityService)
+		transaction.NewNoOpTransactioner(), nil).(*entityService)
 	return svc, store
 }
 

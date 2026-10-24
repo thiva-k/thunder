@@ -175,7 +175,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	exporters = append(exporters, entityTypeExporter)
 	exporters = append(exporters, agentTypeExporter)
 
-	entityService, err := entity.Initialize(cacheManager, hashService, entityTypeService, ouService)
+	entityService, err := entity.Initialize(cacheManager, hashService, entityTypeService, ouService,
+		sharingService)
 	fatalOnError(ctx, logger, err, "Failed to initialize EntityService")
 
 	entityProvider := entityprovider.InitializeEntityProvider(entityService)
