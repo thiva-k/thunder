@@ -46,9 +46,9 @@ func (gh *groupHandler) HandleGroupListRequest(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	filters, svcErr := parseFilterParams(r.URL.Query())
-	if svcErr != nil {
-		gh.handleError(ctx, w, svcErr)
+	filters, err := filter.ParseEqualityFilterParam(r.URL.Query())
+	if err != nil {
+		gh.handleError(ctx, w, &ErrorInvalidFilter)
 		return
 	}
 
@@ -502,23 +502,6 @@ func parsePaginationParams(query url.Values) (int, int, *tidcommon.ServiceError)
 	}
 
 	return limit, offset, nil
-}
-
-// parseFilterParams reads the filter query parameter as equality filters. A filter holds one
-// expression.
-func parseFilterParams(query url.Values) (map[string]interface{}, *tidcommon.ServiceError) {
-	group, err := filter.ParseFilterParam(query)
-	if err != nil {
-		return nil, &ErrorInvalidFilter
-	}
-	if group == nil {
-		return nil, nil
-	}
-	if len(group.Clauses) != 1 || group.Clauses[0].Expr.Operator != tidcommon.OperatorEq {
-		return nil, &ErrorInvalidFilter
-	}
-	expr := group.Clauses[0].Expr
-	return map[string]interface{}{expr.Attribute: expr.Value}, nil
 }
 
 // extractAndValidatePath extracts and validates the path parameter from the request.
