@@ -1610,6 +1610,21 @@ var (
 			DefaultValue: "This account is suspended. Contact an administrator",
 		},
 	}
+
+	// ErrFederatedUserSyncFailed is returned when a federated user cannot be updated with
+	// the attributes received from the identity provider.
+	ErrFederatedUserSyncFailed = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1120",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.federated_user_sync_failed",
+			DefaultValue: "Failed to sync user",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.federated_user_sync_failed_desc",
+			DefaultValue: "The account could not be updated with the details from the identity provider",
+		},
+	}
 )
 
 // errForEntityCategory returns a copy of err whose messages name the entity category they are
