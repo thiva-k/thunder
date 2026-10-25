@@ -18,15 +18,13 @@ const (
 	boundaryClientSecret = "governance_boundary_secret" //nolint:gosec // test credential
 	boundaryRedirectURI  = "https://localhost:3000/callback"
 
-	boundaryScopedRSHandle  = "https://boundary-test.example.com/system"
-	boundaryRecoveryHandle  = "governance-boundary-recovery-suspend"
-	boundaryNoPlanHandle    = "governance-boundary-suspend-without-plan"
-	boundaryAuthFlowHandle  = "governance-boundary-auth"
-	boundaryRecoveryAppName = "Governance Boundary Recovery App"
+	boundaryScopedRSHandle = "https://boundary-test.example.com/system"
+	boundaryRecoveryHandle = "governance-boundary-recovery-suspend"
+	boundaryNoPlanHandle   = "governance-boundary-suspend-without-plan"
+	boundaryAuthFlowHandle = "governance-boundary-auth"
 
-	// The actions the boundary suite's recovery flow submits a subject with.
-	submitSubjectAction    = "action_submit_subject"
-	unsuspendSubjectAction = "action_unsuspend_subject"
+	// The action the boundary suite's recovery flow submits a subject with.
+	submitSubjectAction = "action_submit_subject"
 
 	// adminAuthenticationRequiredCode is the administration gate's answer to a caller without root.
 	// /flow/execute is a public path, so the middleware drops a token that fails its root check and
@@ -219,56 +217,20 @@ func (ts *LifecycleBoundaryTestSuite) TestTheLifecycleRunsInOrder() {
 	ts.Equal("ACTIVE", readStatus(ts.T(), targetID).Value, "unlock must return the account")
 }
 
-// Suspend and unsuspend fault outside an administration flow, and change nothing. A
-// recovery flow carrying either node, handed a target, ends in a server fault. For unsuspend that
-// fault is the flow-type guard's alone: without it the node would look for recorded proof, find none
-// and answer with an ordinary refusal. For suspend the missing pre-suspend plan faults the node as
-// well, so the guard itself is pinned by the executor's unit test.
-func (ts *LifecycleBoundaryTestSuite) TestSuspendAndUnsuspendFaultOutsideAnAdministrationFlow() {
-	flowID, err := testutils.CreateFlow(buildRecoverySuspendFlow())
-	ts.Require().NoError(err, "a recovery flow with lifecycle nodes is creatable; the nodes refuse at run time")
-	cleanupFlow(ts.T(), flowID)
-	appID, err := testutils.CreateApplication(testutils.Application{
-		OUID:                  ts.unitA.ouID,
-		Name:                  boundaryRecoveryAppName,
-		Description:           "Application whose recovery flow carries suspend and unsuspend nodes",
-		IsRecoveryFlowEnabled: true,
-		ClientID:              "governance_boundary_recovery_client",
-		ClientSecret:          "governance_boundary_recovery_secret",
-		RedirectURIs:          []string{boundaryRedirectURI},
-		AllowedUserTypes:      []string{ts.unitA.userType},
-		AuthFlowID:            ts.authFlowID,
-		RecoveryFlowID:        flowID,
-	})
-	ts.Require().NoError(err, "failed to create the recovery application")
-	cleanupApplication(ts.T(), appID)
-
-	activeID, username, password := ts.unitA.newUser(ts.T(), "recovery_target", nil)
-	held := ts.signIn(username, password)
-	ts.Equal(serverFault, ts.recoverWith(appID, activeID, submitSubjectAction),
-		"a suspend node in a recovery flow must fault")
-	ts.Equal("ACTIVE", readStatus(ts.T(), activeID).Value, "a recovery flow must not suspend anyone")
-	ts.intact(held, "a recovery flow must revoke nothing")
-
-	suspendedID, _, _ := ts.unitA.newUser(ts.T(), "recovery_suspended", nil)
-	ts.run(suspendFlowHandle, suspendedID)
-	ts.Equal(serverFault, ts.recoverWith(appID, suspendedID, unsuspendSubjectAction),
-		"an unsuspend node in a recovery flow must fault")
-	ts.Equal("SUSPENDED", readStatus(ts.T(), suspendedID).Value, "a recovery flow must not unsuspend anyone")
-}
-
-// recoverWith starts the suite's recovery flow and submits a target through the given action.
-func (ts *LifecycleBoundaryTestSuite) recoverWith(appID, subject, action string) flowAnswer {
-	ts.T().Helper()
-	step, err := common.InitiateRecoveryFlow(appID, false, nil, "")
-	ts.Require().NoError(err)
-	ts.Require().Equal("INCOMPLETE", step.FlowStatus)
-	return answerOf(postFlow(ts.T(), nil, "", map[string]interface{}{
-		"executionId":    step.ExecutionID,
-		"inputs":         map[string]string{subjectInput: subject},
-		"action":         action,
-		"challengeToken": step.ChallengeToken,
-	}))
+// A recovery flow cannot suspend or unsuspend: the flow API refuses to save one with either node, so
+// a designer cannot break recovery with a node that would fault at run time. The executor's own
+// flow-type guard is pinned by its unit test.
+func (ts *LifecycleBoundaryTestSuite) TestARecoveryFlowCannotSuspendOrUnsuspend() {
+	for _, mode := range []string{"suspend", "unsuspend"} {
+		flowID, err := testutils.CreateFlow(buildRecoveryGovernanceFlow(mode))
+		if flowID != "" {
+			cleanupFlow(ts.T(), flowID)
+		}
+		ts.Require().Error(err, "a recovery flow with a %s node must not be saved", mode)
+		ts.Contains(err.Error(), "got 400", "the %s node must be refused as a bad request", mode)
+		ts.Contains(err.Error(), "FLM-1023", "the %s node must be refused as an executor configuration", mode)
+		ts.Contains(err.Error(), "mode '"+mode+"'", "the refusal must name the %s mode", mode)
+	}
 }
 
 // A suspend node with no pre-suspend plan before it faults and holds nothing: the plan is the
@@ -330,24 +292,18 @@ func (ts *LifecycleBoundaryTestSuite) active(token string) bool {
 	return result.Active
 }
 
-// buildRecoverySuspendFlow is a recovery flow that asks for a subject and runs a suspend or an
-// unsuspend node on it, by the action submitted.
-func buildRecoverySuspendFlow() testutils.Flow {
+// buildRecoveryGovernanceFlow is a recovery flow that asks for a subject and runs an identity
+// governance node in the given mode on it.
+func buildRecoveryGovernanceFlow(mode string) testutils.Flow {
 	subject := flowInput("input_subject", subjectInput, "TEXT_INPUT")
-	prompt := promptNode("prompt_subject", submitSubjectAction, "access_governance", subject)
-	prompt["prompts"] = append(prompt["prompts"].([]map[string]interface{}), map[string]interface{}{
-		"inputs": []map[string]interface{}{flowInput("input_unsuspend_subject", subjectInput, "TEXT_INPUT")},
-		"action": map[string]interface{}{"ref": unsuspendSubjectAction, "nextNode": "release_hold"},
-	})
 	return testutils.Flow{
-		Name:     "Governance Boundary Recovery Suspend Flow",
-		Handle:   boundaryRecoveryHandle + "-" + uniqueSuffix(),
+		Name:     "Governance Boundary Recovery " + mode,
+		Handle:   boundaryRecoveryHandle + "-" + mode + "-" + uniqueSuffix(),
 		FlowType: "RECOVERY",
 		Nodes: []map[string]interface{}{
 			startNode("prompt_subject"),
-			prompt,
-			taskNode("access_governance", "IdentityGovernanceExecutor", "suspend", "end", nil),
-			taskNode("release_hold", "IdentityGovernanceExecutor", "unsuspend", "end", nil),
+			promptNode("prompt_subject", submitSubjectAction, "access_governance", subject),
+			taskNode("access_governance", "IdentityGovernanceExecutor", mode, "end", nil),
 			endNode(),
 		},
 	}

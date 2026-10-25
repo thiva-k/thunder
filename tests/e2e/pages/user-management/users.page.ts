@@ -17,6 +17,7 @@ import { Page, Locator, expect } from "@playwright/test";
 import { ConsoleRoutes } from "../../configs/routes/console-routes";
 import { BasePage } from "../base.page";
 import { Timeouts } from "../../constants/timeouts";
+import { AccountStatusControls } from "../components/account-status-controls";
 import { OrganizationAccessSettings } from "../components/organization-access";
 
 export type UserFormData = {
@@ -90,9 +91,13 @@ export class UsersPage extends BasePage {
   // Affiliations tab: the shared Organization Access screen
   readonly organizationAccess: OrganizationAccessSettings;
 
+  // Lifecycle controls (User Details page header: Actions menu, its dialogs and the status banner)
+  readonly accountStatus: AccountStatusControls;
+
   constructor(page: Page, baseUrl: string) {
     super(page);
     this.baseUrl = baseUrl;
+    this.accountStatus = new AccountStatusControls(page);
 
     // Add User button
     this.addUserButton = page

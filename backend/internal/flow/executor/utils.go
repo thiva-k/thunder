@@ -503,10 +503,13 @@ func governanceFault(svcErr *tidcommon.ServiceError) error {
 }
 
 // dispatchPlaneFor maps the flow a challenge belongs to onto the plane it is checked at. A lock gives
-// way at the recovery plane, so recovery and registration challenges still go out.
+// way at the recovery plane, so recovery and registration challenges still go out; every other flow
+// is checked at the dispatch plane.
 func dispatchPlaneFor(flowType providers.FlowType) providers.AccessPlane {
-	if flowType == providers.FlowTypeAuthentication {
+	switch flowType {
+	case providers.FlowTypeRecovery, providers.FlowTypeRegistration:
+		return providers.AccessPlaneRecovery
+	default:
 		return providers.AccessPlaneDispatch
 	}
-	return providers.AccessPlaneRecovery
 }

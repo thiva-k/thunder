@@ -334,7 +334,9 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 
 // An onboarding flow loads no application, so the caller-supplied ID is not checked.
 func (s *ServiceTestSuite) TestInitiateFlowChecksOnlyALoadedApplication() {
-	_ = config.InitializeServerRuntime("/tmp/test", &config.Config{})
+	config.ResetServerRuntime()
+	defer config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(), &config.Config{}))
 	flowFactory, _ := core.Initialize(cache.Initialize(config.GetServerRuntime().Config.Cache, "test-deployment"))
 
 	mockStore := newFlowStoreInterfaceMock(s.T())

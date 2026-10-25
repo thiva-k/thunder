@@ -110,6 +110,7 @@ export const ExecutionTypes = {
   Session: 'SessionExecutor',
   SessionSignOut: 'SessionSignOutExecutor',
   PreDelete: 'PreDeleteExecutor',
+  PreSuspend: 'PreSuspendExecutor',
   ApplicationActionValidator: 'ApplicationActionValidator',
   ApplicationDelete: 'ApplicationDeleteExecutor',
   ClientSecret: 'ClientSecretExecutor',

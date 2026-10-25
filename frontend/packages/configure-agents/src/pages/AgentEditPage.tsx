@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+  AccessStatusBanner,
+  AccountStatusAction,
   DocumentTitle,
   PageLoadingAnimation,
   QueryErrorNotice,
@@ -47,6 +49,7 @@ import AgentOverview from '../components/edit-agent/overview/AgentOverview';
 import EditTokensSettings from '../components/edit-agent/tokens/EditTokensSettings';
 import ShowClientSecret from '../components/ShowClientSecret';
 import AgentConstants from '../constants/agent-constants';
+import AgentQueryKeys from '../constants/agent-query-keys';
 import useAgentRoutes from '../hooks/useAgentRoutes';
 import type {Agent, OAuthAgentConfig} from '../models/agent';
 import isDelegatedAgent from '../utils/isDelegatedAgent';
@@ -87,6 +90,9 @@ export default function AgentEditPage(): JSX.Element {
 
   const {data: agent, isLoading, error, refetch} = useGetAgent(agentId ?? '');
   const updateAgent = useUpdateAgent();
+  const handleStatusChanged = useCallback((): void => {
+    void refetch();
+  }, [refetch]);
 
   // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
   // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
@@ -420,6 +426,7 @@ export default function AgentEditPage(): JSX.Element {
           {t('common:messages.readOnlyResource', 'This resource is read-only and cannot be modified.')}
         </Alert>
       )}
+      <AccessStatusBanner status={agent.status} category="agent" sx={{mb: 2}} />
       <PageTitle>
         <PageTitle.BackButton component={<Link to={routes.agents.list()} />}>
           {t('agents:edit.page.back', 'Back to agents')}
@@ -507,6 +514,16 @@ export default function AgentEditPage(): JSX.Element {
             )}
           </Stack>
         </PageTitle.SubHeader>
+        {/* Read-only records too: the flows change only runtime state. */}
+        <PageTitle.Actions>
+          <AccountStatusAction
+            category="agent"
+            subject={agent.id}
+            status={agent.status}
+            listQueryKey={[AgentQueryKeys.AGENTS]}
+            onChanged={handleStatusChanged}
+          />
+        </PageTitle.Actions>
       </PageTitle>
 
       <Tabs value={safeActiveTab} onChange={handleTabChange} aria-label="agent settings tabs">

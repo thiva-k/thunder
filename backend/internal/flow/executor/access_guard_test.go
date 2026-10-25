@@ -211,7 +211,7 @@ func (s *AccessGuardTestSuite) TestAccessGuardRecordsTheLogin() {
 	newAccessGuard(governance).recordLogin(context.Background(), "u1")
 }
 
-func (s *AccessGuardTestSuite) TestAccessGuardChecksNonAuthenticationDispatchAtTheRecoveryPlane() {
+func (s *AccessGuardTestSuite) TestAccessGuardChecksRecoveryAndRegistrationDispatchAtTheRecoveryPlane() {
 	for _, flowType := range []providers.FlowType{providers.FlowTypeRecovery, providers.FlowTypeRegistration} {
 		governance := expectAccess(s.T(), "u1", providers.AccessPlaneRecovery, providers.AuthenticationMethodOTP,
 			providers.AccessDecision{Admitted: true}, nil)
@@ -221,6 +221,23 @@ func (s *AccessGuardTestSuite) TestAccessGuardChecksNonAuthenticationDispatchAtT
 		s.Require().NoError(err)
 		s.False(withheld, string(flowType))
 		s.Nil(stated)
+	}
+}
+
+// Every flow other than recovery and registration, administration included, is checked at the
+// dispatch plane, where a lock withholds the challenge.
+func (s *AccessGuardTestSuite) TestAccessGuardChecksOtherDispatchAtTheDispatchPlane() {
+	for _, flowType := range []providers.FlowType{providers.FlowTypeAuthentication,
+		providers.FlowTypeAdministration, providers.FlowTypeUserOnboarding} {
+		governance := expectAccess(s.T(), "u1", providers.AccessPlaneDispatch, providers.AuthenticationMethodOTP,
+			providers.AccessDecision{Reason: providers.AccessRefusalReasonLocked}, nil)
+
+		withheld, stated, err := newAccessGuard(governance).heldAtDispatch(context.Background(), "u1",
+			providers.AuthenticationMethodOTP, flowType, log.GetLogger())
+		s.Require().NoError(err)
+		s.True(withheld, string(flowType))
+		s.Require().NotNil(stated)
+		s.Equal(ErrAccountLocked.Code, stated.Code)
 	}
 }
 

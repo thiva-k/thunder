@@ -439,8 +439,8 @@ func (s *userInfoService) validateOpenIDScope(ctx context.Context, scopes []stri
 }
 
 // getOAuthApp retrieves the OAuth client configuration if client_id is present in claims.
-// Returns nil when no client_id is present, on error, or when the app is not found. A held client
-// refuses the token.
+// Returns nil when no client_id is present or the app is not found. A failed lookup is a server
+// error, and a held client refuses the token.
 func (s *userInfoService) getOAuthApp(
 	ctx context.Context, claims map[string]interface{},
 ) (*providers.OAuthClient, *tidcommon.ServiceError) {
@@ -450,7 +450,10 @@ func (s *userInfoService) getOAuthApp(
 	}
 
 	app, svcErr := s.inboundClient.GetOAuthClientByClientID(ctx, clientID)
-	if svcErr != nil || app == nil {
+	if svcErr != nil {
+		return nil, &tidcommon.InternalServerError
+	}
+	if app == nil {
 		return nil, nil
 	}
 

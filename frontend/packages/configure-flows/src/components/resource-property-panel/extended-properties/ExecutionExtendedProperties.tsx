@@ -15,6 +15,7 @@ import FederationProperties from './execution-properties/FederationProperties';
 import GroupExecutorProperties from './execution-properties/GroupExecutorProperties';
 import HttpRequestProperties from './execution-properties/HttpRequestProperties';
 import IdentifyingProperties from './execution-properties/IdentifyingProperties';
+import IdentityGovernanceProperties from './execution-properties/IdentityGovernanceProperties';
 import InviteProperties from './execution-properties/InviteProperties';
 import MagicLinkProperties from './execution-properties/MagicLinkProperties';
 import NoConfigProperties from './execution-properties/NoConfigProperties';
@@ -117,6 +118,9 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     case ExecutionTypes.GroupExecutor:
       executorSpecificProperties = <GroupExecutorProperties resource={resource} onChange={onChange} />;
       break;
+    case ExecutionTypes.IdentityGovernance:
+      executorSpecificProperties = <IdentityGovernanceProperties resource={resource} onChange={onChange} />;
+      break;
     case ExecutionTypes.ProvisioningExecutor:
       executorSpecificProperties = <ProvisioningProperties resource={resource} onChange={onChange} />;
       break;
@@ -148,7 +152,7 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
       executorSpecificProperties = <AttributeUniquenessValidatorProperties resource={resource} onChange={onChange} />;
       break;
     case ExecutionTypes.CredentialSetter:
-    case ExecutionTypes.IdentityGovernance:
+    case ExecutionTypes.PreSuspend:
     case ExecutionTypes.Session:
     case ExecutionTypes.OwnerResolver:
     case ExecutionTypes.AccountLinking:

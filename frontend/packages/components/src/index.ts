@@ -75,5 +75,13 @@ export {default as ResourceAvatar} from './lab/components/ResourceAvatar';
 export {default as SettingsCard} from './lab/components/SettingsCard';
 export {default as UnsavedChangesBar} from './lab/components/UnsavedChangesBar';
 
+// Account status and the identity lifecycle operations
+export {default as AccessStatusIndicator} from './AccountStatus/AccessStatusIndicator';
+export type {AccessStatusIndicatorProps} from './AccountStatus/AccessStatusIndicator';
+export {default as AccessStatusBanner} from './AccountStatus/AccessStatusBanner';
+export type {AccessStatusBannerProps} from './AccountStatus/AccessStatusBanner';
+export {default as AccountStatusAction} from './AccountStatus/AccountStatusAction';
+export type {AccountStatusActionProps} from './AccountStatus/AccountStatusAction';
+
 // Utils
 export {default as getInitials} from './lab/utils/getInitials';

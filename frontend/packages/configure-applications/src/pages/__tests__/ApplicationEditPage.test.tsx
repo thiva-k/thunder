@@ -200,6 +200,16 @@ vi.mock('@thunderid/components', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/components')>();
   return {
     ...actual,
+    AccountStatusAction: ({listQueryKey, onChanged}: {listQueryKey: unknown; onChanged: () => void}) => (
+      <button
+        type="button"
+        data-testid="account-status-action"
+        data-list-query-key={JSON.stringify(listQueryKey)}
+        onClick={onChanged}
+      >
+        status action
+      </button>
+    ),
     AppleIcon: vi.fn(() => null),
     AndroidLogo: vi.fn(() => null),
     FlutterLogo: vi.fn(() => null),
@@ -497,6 +507,92 @@ describe('ApplicationEditPage', () => {
       renderComponent();
 
       expect(screen.getByText('No description provided')).toBeInTheDocument();
+    });
+  });
+
+  describe('Access status', () => {
+    const refetch = vi.fn().mockResolvedValue({});
+    const renderApplication = (application: Partial<Application>): void => {
+      mockUseGetApplication.mockReturnValue({
+        data: {...mockApplication, ...application},
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch,
+      } as unknown as UseQueryResult<Application>);
+
+      renderComponent();
+    };
+
+    it('shows the suspension banner for a suspended application', () => {
+      renderApplication({status: {value: 'SUSPENDED'}});
+
+      expect(screen.getByRole('status')).toHaveTextContent('Suspended');
+      expect(screen.getByRole('status')).toHaveTextContent('The application is suspended');
+    });
+
+    it('shows no banner for an active application', () => {
+      renderApplication({});
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('offers the lifecycle action on a writable application', () => {
+      renderApplication({});
+
+      expect(screen.getByTestId('account-status-action')).toBeInTheDocument();
+    });
+
+    // The lifecycle flows change only runtime state, which a declared record keeps too.
+    it('offers the lifecycle action on a read-only application', () => {
+      renderApplication({isReadOnly: true});
+
+      expect(screen.getByTestId('account-status-action')).toBeInTheDocument();
+    });
+
+    it('shows the banner below the read-only notice and above the header', () => {
+      renderApplication({isReadOnly: true, status: {value: 'SUSPENDED'}});
+
+      const notice = screen.getByText('This resource is read-only and cannot be modified.');
+      const banner = screen.getByRole('status');
+      expect(banner).toHaveTextContent('Suspended');
+      expect(notice.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        banner.compareDocumentPosition(screen.getByTestId('account-status-action')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('hands the applications list query to the lifecycle action', () => {
+      renderApplication({});
+
+      expect(screen.getByTestId('account-status-action')).toHaveAttribute('data-list-query-key', '["applications"]');
+    });
+
+    it("hides the lifecycle action on the Console's own client", () => {
+      const [oauth2] = mockApplication.inboundAuthConfig ?? [];
+      renderApplication({
+        inboundAuthConfig: [{...oauth2, config: {...oauth2.config, clientId: 'console'}}],
+      } as Partial<Application>);
+
+      expect(screen.queryByTestId('account-status-action')).not.toBeInTheDocument();
+    });
+
+    it('refetches the application after a lifecycle operation', async () => {
+      const user = userEvent.setup();
+      renderApplication({});
+
+      await user.click(screen.getByTestId('account-status-action'));
+
+      expect(refetch).toHaveBeenCalled();
+    });
+
+    it('keeps a suspended application editable', async () => {
+      const user = userEvent.setup();
+      renderApplication({status: {value: 'SUSPENDED'}});
+
+      await editInlineField(user, 'Test Application', 'Updated Application');
+
+      expect(await screen.findByRole('button', {name: /save changes/i})).toBeEnabled();
     });
   });
 
