@@ -10,15 +10,14 @@ import (
 
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
+	"github.com/thunder-id/thunderid/internal/ou"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/group"
-	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/role"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
@@ -117,13 +116,16 @@ func (s *IDPServiceTestSuite) SetupTest() {
 	s.mockOU = oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
 	// Every identity provider names the organization unit it belongs to; unless a test is about the owner, "ou-1"
 	// exists.
-	s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "ou-1").Return(true, nil).Maybe()
+	s.mockOU.On("ResolveOwner", mock.Anything, "ou-1", "", mock.Anything).Return("ou-1", nil).Maybe()
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "", mock.Anything, mock.Anything).
+		RunAndReturn(func(
+			_ context.Context, _, _, currentID string, _ ou.OwnerErrors,
+		) (string, *tidcommon.ServiceError) {
+			return currentID, nil
+		}).Maybe()
+	s.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-1", "", "ou-1", mock.Anything).Return("ou-1", nil).Maybe()
 	s.idpService = &idpService{
-		ouResolver: connectionou.Initialize(s.mockOU, connectionou.Errors{
-			Required: ErrorIDPOURequired,
-			NotFound: ErrorInvalidIDPOU,
-			Changed:  ErrorIDPOUUpdateNotAllowed,
-		}),
+		ouService:          s.mockOU,
 		idpStore:           s.mockStore,
 		transactioner:      &mockTransactioner{},
 		dependencyRegistry: newNoBlockingDepsRegistry(),
@@ -1093,7 +1095,7 @@ func (s *IDPServiceTestSuite) TestUpdateIdentityProvider_FailsForDeclarativeIDP(
 		Return((*providers.IDPDTO)(nil), ErrIDPNotFound)
 
 	service := newIDPService(compositeStore, nil, nil, nil, nil, &mockTransactioner{},
-		connectionou.Initialize(nil, connectionou.Errors{}))
+		s.mockOU)
 
 	updatedIDP := &providers.IDPDTO{
 		Name:        "Updated Name",
@@ -1146,7 +1148,7 @@ func (s *IDPServiceTestSuite) TestUpdateIdentityProvider_SucceedsForMutableIDP()
 	})).Return(nil)
 
 	service := newIDPService(compositeStore, nil, nil, nil, nil, &mockTransactioner{},
-		connectionou.Initialize(nil, connectionou.Errors{}))
+		s.mockOU)
 
 	updatedIDP := &providers.IDPDTO{
 		Name:        "Updated Name",
@@ -1189,7 +1191,7 @@ func (s *IDPServiceTestSuite) TestDeleteIdentityProvider_FailsForDeclarativeIDP(
 	fileStore.On("GetIdentityProvider", context.Background(), idpID).Return(existingIDP, nil)
 
 	service := newIDPService(compositeStore, nil, nil, nil, nil, &mockTransactioner{},
-		connectionou.Initialize(nil, connectionou.Errors{}))
+		s.mockOU)
 	service.SetDependencyRegistry(newNoBlockingDepsRegistry())
 
 	err := service.DeleteIdentityProvider(context.Background(), idpID)
@@ -1228,7 +1230,7 @@ func (s *IDPServiceTestSuite) TestDeleteIdentityProvider_SucceedsForMutableIDP()
 	dbStore.On("DeleteIdentityProvider", context.Background(), idpID).Return(nil)
 
 	service := newIDPService(compositeStore, nil, nil, nil, nil, &mockTransactioner{},
-		connectionou.Initialize(nil, connectionou.Errors{}))
+		s.mockOU)
 	service.SetDependencyRegistry(newNoBlockingDepsRegistry())
 
 	err := service.DeleteIdentityProvider(context.Background(), idpID)
@@ -1941,7 +1943,7 @@ func (s *IDPServiceTestSuite) TestUpdateIdentityProvider_DoesNotReSeedRemovedDef
 		transactioner:      &mockTransactioner{},
 		dependencyRegistry: newNoBlockingDepsRegistry(),
 		entityTypeService:  mockET,
-		ouResolver:         connectionou.Initialize(nil, connectionou.Errors{}),
+		ouService:          s.mockOU,
 		logger:             log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IdPService")),
 		uuidGenerator:      utils.GenerateUUIDv7,
 	}
@@ -2758,19 +2760,28 @@ func (s *IDPServiceTestSuite) TestCreateIdentityProvider_OUHandling() {
 			ctx:      context.Background(),
 			ouHandle: "acme",
 			armOU: func() {
-				s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-					Return(ou.OrganizationUnit{ID: "ou-acme"}, nil)
+				s.mockOU.On("ResolveOwner", mock.Anything, "", "acme", mock.Anything).Return("ou-acme", nil)
 			},
 			wantOU: "ou-acme",
 		},
-		{name: "IDWinsOverHandle", ctx: context.Background(), ouID: "ou-1", ouHandle: "acme", wantOU: "ou-1"},
-		{name: "NoOUWhoeverTheCallerIs", ctx: callerCtx, wantErrCode: ErrorIDPOURequired.Code},
+		{
+			name: "IDWinsOverHandle", ctx: context.Background(), ouID: "ou-1", ouHandle: "acme", wantOU: "ou-1",
+			armOU: func() {
+				s.mockOU.On("ResolveOwner", mock.Anything, "ou-1", "acme", mock.Anything).Return("ou-1", nil)
+			},
+		},
+		{
+			name: "NoOUWhoeverTheCallerIs", ctx: callerCtx, wantErrCode: ErrorIDPOURequired.Code,
+			armOU: func() {
+				s.mockOU.On("ResolveOwner", mock.Anything, "", "", mock.Anything).Return("", &ErrorIDPOURequired)
+			},
+		},
 		{
 			name: "UnknownOUID",
 			ctx:  context.Background(),
 			ouID: "missing",
 			armOU: func() {
-				s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "missing").Return(false, nil)
+				s.mockOU.On("ResolveOwner", mock.Anything, "missing", "", mock.Anything).Return("", &ErrorInvalidIDPOU)
 			},
 			wantErrCode: ErrorInvalidIDPOU.Code,
 		},
@@ -2779,30 +2790,10 @@ func (s *IDPServiceTestSuite) TestCreateIdentityProvider_OUHandling() {
 			ctx:      context.Background(),
 			ouHandle: "nowhere",
 			armOU: func() {
-				s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "nowhere").
-					Return(ou.OrganizationUnit{}, &ou.ErrorOrganizationUnitNotFound)
+				s.mockOU.On("ResolveOwner", mock.Anything, "", "nowhere", mock.Anything).
+					Return("", &ErrorInvalidIDPOU)
 			},
 			wantErrCode: ErrorInvalidIDPOU.Code,
-		},
-		{
-			name: "OUIDLookupFails",
-			ctx:  context.Background(),
-			ouID: "broken",
-			armOU: func() {
-				s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "broken").
-					Return(false, &tidcommon.ServiceError{Type: tidcommon.ServerErrorType})
-			},
-			wantErrCode: tidcommon.InternalServerError.Code,
-		},
-		{
-			name:     "OUHandleLookupRefused",
-			ctx:      context.Background(),
-			ouHandle: "denied",
-			armOU: func() {
-				s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "denied").Return(ou.OrganizationUnit{},
-					&tidcommon.ServiceError{Type: tidcommon.ClientErrorType, Code: "OU-9999"})
-			},
-			wantErrCode: tidcommon.InternalServerError.Code,
 		},
 	}
 
@@ -2859,12 +2850,18 @@ func (s *IDPServiceTestSuite) TestUpdateIdentityProvider_OUHandling() {
 			name:     "SameOUByHandle",
 			ouHandle: "acme",
 			armOU: func() {
-				s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-					Return(ou.OrganizationUnit{ID: "ou-1"}, nil)
+				s.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "", "acme", "ou-1", mock.Anything).
+					Return("ou-1", nil)
 			},
 			wantOU: "ou-1",
 		},
-		{name: "ChangeNotAllowed", ouID: "ou-2", wantErrCode: ErrorIDPOUUpdateNotAllowed.Code},
+		{
+			name: "ChangeNotAllowed", ouID: "ou-2", wantErrCode: ErrorIDPOUUpdateNotAllowed.Code,
+			armOU: func() {
+				s.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-2", "", "ou-1", mock.Anything).
+					Return("", &ErrorIDPOUUpdateNotAllowed)
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -2891,8 +2888,8 @@ func (s *IDPServiceTestSuite) TestUpdateIdentityProvider_OUHandling() {
 }
 
 func (s *IDPServiceTestSuite) TestResolveIdentityProviderOU() {
-	s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-		Return(ou.OrganizationUnit{ID: "ou-acme"}, nil)
+	s.mockOU.On("ResolveOwner", mock.Anything, "", "acme", mock.Anything).Return("ou-acme", nil)
+	s.mockOU.On("ResolveOwner", mock.Anything, "", "", mock.Anything).Return("", &ErrorIDPOURequired)
 	byHandle := s.newIDPForOU("", "acme")
 
 	s.Nil(s.idpService.ResolveIdentityProviderOU(context.Background(), byHandle))

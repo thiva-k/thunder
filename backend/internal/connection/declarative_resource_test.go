@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/notification"
@@ -1155,7 +1154,7 @@ func (s *DeclarativeResourceTestSuite) TestValidateConnectionDTOWrapperValidates
 	httpService.On("ValidateHTTPConnection", mock.Anything, invalid).Return(&httpconnection.ErrorInvalidURL)
 	httpService.On("ResolveConnectionOU", mock.Anything, valid).
 		Run(func(mock.Arguments) { valid.OUID = "ou-acme" }).Return((*tidcommon.ServiceError)(nil))
-	httpService.On("ResolveConnectionOU", mock.Anything, unowned).Return(&connectionou.ErrorInvalidOU)
+	httpService.On("ResolveConnectionOU", mock.Anything, unowned).Return(&httpconnection.ErrorInvalidOU)
 
 	s.NoError(validateConnectionDTOWrapper(valid, nil, nil, nil, httpService))
 	s.Equal("ou-acme", valid.OUID)
@@ -1279,20 +1278,20 @@ func (s *DeclarativeResourceTestSuite) TestValidateConnectionDTOOwner() {
 	})
 	s.Run("fails when the service cannot resolve the owner", func() {
 		sender := newSender("", "missing")
-		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).Return(&connectionou.ErrorInvalidOU).Once()
+		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).Return(&authzenpdp.ErrorInvalidOU).Once()
 		err := validateConnectionDTOWrapper(sender, nil, s.mockNotif, nil, nil)
 		s.ErrorContains(err, `organization unit "missing" of connection resource "s-1" could not be resolved`)
 	})
 	s.Run("fails when the AuthZEN PDP service cannot resolve the owner", func() {
 		pdp := newPDP("", "missing")
 		pdpService := authzenpdpmock.NewAuthZENPDPServiceInterfaceMock(s.T())
-		pdpService.On("ResolveConnectionOU", mock.Anything, pdp).Return(&connectionou.ErrorInvalidOU).Once()
+		pdpService.On("ResolveConnectionOU", mock.Anything, pdp).Return(&authzenpdp.ErrorInvalidOU).Once()
 		err := validateConnectionDTOWrapper(pdp, nil, nil, pdpService, nil)
 		s.ErrorContains(err, `organization unit "missing" of connection resource`)
 	})
 	s.Run("fails when the service cannot find the ouId given", func() {
 		sender := newSender("ou-missing", "")
-		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).Return(&connectionou.ErrorInvalidOU).Once()
+		s.mockNotif.On("ResolveSenderOU", mock.Anything, sender).Return(&authzenpdp.ErrorInvalidOU).Once()
 		err := validateConnectionDTOWrapper(sender, nil, s.mockNotif, nil, nil)
 		s.ErrorContains(err, `organization unit of connection resource "s-1" could not be resolved`)
 	})

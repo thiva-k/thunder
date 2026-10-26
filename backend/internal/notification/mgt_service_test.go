@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
@@ -98,23 +97,22 @@ func (suite *NotificationSenderMgtServiceTestSuite) SetupTest() {
 	suite.mockStore = newNotificationStoreInterfaceMock(suite.T())
 	suite.mockOU = oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
 	// Every sender names the organization unit it belongs to; unless a test is about the owner, "ou-1" exists.
-	suite.mockOU.On("IsOrganizationUnitExists", mock.Anything, "ou-1").Return(true, nil).Maybe()
+	suite.mockOU.On("ResolveOwner", mock.Anything, "ou-1", "", mock.Anything).Return("ou-1", nil).Maybe()
+	suite.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "", mock.Anything, mock.Anything).
+		RunAndReturn(func(
+			_ context.Context, _, _, currentID string, _ ou.OwnerErrors,
+		) (string, *tidcommon.ServiceError) {
+			return currentID, nil
+		}).Maybe()
+	suite.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-1", "", "ou-1", mock.Anything).
+		Return("ou-1", nil).Maybe()
 	suite.service = &notificationSenderMgtService{
-		ouResolver:         suite.newOUResolver(),
+		ouService:          suite.mockOU,
 		notificationStore:  suite.mockStore,
 		transactioner:      &fakeTransactioner{},
 		dependencyRegistry: newNoBlockingDepsRegistry(),
 		uuidGenerator:      sysutils.GenerateUUIDv7,
 	}
-}
-
-// newOUResolver is the resolver of the owner of a sender over the suite's organization unit service.
-func (suite *NotificationSenderMgtServiceTestSuite) newOUResolver() connectionou.ResolverInterface {
-	return connectionou.Initialize(suite.mockOU, connectionou.Errors{
-		Required: ErrorSenderOURequired,
-		NotFound: ErrorInvalidSenderOU,
-		Changed:  ErrorSenderOUUpdateNotAllowed,
-	})
 }
 
 func (suite *NotificationSenderMgtServiceTestSuite) TestCreateSender() {
@@ -152,7 +150,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestCreateSender_UUIDGenerat
 	sender := suite.getValidTwilioSender()
 
 	svc := &notificationSenderMgtService{
-		ouResolver:        suite.newOUResolver(),
+		ouService:         suite.mockOU,
 		notificationStore: suite.mockStore,
 		transactioner:     &fakeTransactioner{},
 		uuidGenerator: func() (string, error) {
@@ -230,7 +228,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestCreateSender_WithFailure
 		suite.T().Run(tc.name, func(t *testing.T) {
 			mockStore := newNotificationStoreInterfaceMock(t)
 			svc := &notificationSenderMgtService{
-				ouResolver:        suite.newOUResolver(),
+				ouService:         suite.mockOU,
 				notificationStore: mockStore,
 				transactioner:     &fakeTransactioner{},
 				uuidGenerator:     sysutils.GenerateUUIDv7,
@@ -371,7 +369,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestGetSenderByName() {
 		suite.T().Run(tc.name, func(t *testing.T) {
 			mockStore := newNotificationStoreInterfaceMock(t)
 			svc := &notificationSenderMgtService{
-				ouResolver:        suite.newOUResolver(),
+				ouService:         suite.mockOU,
 				notificationStore: mockStore,
 				transactioner:     &fakeTransactioner{},
 				uuidGenerator:     sysutils.GenerateUUIDv7,
@@ -394,7 +392,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestGetSenderByName() {
 func (suite *NotificationSenderMgtServiceTestSuite) TestGetSenderByName_NotFound() {
 	mockStore := newNotificationStoreInterfaceMock(suite.T())
 	svc := &notificationSenderMgtService{
-		ouResolver:        suite.newOUResolver(),
+		ouService:         suite.mockOU,
 		notificationStore: mockStore,
 		transactioner:     &fakeTransactioner{},
 	}
@@ -433,7 +431,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestGetSenderByName_WithFail
 		suite.T().Run(tc.name, func(t *testing.T) {
 			mockStore := newNotificationStoreInterfaceMock(t)
 			svc := &notificationSenderMgtService{
-				ouResolver:        suite.newOUResolver(),
+				ouService:         suite.mockOU,
 				notificationStore: mockStore,
 				transactioner:     &fakeTransactioner{},
 				uuidGenerator:     sysutils.GenerateUUIDv7,
@@ -497,7 +495,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestUpdateSender() {
 		suite.T().Run(tc.name, func(t *testing.T) {
 			mockStore := newNotificationStoreInterfaceMock(t)
 			svc := &notificationSenderMgtService{
-				ouResolver:        suite.newOUResolver(),
+				ouService:         suite.mockOU,
 				notificationStore: mockStore,
 				transactioner:     &fakeTransactioner{},
 				uuidGenerator:     sysutils.GenerateUUIDv7,
@@ -630,7 +628,7 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestUpdateSender_WithFailure
 		suite.T().Run(tc.name, func(t *testing.T) {
 			mockStore := newNotificationStoreInterfaceMock(t)
 			svc := &notificationSenderMgtService{
-				ouResolver:        suite.newOUResolver(),
+				ouService:         suite.mockOU,
 				notificationStore: mockStore,
 				transactioner:     &fakeTransactioner{},
 				uuidGenerator:     sysutils.GenerateUUIDv7,
@@ -923,28 +921,26 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestCreateSender_OUHandling(
 			name:     "ResolvesHandle",
 			ouHandle: "acme",
 			armOU: func() {
-				suite.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-					Return(ou.OrganizationUnit{ID: "ou-acme"}, nil).Once()
+				suite.mockOU.On("ResolveOwner", mock.Anything, "", "acme", mock.Anything).
+					Return("ou-acme", nil).Once()
 			},
 			wantOU: "ou-acme",
 		},
-		{name: "NoOU", wantErrCode: ErrorSenderOURequired.Code},
+		{
+			name: "NoOU", wantErrCode: ErrorSenderOURequired.Code,
+			armOU: func() {
+				suite.mockOU.On("ResolveOwner", mock.Anything, "", "", mock.Anything).
+					Return("", &ErrorSenderOURequired).Once()
+			},
+		},
 		{
 			name: "UnknownOU",
 			ouID: "missing",
 			armOU: func() {
-				suite.mockOU.On("IsOrganizationUnitExists", mock.Anything, "missing").Return(false, nil).Once()
+				suite.mockOU.On("ResolveOwner", mock.Anything, "missing", "", mock.Anything).
+					Return("", &ErrorInvalidSenderOU).Once()
 			},
 			wantErrCode: ErrorInvalidSenderOU.Code,
-		},
-		{
-			name: "OULookupFails",
-			ouID: "broken",
-			armOU: func() {
-				suite.mockOU.On("IsOrganizationUnitExists", mock.Anything, "broken").
-					Return(false, &tidcommon.ServiceError{Type: tidcommon.ServerErrorType}).Once()
-			},
-			wantErrCode: tidcommon.InternalServerError.Code,
 		},
 	}
 
@@ -998,7 +994,10 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestUpdateSender_OUHandling(
 			existing := suite.getValidTwilioSender()
 			existing.ID = testSenderID
 			suite.mockStore.EXPECT().getSenderByID(mock.Anything, testSenderID).Return(&existing, nil).Once()
-			if tc.wantErrCode == "" {
+			if tc.wantErrCode != "" {
+				suite.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-2", "", "ou-1", mock.Anything).
+					Return("", &ErrorSenderOUUpdateNotAllowed).Once()
+			} else {
 				suite.mockStore.EXPECT().updateSender(mock.Anything, testSenderID,
 					mock.MatchedBy(func(s common.NotificationSenderDTO) bool { return s.OUID == tc.wantStoredOU })).
 					Return(nil).Once()

@@ -168,4 +168,44 @@ var (
 			DefaultValue: "The total number of HTTP connections exceeds the maximum limit in composite mode",
 		},
 	}
+	// ErrorInvalidOU is the error returned when the organization unit given for an HTTP connection does not exist.
+	ErrorInvalidOU = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CON-1028",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.invalid_http_connection_ou",
+			DefaultValue: "Invalid organization unit",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.invalid_http_connection_ou_description",
+			DefaultValue: "The organization unit given for the HTTP connection does not exist",
+		},
+	}
+	// ErrorOUUpdateNotAllowed is the error returned when attempting to change the
+	// organization unit of an HTTP connection.
+	ErrorOUUpdateNotAllowed = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CON-1029",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.http_connection_ou_update_not_allowed",
+			DefaultValue: "Organization unit update not allowed",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.http_connection_ou_update_not_allowed_description",
+			DefaultValue: "The organization unit of an HTTP connection cannot be changed",
+		},
+	}
+	// ErrorOURequired is the error returned when an HTTP connection is created without an organization unit.
+	ErrorOURequired = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CON-1030",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.http_connection_ou_required",
+			DefaultValue: "Organization unit required",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.connectionservice.http_connection_ou_required_description",
+			DefaultValue: "An HTTP connection needs an organization unit. Give its ouId in the request",
+		},
+	}
 )

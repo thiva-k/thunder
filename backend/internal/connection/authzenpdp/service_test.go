@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/config"
@@ -25,21 +24,20 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 )
 
-// newTestOUResolver is the resolver of the connection organization unit over the given organization unit service.
-func newTestOUResolver(ouService *oumock.OrganizationUnitServiceInterfaceMock) connectionou.ResolverInterface {
-	return connectionou.Initialize(ouService, connectionou.Errors{
-		Required: connectionou.ErrorOURequired,
-		NotFound: connectionou.ErrorInvalidOU,
-		Changed:  connectionou.ErrorOUUpdateNotAllowed,
-	})
-}
-
-// newTestOUService is a resolver over an organization unit service in which "ou-1" exists.
-func newTestOUService(t *testing.T) connectionou.ResolverInterface {
+// newTestOUService is an organization unit service in which "ou-1" exists.
+func newTestOUService(t *testing.T) *oumock.OrganizationUnitServiceInterfaceMock {
 	t.Helper()
 	ouService := oumock.NewOrganizationUnitServiceInterfaceMock(t)
-	ouService.On("IsOrganizationUnitExists", mock.Anything, "ou-1").Return(true, nil).Maybe()
-	return newTestOUResolver(ouService)
+	ouService.On("ResolveOwner", mock.Anything, "ou-1", "", mock.Anything).Return("ou-1", nil).Maybe()
+	ouService.On("ResolveOwnerForUpdate", mock.Anything, "ou-1", "", "ou-1", mock.Anything).
+		Return("ou-1", nil).Maybe()
+	ouService.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "", mock.Anything, mock.Anything).
+		RunAndReturn(func(
+			_ context.Context, _, _, currentID string, _ ou.OwnerErrors,
+		) (string, *tidcommon.ServiceError) {
+			return currentID, nil
+		}).Maybe()
+	return ouService
 }
 
 // newTestAuthZENPDPService creates the service over the given store and defaults, with an organization unit service in
@@ -646,12 +644,14 @@ func TestFileBasedStoreRejectsMutableOperations(t *testing.T) {
 
 func TestServiceCreateResolvesConnectionOU(t *testing.T) {
 	ouService := oumock.NewOrganizationUnitServiceInterfaceMock(t)
-	ouService.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-		Return(ou.OrganizationUnit{ID: "ou-acme"}, nil).Once()
-	ouService.On("IsOrganizationUnitExists", mock.Anything, "missing").Return(false, nil).Once()
+	ouService.On("ResolveOwner", mock.Anything, "", "acme", mock.Anything).Return("ou-acme", nil).Once()
+	ouService.On("ResolveOwner", mock.Anything, "", "", mock.Anything).
+		Return("", &ErrorOURequired).Once()
+	ouService.On("ResolveOwner", mock.Anything, "missing", "", mock.Anything).
+		Return("", &ErrorInvalidOU).Once()
 	store := &serviceStoreStub{}
 	service := newAuthZENPDPService(store, config.AuthZENPDPConfig{}, transaction.NewNoOpTransactioner(), nil,
-		newTestOUResolver(ouService))
+		ouService)
 	base := ConnectionRequest{Name: "AuthZEN PDP", Endpoint: "https://pdp.example.com/evaluation"}
 
 	byHandle := base
@@ -662,13 +662,13 @@ func TestServiceCreateResolvesConnectionOU(t *testing.T) {
 
 	_, svcErr = service.CreateAuthZENPDPConnection(context.Background(), base)
 	require.NotNil(t, svcErr)
-	require.Equal(t, connectionou.ErrorOURequired.Code, svcErr.Code)
+	require.Equal(t, ErrorOURequired.Code, svcErr.Code)
 
 	unknown := base
 	unknown.OUID = "missing"
 	_, svcErr = service.CreateAuthZENPDPConnection(context.Background(), unknown)
 	require.NotNil(t, svcErr)
-	require.Equal(t, connectionou.ErrorInvalidOU.Code, svcErr.Code)
+	require.Equal(t, ErrorInvalidOU.Code, svcErr.Code)
 }
 
 func TestServiceUpdateKeepsConnectionOU(t *testing.T) {
@@ -683,11 +683,17 @@ func TestServiceUpdateKeepsConnectionOU(t *testing.T) {
 	}{
 		{name: "omitted", requested: ""},
 		{name: "same", requested: "ou-1"},
-		{name: "changed", requested: "ou-2", wantCode: connectionou.ErrorOUUpdateNotAllowed.Code},
+		{name: "changed", requested: "ou-2", wantCode: ErrorOUUpdateNotAllowed.Code},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			store := &serviceStoreStub{connection: connection}
-			service := newTestAuthZENPDPService(t, store, config.AuthZENPDPConfig{})
+			ouService := newTestOUService(t)
+			if test.wantCode != "" {
+				ouService.On("ResolveOwnerForUpdate", mock.Anything, "ou-2", "", "ou-1", mock.Anything).
+					Return("", &ErrorOUUpdateNotAllowed).Once()
+			}
+			service := newAuthZENPDPService(
+				store, config.AuthZENPDPConfig{}, transaction.NewNoOpTransactioner(), nil, ouService)
 
 			updated, svcErr := service.UpdateAuthZENPDPConnection(context.Background(), "pdp-1", ConnectionRequest{
 				OUID: test.requested, Name: "AuthZEN PDP", Endpoint: connection.Endpoint,

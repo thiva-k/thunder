@@ -38,6 +38,10 @@ type OrganizationUnitServiceInterface interface {
 		handlePath string,
 	) (OrganizationUnit, *tidcommon.ServiceError)
 	IsOrganizationUnitExists(ctx context.Context, id string) (bool, *tidcommon.ServiceError)
+	ResolveOwner(ctx context.Context, ouID, ouHandle string, errs OwnerErrors) (string, *tidcommon.ServiceError)
+	ResolveOwnerForUpdate(
+		ctx context.Context, requestedID, requestedHandle, currentID string, errs OwnerErrors,
+	) (string, *tidcommon.ServiceError)
 	IsOrganizationUnitDeclarative(ctx context.Context, id string) bool
 	IsParent(ctx context.Context, parentID, childID string) (bool, *tidcommon.ServiceError)
 	UpdateOrganizationUnit(
@@ -1298,6 +1302,69 @@ func (ous *organizationUnitService) validateDefaultFlows(
 		return svcErr
 	}
 	return nil
+}
+
+// ResolveOwner returns the id of the organization unit that owns a resource. An id is used as given, and a handle is
+// resolved to the id of the unit it names; when both are given the id wins. The unit has to exist. Only a lookup that
+// finds no such unit is reported as errs.NotFound, so a failed or refused lookup is not taken for one.
+//
+// A handle is resolved with the runtime context: it comes from an import or a declarative file, which name the owner
+// by handle on behalf of the deployment and not of whoever runs the import.
+func (ous *organizationUnitService) ResolveOwner(
+	ctx context.Context, ouID, ouHandle string, errs OwnerErrors,
+) (string, *tidcommon.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentNameService))
+	if ouID != "" && ouHandle != "" {
+		logger.Warn(ctx, "Both ouId and ouHandle provided for a resource; ouHandle ignored")
+	}
+
+	if ouID == "" {
+		if ouHandle == "" {
+			return "", &errs.Required
+		}
+		unit, svcErr := ous.GetOrganizationUnitByPath(security.WithRuntimeContext(ctx), ouHandle)
+		if svcErr != nil {
+			if svcErr.Code == ErrorOrganizationUnitNotFound.Code {
+				return "", &errs.NotFound
+			}
+			logger.Error(ctx, "Failed to look up the owner organization unit by handle",
+				log.String("errorCode", svcErr.Code))
+			return "", &tidcommon.InternalServerError
+		}
+		return unit.ID, nil
+	}
+
+	exists, svcErr := ous.IsOrganizationUnitExists(ctx, ouID)
+	if svcErr != nil {
+		logger.Error(ctx, "Failed to look up the owner organization unit", log.String("errorCode", svcErr.Code))
+		return "", &tidcommon.InternalServerError
+	}
+	if !exists {
+		return "", &errs.NotFound
+	}
+	return ouID, nil
+}
+
+// ResolveOwnerForUpdate returns the owner an updated resource has. An owner cannot change once the resource is
+// created, so a request that leaves the owner out keeps the current one, and one that names an owner has to name the
+// one the resource has, by id or by handle.
+func (ous *organizationUnitService) ResolveOwnerForUpdate(
+	ctx context.Context, requestedID, requestedHandle, currentID string, errs OwnerErrors,
+) (string, *tidcommon.ServiceError) {
+	if requestedID == "" && requestedHandle == "" {
+		return currentID, nil
+	}
+	resolved := requestedID
+	if resolved == "" {
+		var svcErr *tidcommon.ServiceError
+		if resolved, svcErr = ous.ResolveOwner(ctx, "", requestedHandle, errs); svcErr != nil {
+			return "", svcErr
+		}
+	}
+	if resolved != currentID {
+		return "", &errs.Changed
+	}
+	return currentID, nil
 }
 
 // validateDefaultFlowID validates that a single default flow ID, if set, exists and matches flowType.

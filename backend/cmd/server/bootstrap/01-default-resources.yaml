@@ -120,6 +120,7 @@ resources:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000061
+ouHandle: default
 name: Default Authentication Flow
 handle: default-flow
 flowType: AUTHENTICATION
@@ -284,6 +285,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000068
+ouHandle: default
 name: Console App Authentication Flow
 handle: console-app-flow
 flowType: AUTHENTICATION
@@ -396,6 +398,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000070
+ouHandle: default
 name: Console App Recovery Flow
 handle: console-app-flow
 flowType: RECOVERY
@@ -590,6 +593,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000006a
+ouHandle: default
 name: Default Sign Out Flow
 handle: default-flow
 flowType: SIGNOUT
@@ -646,6 +650,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000067
+ouHandle: default
 name: Default Recovery Flow
 handle: default-flow
 flowType: RECOVERY
@@ -947,6 +952,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000064
+ouHandle: default
 name: Default Registration Flow
 handle: default-flow
 flowType: REGISTRATION
@@ -1188,6 +1194,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000069
+ouHandle: default
 name: Console App Registration Flow
 handle: console-app-flow
 flowType: REGISTRATION
@@ -1347,6 +1354,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000066
+ouHandle: default
 name: Default User Onboarding Flow
 handle: default-flow
 flowType: USER_ONBOARDING
@@ -1941,6 +1949,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000077
+ouHandle: default
 name: Default User Deletion Flow
 handle: default-user-deletion-flow
 flowType: ADMINISTRATION
@@ -2031,6 +2040,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000079
+ouHandle: default
 name: Default Application Deletion Flow
 handle: default-application-deletion-flow
 flowType: ADMINISTRATION
@@ -2118,6 +2128,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000007a
+ouHandle: default
 name: Default Secret Regeneration Flow
 handle: default-secret-regeneration-flow
 flowType: ADMINISTRATION
@@ -2207,6 +2218,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000081
+ouHandle: default
 name: Default Role Assignment Removal Flow
 handle: default-role-assignment-removal-flow
 flowType: ADMINISTRATION
@@ -2300,6 +2312,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000007c
+ouHandle: default
 name: Default Action Deletion Flow
 handle: default-action-deletion-flow
 flowType: ADMINISTRATION
@@ -2392,6 +2405,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000007d
+ouHandle: default
 name: Default Role Deletion Flow
 handle: default-role-deletion-flow
 flowType: ADMINISTRATION
@@ -2485,6 +2499,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000007e
+ouHandle: default
 name: Default Group Deletion Flow
 handle: default-group-deletion-flow
 flowType: ADMINISTRATION
@@ -2578,6 +2593,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000007f
+ouHandle: default
 name: Default Group Membership Removal Flow
 handle: default-group-membership-removal-flow
 flowType: ADMINISTRATION
@@ -2671,6 +2687,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000080
+ouHandle: default
 name: Default Role Permission Removal Flow
 handle: default-role-permission-removal-flow
 flowType: ADMINISTRATION
@@ -2764,6 +2781,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000007b
+ouHandle: default
 name: Default Agent Onboarding Flow
 handle: default-agent-onboarding-flow
 flowType: ADMINISTRATION
@@ -6715,6 +6733,7 @@ translations:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000087
+ouHandle: default
 name: Default User Unlock Flow
 handle: default-user-unlock-flow
 flowType: ADMINISTRATION
@@ -6789,6 +6808,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000086
+ouHandle: default
 name: Default Agent Unlock Flow
 handle: default-agent-unlock-flow
 flowType: ADMINISTRATION
@@ -6843,6 +6863,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000088
+ouHandle: default
 name: Default User Suspend Flow
 handle: default-user-suspend-flow
 flowType: ADMINISTRATION
@@ -6953,6 +6974,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000089
+ouHandle: default
 name: Default User Unsuspend Flow
 handle: default-user-unsuspend-flow
 flowType: ADMINISTRATION
@@ -7027,6 +7049,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000082
+ouHandle: default
 name: Default Agent Suspend Flow
 handle: default-agent-suspend-flow
 flowType: ADMINISTRATION
@@ -7137,6 +7160,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000083
+ouHandle: default
 name: Default Agent Unsuspend Flow
 handle: default-agent-unsuspend-flow
 flowType: ADMINISTRATION
@@ -7191,6 +7215,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000084
+ouHandle: default
 name: Default Application Suspend Flow
 handle: default-application-suspend-flow
 flowType: ADMINISTRATION
@@ -7301,6 +7326,7 @@ nodes:
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000085
+ouHandle: default
 name: Default Application Unsuspend Flow
 handle: default-application-unsuspend-flow
 flowType: ADMINISTRATION

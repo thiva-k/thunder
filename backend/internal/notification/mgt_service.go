@@ -13,8 +13,8 @@ import (
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/notification/common"
+	"github.com/thunder-id/thunderid/internal/ou"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
@@ -39,10 +39,17 @@ type NotificationSenderMgtSvcInterface interface {
 	ResolveSenderOU(ctx context.Context, sender *common.NotificationSenderDTO) *tidcommon.ServiceError
 }
 
+// ownerErrors are the errors given when the organization unit of a notification sender is refused.
+var ownerErrors = ou.OwnerErrors{
+	Required: ErrorSenderOURequired,
+	NotFound: ErrorInvalidSenderOU,
+	Changed:  ErrorSenderOUUpdateNotAllowed,
+}
+
 // notificationSenderMgtService implements the NotificationSenderMgtSvcInterface.
 type notificationSenderMgtService struct {
 	notificationStore  notificationStoreInterface
-	ouResolver         connectionou.ResolverInterface
+	ouService          ou.OrganizationUnitServiceInterface
 	transactioner      providers.Transactioner
 	dependencyRegistry resourcedependency.Registry
 	uuidGenerator      func() (string, error)
@@ -51,10 +58,10 @@ type notificationSenderMgtService struct {
 // newNotificationSenderMgtService returns a new instance of NotificationSenderMgtSvcInterface.
 func newNotificationSenderMgtService(
 	store notificationStoreInterface, tx providers.Transactioner,
-	ouResolver connectionou.ResolverInterface) NotificationSenderMgtSvcInterface {
+	ouService ou.OrganizationUnitServiceInterface) NotificationSenderMgtSvcInterface {
 	return &notificationSenderMgtService{
 		notificationStore: store,
-		ouResolver:        ouResolver,
+		ouService:         ouService,
 		transactioner:     tx,
 		uuidGenerator:     sysutils.GenerateUUIDv7,
 	}
@@ -136,7 +143,7 @@ func (s *notificationSenderMgtService) CreateSender(
 // organization unit, and it has to exist.
 func (s *notificationSenderMgtService) ResolveSenderOU(
 	ctx context.Context, sender *common.NotificationSenderDTO) *tidcommon.ServiceError {
-	ouID, svcErr := s.ouResolver.Resolve(ctx, sender.OUID, sender.OUHandle)
+	ouID, svcErr := s.ouService.ResolveOwner(ctx, sender.OUID, sender.OUHandle, ownerErrors)
 	if svcErr != nil {
 		return svcErr
 	}
@@ -269,7 +276,8 @@ func (s *notificationSenderMgtService) UpdateSender(ctx context.Context, id stri
 		}
 
 		// An owner cannot change. Leaving it out keeps the one the sender has.
-		ouID, ouErr := s.ouResolver.ResolveForUpdate(txCtx, sender.OUID, sender.OUHandle, senderRetv.OUID)
+		ouID, ouErr := s.ouService.ResolveOwnerForUpdate(
+			txCtx, sender.OUID, sender.OUHandle, senderRetv.OUID, ownerErrors)
 		if ouErr != nil {
 			svcErr = ouErr
 			return errors.New("organization unit of a notification sender cannot be resolved")

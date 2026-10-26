@@ -11,8 +11,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/entitytype"
+	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -46,8 +46,15 @@ type AuthZENPDPService struct {
 	defaults      config.AuthZENPDPConfig
 	transactioner providers.Transactioner
 	entityTypes   entitytype.EntityTypeServiceInterface
-	ouResolver    connectionou.ResolverInterface
+	ouService     ou.OrganizationUnitServiceInterface
 	logger        *log.Logger
+}
+
+// ownerErrors are the errors given when the organization unit of an AuthZEN PDP connection is refused.
+var ownerErrors = ou.OwnerErrors{
+	Required: ErrorOURequired,
+	NotFound: ErrorInvalidOU,
+	Changed:  ErrorOUUpdateNotAllowed,
 }
 
 var _ AuthZENPDPServiceInterface = (*AuthZENPDPService)(nil)
@@ -60,14 +67,14 @@ func newAuthZENPDPService(
 	defaults config.AuthZENPDPConfig,
 	transactioner providers.Transactioner,
 	entityTypes entitytype.EntityTypeServiceInterface,
-	ouResolver connectionou.ResolverInterface,
+	ouService ou.OrganizationUnitServiceInterface,
 ) *AuthZENPDPService {
 	return &AuthZENPDPService{
 		store:         store,
 		defaults:      defaults,
 		transactioner: transactioner,
 		entityTypes:   entityTypes,
-		ouResolver:    ouResolver,
+		ouService:     ouService,
 		logger:        log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthZENPDPService")),
 	}
 }
@@ -173,7 +180,8 @@ func (s *AuthZENPDPService) UpdateAuthZENPDPConnection(
 		return nil, &ErrorAlreadyExists
 	}
 	// An owner cannot change. Leaving it out keeps the one the connection has.
-	ouID, ouErr := s.ouResolver.ResolveForUpdate(ctx, connection.OUID, connection.OUHandle, current.OUID)
+	ouID, ouErr := s.ouService.ResolveOwnerForUpdate(
+		ctx, connection.OUID, connection.OUHandle, current.OUID, ownerErrors)
 	if ouErr != nil {
 		return nil, ouErr
 	}
@@ -202,7 +210,7 @@ func (s *AuthZENPDPService) UpdateAuthZENPDPConnection(
 func (s *AuthZENPDPService) ResolveConnectionOU(
 	ctx context.Context, connection *AuthZENPDPConnection,
 ) *tidcommon.ServiceError {
-	ouID, svcErr := s.ouResolver.Resolve(ctx, connection.OUID, connection.OUHandle)
+	ouID, svcErr := s.ouService.ResolveOwner(ctx, connection.OUID, connection.OUHandle, ownerErrors)
 	if svcErr != nil {
 		return svcErr
 	}
