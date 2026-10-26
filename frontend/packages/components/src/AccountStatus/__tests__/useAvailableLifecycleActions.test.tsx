@@ -22,9 +22,11 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
   };
 });
 
-const {default: useAvailableLifecycleActions, LIFECYCLE_FLOWS_QUERY_KEY} = await import(
-  '../useAvailableLifecycleActions'
-);
+const {
+  default: useAvailableLifecycleActions,
+  getLifecycleFlowPurposes,
+  LIFECYCLE_FLOWS_QUERY_KEY,
+} = await import('../useAvailableLifecycleActions');
 
 /**
  * Serves the flow section and the administration flow listing.
@@ -38,6 +40,25 @@ function serve(section: Record<string, {defaultHandle: string}>, flows: {id: str
     ),
   );
 }
+
+describe('getLifecycleFlowPurposes', () => {
+  it('pairs each operation of the category with the purpose naming its flow', () => {
+    expect(getLifecycleFlowPurposes({}, 'application')).toEqual([
+      ['suspend', 'applicationSuspendFlow'],
+      ['unsuspend', 'applicationUnsuspendFlow'],
+    ]);
+  });
+
+  it('keeps only the operations that run as flows', () => {
+    const administration: AdministrationConfig = {
+      features: {users: {operations: {unlock: AdministrationModes.FLOW}}},
+      mode: AdministrationModes.NATIVE,
+    };
+
+    expect(getLifecycleFlowPurposes(administration, 'user')).toEqual([['unlock', 'userUnlockFlow']]);
+    expect(getLifecycleFlowPurposes(administration, 'agent')).toEqual([]);
+  });
+});
 
 describe('useAvailableLifecycleActions', () => {
   beforeEach(() => {

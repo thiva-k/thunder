@@ -3100,7 +3100,7 @@ components:
 
                 With `lockGranularity` set to `authentication_method`, each method locks separately,
                 so several entries can be present, each with its own expiry. An account-wide lock is
-                reported as a single entry with the method `entity`.
+                reported as a single entry with the method `account`.
               items:
                 type: object
                 properties:
@@ -3108,7 +3108,7 @@ components:
                     type: string
                     readOnly: true
                     description: |
-                      The locked authentication method, such as `credential`, or `entity` when every
+                      The locked authentication method, such as `credential`, or `account` when every
                       method is locked.
                     example: "credential"
                   expiresAt:

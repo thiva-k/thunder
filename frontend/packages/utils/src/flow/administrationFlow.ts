@@ -64,12 +64,16 @@ export interface FlowExecutionResponse {
 }
 
 /**
- * One entry of `GET /flows`, narrowed to the fields needed to resolve a handle to an id.
+ * One entry of `GET /flows`, narrowed to the fields needed to resolve a handle to an id and list the
+ * flow.
  */
 export interface BasicFlowSummary {
   id: string;
   handle: string;
   flowType: string;
+  name: string;
+  updatedAt: string;
+  isReadOnly?: boolean;
 }
 
 /**
@@ -366,21 +370,21 @@ export async function findAdministrationFlows(
 }
 
 /**
- * Resolves each action whose configured handle names an existing flow to that flow's identifier, in
- * one server-config read and one listing walk.
+ * Resolves each action whose configured handle names an existing flow to that flow, in one
+ * server-config read and one listing walk. A caller that needs only the identifier reads `id`.
  */
 export async function resolveAdministrationFlows(
   http: HttpLike,
   serverUrl: string,
   configKeys: readonly AdministrationFlowConfigKeyValue[],
-): Promise<Record<string, string>> {
+): Promise<Record<string, BasicFlowSummary>> {
   const handles = await resolveAdministrationFlowHandles(http, serverUrl, configKeys);
   const flows = await findAdministrationFlows(http, serverUrl, Object.values(handles));
-  const resolved: Record<string, string> = {};
+  const resolved: Record<string, BasicFlowSummary> = {};
 
   Object.entries(handles).forEach(([configKey, handle]) => {
     if (flows[handle]) {
-      resolved[configKey] = flows[handle].id;
+      resolved[configKey] = flows[handle];
     }
   });
 

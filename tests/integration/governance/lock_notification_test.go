@@ -214,14 +214,14 @@ func (ts *LockNotificationTestSuite) TestAPermanentLockSendsThePermanentTemplate
 // A lock on every sign-in method sends the account template, which names no method.
 func (ts *LockNotificationTestSuite) TestAnAccountWideLockSendsTheAccountTemplate() {
 	ts.useDefaultSender(ts.senderID)
-	ts.setAccountAccess(fmt.Sprintf(`{"user":{"lockGranularity":"entity",`+
+	ts.setAccountAccess(fmt.Sprintf(`{"user":{"lockGranularity":"account",`+
 		`"default":{"lockDurationsSeconds":[%d]}}}`, notifiedRungSeconds))
 
-	userID, username, _, _ := ts.newUser("entity")
+	userID, username, _, _ := ts.newUser("account")
 	failAuthentication(ts.T(), "username", username, lockThreshold)
 	ts.Require().Equal("LOCKED", readStatus(ts.T(), userID).Value, "the lock must form")
 
-	email := awaitDelivered(ts.T(), ts.smtp.GetLastEmail, "an entity-wide lock must send an email")
+	email := awaitDelivered(ts.T(), ts.smtp.GetLastEmail, "an account-wide lock must send an email")
 	ts.Contains(email.Body, "Sign-in to your account has been temporarily locked")
 	ts.NotContains(email.Body, "sign-in method on your account", "the account template names no method")
 }
@@ -230,16 +230,16 @@ func (ts *LockNotificationTestSuite) TestAnAccountWideLockSendsTheAccountTemplat
 // no method and states no expiry.
 func (ts *LockNotificationTestSuite) TestAPermanentAccountWideLockSendsThePermanentAccountTemplate() {
 	ts.useDefaultSender(ts.senderID)
-	ts.setAccountAccess(`{"user":{"lockGranularity":"entity","default":{"lockDurationsSeconds":[0]}}}`)
+	ts.setAccountAccess(`{"user":{"lockGranularity":"account","default":{"lockDurationsSeconds":[0]}}}`)
 
-	userID, username, address, _ := ts.newUser("entity_permanent")
+	userID, username, address, _ := ts.newUser("account_permanent")
 	failAuthentication(ts.T(), "username", username, lockThreshold)
 	status := readStatus(ts.T(), userID)
-	ts.Require().Equal([]string{"entity"}, status.lockedMethods(), "the entity-wide lock must form")
-	_, expires := status.expiryOf("entity")
+	ts.Require().Equal([]string{"account"}, status.lockedMethods(), "the account-wide lock must form")
+	_, expires := status.expiryOf("account")
 	ts.Require().False(expires, "a rung of zero must form a lock with no expiry")
 
-	email := awaitDelivered(ts.T(), ts.smtp.GetLastEmail, "a permanent entity-wide lock must send an email")
+	email := awaitDelivered(ts.T(), ts.smtp.GetLastEmail, "a permanent account-wide lock must send an email")
 	ts.Equal([]string{address}, email.To)
 	ts.Contains(email.Body, "Sign-in to your account has been locked due to multiple failed attempts.")
 	ts.Contains(email.Body, "This lock does not expire automatically.")

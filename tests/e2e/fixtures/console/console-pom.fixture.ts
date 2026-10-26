@@ -15,7 +15,7 @@ import { ConsoleSigninPage } from "../../pages/authentication";
 import { UsersPage } from "../../pages/user-management";
 import { UserTypesPage } from "../../pages/user-types";
 import { ApplicationsPage } from "../../pages/applications";
-import { SettingsPage } from "../../pages/settings";
+import { SettingsPage, AccountSecurityPage } from "../../pages/settings";
 import { WelcomePage } from "../../pages/welcome";
 import { ConnectionsPage } from "../../pages/connections";
 import { AgentOnboardingPage, AgentDetailsPage } from "../../pages/agents";
@@ -32,6 +32,7 @@ type POMFixtures = {
   connectionsPage: ConnectionsPage;
   agentOnboardingPage: AgentOnboardingPage;
   agentDetailsPage: AgentDetailsPage;
+  accountSecurityPage: AccountSecurityPage;
 };
 
 export const test = base.extend<POMFixtures>({
@@ -78,6 +79,11 @@ export const test = base.extend<POMFixtures>({
   agentDetailsPage: async ({ authenticatedPage }, use) => {
     await use(new AgentDetailsPage(authenticatedPage, baseUrl));
   },
+
+  // Account security settings tab requires auth, uses authenticatedPage fixture
+  accountSecurityPage: async ({ authenticatedPage }, use) => {
+    await use(new AccountSecurityPage(authenticatedPage, baseUrl));
+  },
 });
 
 export { expect } from "@playwright/test";
@@ -85,7 +91,7 @@ export { ConsoleSigninPage } from "../../pages/authentication";
 export { UsersPage, type UserFormData } from "../../pages/user-management";
 export { UserTypesPage } from "../../pages/user-types";
 export { ApplicationsPage, type ApplicationFormData } from "../../pages/applications";
-export { SettingsPage } from "../../pages/settings";
+export { SettingsPage, AccountSecurityPage } from "../../pages/settings";
 export { WelcomePage } from "../../pages/welcome";
 export { ConnectionsPage, type BrandedConnectionFormData } from "../../pages/connections";
 export { AgentOnboardingPage, AgentDetailsPage } from "../../pages/agents";

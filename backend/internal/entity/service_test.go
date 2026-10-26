@@ -120,7 +120,7 @@ func (s *ServiceTestSuite) TestCreateEntity_LinkedAccount() {
 	s.store.AssertNotCalled(s.T(), "ResolveLinkedAccounts", mock.Anything, mock.Anything, mock.Anything)
 }
 
-// A caller-supplied id a declarative entity holds is refused, so its runtime row is not reset.
+// A caller-supplied id a declarative account holds is refused, so its runtime row is not reset.
 func (s *ServiceTestSuite) TestCreateEntity_RefusesADeclarativeID() {
 	svc, runtime := s.newServiceWithRuntimeMock()
 	e := testEntity("declarative-id")
@@ -490,7 +490,7 @@ func (s *ServiceTestSuite) TestGovernanceWritesGoToTheRuntimeStore() {
 	now := time.Date(2026, 9, 8, 10, 0, 0, 0, time.UTC)
 	observed := identitygovernance.LockEntry{FailureCount: 5, Revision: 3}
 	episode := identitygovernance.LockEpisode{LockCount: 1, UnlockAt: "2026-09-08T10:05:00Z"}
-	hold := &identitygovernance.EntityHold{UnlockAt: testPermanentUnlockAt}
+	hold := &identitygovernance.AccountHold{UnlockAt: testPermanentUnlockAt}
 	methods := []providers.AuthenticationMethod{providers.AuthenticationMethodCredential}
 	for name, tc := range map[string]struct {
 		expect func(runtime *entityRuntimeStoreInterfaceMock)
@@ -1445,7 +1445,7 @@ func (s *ServiceTestSuite) TestUpdateSystemAttributes_UnparsableStoredBlobFails(
 }
 
 // Links are written only by LinkAccount, which enforces the link limit, so a caller that
-// sends linkedIds through a wholesale replace has them dropped when the entity holds none.
+// sends linkedIds through a wholesale replace has them dropped when the account holds none.
 func (s *ServiceTestSuite) TestUpdateSystemAttributes_DropsCallerSentLinks() {
 	e := testEntity("e-sent-links")
 	s.store.On("LockEntity", mock.Anything, e.ID).Return(*e, nil)
@@ -2089,11 +2089,11 @@ func (s *ServiceTestSuite) TestGetGovernedEntityReadsTheRuntimeRow() {
 	s.Equal("2026-09-08T10:00:00Z", credential.LastFailedAt)
 }
 
-func (s *ServiceTestSuite) TestGetGovernedEntityParsesSuspensionAndEntityHold() {
+func (s *ServiceTestSuite) TestGetGovernedEntityParsesSuspensionAndAccountHold() {
 	e := testEntity("e-gov-held")
 	s.governedRead(e, providers.EntityStateSuspended, `{"accessState":{"suspend":`+
 		`{"suspendedAt":"2026-09-10T11:02:00Z","operatorNote":"Credential exposure"},`+
-		`"lock":{"entity":{"unlockAt":"9999-12-31T23:59:59Z","reason":"POST_SUSPENDED"}},`+
+		`"lock":{"account":{"unlockAt":"9999-12-31T23:59:59Z","reason":"POST_SUSPENDED"}},`+
 		`"lastLoginAt":"2026-09-09T18:22:04Z"}}`)
 
 	governed, err := s.svc.GetGovernedEntity(s.ctx, e.ID, true)
@@ -2103,10 +2103,10 @@ func (s *ServiceTestSuite) TestGetGovernedEntityParsesSuspensionAndEntityHold() 
 	s.Equal("2026-09-10T11:02:00Z", governed.AccessState.Suspend.SuspendedAt)
 	s.Equal("Credential exposure", governed.AccessState.Suspend.OperatorNote)
 	s.Equal("2026-09-09T18:22:04Z", governed.AccessState.LastLoginAt)
-	s.Require().NotNil(governed.AccessState.Lock.Entity)
+	s.Require().NotNil(governed.AccessState.Lock.Account)
 	s.Equal(int64(7), governed.Revision)
-	s.Equal(testPermanentUnlockAt, governed.AccessState.Lock.Entity.UnlockAt)
-	s.Equal(testPostSuspensionReason, governed.AccessState.Lock.Entity.Reason)
+	s.Equal(testPermanentUnlockAt, governed.AccessState.Lock.Account.UnlockAt)
+	s.Equal(testPostSuspensionReason, governed.AccessState.Lock.Account.Reason)
 	s.Empty(governed.AccessState.Lock.AuthenticationMethods)
 }
 

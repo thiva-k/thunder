@@ -342,7 +342,7 @@ type IdentityGovernanceProvider interface {
 		method AuthenticationMethod) (AccessDecision, *common.ServiceError)
 
 	// AdmitSignIn is EvaluateAccess at AccessPlaneSession for a completing sign-in. When it admits, it
-	// also clears a lapsed entity-wide failure record.
+	// also clears a lapsed account-wide failure record.
 	AdmitSignIn(ctx context.Context, entityID string) (AccessDecision, *common.ServiceError)
 
 	// RecordLogin stamps when the identity was last granted access. Callers do not fail the grant on
@@ -361,7 +361,7 @@ type IdentityGovernanceProvider interface {
 	// nothing. An identity already suspended passes.
 	ValidateSuspend(ctx context.Context, entityID, operatorNote string) *common.ServiceError
 
-	// Unsuspend releases the hold. A user is left with a non-expiring entity-wide lock, which a
+	// Unsuspend releases the hold. A user is left with a non-expiring account-wide lock, which a
 	// recovery or an unlock clears; an agent keeps any automatic lock still in force, and an
 	// application becomes active.
 	Unsuspend(ctx context.Context, entityID string) *common.ServiceError

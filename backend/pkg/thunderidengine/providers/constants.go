@@ -340,7 +340,7 @@ const (
 	// the reported expiry.
 	AccessHoldReasonFailedAttempts AccessHoldReason = "FAILED_ATTEMPTS"
 
-	// AccessHoldReasonSuspensionReleaseLock is the entity-wide lock left when a suspension is
+	// AccessHoldReasonSuspensionReleaseLock is the account-wide lock left when a suspension is
 	// cleared. It reports as LOCKED with no expiry and does not lift on its own.
 	AccessHoldReasonSuspensionReleaseLock AccessHoldReason = "SUSPENSION_RELEASE_LOCK"
 

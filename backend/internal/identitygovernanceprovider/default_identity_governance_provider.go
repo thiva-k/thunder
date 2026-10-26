@@ -34,7 +34,7 @@ func (p *defaultIdentityGovernanceProvider) EvaluateAccess(ctx context.Context, 
 	return p.governance.EvaluateAccess(security.WithRuntimeContext(ctx), entityID, plane, method)
 }
 
-// AdmitSignIn admits a completing sign-in and clears a lapsed entity-wide lock when admitted.
+// AdmitSignIn admits a completing sign-in and clears a lapsed account-wide lock when admitted.
 func (p *defaultIdentityGovernanceProvider) AdmitSignIn(ctx context.Context,
 	entityID string) (providers.AccessDecision, *tidcommon.ServiceError) {
 	return p.governance.AdmitSignIn(security.WithRuntimeContext(ctx), entityID)

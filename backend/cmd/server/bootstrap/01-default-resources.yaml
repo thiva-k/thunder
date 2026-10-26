@@ -7514,7 +7514,7 @@ content:
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
       <h2>Sign-in temporarily locked</h2>
-      <p>The {{ctx(authenticationMethod)}} sign-in method on your account has been temporarily locked due to multiple failed attempts.</p>
+      <p>The {{ctx(lockedAuthenticationMethod)}} sign-in method on your account has been temporarily locked due to multiple failed attempts.</p>
       <p><strong>It will be available again in {{ctx(lockDuration)}}, on {{ctx(unlockTime)}} UTC.</strong></p>
       <p>To regain access sooner, complete account recovery or contact your administrator.</p>
       <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>
@@ -7534,7 +7534,7 @@ content:
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #181818;">
       <h2>Sign-in locked</h2>
-      <p>The {{ctx(authenticationMethod)}} sign-in method on your account has been locked due to multiple failed attempts.</p>
+      <p>The {{ctx(lockedAuthenticationMethod)}} sign-in method on your account has been locked due to multiple failed attempts.</p>
       <p><strong>This lock does not expire automatically.</strong></p>
       <p>To regain access, complete account recovery or contact your administrator.</p>
       <p><strong>Didn't try to sign in?</strong> Someone else may be trying to get into your account. Report this to your administrator. Once you regain access, change your credentials and check that your email address and phone number are still yours.</p>

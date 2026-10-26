@@ -17,7 +17,7 @@ import (
 var federatedHolderSchema = credentialsSchema(map[string]interface{}{"email": stringAttribute})
 
 // FederatedTestSuite checks, under authentication method granularity, that a federated
-// sign-in to a linked account obeys the account's suspension and entity-wide lock, and ignores a lock
+// sign-in to a linked account obeys the account's suspension and account-wide lock, and ignores a lock
 // on another authentication method. Where several users hold the identity, the one a sign-in picks or
 // a registration completes as is bound by ID and held the same way.
 type FederatedTestSuite struct {
@@ -72,14 +72,14 @@ func (ts *FederatedTestSuite) TestASuspendedLinkedAccountIsRefused() {
 	ts.federated.requireRefusedWithStatedHold(ts.T(), email, flowStatedSuspensionCode, "suspended")
 }
 
-// The entity-wide lock an unsuspend leaves holds a federated sign-in, and unlock releases it.
+// The account-wide lock an unsuspend leaves holds a federated sign-in, and unlock releases it.
 func (ts *FederatedTestSuite) TestTheLockAnUnsuspendLeavesHoldsAFederatedSignIn() {
 	userID, _, _, email := ts.newLinkedUser("unsuspended")
 
 	runAdministrationFlow(ts.T(), suspendFlowHandle, userID)
 	runAdministrationFlow(ts.T(), unsuspendFlowHandle, userID)
-	ts.Require().Equal([]string{"entity"}, readStatus(ts.T(), userID).lockedMethods(),
-		"unsuspend must land on an entity-wide lock")
+	ts.Require().Equal([]string{"account"}, readStatus(ts.T(), userID).lockedMethods(),
+		"unsuspend must land on an account-wide lock")
 
 	ts.federated.requireRefusedWithStatedHold(ts.T(), email, flowStatedLockCode, "unsuspended")
 
@@ -139,10 +139,10 @@ func (ts *FederatedTestSuite) TestAPickedLinkHolderThatIsSuspendedIsRefused() {
 // A link holder held by an account-wide lock is refused when picked, with the lock stated: the bind is
 // a federated sign-in, which an account-wide lock holds.
 func (ts *FederatedTestSuite) TestAPickedLinkHolderWithAnAccountWideLockIsRefused() {
-	email, held, _ := ts.newHeldIdentity("pick_entity_lock", ts.users)
+	email, held, _ := ts.newHeldIdentity("pick_account_lock", ts.users)
 	runAdministrationFlow(ts.T(), suspendFlowHandle, held.id)
 	runAdministrationFlow(ts.T(), unsuspendFlowHandle, held.id)
-	ts.Require().Equal([]string{"entity"}, readStatus(ts.T(), held.id).lockedMethods(),
+	ts.Require().Equal([]string{"account"}, readStatus(ts.T(), held.id).lockedMethods(),
 		"unsuspend must land on an account-wide lock")
 
 	refused := ts.federated.signInAndPick(ts.T(), ts.pickerApp(), email, held.username)

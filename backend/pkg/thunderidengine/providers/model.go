@@ -700,7 +700,7 @@ type OAuthProfile struct {
 }
 
 // AccessLockedMethod is one live automatic lock. Method is the authentication method it holds, or the
-// entity key when it holds every method. ExpiresAt is when it lifts on its own, empty when it does
+// account key when it holds every method. ExpiresAt is when it lifts on its own, empty when it does
 // not. An entity can hold several at once.
 type AccessLockedMethod struct {
 	Method    string `json:"method"              yaml:"-"`

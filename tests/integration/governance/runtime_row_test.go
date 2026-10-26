@@ -35,7 +35,7 @@ var runtimeRowSchema = credentialsSchema(map[string]interface{}{
 			"lock": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"entity": map[string]interface{}{
+					"account": map[string]interface{}{
 						"type": "object",
 						"properties": map[string]interface{}{
 							"unlockAt": stringAttribute,
@@ -132,7 +132,7 @@ func (ts *RuntimeRowTestSuite) TestAnAccessStateProfileAttributeGovernsNothing()
 			"suspendedAt": "2026-01-01T00:00:00Z", "operatorNote": "claimed by the profile",
 		},
 		"lock": map[string]interface{}{
-			"entity": map[string]interface{}{
+			"account": map[string]interface{}{
 				"unlockAt": "9999-12-31T23:59:59Z", "reason": storedPostSuspensionReason,
 			},
 		},

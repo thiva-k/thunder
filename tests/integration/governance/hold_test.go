@@ -244,8 +244,8 @@ func assertTheRecoveryLock(t *testing.T, status statusReport, label string) {
 	require.NotNil(t, status.Details, "%s: the lock must report its details", label)
 	require.Equal(t, "SUSPENSION_RELEASE_LOCK", status.Details.Reason,
 		"%s: the lock must be attributed to the suspension's release", label)
-	require.Equal(t, []string{"entity"}, status.lockedMethods(),
+	require.Equal(t, []string{"account"}, status.lockedMethods(),
 		"%s: the release lock must hold the whole account, replacing every earlier entry", label)
-	_, expires := status.expiryOf("entity")
+	_, expires := status.expiryOf("account")
 	require.False(t, expires, "%s: the release lock must not expire on its own", label)
 }

@@ -65,12 +65,12 @@ describe('AccessStatusBanner', () => {
   });
 
   it('promises a lock lifts on its own only when it has an expiry', () => {
-    const timed = {lockedMethods: [{expiresAt: '2026-10-07T10:00:00Z', method: 'entity'}], reason: 'FAILED_ATTEMPTS'};
+    const timed = {lockedMethods: [{expiresAt: '2026-10-07T10:00:00Z', method: 'account'}], reason: 'FAILED_ATTEMPTS'};
     const {unmount} = render(<AccessStatusBanner status={report('LOCKED', timed)} />);
     expect(screen.getByRole('status')).toHaveTextContent('It unlocks on its own');
     unmount();
 
-    const permanent = {lockedMethods: [{method: 'entity'}], reason: 'FAILED_ATTEMPTS'};
+    const permanent = {lockedMethods: [{method: 'account'}], reason: 'FAILED_ATTEMPTS'};
     render(<AccessStatusBanner status={report('LOCKED', permanent)} />);
     expect(screen.getByRole('status')).not.toHaveTextContent('It unlocks on its own');
     // A held lockout ends on account recovery or an unlock, so the generic line says so.
@@ -81,7 +81,7 @@ describe('AccessStatusBanner', () => {
     const expiresAt = '2026-10-07T10:00:00Z';
     render(
       <AccessStatusBanner
-        status={report('LOCKED', {lockedMethods: [{expiresAt, method: 'entity'}], reason: 'FAILED_ATTEMPTS'})}
+        status={report('LOCKED', {lockedMethods: [{expiresAt, method: 'account'}], reason: 'FAILED_ATTEMPTS'})}
       />,
     );
 

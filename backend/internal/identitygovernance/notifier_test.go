@@ -177,7 +177,7 @@ func (s *NotifierTestSuite) TestSendsTheConfiguredTemplateToThePrimaryEmail() {
 	s.Equal([]string{"member@example.com"}, sent.To)
 	s.True(sent.IsHTML)
 	s.Equal(testLockTemplate, handle)
-	s.Equal(string(providers.AuthenticationMethodCredential), data[templateKeyAuthenticationMethod])
+	s.Equal(string(providers.AuthenticationMethodCredential), data[templateKeyLockedAuthenticationMethod])
 }
 
 // deliveryContext is what one delivery step saw of its context, read while the step ran.

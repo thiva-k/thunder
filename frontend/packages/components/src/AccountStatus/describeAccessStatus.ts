@@ -15,7 +15,7 @@ export const AccessStatuses = {
 } as const satisfies Record<AccessStatus, AccessStatus>;
 
 /** The lockedMethods entry for a lock on every method. */
-const ENTITY_METHOD = 'entity';
+const ACCOUNT_METHOD = 'account';
 
 function activeHint(category: LifecycleCategory, t: TFunction): string {
   switch (category) {
@@ -111,7 +111,7 @@ function methodName(method: string, t: TFunction): string {
  * One live lock as a line: the method, unless it is every method, and when the lock ends.
  */
 function lockLine(method: string, expiresAt: string | undefined, t: TFunction): string {
-  if (method === ENTITY_METHOD) {
+  if (method === ACCOUNT_METHOD) {
     return expiresAt
       ? t('common:accountStatus.locked.until', 'Locked until {{expiresAt}}', {
           expiresAt: new Date(expiresAt).toLocaleString(),
@@ -174,8 +174,8 @@ export default function describeAccessStatus(
   if (value === AccessStatuses.LOCKED) {
     const label = t('common:accountStatus.locked.label', 'Locked');
     const lockedMethods = details?.lockedMethods ?? [];
-    // An `entity` entry locks every method; a report without entries reads the same way.
-    const wholeAccount = lockedMethods.length === 0 || lockedMethods.some(({method}) => method === ENTITY_METHOD);
+    // An `account` entry locks every method; a report without entries reads the same way.
+    const wholeAccount = lockedMethods.length === 0 || lockedMethods.some(({method}) => method === ACCOUNT_METHOD);
     const locks = lockedMethods.map(({expiresAt, method}) => lockLine(method, expiresAt, t));
 
     if (!wholeAccount) {

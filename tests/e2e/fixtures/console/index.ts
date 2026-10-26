@@ -28,7 +28,7 @@ export { ConsoleSigninPage } from "../../pages/authentication";
 export { UsersPage, type UserFormData } from "../../pages/user-management";
 export { UserTypesPage } from "../../pages/user-types";
 export { ApplicationsPage, type ApplicationFormData } from "../../pages/applications";
-export { SettingsPage } from "../../pages/settings";
+export { SettingsPage, AccountSecurityPage } from "../../pages/settings";
 export { ConnectionsPage, type BrandedConnectionFormData } from "../../pages/connections";
 export { AgentOnboardingPage, AgentDetailsPage } from "../../pages/agents";
 
@@ -41,4 +41,5 @@ export { ApplicationsApi, type ApiApplication } from "../../utils/applications-a
 export { FlowsApi, type ApiFlow } from "../../utils/flows-api";
 export { ConnectionsApi, type ApiConnection } from "../../utils/connections-api";
 export { AgentsApi, type ApiAgent } from "../../utils/agents-api";
+export { ServerConfigApi, type ApiServerConfigLayers } from "../../utils/server-config-api";
 export { WelcomePage } from "../../pages/welcome";

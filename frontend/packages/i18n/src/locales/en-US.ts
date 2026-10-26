@@ -5595,7 +5595,7 @@ const translations = {
     'editor.tokens.labels.context.expiryTime': 'Expiry time',
     'editor.tokens.labels.context.magicLink': 'Magic link',
     'editor.tokens.labels.context.inviteLink': 'Invite link',
-    'editor.tokens.labels.context.authenticationMethod': 'Sign-in method',
+    'editor.tokens.labels.context.lockedAuthenticationMethod': 'Locked sign-in method',
     'editor.tokens.labels.context.lockDuration': 'Lock duration',
     'editor.tokens.labels.context.unlockTime': 'Unlock time',
     'editor.validation.emailRequired': 'A subject and body are required.',
@@ -6485,6 +6485,7 @@ const translations = {
     'page.subtitle': 'Settings that apply across your entire ThunderID deployment.',
     'tabs.ariaLabel': 'Settings sections',
     'tabs.cors': 'CORS',
+    'tabs.accountSecurity': 'Account security',
     'cors.card.title': 'Allowed origins',
     'cors.card.description':
       'Manage which origins are allowed to access your APIs. Each entry is either an exact origin or a regular expression.',
@@ -6513,6 +6514,170 @@ const translations = {
 
     // Backend error code translations (per server-config service error envelope).
     'errors.SCF-1003': 'One or more origins are not valid. Enter a valid URL or regular expression.',
+
+    // Automatic account lock
+    'accountLock.section.title': 'Automatic account lock',
+    'accountLock.section.description':
+      "Temporarily block sign-in after too many failed attempts. Lockouts prevent new sign-ins but don't affect existing sessions or tokens. To revoke existing access, suspend the account.",
+
+    'accountLock.toggle.ariaLabel': 'Automatic lock for {{title}}',
+    'accountLock.user.title': 'Users',
+    'accountLock.user.description': 'Temporarily block sign-in after repeated failed attempts.',
+    'accountLock.agent.title': 'Agents',
+    'accountLock.agent.description':
+      'Temporarily block agent authentication after repeated failed attempts. Client secret authentication is excluded from lockouts.',
+
+    'accountLock.summary.off.user': 'Automatic locking is off. Failed sign-in attempts do not lock users.',
+    'accountLock.summary.off.agent': 'Automatic locking is off. Failed authentication attempts do not lock agents.',
+    'accountLock.summary.trigger.authentication_method.user':
+      'After {{count}} failed attempts with no more than {{window}} between them, the affected sign-in method is locked.',
+    'accountLock.summary.trigger.authentication_method.agent':
+      'After {{count}} failed attempts with no more than {{window}} between them, the affected authentication method is locked.',
+    'accountLock.summary.trigger.account.user':
+      'After {{count}} failed attempts with no more than {{window}} between them, all sign-in methods are locked.',
+    'accountLock.summary.trigger.account.agent':
+      'After {{count}} failed attempts with no more than {{window}} between them, all authentication methods are locked.',
+    'accountLock.summary.triggerNoWindow.authentication_method.user':
+      'After {{count}} failed attempts without a successful sign-in, the affected sign-in method is locked.',
+    'accountLock.summary.triggerNoWindow.authentication_method.agent':
+      'After {{count}} failed attempts without a successful authentication, the affected authentication method is locked.',
+    'accountLock.summary.triggerNoWindow.account.user':
+      'After {{count}} failed attempts without a successful sign-in, all sign-in methods are locked.',
+    'accountLock.summary.triggerNoWindow.account.agent':
+      'After {{count}} failed attempts without a successful authentication, all authentication methods are locked.',
+    'accountLock.summary.duration.single': 'Each lockout lasts {{duration}}.',
+    'accountLock.summary.duration.range':
+      'The first lockout lasts {{from}}, increasing to {{to}} for subsequent lockouts.',
+    'accountLock.summary.duration.permanentOnly.user':
+      'Each lockout lasts until account recovery or administrator intervention.',
+    'accountLock.summary.duration.permanentOnly.agent': 'Each lockout lasts until administrator intervention.',
+    'accountLock.summary.duration.permanentRange.user':
+      'The first lockout lasts {{from}}. Subsequent lockouts last until account recovery or administrator intervention.',
+    'accountLock.summary.duration.permanentRange.agent':
+      'The first lockout lasts {{from}}. Subsequent lockouts last until administrator intervention.',
+    'accountLock.summary.duration.rangeThenPermanent.user':
+      'The first {{count}} lockouts end on their own, starting at {{from}}. Subsequent lockouts last until account recovery or administrator intervention.',
+    'accountLock.summary.duration.rangeThenPermanent.agent':
+      'The first {{count}} lockouts end on their own, starting at {{from}}. Subsequent lockouts last until administrator intervention.',
+    'accountLock.summary.duration.mixed.user':
+      'Some lockouts last until account recovery or administrator intervention, and the others end on their own.',
+    'accountLock.summary.duration.mixed.agent':
+      'Some lockouts last until administrator intervention, and the others end on their own.',
+
+    'accountLock.granularity.label': 'Lockout applies to',
+    'accountLock.granularity.authenticationMethod.user': 'Only the affected sign-in method',
+    'accountLock.granularity.authenticationMethod.agent': 'Only the affected authentication method',
+    'accountLock.granularity.authenticationMethodHint.user': 'Users can still sign in using other methods.',
+    'accountLock.granularity.authenticationMethodHint.agent': 'Agents can still authenticate using other methods.',
+    'accountLock.granularity.account.user': 'All sign-in methods',
+    'accountLock.granularity.account.agent': 'All authentication methods',
+    'accountLock.granularity.accountHint.user':
+      'Prevent users from signing in using any method until the lockout ends.',
+    'accountLock.granularity.accountHint.agent':
+      'Prevent agents from authenticating using any method until the lockout ends.',
+
+    'accountLock.threshold.label': 'Lock after',
+    'accountLock.threshold.ariaLabel': 'Failed attempts before lock',
+    'accountLock.threshold.within': 'failed attempts within',
+    'accountLock.window.ariaLabel': 'Longest gap allowed between failed attempts',
+    'accountLock.window.hint': 'A longer gap between two failed attempts starts the count again.',
+    'accountLock.window.never': 'No time limit',
+
+    'accountLock.advanced.label': 'Advanced settings',
+
+    'accountLock.ladder.label': 'Lockout duration',
+    'accountLock.ladder.hint': 'Each successive lockout uses the next duration in the list.',
+    'accountLock.ladder.hintSingle': 'How long a lockout lasts before it ends on its own.',
+    'accountLock.ladder.position_ordinal_one': '{{count}}st',
+    'accountLock.ladder.position_ordinal_two': '{{count}}nd',
+    'accountLock.ladder.position_ordinal_few': '{{count}}rd',
+    'accountLock.ladder.position_ordinal_other': '{{count}}th',
+    'accountLock.ladder.row': '{{position}} lockout',
+    'accountLock.ladder.rowLast': '{{position}} and later',
+    'accountLock.ladder.add': 'Add duration',
+    'accountLock.ladder.addFirstEscalation': 'Add a longer duration for subsequent lockouts',
+    'accountLock.ladder.remove': 'Remove the {{position}} duration',
+    'accountLock.ladder.untilUnlocked.user': 'Until account recovery or an administrator unlocks',
+    'accountLock.ladder.untilUnlocked.agent': 'Until an administrator unlocks',
+    'accountLock.ladder.end.label': 'After the final duration',
+    'accountLock.ladder.end.repeat': 'Continue using the final duration',
+    'accountLock.ladder.end.repeatHint': 'Apply the same duration to all subsequent lockouts.',
+    'accountLock.ladder.end.untilUnlocked.user': 'Require account recovery or administrator intervention',
+    'accountLock.ladder.end.untilUnlocked.agent': 'Require administrator intervention',
+    'accountLock.ladder.end.untilUnlockedHint.user':
+      'Keep the lockout in place until the user completes account recovery or an administrator unlocks the account.',
+    'accountLock.ladder.end.untilUnlockedHint.agent':
+      'Keep the lockout in place until an administrator unlocks the agent.',
+
+    'accountLock.notify.label': 'Notify user by email',
+    'accountLock.notify.hint':
+      "Send an email to the user's primary email address when a sign-in method is locked. Users without a primary email address won't receive notifications.",
+
+    'accountLock.decay.label': 'Reset lockout progression',
+    'accountLock.decay.hint':
+      'Restart the lockout sequence if no new lockout occurs within this period after the last one ends.',
+    'accountLock.decay.ariaLabel': 'Period without a lockout before the sequence restarts',
+    'accountLock.decay.never': 'Never reset',
+
+    'accountLock.ceiling.label': 'Consecutive failure limit',
+    'accountLock.ceiling.hint.user':
+      'Require account recovery or administrator intervention when the number of consecutive failed sign-in attempts reaches this limit.',
+    'accountLock.ceiling.hint.agent':
+      'Require administrator intervention when the number of consecutive failed authentication attempts reaches this limit.',
+    'accountLock.ceiling.ariaLabel': 'Consecutive failure limit',
+
+    'accountLock.units.label': 'Unit',
+    'accountLock.units.seconds': 'Seconds',
+    'accountLock.units.minutes': 'Minutes',
+    'accountLock.units.hours': 'Hours',
+    'accountLock.units.days': 'Days',
+    'accountLock.units.second': 'Second',
+    'accountLock.units.minute': 'Minute',
+    'accountLock.units.hour': 'Hour',
+    'accountLock.units.day': 'Day',
+    'accountLock.units.short.second': '{{count}} second',
+    'accountLock.units.short.seconds': '{{count}} seconds',
+    'accountLock.units.short.minute': '{{count}} minute',
+    'accountLock.units.short.minutes': '{{count}} minutes',
+    'accountLock.units.short.hour': '{{count}} hour',
+    'accountLock.units.short.hours': '{{count}} hours',
+    'accountLock.units.short.day': '{{count}} day',
+    'accountLock.units.short.days': '{{count}} days',
+
+    'accountLock.validation.threshold': 'Enter how many failed attempts should lock the account.',
+    'accountLock.validation.ladder': 'Add at least one lock duration.',
+    'accountLock.validation.ceiling':
+      'Enter 0 for no limit, or at least the number of failed attempts that locks the account.',
+
+    'accountLock.readOnlyHint':
+      "These settings are read-only because they're managed declaratively. Change them in the declarative configuration.",
+    'accountLock.unsavedChanges': 'You have unsaved changes',
+    'accountLock.reset': 'Reset',
+    'accountLock.save': 'Save changes',
+    'accountLock.saving': 'Saving...',
+    'accountLock.load.error': 'Failed to load the account security settings.',
+    'accountLock.save.success': 'Account security settings updated.',
+    'accountLock.save.error': 'Failed to update the account security settings.',
+    'accountLock.errors.SCF-1003':
+      'One or more account security settings are not valid. Check the values and try again.',
+
+    // Lock and suspension flows
+    'accountSuspension.title': 'Lock and suspension flows',
+    'accountSuspension.description':
+      'Manage the flows that suspend and unsuspend users, agents, and applications, and unlock users and agents. Suspension invalidates existing sessions and tokens and blocks access until it is lifted.',
+    'accountSuspension.purpose.userSuspendFlow': 'Suspend users',
+    'accountSuspension.purpose.userUnsuspendFlow': 'Unsuspend users',
+    'accountSuspension.purpose.userUnlockFlow': 'Unlock users',
+    'accountSuspension.purpose.agentSuspendFlow': 'Suspend agents',
+    'accountSuspension.purpose.agentUnsuspendFlow': 'Unsuspend agents',
+    'accountSuspension.purpose.agentUnlockFlow': 'Unlock agents',
+    'accountSuspension.purpose.applicationSuspendFlow': 'Suspend applications',
+    'accountSuspension.purpose.applicationUnsuspendFlow': 'Unsuspend applications',
+    'accountSuspension.notConfigured': '{{operation}}: Not configured.',
+    'accountSuspension.openFlows': 'Open flows',
+    'accountSuspension.noFlowOperations':
+      'Suspend, unsuspend, and unlock do not run through flows in this console, so there are no flows to manage.',
+    'accountSuspension.load.error': 'Failed to load the account lifecycle flows.',
   },
 } as const;
 

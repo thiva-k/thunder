@@ -23,6 +23,8 @@ export {default as I18nTextInput} from './I18nTextInput/I18nTextInput';
 export type {I18nTextInputLabels, I18nTextInputProps} from './I18nTextInput/I18nTextInput';
 export {default as ExternalLink} from './ExternalLink/ExternalLink';
 export type {ExternalLinkProps} from './ExternalLink/ExternalLink';
+export {default as useFlowListColumns} from './FlowList/useFlowListColumns';
+export type {FlowListColumnsOptions, FlowListRow} from './FlowList/useFlowListColumns';
 export {default as OrganizationUnitSummaryChip} from './OrganizationUnitSummaryChip/OrganizationUnitSummaryChip';
 export type {OrganizationUnitSummaryChipProps} from './OrganizationUnitSummaryChip/OrganizationUnitSummaryChip';
 export {default as PageLoader} from './PageLoader/PageLoader';
@@ -82,6 +84,13 @@ export {default as AccessStatusBanner} from './AccountStatus/AccessStatusBanner'
 export type {AccessStatusBannerProps} from './AccountStatus/AccessStatusBanner';
 export {default as AccountStatusAction} from './AccountStatus/AccountStatusAction';
 export type {AccountStatusActionProps} from './AccountStatus/AccountStatusAction';
+export {
+  LIFECYCLE_FLOW_PURPOSES,
+  getLifecycleFlowPurposes,
+  useLifecycleFlows,
+} from './AccountStatus/useAvailableLifecycleActions';
+export type {LifecycleFlowsOptions} from './AccountStatus/useAvailableLifecycleActions';
+export type {LifecycleCategory} from './AccountStatus/lifecycleAction';
 
 // Utils
 export {default as getInitials} from './lab/utils/getInitials';

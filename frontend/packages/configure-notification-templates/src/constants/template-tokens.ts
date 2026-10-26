@@ -72,9 +72,9 @@ export const CONTEXT_TOKENS: readonly TemplateToken[] = [
   {labelKey: 'editor.tokens.labels.context.magicLink', label: 'Magic link', insert: '{{ctx(magicLink)}}'},
   {labelKey: 'editor.tokens.labels.context.inviteLink', label: 'Invite link', insert: '{{ctx(inviteLink)}}'},
   {
-    labelKey: 'editor.tokens.labels.context.authenticationMethod',
-    label: 'Sign-in method',
-    insert: '{{ctx(authenticationMethod)}}',
+    labelKey: 'editor.tokens.labels.context.lockedAuthenticationMethod',
+    label: 'Locked sign-in method',
+    insert: '{{ctx(lockedAuthenticationMethod)}}',
   },
   {labelKey: 'editor.tokens.labels.context.lockDuration', label: 'Lock duration', insert: '{{ctx(lockDuration)}}'},
   {labelKey: 'editor.tokens.labels.context.unlockTime', label: 'Unlock time', insert: '{{ctx(unlockTime)}}'},
