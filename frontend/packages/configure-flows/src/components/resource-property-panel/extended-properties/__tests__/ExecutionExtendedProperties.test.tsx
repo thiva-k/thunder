@@ -99,6 +99,11 @@ vi.mock('../../../../api/useGetNotificationTemplates', () => ({
   default: () => mockNotificationTemplates(),
 }));
 
+// The Identity Governance panel reads the flow's type; an administration flow offers every operation.
+vi.mock('../../../../api/useGetFlowById', () => ({
+  default: () => ({data: {flowType: 'ADMINISTRATION'}}),
+}));
+
 /** Builds a resolved (successful) query state for the template hook mock. */
 const loaded = (data: unknown[]): TemplatesState => ({data, isLoading: false, isSuccess: true, isError: false});
 
@@ -1817,6 +1822,27 @@ describe('ExecutionExtendedProperties', () => {
     });
   });
 
+  describe('Pre Suspend Executor', () => {
+    const preSuspendResource = {
+      id: 'pre-suspend-1',
+      data: {
+        action: {
+          executor: {
+            name: ExecutionTypes.PreSuspend,
+          },
+        },
+        properties: {},
+      },
+    } as unknown as Resource;
+
+    it('should render NoConfigProperties message and hide the inputs editor', () => {
+      render(<ExecutionExtendedProperties resource={preSuspendResource} onChange={mockOnChange} />);
+
+      expect(screen.getByText('flows:core.executions.noConfig.description')).toBeInTheDocument();
+      expect(screen.queryByText('flows:core.executions.inputs.title')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Identifying Executor', () => {
     const identifyingResource = {
       id: 'identifying-executor-1',
@@ -1919,23 +1945,12 @@ describe('ExecutionExtendedProperties', () => {
       [ExecutionTypes.RoleExecutor, 'role_deletion', 'roleExecutor'],
       [ExecutionTypes.GroupExecutor, 'group_membership_removal', 'groupExecutor'],
       [ExecutionTypes.CriteriaRevocation, 'advance_cutoff', 'criteriaRevocation'],
+      [ExecutionTypes.IdentityGovernance, 'unlock', 'identityGovernance'],
     ])('should route %s to its mode selector and hide the inputs editor', (name, mode, namespace) => {
       render(<ExecutionExtendedProperties resource={makeResource(name, mode)} onChange={mockOnChange} />);
 
       expect(screen.getByText(`flows:core.executions.${namespace}.description`)).toBeInTheDocument();
       expect(screen.getByText(`flows:core.executions.${namespace}.mode.label`)).toBeInTheDocument();
-      expect(screen.queryByText('flows:core.executions.inputs.title')).not.toBeInTheDocument();
-    });
-
-    it('should hide the inputs editor and show no configuration for the identity governance executor', () => {
-      render(
-        <ExecutionExtendedProperties
-          resource={makeResource(ExecutionTypes.IdentityGovernance, 'unlock')}
-          onChange={mockOnChange}
-        />,
-      );
-
-      expect(screen.getByText('flows:core.executions.noConfig.description')).toBeInTheDocument();
       expect(screen.queryByText('flows:core.executions.inputs.title')).not.toBeInTheDocument();
     });
   });

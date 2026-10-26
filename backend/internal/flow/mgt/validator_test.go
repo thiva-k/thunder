@@ -1339,6 +1339,43 @@ func (s *ValidatorTestSuite) TestValidateNodes_Valid() {
 }
 
 // ---------------------------------------------------------------------------
+// Tests for validateModeFlowTypes
+// ---------------------------------------------------------------------------
+
+// Identity governance suspends and unsuspends only in an administration flow; a recovery flow takes
+// only its unlock, so a designer cannot save a recovery flow that faults at run time.
+func (s *ValidatorTestSuite) TestValidateModeFlowTypes_IdentityGovernance() {
+	cases := []struct {
+		mode     string
+		flowType providers.FlowType
+		allowed  bool
+	}{
+		{executor.ExecutorModeSuspend, providers.FlowTypeAdministration, true},
+		{executor.ExecutorModeUnsuspend, providers.FlowTypeAdministration, true},
+		{executor.ExecutorModeUnlock, providers.FlowTypeAdministration, true},
+		{executor.ExecutorModeUnlock, providers.FlowTypeRecovery, true},
+		{executor.ExecutorModeSuspend, providers.FlowTypeRecovery, false},
+		{executor.ExecutorModeUnsuspend, providers.FlowTypeRecovery, false},
+	}
+	for _, tc := range cases {
+		s.Run(tc.mode+"/"+string(tc.flowType), func() {
+			nodes := companionNodes(executor.ExecutorNameIdentityGovernance)
+			nodes[1].Executor.Mode = tc.mode
+
+			err := s.v.validateModeFlowTypes(tc.flowType, nodes)
+
+			if tc.allowed {
+				s.Nil(err)
+				return
+			}
+			s.Require().NotNil(err)
+			s.Equal(ErrorInvalidExecutorConfig.Code, err.Code)
+			s.Equal("error.flowmgtservice.unsupported_executor_mode_flow_type_description", err.ErrorDescription.Key)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Tests for validateCompanionExecutors
 // ---------------------------------------------------------------------------
 

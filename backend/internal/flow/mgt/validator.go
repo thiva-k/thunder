@@ -6,6 +6,7 @@ package flowmgt
 import (
 	"context"
 	"regexp"
+	"slices"
 	"strconv"
 
 	"github.com/thunder-id/thunderid/internal/flow/common"
@@ -170,6 +171,15 @@ var companionExecutors = map[string][]companionExecutor{
 	},
 }
 
+// modeFlowTypes limits an executor mode to fewer flow types than the executor supports. Identity
+// governance suspends and unsuspends only in an administration flow; a recovery flow runs only unlock.
+var modeFlowTypes = map[string]map[string][]providers.FlowType{
+	executormeta.ExecutorNameIdentityGovernance: {
+		executormeta.ExecutorModeSuspend:   {providers.FlowTypeAdministration},
+		executormeta.ExecutorModeUnsuspend: {providers.FlowTypeAdministration},
+	},
+}
+
 // validateFlowTypeBasedConstraints checks forbidden and required executor rules for the flow type.
 // Uses static maps only — no registry access required.
 func (v *flowValidator) validateFlowTypeBasedConstraints(
@@ -178,7 +188,38 @@ func (v *flowValidator) validateFlowTypeBasedConstraints(
 	if svcErr := v.validateRequiredExecutors(flowType, nodes); svcErr != nil {
 		return svcErr
 	}
+	if svcErr := v.validateModeFlowTypes(flowType, nodes); svcErr != nil {
+		return svcErr
+	}
 	return v.validateCompanionExecutors(nodes)
+}
+
+// validateModeFlowTypes returns an error when a node runs an executor in a mode the flow type cannot
+// run.
+func (v *flowValidator) validateModeFlowTypes(
+	flowType providers.FlowType, nodes []providers.NodeDefinition,
+) *tidcommon.ServiceError {
+	for _, node := range nodes {
+		if node.Type != string(common.NodeTypeTaskExecution) || node.Executor == nil {
+			continue
+		}
+		flowTypes, ok := modeFlowTypes[node.Executor.Name][node.Executor.Mode]
+		if !ok || slices.Contains(flowTypes, flowType) {
+			continue
+		}
+		return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+			Key: "error.flowmgtservice.unsupported_executor_mode_flow_type_description",
+			DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' mode " +
+				"'{{param(mode)}}' is not compatible with flow type '{{param(flowType)}}'",
+			Params: map[string]string{
+				"nodeID":       node.ID,
+				"executorName": node.Executor.Name,
+				"mode":         node.Executor.Mode,
+				"flowType":     string(flowType),
+			},
+		})
+	}
+	return nil
 }
 
 // validateCompanionExecutors returns an error when an executor is present without an executor it

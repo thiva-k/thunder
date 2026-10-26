@@ -833,6 +833,7 @@ var defaultMessages = map[string]string{
 	"error.flowmgtservice.task_node_missing_on_success_description": "TASK_EXECUTION node '{{param(nodeID)}}' must have onSuccess",
 	"error.flowmgtservice.unsupported_executor_flow_type_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' is not compatible with flow type '{{param(flowType)}}'",
 	"error.flowmgtservice.unsupported_executor_mode_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' does not support mode '{{param(mode)}}'",
+	"error.flowmgtservice.unsupported_executor_mode_flow_type_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' mode '{{param(mode)}}' is not compatible with flow type '{{param(flowType)}}'",
 	"error.flowmgtservice.unsupported_executor_property_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' does not support property '{{param(propertyKey)}}'",
 	"error.gateway.already_registered": "Gateway already registered",
 	"error.gateway.already_registered_description": "Another gateway is already registered at that address",

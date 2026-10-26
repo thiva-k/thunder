@@ -157,6 +157,30 @@ export const CRITERIA_REVOCATION_MODES = [
 ] as const;
 
 /**
+ * Identity Governance executor operations, matching its backend SupportedModes. `image` is the node icon.
+ */
+export const IDENTITY_GOVERNANCE_MODES = [
+  {
+    value: 'suspend',
+    translationKey: 'flows:core.executions.identityGovernance.mode.suspend',
+    displayLabel: 'Suspend Identity',
+    image: 'ShieldBan',
+  },
+  {
+    value: 'unsuspend',
+    translationKey: 'flows:core.executions.identityGovernance.mode.unsuspend',
+    displayLabel: 'Unsuspend Identity',
+    image: 'ShieldCheck',
+  },
+  {
+    value: 'unlock',
+    translationKey: 'flows:core.executions.identityGovernance.mode.unlock',
+    displayLabel: 'Unlock Identity',
+    image: 'LockKeyholeOpen',
+  },
+] as const;
+
+/**
  * Available modes for Passkey executor.
  */
 export const PASSKEY_MODES = [
@@ -247,5 +271,6 @@ export const EXECUTORS_WITH_FIXED_INPUTS = new Set<string>([
   ExecutionTypes.AccessChangeValidator,
   ExecutionTypes.RoleExecutor,
   ExecutionTypes.GroupExecutor,
+  ExecutionTypes.PreSuspend,
   ExecutionTypes.IdentityGovernance,
 ]);

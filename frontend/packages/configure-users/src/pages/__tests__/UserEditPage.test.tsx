@@ -8,8 +8,10 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {ApiUserType, UserTypeListResponse} from '../../models/users';
 import UserEditPage from '../UserEditPage';
 
-const {mockLoggerError, stagingCallbackIdentities} = vi.hoisted(() => ({
+const {mockLoggerError, signedIn, stagingCallbackIdentities} = vi.hoisted(() => ({
   mockLoggerError: vi.fn(),
+  // The signed-in user's profile, as the SDK exposes it.
+  signedIn: {user: null as Record<string, unknown> | null},
   // Every distinct onFieldChange the Attributes tab is handed.
   stagingCallbackIdentities: new Set<unknown>(),
 }));
@@ -18,6 +20,16 @@ vi.mock('@thunderid/components', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/components')>();
   return {
     ...actual,
+    AccountStatusAction: ({listQueryKey, onChanged}: {listQueryKey: unknown; onChanged: () => void}) => (
+      <button
+        type="button"
+        data-testid="account-status-action"
+        data-list-query-key={JSON.stringify(listQueryKey)}
+        onClick={onChanged}
+      >
+        status action
+      </button>
+    ),
     CopyableId: vi.fn(() => null),
   };
 });
@@ -28,6 +40,15 @@ const mockDeleteMutate = vi.fn();
 const mockResetDeleteError = vi.fn();
 
 // Mock logger
+vi.mock('@thunderid/react', async (importOriginal) => {
+  const actual = await importOriginal();
+
+  return {
+    ...(actual as object),
+    useThunderID: () => ({http: {request: vi.fn()}, user: signedIn.user}),
+  };
+});
+
 vi.mock('@thunderid/logger/react', () => ({
   useLogger: () => ({
     info: vi.fn(),
@@ -245,6 +266,7 @@ describe('UserEditPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    signedIn.user = null;
     mockAccess.hasChanges = false;
     mockAccess.saveError = null;
     stagingCallbackIdentities.clear();
@@ -466,6 +488,109 @@ describe('UserEditPage', () => {
       render(<UserEditPage />);
 
       expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
+    });
+  });
+
+  describe('Access status', () => {
+    const renderUser = (user: Record<string, unknown>): void => {
+      mockUseGetUser.mockReturnValue({
+        data: {...mockUserData, ...user},
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+      render(<UserEditPage />);
+    };
+
+    it('shows the lock banner for a locked user', () => {
+      renderUser({status: {value: 'LOCKED'}});
+
+      expect(screen.getByRole('status')).toHaveTextContent('Locked');
+      expect(screen.getByRole('status')).toHaveTextContent('The account is locked');
+    });
+
+    it('shows no banner for an active user', () => {
+      renderUser({});
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('offers the lifecycle action on a writable user', () => {
+      renderUser({});
+
+      expect(screen.getByTestId('account-status-action')).toBeInTheDocument();
+    });
+
+    // The lifecycle flows change only runtime state, which a declared record keeps too.
+    it('offers the lifecycle action on a read-only user', () => {
+      renderUser({isReadOnly: true});
+
+      expect(screen.getByTestId('account-status-action')).toBeInTheDocument();
+    });
+
+    it('shows the banner below the read-only notice and above the header', () => {
+      renderUser({isReadOnly: true, status: {value: 'LOCKED'}});
+
+      const notice = screen.getByText('This resource is read-only and cannot be modified.');
+      const banner = screen.getByRole('status');
+      expect(banner).toHaveTextContent('Locked');
+      expect(notice.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        banner.compareDocumentPosition(screen.getByTestId('account-status-action')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    describe('for the signed-in user', () => {
+      const signedInAs = (signedInUser: Record<string, unknown>): void => {
+        signedIn.user = signedInUser;
+      };
+
+      // The server refuses every lifecycle operation on one's own account.
+      it('hides the lifecycle actions on the signed-in user, matched by the token subject', () => {
+        signedInAs({sub: 'user123'});
+        renderUser({});
+
+        expect(screen.queryByTestId('account-status-action')).not.toBeInTheDocument();
+      });
+
+      it('hides the lifecycle actions on the signed-in user, matched by the profile id', () => {
+        signedInAs({id: 'user123'});
+        renderUser({});
+
+        expect(screen.queryByTestId('account-status-action')).not.toBeInTheDocument();
+      });
+
+      it('offers the lifecycle actions on another user', () => {
+        signedInAs({id: 'admin-1', sub: 'admin-1'});
+        renderUser({});
+
+        expect(screen.getByTestId('account-status-action')).toBeInTheDocument();
+      });
+    });
+
+    it('hands the users list query to the lifecycle action', () => {
+      renderUser({});
+
+      expect(screen.getByTestId('account-status-action')).toHaveAttribute('data-list-query-key', '["users"]');
+    });
+
+    it('refetches the user after a lifecycle operation', async () => {
+      const user = userEvent.setup();
+      renderUser({});
+
+      await user.click(screen.getByTestId('account-status-action'));
+
+      expect(mockRefetch).toHaveBeenCalled();
+    });
+
+    it('keeps a suspended user editable', async () => {
+      const user = userEvent.setup();
+      renderUser({status: {value: 'SUSPENDED'}});
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+
+      expect(screen.getByRole('button', {name: 'Save'})).toBeEnabled();
     });
   });
 
@@ -882,6 +1007,24 @@ describe('UserEditPage', () => {
       render(<UserEditPage />);
 
       expect(screen.queryByRole('tab', {name: 'Credentials'})).not.toBeInTheDocument();
+    });
+
+    it('keeps the Credentials tab for a suspended user', () => {
+      mockUseGetUser.mockReturnValue({
+        data: {...mockUserData, status: {value: 'SUSPENDED'}},
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+      mockUseGetUserType.mockReturnValue({
+        data: schemaWithCredentials,
+        isLoading: false,
+        error: null,
+      });
+
+      render(<UserEditPage />);
+
+      expect(screen.getByRole('tab', {name: 'Credentials'})).toBeInTheDocument();
     });
 
     it('passes the userId and derived credential fields to CredentialsTabPanel when selected', async () => {

@@ -10,6 +10,126 @@ const translations = {
   // Common namespace - Shared translations across all applications
   // ============================================================================
   common: {
+    // Account status
+    'accountStatus.active.label': 'Active',
+    'accountStatus.active.hint.user': 'This account can sign in normally.',
+    'accountStatus.active.hint.agent': 'This agent can authenticate normally.',
+    'accountStatus.active.hint.application': 'This application can authenticate normally.',
+    'accountStatus.locked.label': 'Locked',
+    'accountStatus.locked.hint.user':
+      'The account is locked and cannot sign in. A timed lockout ends on its own; otherwise the user must complete account recovery or an administrator must unlock the account.',
+    'accountStatus.locked.hint.agent':
+      'The agent is locked and cannot authenticate. A timed lockout ends on its own; otherwise an administrator must unlock the agent.',
+    'accountStatus.locked.hint.failedAttempts.user':
+      'The account is locked after too many failed sign-in attempts. It unlocks on its own, or sooner if the user completes account recovery or an administrator unlocks it.',
+    'accountStatus.locked.hint.failedAttempts.agent':
+      'The agent is locked after too many failed authentication attempts. It unlocks on its own, or sooner if an administrator unlocks it.',
+    'accountStatus.locked.hint.suspensionReleased.user':
+      'Suspension removed. The account remains locked until the user completes account recovery or an administrator unlocks it.',
+    'accountStatus.locked.title.someMethods.user': 'Sign-in locked for some methods',
+    'accountStatus.locked.title.someMethods.agent': 'Authentication locked for some methods',
+    'accountStatus.locked.hint.someMethods.user':
+      'Some sign-in methods are locked after too many failed attempts. Other sign-in methods are not affected. A timed lock ends on its own, or sooner if the user completes account recovery or an administrator unlocks the account.',
+    'accountStatus.locked.hint.someMethods.agent':
+      'Some authentication methods are locked after too many failed attempts. Other methods are not affected. A timed lock ends on its own, or sooner if an administrator unlocks the agent.',
+    'accountStatus.locked.until': 'Locked until {{expiresAt}}',
+    'accountStatus.locked.untilReleased': 'Locked until released',
+    'accountStatus.locked.method.until': '{{method}}: locked until {{expiresAt}}',
+    'accountStatus.locked.method.untilReleased': '{{method}}: locked until released',
+    'accountStatus.method.credential': 'Password or other stored credential',
+    'accountStatus.method.otp': 'One-time password',
+    'accountStatus.suspended.label': 'Suspended',
+    'accountStatus.suspended.hint.user':
+      'The account is suspended and cannot sign in until an administrator unsuspends it.',
+    'accountStatus.suspended.hint.agent':
+      'The agent is suspended and cannot authenticate until an administrator unsuspends it.',
+    'accountStatus.suspended.hint.application':
+      'The application is suspended and cannot authenticate until an administrator unsuspends it.',
+    'accountStatus.suspended.operatorNote': 'Operator note: {{operatorNote}}',
+
+    // Account lifecycle actions
+    'accountStatus.actions': 'Actions',
+    'accountStatus.error.user': 'The user operation could not be completed.',
+    'accountStatus.error.agent': 'The agent operation could not be completed.',
+    'accountStatus.error.application': 'The application operation could not be completed.',
+    'accountStatus.availabilityError': 'The account actions could not be loaded. Reload the page to try again.',
+    'accountStatus.suspend.action': 'Suspend',
+    'accountStatus.suspend.hint.user': 'Prevent sign-in and revoke existing access.',
+    'accountStatus.suspend.hint.agent': 'Prevent authentication and revoke existing access.',
+    'accountStatus.suspend.hint.application': 'Prevent authentication and revoke existing access.',
+    'accountStatus.suspend.confirmTitle.user': 'Suspend user',
+    'accountStatus.suspend.confirmTitle.agent': 'Suspend agent',
+    'accountStatus.suspend.confirmTitle.application': 'Suspend application',
+    'accountStatus.suspend.confirmBody.user':
+      'The account will no longer be able to sign in. Existing sessions and tokens will be revoked.',
+    'accountStatus.suspend.confirmBody.agent':
+      'The agent will no longer be able to authenticate or obtain new tokens. Existing sessions and tokens will be revoked. You can still update the agent details and credentials while it is suspended.',
+    'accountStatus.suspend.confirmBody.application':
+      'The application will no longer be able to authenticate or obtain new tokens. Existing sessions and tokens will be revoked.',
+    'accountStatus.suspend.operatorNoteLabel': 'Operator note (optional)',
+    'accountStatus.suspend.operatorNoteHelp':
+      'Shown to anyone who can read this record. It is never shown on a sign-in attempt.',
+    'accountStatus.suspend.success.user': 'User suspended',
+    'accountStatus.suspend.success.agent': 'Agent suspended',
+    'accountStatus.suspend.success.application': 'Application suspended',
+    'accountStatus.suspend.emailNotSent.user':
+      "User suspended, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.suspend.emailNotSent.agent':
+      "Agent suspended, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.suspend.emailNotSent.application':
+      "Application suspended, but no notification email was sent. Check that the application has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.unlock.action': 'Unlock',
+    'accountStatus.unlock.hint.user': 'Remove all sign-in locks.',
+    'accountStatus.unlock.hint.agent': 'Remove all authentication locks.',
+    'accountStatus.unlock.success.user': 'User unlocked',
+    'accountStatus.unlock.success.agent': 'Agent unlocked',
+    'accountStatus.unlock.emailNotSent.user':
+      "User unlocked, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.unlock.emailNotSent.agent':
+      "Agent unlocked, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.unsuspend.action': 'Unsuspend',
+    'accountStatus.unsuspend.hint.user':
+      'Remove the suspension. The account remains locked until the user completes account recovery or an administrator unlocks it.',
+    'accountStatus.unsuspend.hint.agent': 'Remove the suspension.',
+    'accountStatus.unsuspend.hint.application': 'Remove the suspension.',
+    'accountStatus.unsuspend.confirmTitle.user': 'Unsuspend user',
+    'accountStatus.unsuspend.confirmTitle.agent': 'Unsuspend agent',
+    'accountStatus.unsuspend.confirmTitle.application': 'Unsuspend application',
+    'accountStatus.unsuspend.confirmGuidance.user':
+      "Before unsuspending, verify the user's contact information and reset any potentially compromised credentials.",
+    'accountStatus.unsuspend.confirmGuidance.agent':
+      'Before unsuspending, rotate any potentially compromised agent secrets to prevent their reuse.',
+    'accountStatus.unsuspend.confirmGuidance.application':
+      'Before unsuspending, rotate any potentially compromised application secrets to prevent their reuse.',
+    'accountStatus.unsuspend.confirmBody.user':
+      "The user's account will remain locked after unsuspension. To regain access, the user must complete account recovery or an administrator must unlock the account.",
+    'accountStatus.unsuspend.confirmBody.agent':
+      "This action will remove the suspension and restore the agent's access, unless the agent is also locked.",
+    'accountStatus.unsuspend.confirmBody.application':
+      "This action will remove the suspension and restore the application's access.",
+    'accountStatus.unsuspend.success.user': 'User unsuspended',
+    'accountStatus.unsuspend.success.agent': 'Agent unsuspended',
+    'accountStatus.unsuspend.success.application': 'Application unsuspended',
+    'accountStatus.unsuspend.emailNotSent.user':
+      "User unsuspended, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.unsuspend.emailNotSent.agent':
+      "Agent unsuspended, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.unsuspend.emailNotSent.application':
+      "Application unsuspended, but no notification email was sent. Check that the application has an email address and that the flow's Send Email node has an email provider.",
+    'accountStatus.unsuspendAndUnlock.action': 'Unsuspend and unlock',
+    'accountStatus.unsuspendAndUnlock.hint.user':
+      'Remove the suspension and unlock. The account can sign in right away.',
+    'accountStatus.unsuspendAndUnlock.confirmTitle': 'Unsuspend and unlock user',
+    'accountStatus.unsuspendAndUnlock.confirmGuidance':
+      "Before restoring access, verify the user's contact information and reset any potentially compromised credentials.",
+    'accountStatus.unsuspendAndUnlock.confirmBody':
+      'This action will remove the suspension and unlock the account, allowing the user to sign in again.',
+    'accountStatus.unsuspendAndUnlock.success': 'User unsuspended and unlocked',
+    'accountStatus.unsuspendAndUnlock.emailNotSent':
+      "User unsuspended and unlocked, but a notification email was not sent. Check that the user has an email address and that each flow's Send Email node has an email provider.",
+    'accountStatus.unsuspendAndUnlock.incomplete':
+      'The suspension was removed, but the unlock failed. Unlock it from the Actions menu.',
+
     // Actions
     'actions.add': 'Add',
     'actions.edit': 'Edit',
@@ -161,6 +281,8 @@ const translations = {
     'errors.FET-1109': 'The action could not be deleted. Please try again.',
     'errors.FET-1110': 'The permissions supplied for this role are not valid. Refresh the page and try again.',
     'errors.FET-1111': 'A required value for this change is missing. Refresh the page and try again.',
+    'errors.FET-1112':
+      'The account operation could not be completed. Check that the account still exists and that the operation applies to its current state.',
     'errors.RVS-1001':
       'This change would revoke access through {{entries}} entries, more than the {{max}} allowed for one change.',
 
@@ -737,6 +859,7 @@ const translations = {
     lastLogin: 'Last login',
     'listing.columns.name': 'Name',
     'listing.columns.userId': 'User ID',
+    'listing.columns.status': 'Status',
     'listing.columns.actions': 'Actions',
     noUsers: 'No users found',
     searchUsers: 'Search users...',
@@ -1156,6 +1279,7 @@ const translations = {
     'listing.columns.name': 'Name',
     'listing.columns.agentId': 'Agent ID',
     'listing.columns.organizationUnit': 'Organization unit',
+    'listing.columns.status': 'Status',
     'listing.columns.actions': 'Actions',
 
     // Onboarding (flow driven)
@@ -2703,6 +2827,7 @@ const translations = {
     'listing.addApplication': 'Add application',
     'listing.columns.name': 'Name',
     'listing.columns.clientId': 'Client ID',
+    'listing.columns.status': 'Status',
     'listing.columns.actions': 'Actions',
     'listing.columns.template': 'Type',
     'listing.search.placeholder': 'Search ..',
@@ -4246,6 +4371,16 @@ const translations = {
       'Must match the mode of the access change validator earlier in the flow. A mismatched pair is refused at runtime.',
     'core.executions.groupExecutor.description': 'Apply the group change named by the trusted revocation plan.',
 
+    // Identity governance executor operations
+    'core.executions.identityGovernance.mode.suspend': 'Suspend',
+    'core.executions.identityGovernance.mode.unsuspend': 'Unsuspend',
+    'core.executions.identityGovernance.mode.unlock': 'Unlock',
+    'core.executions.identityGovernance.mode.label': 'Operation',
+    'core.executions.identityGovernance.mode.placeholder': 'Select an operation',
+    'core.executions.identityGovernance.mode.hint':
+      'Suspend and unlock act on different holds, so releasing one leaves the other in place. Suspend acts on the identity a Pre Suspend Executor planned.',
+    'core.executions.identityGovernance.description': 'Run one lifecycle operation on the identity the flow resolved.',
+
     // Passkey executor modes
     'core.executions.passkey.mode.challenge': 'Challenge',
     'core.executions.passkey.mode.verify': 'Verify',
@@ -5460,6 +5595,9 @@ const translations = {
     'editor.tokens.labels.context.expiryTime': 'Expiry time',
     'editor.tokens.labels.context.magicLink': 'Magic link',
     'editor.tokens.labels.context.inviteLink': 'Invite link',
+    'editor.tokens.labels.context.authenticationMethod': 'Sign-in method',
+    'editor.tokens.labels.context.lockDuration': 'Lock duration',
+    'editor.tokens.labels.context.unlockTime': 'Unlock time',
     'editor.validation.emailRequired': 'A subject and body are required.',
     'editor.validation.bodyRequired': 'A body is required.',
     'editor.tokens.noDesign': 'No design tokens match your search.',

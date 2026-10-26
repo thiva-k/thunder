@@ -565,9 +565,8 @@ func (s *UserInfoServiceTestSuite) TestGetUserInfo_MalformedClaimsRequest_Return
 	s.mockAttributeCacheService.AssertExpectations(s.T())
 }
 
-// TestGetUserInfo_AppNotFound_ReturnsInvalidToken tests that a stale/orphaned token returns an error
-// when the referenced client application no longer exists.
-func (s *UserInfoServiceTestSuite) TestGetUserInfo_AppNotFound_ReturnsInvalidToken() {
+// A token of a client that no longer exists is answered with only the subject.
+func (s *UserInfoServiceTestSuite) TestGetUserInfo_DeletedClientAnswersWithSubOnly() {
 	claims := map[string]interface{}{
 		"exp":       float64(time.Now().Add(time.Hour).Unix()),
 		"nbf":       float64(time.Now().Add(-time.Minute).Unix()),
@@ -585,7 +584,7 @@ func (s *UserInfoServiceTestSuite) TestGetUserInfo_AppNotFound_ReturnsInvalidTok
 	s.mockAttributeCacheService.On("GetAttributeCache", mock.Anything, "cache-anf-123").Return(
 		&attributecache.AttributeCache{ID: "cache-anf-123", Attributes: userAttrs}, nil)
 	s.mockInboundClient.On("GetOAuthClientByClientID", mock.Anything, "client123").
-		Return(nil, errors.New("app not found"))
+		Return(nil, nil)
 
 	response, svcErr := s.userInfoService.GetUserInfo(context.Background(), token)
 	assert.Nil(s.T(), svcErr)
@@ -597,6 +596,30 @@ func (s *UserInfoServiceTestSuite) TestGetUserInfo_AppNotFound_ReturnsInvalidTok
 	s.mockTokenValidator.AssertExpectations(s.T())
 	s.mockAttributeCacheService.AssertExpectations(s.T())
 	s.mockInboundClient.AssertExpectations(s.T())
+}
+
+// A failed client lookup is a server error, since the client's governance cannot be checked.
+func (s *UserInfoServiceTestSuite) TestGetUserInfo_ClientLookupFailureIsAServerError() {
+	claims := map[string]interface{}{
+		"exp":       float64(time.Now().Add(time.Hour).Unix()),
+		"nbf":       float64(time.Now().Add(-time.Minute).Unix()),
+		"sub":       "user123",
+		"scope":     "openid profile",
+		"client_id": "client123",
+		"aci":       "cache-lookup-123",
+	}
+	token := s.createToken(claims)
+	s.mockTokenValidator.On("ValidateAccessToken", mock.Anything, token).Return(
+		&tokenservice.AccessTokenClaims{Sub: "user123", Claims: claims}, nil)
+	s.mockInboundClient.On("GetOAuthClientByClientID", mock.Anything, "client123").
+		Return(nil, errors.New("lookup failed"))
+
+	response, svcErr := s.userInfoService.GetUserInfo(context.Background(), token)
+
+	s.Nil(response)
+	s.Require().NotNil(svcErr)
+	s.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
+	s.mockAttributeCacheService.AssertNotCalled(s.T(), "GetAttributeCache", mock.Anything, mock.Anything)
 }
 
 // A token of a held application is refused as an invalid token, and no claims are read.

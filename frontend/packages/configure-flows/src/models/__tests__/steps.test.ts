@@ -207,8 +207,12 @@ describe('steps models', () => {
       expect(ExecutionTypes.IdentityGovernance).toBe('IdentityGovernanceExecutor');
     });
 
-    it('should have exactly 39 execution types', () => {
-      expect(Object.keys(ExecutionTypes)).toHaveLength(39);
+    it('should have PreSuspend type', () => {
+      expect(ExecutionTypes.PreSuspend).toBe('PreSuspendExecutor');
+    });
+
+    it('should have exactly 40 execution types', () => {
+      expect(Object.keys(ExecutionTypes)).toHaveLength(40);
     });
   });
 

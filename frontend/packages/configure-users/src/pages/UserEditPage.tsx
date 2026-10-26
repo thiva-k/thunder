@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+  AccessStatusBanner,
+  AccountStatusAction,
   DocumentTitle,
   PageLoadingAnimation,
   QueryErrorNotice,
@@ -13,6 +15,7 @@ import {
 import {useOrganizationAccess} from '@thunderid/configure-resource-sharing';
 import {useResolveDisplayName} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
+import {useThunderID} from '@thunderid/react';
 import type {User} from '@thunderid/types';
 import {isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -48,6 +51,7 @@ import EditOrganizationAccessSettings from '../components/edit-user/organization
 import QuickCopySection from '../components/edit-user/QuickCopySection';
 import UserDeleteDialog from '../components/UserDeleteDialog';
 import UserConstants from '../constants/user-constants';
+import UserQueryKeys from '../constants/user-query-keys';
 import useUserRoutes from '../hooks/useUserRoutes';
 import {dropNonConformingOptionalAttributes} from '../utils/dropNonConformingAttributes';
 import getUserErrorMessage from '../utils/getUserErrorMessage';
@@ -97,6 +101,12 @@ export default function UserEditPage() {
 
   const {data: user, isLoading: isUserLoading, error: userError, refetch} = useGetUser(userId);
   const updateUserMutation = useUpdateUser();
+  const {user: signedInUser} = useThunderID() as {user?: Record<string, unknown> | null};
+  // The server refuses every lifecycle operation on the operator's own account.
+  const isSignedInUser = Boolean(userId && (signedInUser?.['sub'] === userId || signedInUser?.['id'] === userId));
+  const handleStatusChanged = useCallback((): void => {
+    void refetch();
+  }, [refetch]);
 
   // Get all schemas to find the schema ID from the schema handle
   const {
@@ -494,6 +504,7 @@ export default function UserEditPage() {
           {t('common:messages.readOnlyResource', 'This resource is read-only and cannot be modified.')}
         </Alert>
       )}
+      <AccessStatusBanner status={user.status} sx={{mb: 2}} />
       {/* Header */}
       <PageTitle>
         <PageTitle.BackButton component={<Link to={routes.list()} />}>
@@ -514,6 +525,18 @@ export default function UserEditPage() {
             <Chip label={matchedSchema?.displayName ?? user.type} size="small" sx={{px: 0.5}} />
           </Stack>
         </PageTitle.SubHeader>
+        {/* Read-only records too: the flows change only runtime state. */}
+        {!isSignedInUser && (
+          <PageTitle.Actions>
+            <AccountStatusAction
+              category="user"
+              subject={user.id}
+              status={user.status}
+              listQueryKey={[UserQueryKeys.USERS]}
+              onChanged={handleStatusChanged}
+            />
+          </PageTitle.Actions>
+        )}
       </PageTitle>
 
       {/* Tabs */}

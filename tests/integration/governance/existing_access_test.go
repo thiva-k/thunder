@@ -44,9 +44,10 @@ var switchesOn = revocationSwitches{oauth: true, native: true}
 
 // switchesFor names the tests that run with a switch off. Every other test runs with both on.
 var switchesFor = map[string]revocationSwitches{
-	"TestWithOAuthRevocationOffIntrospectionMissesTheSuspension":   {oauth: false, native: true},
-	"TestWithNativeRevocationOffTheRESTAPIMissesTheSuspension":     {oauth: true, native: false},
-	"TestWithNativeRevocationOffTheSelfUpdateReportsTheSuspension": {oauth: true, native: false},
+	"TestWithOAuthRevocationOffIntrospectionMissesTheSuspension":     {oauth: false, native: true},
+	"TestWithOAuthRevocationOffUserInfoRefusesASuspendedApplication": {oauth: false, native: true},
+	"TestWithNativeRevocationOffTheRESTAPIMissesTheSuspension":       {oauth: true, native: false},
+	"TestWithNativeRevocationOffTheSelfUpdateReportsTheSuspension":   {oauth: true, native: false},
 }
 
 // ExistingAccessTestSuite checks what each hold does to existing sessions and refresh grants: a
@@ -423,6 +424,25 @@ func (ts *ExistingAccessTestSuite) TestWithOAuthRevocationOffIntrospectionMisses
 	ts.True(ts.tokenActive(token.AccessToken),
 		"with OAuth revocation off, introspection does not consult the suspension's record")
 	ts.False(ts.refreshSucceeds(token.RefreshToken), "refresh is still refused by its live check")
+}
+
+// With OAuth revocation off, only UserInfo's own client check can refuse the token.
+func (ts *ExistingAccessTestSuite) TestWithOAuthRevocationOffUserInfoRefusesASuspendedApplication() {
+	userID, username, password := ts.newUser("app_userinfo_switch_off")
+	token := ts.browser().login(username, password, "app_userinfo_switch_off")
+	status, _ := ts.userInfo(token.AccessToken)
+	ts.Require().Equal(http.StatusOK, status, "precondition: UserInfo answers before the suspension")
+
+	ts.T().Cleanup(ts.releaseTheApplicationIfSuspended)
+	runAdministrationFlow(ts.T(), applicationSuspendFlowHandle, ts.appID)
+	status, _ = ts.userInfo(token.AccessToken)
+	ts.Equal(http.StatusUnauthorized, status, "UserInfo must refuse a token of a suspended application")
+
+	runAdministrationFlow(ts.T(), applicationUnsuspendFlowHandle, ts.appID)
+	status, sub := ts.userInfo(token.AccessToken)
+	ts.Equal(http.StatusOK, status, "UserInfo must answer once the application is released")
+	ts.Equal(userID, sub, "UserInfo must report the entity")
+	waitPastTheCutoff(time.Now())
 }
 
 // With native API revocation off, `/users/me` still accepts a token issued before a suspension, and
