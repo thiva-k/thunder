@@ -171,6 +171,7 @@ $QUICKSTART_BUNDLE_STAGE_DIR = Join-Path $FRONTEND_CONSOLE_APP_SOURCE_DIR "src/d
 # Default ports
 $GATE_APP_DEFAULT_PORT = 5190
 $CONSOLE_APP_DEFAULT_PORT = 5191
+$ADMIN_CONSOLE_APP_DEFAULT_PORT = 5192
 $DOCS_DEFAULT_PORT = 3000
 
 # ============================================================================
@@ -1555,6 +1556,7 @@ value:
   allowedOrigins:
     - "https://localhost:$GATE_APP_DEFAULT_PORT"
     - "https://localhost:$CONSOLE_APP_DEFAULT_PORT"
+    - "https://localhost:$ADMIN_CONSOLE_APP_DEFAULT_PORT"
 "@
     Set-Content -Path (Join-Path $BACKEND_DIR "bootstrap/03-dev-server-configurations.yaml") -Value $devServerConfig
 
@@ -1565,7 +1567,9 @@ value:
     $env:ADMIN_PASSWORD = if ($env:ADMIN_PASSWORD) { $env:ADMIN_PASSWORD } else { "admin" }
     Push-Location $BACKEND_DIR
     try {
-        & go run . bootstrap --console-redirect-uris "https://localhost:${CONSOLE_APP_DEFAULT_PORT}/console"
+        # Both the Console and Admin Console dev servers use the same CONSOLE OAuth2 client, each on
+        # its own origin, so both need a registered redirect URI here.
+        & go run . bootstrap --console-redirect-uris "https://localhost:${CONSOLE_APP_DEFAULT_PORT}/console,https://localhost:${ADMIN_CONSOLE_APP_DEFAULT_PORT}/console"
         $bootstrapExit = $LASTEXITCODE
     }
     finally {
@@ -1586,6 +1590,7 @@ value:
     Write-Host "  📱 Frontend :"
     Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/gate"
     Write-Host "      🛠️  Console (System Management): https://localhost:${CONSOLE_APP_DEFAULT_PORT}/console"
+    Write-Host "      🛠️  Admin Console (Users, Agents, Groups, Roles): https://localhost:${ADMIN_CONSOLE_APP_DEFAULT_PORT}/console"
     Write-Host ""
 
     Write-Host "Press Ctrl+C to stop."
@@ -1699,7 +1704,7 @@ function Run-Frontend {
         # In dev the apps are served on their own origins, so point them at the backend via
         # THUNDERID_DEV_SERVER_URL (injected into __DEV_SERVER_URL__; applied only in dev builds).
         $env:THUNDERID_DEV_SERVER_URL = $PUBLIC_URL
-        $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "pnpm", "-r", "--parallel", "--filter", "@thunderid/console", "--filter", "@thunderid/gate", "dev" -PassThru -NoNewWindow
+        $frontendProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "pnpm", "-r", "--parallel", "--filter", "@thunderid/console", "--filter", "@thunderid/gate", "--filter", "@thunderid/admin-console", "dev" -PassThru -NoNewWindow
         $script:FRONTEND_PID = $frontendProcess.Id
     }
     finally {
