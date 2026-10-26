@@ -112,6 +112,7 @@ export default function AccountSuspensionSection(): JSX.Element {
                 onRowClick={(params) => {
                   handleOpenClick(params.row as BasicFlowSummary);
                 }}
+                rowHeight={64}
                 // Eight lifecycle purposes cap the rows at eight, so no paging or column menu.
                 hideFooter
                 disableColumnMenu

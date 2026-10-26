@@ -116,15 +116,21 @@ export default function AgentsList(): JSX.Element {
           <ListingTable.RowActions>
             {params.row.isReadOnly ? (
               <Tooltip title={t('common:status.readOnly', 'Read only')}>
-                <IconButton size="small" disableRipple sx={{cursor: 'default'}}>
+                <IconButton
+                  size="small"
+                  disableRipple
+                  sx={{cursor: 'default'}}
+                  aria-label={t('common:status.readOnly', 'Read only')}
+                >
                   <Eye size={16} />
                 </IconButton>
               </Tooltip>
             ) : (
               <>
-                <Tooltip title={t('common:actions.edit')}>
+                <Tooltip title={t('common:actions.edit', 'Edit')}>
                   <IconButton
                     size="small"
+                    aria-label={t('common:actions.edit', 'Edit')}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditClick(params.row.id);
@@ -133,10 +139,11 @@ export default function AgentsList(): JSX.Element {
                     <Pencil size={16} />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title={t('common:actions.delete')}>
+                <Tooltip title={t('common:actions.delete', 'Delete')}>
                   <IconButton
                     size="small"
                     color="error"
+                    aria-label={t('common:actions.delete', 'Delete')}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteClick(params.row.id);
@@ -168,8 +175,8 @@ export default function AgentsList(): JSX.Element {
 
   return (
     <Box data-testid="agents-list">
-      <ListingTable.Provider variant="data-grid-card" loading={isLoading}>
-        <ListingTable.Container disablePaper>
+      <ListingTable.Provider variant="data-grid" loading={isLoading}>
+        <ListingTable.Container>
           <ListingTable.DataGrid
             rows={data?.agents ?? []}
             columns={columns}
@@ -185,6 +192,7 @@ export default function AgentsList(): JSX.Element {
             // Filtering is not wired end to end, so the column filter panel stays hidden.
             disableColumnFilter
             localeText={dataGridLocaleText}
+            rowHeight={64}
             sx={{
               height: 'auto',
               '& .MuiDataGrid-row': {cursor: 'pointer'},

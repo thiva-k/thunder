@@ -93,13 +93,7 @@ export default function ApplicationsList(): JSX.Element {
         renderCell: (params: DataGrid.GridRenderCellParams<BasicApplication>): JSX.Element => {
           const templateMetadata = getTemplateMetadata(params.row.template);
           return templateMetadata ? (
-            <Chip
-              label={templateMetadata.displayName}
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{fontSize: '0.7rem'}}
-            />
+            <Chip label={templateMetadata.displayName} size="small" variant="outlined" />
           ) : (
             <>-</>
           );
@@ -142,15 +136,21 @@ export default function ApplicationsList(): JSX.Element {
           <ListingTable.RowActions>
             {params.row.isReadOnly ? (
               <Tooltip title={t('common:status.readOnly', 'Read only')}>
-                <IconButton size="small" disableRipple sx={{cursor: 'default'}}>
+                <IconButton
+                  size="small"
+                  disableRipple
+                  sx={{cursor: 'default'}}
+                  aria-label={t('common:status.readOnly', 'Read only')}
+                >
                   <Eye size={16} />
                 </IconButton>
               </Tooltip>
             ) : (
               <>
-                <Tooltip title={t('common:actions.edit')}>
+                <Tooltip title={t('common:actions.edit', 'Edit')}>
                   <IconButton
                     size="small"
+                    aria-label={t('common:actions.edit', 'Edit')}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditClick(params.row.id);
@@ -160,10 +160,11 @@ export default function ApplicationsList(): JSX.Element {
                   </IconButton>
                 </Tooltip>
                 {!isSystemConsoleClient(params.row.clientId, consoleClientId) && (
-                  <Tooltip title={t('common:actions.delete')}>
+                  <Tooltip title={t('common:actions.delete', 'Delete')}>
                     <IconButton
                       size="small"
                       color="error"
+                      aria-label={t('common:actions.delete', 'Delete')}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteClick(params.row.id);
@@ -196,8 +197,8 @@ export default function ApplicationsList(): JSX.Element {
 
   return (
     <Box data-testid="applications-list">
-      <ListingTable.Provider variant="data-grid-card" loading={isLoading}>
-        <ListingTable.Container disablePaper>
+      <ListingTable.Provider variant="data-grid" loading={isLoading}>
+        <ListingTable.Container>
           <ListingTable.DataGrid
             rows={data?.applications ?? []}
             columns={columns}
@@ -215,6 +216,7 @@ export default function ApplicationsList(): JSX.Element {
             // Filtering is not wired end to end, so the column filter panel stays hidden.
             disableColumnFilter
             localeText={dataGridLocaleText}
+            rowHeight={64}
             autoHeight
             sx={{
               '& .MuiDataGrid-row': {
