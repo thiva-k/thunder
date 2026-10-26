@@ -26,6 +26,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/role"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
+	"github.com/thunder-id/thunderid/internal/system/filter"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/security"
@@ -221,7 +222,8 @@ func (s *agentService) GetAgent(ctx context.Context, agentID string, includeDisp
 	return resp, nil
 }
 
-// GetAgentList returns a paginated list of agents.
+// GetAgentList returns a paginated list of agents. An organization unit filter lists the agents that
+// unit owns, followed by the ones shared into it.
 func (s *agentService) GetAgentList(ctx context.Context, limit, offset int,
 	filters map[string]interface{}, includeDisplay bool) (
 	*model.AgentListResponse, *tidcommon.ServiceError) {
@@ -230,6 +232,17 @@ func (s *agentService) GetAgentList(ctx context.Context, limit, offset int,
 	}
 	if limit == 0 {
 		limit = 30
+	}
+
+	listQuery := sysutils.FilterQueryParam(filters) + sysutils.DisplayQueryParam(includeDisplay)
+	ouID, filters, err := filter.SplitOUIDFilter(filters)
+	if err != nil {
+		return nil, &ErrorInvalidFilter
+	}
+	// Other conditions cannot narrow the agents shared into an organization unit yet, so they are
+	// refused alongside one rather than applied to the owned agents only.
+	if ouID != "" && len(filters) > 0 {
+		return nil, &ErrorInvalidFilter
 	}
 
 	// Resolve the set of organization units the caller is authorized to list agents from.
@@ -241,18 +254,47 @@ func (s *agentService) GetAgentList(ctx context.Context, limit, offset int,
 		return nil, &tidcommon.InternalServerError
 	}
 
+	if ouID != "" {
+		// An organization unit the caller cannot list agents from has none to show.
+		if !accessible.AllAllowed && !slices.Contains(accessible.IDs, ouID) {
+			return s.buildListResponse(ctx, []providers.Entity{}, 0, 0, limit, offset, includeDisplay,
+				listQuery), nil
+		}
+		return s.listAgentsInOU(ctx, ouID, limit, offset, includeDisplay, listQuery)
+	}
+
 	// Unfiltered path: system-level caller — return all agents.
 	if accessible.AllAllowed {
-		return s.listAllAgents(ctx, limit, offset, filters, includeDisplay)
+		return s.listAllAgents(ctx, limit, offset, filters, includeDisplay, listQuery)
 	}
 
 	// Filtered path: return agents belonging to the accessible OUs.
-	return s.listAgentsByOUIDs(ctx, accessible.IDs, limit, offset, filters, includeDisplay)
+	return s.listAgentsByOUIDs(ctx, accessible.IDs, limit, offset, filters, includeDisplay, listQuery)
+}
+
+// listAgentsInOU lists the agents an organization unit owns, followed by the ones shared into it.
+func (s *agentService) listAgentsInOU(ctx context.Context, ouID string, limit, offset int,
+	includeDisplay bool, listQuery string) (*model.AgentListResponse, *tidcommon.ServiceError) {
+	page, err := s.entityService.GetEntityPageInOU(
+		ctx, providers.EntityCategoryAgent, ouID, entity.OUEntityScopeAll, limit, offset, nil)
+	if err != nil {
+		s.logger.Error(ctx, "Failed to list agents in organization unit",
+			log.String("ouID", ouID), log.Error(err))
+		return nil, &tidcommon.InternalServerError
+	}
+
+	// A shared agent is listed under the organization unit it is shared into, not the one owning it.
+	for i := range page.Shared {
+		page.Shared[i].OUID = ouID
+		page.Shared[i].OUHandle = ""
+	}
+	return s.buildListResponse(ctx, slices.Concat(page.Owned, page.Shared), len(page.Owned),
+		page.TotalResults, limit, offset, includeDisplay, listQuery), nil
 }
 
 // listAllAgents retrieves agents without OU filtering.
 func (s *agentService) listAllAgents(ctx context.Context, limit, offset int,
-	filters map[string]interface{}, includeDisplay bool) (
+	filters map[string]interface{}, includeDisplay bool, listQuery string) (
 	*model.AgentListResponse, *tidcommon.ServiceError) {
 	totalCount, err := s.entityService.GetEntityListCount(ctx, providers.EntityCategoryAgent, filters)
 	if err != nil {
@@ -266,16 +308,18 @@ func (s *agentService) listAllAgents(ctx context.Context, limit, offset int,
 		return nil, &tidcommon.InternalServerError
 	}
 
-	return s.buildListResponse(ctx, entities, totalCount, limit, offset, includeDisplay), nil
+	return s.buildListResponse(ctx, entities, len(entities), totalCount, limit, offset, includeDisplay,
+		listQuery), nil
 }
 
 // listAgentsByOUIDs retrieves agents scoped to the given organization unit IDs. The OU filter is
 // applied at the store layer so that page sizes and total counts remain correct.
 func (s *agentService) listAgentsByOUIDs(ctx context.Context, ouIDs []string, limit, offset int,
-	filters map[string]interface{}, includeDisplay bool) (
+	filters map[string]interface{}, includeDisplay bool, listQuery string) (
 	*model.AgentListResponse, *tidcommon.ServiceError) {
 	if len(ouIDs) == 0 {
-		return s.buildListResponse(ctx, []providers.Entity{}, 0, limit, offset, includeDisplay), nil
+		return s.buildListResponse(ctx, []providers.Entity{}, 0, 0, limit, offset, includeDisplay,
+			listQuery), nil
 	}
 
 	totalCount, err := s.entityService.GetEntityListCountByOUIDs(
@@ -292,7 +336,8 @@ func (s *agentService) listAgentsByOUIDs(ctx context.Context, ouIDs []string, li
 		return nil, &tidcommon.InternalServerError
 	}
 
-	return s.buildListResponse(ctx, entities, totalCount, limit, offset, includeDisplay), nil
+	return s.buildListResponse(ctx, entities, len(entities), totalCount, limit, offset, includeDisplay,
+		listQuery), nil
 }
 
 // UpdateAgent applies a full-replacement update to the agent.
@@ -1163,8 +1208,9 @@ func (s *agentService) composeGetResponse(ctx context.Context, e *providers.Enti
 }
 
 // buildListResponse builds the paged agent list response from a slice of entities and pagination metadata.
+// The first ownedCount entities are owned by the listed organization unit and the rest are shared into it.
 func (s *agentService) buildListResponse(ctx context.Context, entities []providers.Entity,
-	totalCount, limit, offset int, includeDisplay bool) *model.AgentListResponse {
+	ownedCount, totalCount, limit, offset int, includeDisplay bool, listQuery string) *model.AgentListResponse {
 	logoByID := s.agentLogoMap(ctx, entities)
 	// One read for the page, so the policy resolves once.
 	reads := s.governance.ReadAccess(ctx, entities)
@@ -1172,6 +1218,7 @@ func (s *agentService) buildListResponse(ctx context.Context, entities []provide
 	for i := range entities {
 		e := &entities[i]
 		description, owner, clientID := readSystemAttributes(e.SystemAttributes)
+		owned := i < ownedCount
 		agents = append(agents, model.BasicAgentResponse{
 			ID:          e.ID,
 			OUID:        e.OUID,
@@ -1182,9 +1229,12 @@ func (s *agentService) buildListResponse(ctx context.Context, entities []provide
 			ClientID:    clientID,
 			Owner:       owner,
 			Attributes:  e.Attributes,
-			IsReadOnly:  e.IsReadOnly,
+			// The organization unit an agent is shared into cannot change it until overlay rules are
+			// supported for agents.
+			IsReadOnly:  e.IsReadOnly || !owned,
 			Status:      &reads[i].Status,
 			LastLoginAt: reads[i].LastLoginAt,
+			IsOwnedByOU: new(owned),
 		})
 	}
 
@@ -1197,13 +1247,12 @@ func (s *agentService) buildListResponse(ctx context.Context, entities []provide
 		s.populateOUHandlesForList(ctx, agents)
 	}
 
-	displayQuery := sysutils.DisplayQueryParam(includeDisplay)
 	return &model.AgentListResponse{
 		TotalResults: totalCount,
 		StartIndex:   offset + 1,
 		Count:        len(agents),
 		Agents:       agents,
-		Links:        sysutils.BuildPaginationLinks(agentBasePath, limit, offset, totalCount, displayQuery),
+		Links:        sysutils.BuildPaginationLinks(agentBasePath, limit, offset, totalCount, listQuery),
 	}
 }
 
