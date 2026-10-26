@@ -59,6 +59,7 @@ PRODUCT_NAME="ThunderID"
 PRODUCT_NAME_LOWERCASE="$(echo "$PRODUCT_NAME" | tr '[:upper:]' '[:lower:]')"
 BINARY_NAME="${PRODUCT_NAME_LOWERCASE}"
 PRODUCT_FOLDER=${BINARY_NAME}-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}
+CP_PRODUCT_FOLDER=${BINARY_NAME}-cp-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}
 
 # --- Sample App Distribution details ---
 # Vanilla Sample
@@ -88,6 +89,8 @@ LOCAL_CERT_DIR=$OUTPUT_DIR/.cert
 BACKEND_BASE_DIR=backend
 BACKEND_DIR=$BACKEND_BASE_DIR/cmd/server
 REPOSITORY_DB_DIR=$BACKEND_DIR/database
+CPSERVER_DIR=$BACKEND_BASE_DIR/cmd/cpserver
+CP_REPOSITORY_DB_DIR=$CPSERVER_DIR/database
 SERVER_SCRIPTS_DIR=$BACKEND_BASE_DIR/scripts
 SERVER_DB_SCRIPTS_DIR=$BACKEND_BASE_DIR/dbscripts
 SECURITY_DIR=config/certs
@@ -96,6 +99,10 @@ GATE_APP_DIST_DIR=apps/gate
 CONSOLE_APP_DIST_DIR=apps/console
 FRONTEND_GATE_APP_SOURCE_DIR=$FRONTEND_BASE_DIR/apps/gate
 FRONTEND_CONSOLE_APP_SOURCE_DIR=$FRONTEND_BASE_DIR/apps/console
+# The console the Control Plane serves, packaged into the same apps/console slot (see
+# prepare_cp_frontend_for_packaging): it runs every administration operation as a direct API call,
+# since a Control Plane executes no flows.
+FRONTEND_CONSOLE_CP_APP_SOURCE_DIR=$FRONTEND_BASE_DIR/apps/console-cp
 SAMPLE_BASE_DIR=samples
 VANILLA_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/vanilla-sample
 REACT_SDK_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/react-sdk-sample
@@ -298,6 +305,9 @@ function build_cp_backend() {
     -o "../$BUILD_DIR/$output_binary" ./cmd/cpserver
 
     echo "Control Plane binary: $BUILD_DIR/$output_binary"
+
+    echo "Initializing Control Plane databases..."
+    initialize_cp_databases true
     echo "================================================================"
 }
 
@@ -348,6 +358,55 @@ function initialize_databases() {
     echo "================================================================"
 }
 
+# initialize_cp_databases is initialize_databases scoped to the datasources the Control Plane uses:
+# configuration and entities, plus the runtime persistent database that holds entity runtime state,
+# which entity and group management read. It issues no tokens, so it has no transient datastore.
+function initialize_cp_databases() {
+    echo "================================================================"
+    local override=$1
+    if [[ -z "$override" ]]; then
+        override=false
+    fi
+
+    echo "Initializing Control Plane SQLite databases..."
+
+    mkdir -p "$CP_REPOSITORY_DB_DIR"
+
+    db_files=("configdb.db" "entitydb.db" "runtime_persistent.db")
+    script_paths=("configdb/sqlite.sql" "entitydb/sqlite.sql" "runtime_persistent/sqlite.sql")
+
+    for ((i = 0; i < ${#db_files[@]}; i++)); do
+        db_file="${db_files[$i]}"
+        script_rel_path="${script_paths[$i]}"
+        db_path="$CP_REPOSITORY_DB_DIR/$db_file"
+        script_path="$SERVER_DB_SCRIPTS_DIR/$script_rel_path"
+
+        if [[ -f "$script_path" ]]; then
+            if [[ -f "$db_path" ]]; then
+                if $override; then
+                    echo " - Removing existing $db_file as override is true"
+                    rm "$db_path"
+                else
+                    echo " ! Skipping $db_file: DB already exists. Delete the existing and re-run to recreate."
+                    continue
+                fi
+            fi
+
+            echo " - Creating $db_file using $script_path"
+            sqlite3 "$db_path" < "$script_path"
+            sqlite3 "$db_path" "PRAGMA journal_mode=WAL;"
+            if [ $? -ne 0 ]; then
+                echo "Failed to enable WAL mode for $db_file"
+                exit 1
+            fi
+        else
+            echo " ! Skipping $db_file: SQL script not found at $script_path"
+        fi
+    done
+
+    echo "Control Plane SQLite database initialization complete."
+    echo "================================================================"
+}
 function ensure_pnpm() {
     if ! command -v pnpm >/dev/null 2>&1; then
         echo "pnpm not found, installing..."
@@ -506,6 +565,47 @@ function prepare_backend_for_packaging() {
     # Key material is not generated into the distribution; setup.sh generates it per deployment.
 }
 
+# prepare_cp_backend_for_packaging mirrors prepare_backend_for_packaging for the Control Plane
+# binary. It reuses the data-plane's bootstrap resources: every resource type they declare is
+# wired into cpserver's own registerServices, so the same content imports cleanly there too.
+function prepare_cp_backend_for_packaging() {
+    echo "================================================================"
+    echo "Copying Control Plane backend artifacts..."
+
+    local binary_name="${BINARY_NAME}-cp"
+    if [ "$GO_OS" = "windows" ]; then
+        binary_name="${BINARY_NAME}-cp.exe"
+    fi
+
+    cp "$BUILD_DIR/$binary_name" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    cp "$CPSERVER_DIR/deployment.yaml" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    # config/default.json is shared across both binaries; take it from the data plane's copy.
+    cp -r "$BACKEND_DIR/config" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    if [ -d "$CP_REPOSITORY_DB_DIR" ]; then
+        cp -r "$CP_REPOSITORY_DB_DIR" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    fi
+    cp "$VERSION_FILE" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    cp -r "$SERVER_SCRIPTS_DIR" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    cp -r "$SERVER_DB_SCRIPTS_DIR" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    mkdir -p "$DIST_DIR/$CP_PRODUCT_FOLDER/$SECURITY_DIR"
+    # Never ship key material: strip any dev certs/keys that "cp -r config" above may have copied in.
+    rm -f "$DIST_DIR/$CP_PRODUCT_FOLDER/$SECURITY_DIR"/*.cert "$DIST_DIR/$CP_PRODUCT_FOLDER/$SECURITY_DIR"/*.key
+    # Ship an empty config/secrets directory so a named volume mounted there inherits the runtime
+    # user's ownership instead of being created as root. The Control Plane has no Direct Auth
+    # Secret concept of its own (that gates a data-plane-only endpoint), so unlike the data plane's
+    # packaging this clears the directory outright rather than stripping one named file: nothing
+    # that "cp -r config" above may have copied in belongs here.
+    rm -rf "$DIST_DIR/$CP_PRODUCT_FOLDER/config/secrets"
+    mkdir -p "$DIST_DIR/$CP_PRODUCT_FOLDER/config/secrets"
+
+    # Reuse the data plane's bootstrap directory as-is (see function comment above).
+    echo "Copying bootstrap scripts..."
+    cp -r "$BACKEND_DIR/bootstrap" "$DIST_DIR/$CP_PRODUCT_FOLDER/"
+    # Never ship the dev-only CORS seed that `run` stages into the source bootstrap dir.
+    rm -f "$DIST_DIR/$CP_PRODUCT_FOLDER/bootstrap/03-dev-server-configurations.yaml"
+
+    # Key material is not generated into the distribution; setup-cp.sh generates it per deployment.
+}
 function prepare_frontend_for_packaging() {
     echo "================================================================"
     echo "Copying frontend artifacts..."
@@ -536,6 +636,26 @@ function prepare_frontend_for_packaging() {
     echo "================================================================"
 }
 
+# prepare_cp_frontend_for_packaging copies only the console app: the Control Plane serves no
+# login/registration traffic, so cpserver's own static file handlers mount no gate app to match.
+# It ships the Control Plane console, which runs every operation as a direct API call.
+function prepare_cp_frontend_for_packaging() {
+    echo "================================================================"
+    echo "Copying Control Plane frontend artifacts..."
+
+    mkdir -p "$DIST_DIR/$CP_PRODUCT_FOLDER/$CONSOLE_APP_DIST_DIR"
+
+    if [ -d "$FRONTEND_CONSOLE_CP_APP_SOURCE_DIR/dist" ]; then
+        echo "Copying Control Plane console build output..."
+        shopt -s dotglob
+        cp -r "$FRONTEND_CONSOLE_CP_APP_SOURCE_DIR/dist/"* "$DIST_DIR/$CP_PRODUCT_FOLDER/$CONSOLE_APP_DIST_DIR"
+        shopt -u dotglob
+    else
+        echo "Warning: Control Plane console build output not found at $FRONTEND_CONSOLE_CP_APP_SOURCE_DIR/dist"
+    fi
+
+    echo "================================================================"
+}
 function sync_quickstart_bundles() {
     # Stage Quick start declarative bundles into the console's public dir.
     echo "Syncing quick start sample bundles to console welcome data dir..."
@@ -586,6 +706,38 @@ function package() {
     echo "================================================================"
 }
 
+# package_cp mirrors package() for the Control Plane: a ready-to-run distribution with its own
+# start-cp.sh/setup-cp.sh rather than the data plane's start.sh/setup.sh, since the two bind
+# different default ports and the Control Plane has no Direct Auth Secret to configure.
+function package_cp() {
+    echo "================================================================"
+    echo "Packaging Control Plane backend & frontend artifacts..."
+
+    mkdir -p "$DIST_DIR/$CP_PRODUCT_FOLDER"
+
+    prepare_cp_frontend_for_packaging
+    prepare_cp_backend_for_packaging
+
+    if [ "$GO_OS" = "windows" ]; then
+        echo "Including Windows scripts (start-cp.ps1, setup-cp.ps1)..."
+        cp -r "start-cp.ps1" "$DIST_DIR/$CP_PRODUCT_FOLDER"
+        cp -r "setup-cp.ps1" "$DIST_DIR/$CP_PRODUCT_FOLDER"
+    else
+        echo "Including Unix scripts (start-cp.sh, setup-cp.sh)..."
+        cp -r "start-cp.sh" "$DIST_DIR/$CP_PRODUCT_FOLDER"
+        cp -r "setup-cp.sh" "$DIST_DIR/$CP_PRODUCT_FOLDER"
+        chmod +x "$DIST_DIR/$CP_PRODUCT_FOLDER/start-cp.sh"
+        chmod +x "$DIST_DIR/$CP_PRODUCT_FOLDER/setup-cp.sh"
+    fi
+
+    echo "Creating zip file..."
+    rm -f "$DIST_DIR/$CP_PRODUCT_FOLDER.zip"
+    (cd "$DIST_DIR" && find "$CP_PRODUCT_FOLDER" | sort | zip "$CP_PRODUCT_FOLDER.zip" -@)
+    # $BUILD_DIR is deliberately left in place, unlike package(): it is what makes `package_cp`
+    # useful on its own (re-zip after editing start-cp.sh/setup-cp.sh without recompiling).
+    rm -rf "${DIST_DIR:?}/$CP_PRODUCT_FOLDER"
+    echo "================================================================"
+}
 function package_sample_app() {
     echo "================================================================"
     echo "Packaging sample apps..."
@@ -1239,6 +1391,7 @@ case "$1" in
         ;;
     build_cp_backend)
         build_cp_backend
+        package_cp
         ;;
     build_frontend)
         build_frontend
@@ -1275,6 +1428,9 @@ case "$1" in
         ;;
     package_samples)
         package_sample_app
+        ;;
+    package_cp)
+        package_cp
         ;;
     build)
         build_backend
@@ -1316,7 +1472,7 @@ case "$1" in
         echo "  clean                    - Clean build artifacts"
         echo "  build                    - Build the complete ${PRODUCT_NAME} application (backend + frontend + samples)"
         echo "  build_backend            - Build only the ${PRODUCT_NAME} backend server"
-        echo "  build_cp_backend         - Build only the ${PRODUCT_NAME} Control Plane server"
+        echo "  build_cp_backend         - Build and package the ${PRODUCT_NAME} Control Plane server"
         echo "  build_frontend           - Build only the Next.js frontend applications"
         echo "  build_docs               - Build only the documentation"
         echo "  tools_build              - Build all tool binaries (CLI + i18n-extractor + npm tools)"
@@ -1329,6 +1485,7 @@ case "$1" in
         echo "  tools_test_i18n_extractor  - Run i18n-extractor tests"
         echo "  tools_lint_i18n_extractor  - Run golangci-lint on the i18n-extractor code"
         echo "  package_samples          - Package the sample applications (samples are distributed as source)"
+        echo "  package_cp               - Package the ${PRODUCT_NAME} Control Plane server (assumes build_cp_backend already ran)"
         echo "  test_unit                - Run unit tests with coverage"
         echo "  test_integration         - Run integration tests. Use -run and -package for filtering"
         echo "  merge_coverage           - Merge unit and integration test coverage reports"
