@@ -115,6 +115,7 @@ QUICKSTART_BUNDLE_STAGE_DIR="$FRONTEND_CONSOLE_APP_SOURCE_DIR/src/data/sample-bu
 # Default ports
 GATE_APP_DEFAULT_PORT=5190
 CONSOLE_APP_DEFAULT_PORT=5191
+ADMIN_CONSOLE_APP_DEFAULT_PORT=5192
 DOCS_DEFAULT_PORT=3000
 
 # Integration test filters (optional)
@@ -1072,9 +1073,9 @@ function run() {
     echo "⚙️  Creating default resources..."
     echo ""
 
-    # Dev-only: seed CORS allowed origins for the Gate and Console apps so they can call
-    # the backend without manual configuration. Regenerated on every run and picked up by
-    # the bootstrap one-shot; it is git-ignored and never packaged (see build()).
+    # Dev-only: seed CORS allowed origins for the Gate, Console and Admin Console apps so
+    # they can call the backend without manual configuration. Regenerated on every run and
+    # picked up by the bootstrap one-shot; it is git-ignored and never packaged (see build()).
     cat > "$BACKEND_DIR/bootstrap/03-dev-server-configurations.yaml" <<EOF
 resource_type: server_config
 name: cors
@@ -1082,15 +1083,20 @@ value:
   allowedOrigins:
     - "https://localhost:$GATE_APP_DEFAULT_PORT"
     - "https://localhost:$CONSOLE_APP_DEFAULT_PORT"
+    - "https://localhost:$ADMIN_CONSOLE_APP_DEFAULT_PORT"
 EOF
 
     # Local dev only: default to admin/admin if not supplied. This path never produces a
     # shared or distributed artifact, so a fixed default here is acceptable.
+    #
+    # Both the Console and Admin Console dev servers use the same CONSOLE OAuth2 client, each
+    # on its own origin, so both need a registered redirect URI here.
     if ! ( cd "$BACKEND_DIR" && \
         ADMIN_USERNAME="${ADMIN_USERNAME:-admin}" \
         ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" \
         PUBLIC_URL="$PUBLIC_URL" \
-        go run . bootstrap --console-redirect-uris "https://localhost:$CONSOLE_APP_DEFAULT_PORT/console" ); then
+        go run . bootstrap --console-redirect-uris \
+            "https://localhost:$CONSOLE_APP_DEFAULT_PORT/console,https://localhost:$ADMIN_CONSOLE_APP_DEFAULT_PORT/console" ); then
         echo "❌ Initial data setup failed"
         echo "💡 Check the logs above for more details"
         exit 1
@@ -1105,6 +1111,7 @@ EOF
     echo "  📱 Frontend :"
     echo "      🚪 Gate (Login/Register): https://localhost:$GATE_APP_DEFAULT_PORT/gate"
     echo "      🛠️  Console (System Management): https://localhost:$CONSOLE_APP_DEFAULT_PORT/console"
+    echo "      🛠️  Admin Console (Users, Agents, Groups, Roles): https://localhost:$ADMIN_CONSOLE_APP_DEFAULT_PORT/console"
     echo ""
 
     echo "Press Ctrl+C to stop."
@@ -1192,7 +1199,7 @@ function run_frontend() {
     # In dev the apps are served on their own origins, so point them at the backend via
     # THUNDERID_DEV_SERVER_URL (injected into __DEV_SERVER_URL__; applied only in dev builds).
     THUNDERID_DEV_SERVER_URL="$PUBLIC_URL" \
-        pnpm -r --parallel --filter "@thunderid/console" --filter "@thunderid/gate" dev &
+        pnpm -r --parallel --filter "@thunderid/console" --filter "@thunderid/gate" --filter "@thunderid/admin-console" dev &
     FRONTEND_PID=$!
     
     # Return to script directory
