@@ -622,6 +622,13 @@ func unresolvedParentError(
 	)
 }
 
+// keepsValueReferences reports whether service runs on a control plane, which keeps a value reference
+// where a value belongs.
+func keepsValueReferences(service ResourceServiceInterface) bool {
+	s, ok := service.(*resourceService)
+	return ok && s.keepsReferences
+}
+
 func validateResourceServerWrapper(
 	data interface{},
 	fileStore resourceStoreInterface,
@@ -639,6 +646,11 @@ func validateResourceServerWrapper(
 
 	if rs.Identifier == "" {
 		return fmt.Errorf("resource server identifier cannot be empty")
+	}
+
+	if hasInvalidMCPIdentifier(rs.Type, rs.Identifier, keepsValueReferences(service)) {
+		return fmt.Errorf("identifier %q of MCP resource server '%s' must be an http or https URL with no fragment",
+			rs.Identifier, rs.Name)
 	}
 
 	if service != nil {

@@ -1406,6 +1406,40 @@ resources:
 	s.Equal("child-"+s.handleSuffix, childResource.Handle)
 }
 
+// TestImportMCPResourceServerRequiresURLIdentifier imports an MCP resource server whose identifier is
+// not an http or https URL, which the import rejects, and then the same server with a URL identifier.
+func (s *GroupRoleResourceImportExportSuite) TestImportMCPResourceServerRequiresURLIdentifier() {
+	buildYAML := func(identifier string) string {
+		return fmt.Sprintf(`resource_type: resource_server
+name: Import MCP Server %s
+identifier: %s
+type: MCP
+ouId: %s
+delimiter: ":"
+`, s.handleSuffix, identifier, s.ouID)
+	}
+	options := testutils.ImportOptions{ContinueOnError: true, Target: "runtime"}
+
+	resp, err := s.importResources(testutils.ImportRequest{Content: buildYAML("my-mcp-server"), Options: options})
+	s.Require().NoError(err)
+	s.Equal(0, resp.Summary.Imported)
+	s.Equal(1, resp.Summary.Failed)
+	s.Require().Len(resp.Results, 1)
+	s.Equal("failed", resp.Results[0].Status)
+	s.Equal("RES-1024", resp.Results[0].Code)
+
+	resp, err = s.importResources(testutils.ImportRequest{
+		Content: buildYAML("https://import-mcp-" + s.handleSuffix + ".example.com/mcp"),
+		Options: options,
+	})
+	s.Require().NoError(err)
+	s.Equal(1, resp.Summary.Imported)
+	s.Equal(0, resp.Summary.Failed)
+	s.Require().Len(resp.Results, 1)
+	s.NotEmpty(resp.Results[0].ResourceID)
+	_ = testutils.DeleteResourceServer(resp.Results[0].ResourceID)
+}
+
 // TestImportResourceServerUpsertNestedResources re-imports a resource server that
 // already exists (upsert path). The nested resources also already exist so conflict
 // recovery must use the scoped parent ID when looking up the existing child resource.

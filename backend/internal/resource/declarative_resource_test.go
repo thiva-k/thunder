@@ -1186,6 +1186,43 @@ func TestValidateResourceServerWrapper_EmptyIdentifier(t *testing.T) {
 	assert.Contains(t, err.Error(), "identifier cannot be empty")
 }
 
+func TestValidateResourceServerWrapper_InvalidMCPIdentifier(t *testing.T) {
+	fileStore := newResourceStoreInterfaceMock(t)
+
+	err := validateResourceServerWrapper(&providers.ResourceServer{
+		ID: "rs1", Name: "Server", Identifier: "my-mcp-server", Type: providers.ResourceServerTypeMCP, OUID: "ou1",
+	}, fileStore, nil, nil)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "must be an http or https URL")
+}
+
+func TestValidateResourceServerWrapper_MCPWithURIIdentifier(t *testing.T) {
+	fileStore := newResourceStoreInterfaceMock(t)
+	fileStore.On("GetResourceServer", mock.Anything, "rs1").
+		Return(providers.ResourceServer{}, errResourceServerNotFound)
+
+	err := validateResourceServerWrapper(&providers.ResourceServer{
+		ID: "rs1", Name: "Server", Identifier: "https://mcp.example.com/mcp",
+		Type: providers.ResourceServerTypeMCP, OUID: "ou1",
+	}, fileStore, nil, nil)
+
+	assert.NoError(t, err)
+}
+
+func TestValidateResourceServerWrapper_MCPIdentifierReferenceOnControlPlane(t *testing.T) {
+	fileStore := newResourceStoreInterfaceMock(t)
+	fileStore.On("GetResourceServer", mock.Anything, "rs1").
+		Return(providers.ResourceServer{}, errResourceServerNotFound)
+
+	err := validateResourceServerWrapper(&providers.ResourceServer{
+		ID: "rs1", Name: "Server", Identifier: "var:RESOURCE_SERVER_SERVER_IDENTIFIER",
+		Type: providers.ResourceServerTypeMCP, OUID: "ou1",
+	}, fileStore, nil, &resourceService{keepsReferences: true})
+
+	assert.NoError(t, err)
+}
+
 func TestValidateResourceServerWrapper_DuplicateInFileStore(t *testing.T) {
 	fileStore := newResourceStoreInterfaceMock(t)
 	fileStore.On("GetResourceServer", mock.Anything, "rs1").Return(providers.ResourceServer{ID: "rs1"}, nil)

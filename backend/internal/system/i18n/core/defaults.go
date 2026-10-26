@@ -1349,6 +1349,8 @@ var defaultMessages = map[string]string{
 	"error.resourceservice.invalid_handle_description": "Handle length must be less than 100 characters and contain valid characters (a-z A-Z 0-9 . _ : - /)",
 	"error.resourceservice.invalid_limit_parameter": "Invalid limit parameter",
 	"error.resourceservice.invalid_limit_parameter_description": "The limit parameter must be a positive integer",
+	"error.resourceservice.invalid_mcp_identifier": "Invalid MCP server identifier",
+	"error.resourceservice.invalid_mcp_identifier_description": "Use an http or https URL with no fragment, such as https://mcp.example.com/mcp",
 	"error.resourceservice.invalid_offset_parameter": "Invalid offset parameter",
 	"error.resourceservice.invalid_offset_parameter_description": "The offset parameter must be a non-negative integer",
 	"error.resourceservice.invalid_request_format": "Invalid request format",
