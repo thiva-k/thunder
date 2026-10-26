@@ -1193,6 +1193,12 @@ const translations = {
     'addForm.secretIssued.subtitle':
       "Copy the client secret and store it somewhere safe. It won't be shown again; the agent's page can only regenerate it.",
     'addForm.noAgentTypes': 'No agent types are defined yet. Create one before adding an agent.',
+    'addForm.owner': 'Owner',
+    'addForm.ownerDefault': 'Me (default)',
+    'addForm.ownerTruncated': 'Showing the first {{shown}} of {{total}} users.',
+    'addForm.ownersError': 'The users to choose an owner from could not be loaded.',
+    'addForm.ownerHint':
+      'Defaults to you. Choose a user created here if the agent is applied to a gateway, which needs an owner it can find.',
     'addForm.organizationUnit': 'Organization unit',
     'addForm.selectAgentType': 'Select an agent type',
     'addForm.submit': 'Create agent',
