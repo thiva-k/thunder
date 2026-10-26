@@ -60,6 +60,7 @@ func Initialize(
 	sharingService sharing.SharingServiceInterface,
 	authorizationDetailService authzdetailmgt.AuthorizationDetailMgtServiceInterface,
 	httpConnectionService connection.HTTPConnectionWriterInterface,
+	projectService ProjectAdapter,
 	references *secretresolver.Resolver,
 ) ImportServiceInterface {
 	service := newImportService(
@@ -90,6 +91,7 @@ func Initialize(
 	service.(*importService).sharingService = sharingService
 	service.(*importService).authorizationDetailTypeService = authorizationDetailService
 	service.(*importService).httpConnectionService = httpConnectionService
+	service.(*importService).projectService = projectService
 	importHandler := newImportHandler(service)
 
 	registerRoutes(mux, importHandler)

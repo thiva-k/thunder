@@ -397,6 +397,172 @@ func (_c *ProjectServiceInterfaceMock_GetResourceDependencies_Call) RunAndReturn
 	return _c
 }
 
+// ImportProject provides a mock function for the type ProjectServiceInterfaceMock
+func (_mock *ProjectServiceInterfaceMock) ImportProject(ctx context.Context, id string, rootOUID string, handle string, displayName string, description string, upsert bool) (bool, *common.ServiceError) {
+	ret := _mock.Called(ctx, id, rootOUID, handle, displayName, description, upsert)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ImportProject")
+	}
+
+	var r0 bool
+	var r1 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, string, string, bool) (bool, *common.ServiceError)); ok {
+		return returnFunc(ctx, id, rootOUID, handle, displayName, description, upsert)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, string, string, bool) bool); ok {
+		r0 = returnFunc(ctx, id, rootOUID, handle, displayName, description, upsert)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, string, string, bool) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, id, rootOUID, handle, displayName, description, upsert)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*common.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// ProjectServiceInterfaceMock_ImportProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ImportProject'
+type ProjectServiceInterfaceMock_ImportProject_Call struct {
+	*mock.Call
+}
+
+// ImportProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - rootOUID string
+//   - handle string
+//   - displayName string
+//   - description string
+//   - upsert bool
+func (_e *ProjectServiceInterfaceMock_Expecter) ImportProject(ctx any, id any, rootOUID any, handle any, displayName any, description any, upsert any) *ProjectServiceInterfaceMock_ImportProject_Call {
+	return &ProjectServiceInterfaceMock_ImportProject_Call{Call: _e.mock.On("ImportProject", ctx, id, rootOUID, handle, displayName, description, upsert)}
+}
+
+func (_c *ProjectServiceInterfaceMock_ImportProject_Call) Run(run func(ctx context.Context, id string, rootOUID string, handle string, displayName string, description string, upsert bool)) *ProjectServiceInterfaceMock_ImportProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 bool
+		if args[6] != nil {
+			arg6 = args[6].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectServiceInterfaceMock_ImportProject_Call) Return(b bool, serviceError *common.ServiceError) *ProjectServiceInterfaceMock_ImportProject_Call {
+	_c.Call.Return(b, serviceError)
+	return _c
+}
+
+func (_c *ProjectServiceInterfaceMock_ImportProject_Call) RunAndReturn(run func(ctx context.Context, id string, rootOUID string, handle string, displayName string, description string, upsert bool) (bool, *common.ServiceError)) *ProjectServiceInterfaceMock_ImportProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ProjectExists provides a mock function for the type ProjectServiceInterfaceMock
+func (_mock *ProjectServiceInterfaceMock) ProjectExists(ctx context.Context, id string) (bool, *common.ServiceError) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ProjectExists")
+	}
+
+	var r0 bool
+	var r1 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, *common.ServiceError)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*common.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// ProjectServiceInterfaceMock_ProjectExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProjectExists'
+type ProjectServiceInterfaceMock_ProjectExists_Call struct {
+	*mock.Call
+}
+
+// ProjectExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+func (_e *ProjectServiceInterfaceMock_Expecter) ProjectExists(ctx any, id any) *ProjectServiceInterfaceMock_ProjectExists_Call {
+	return &ProjectServiceInterfaceMock_ProjectExists_Call{Call: _e.mock.On("ProjectExists", ctx, id)}
+}
+
+func (_c *ProjectServiceInterfaceMock_ProjectExists_Call) Run(run func(ctx context.Context, id string)) *ProjectServiceInterfaceMock_ProjectExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectServiceInterfaceMock_ProjectExists_Call) Return(b bool, serviceError *common.ServiceError) *ProjectServiceInterfaceMock_ProjectExists_Call {
+	_c.Call.Return(b, serviceError)
+	return _c
+}
+
+func (_c *ProjectServiceInterfaceMock_ProjectExists_Call) RunAndReturn(run func(ctx context.Context, id string) (bool, *common.ServiceError)) *ProjectServiceInterfaceMock_ProjectExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateProject provides a mock function for the type ProjectServiceInterfaceMock
 func (_mock *ProjectServiceInterfaceMock) UpdateProject(ctx context.Context, id string, request ProjectRequest) (*Project, *common.ServiceError) {
 	ret := _mock.Called(ctx, id, request)

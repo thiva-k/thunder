@@ -5,6 +5,13 @@ name: Default
 description: Default organization unit
 logoUrl: "avatar:shape=rounded,variant=anonymous_entity,content=pavilion,colors=0"
 ---
+resource_type: project
+id: 01900000-0000-7000-8000-000000000002
+rootOuId: 01900000-0000-7000-8000-000000000001
+handle: default
+displayName: Default
+description: Default organization unit
+---
 resource_type: user_type
 id: 01900000-0000-7000-8000-000000000010
 category: user

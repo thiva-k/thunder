@@ -166,8 +166,9 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		runtime.Config.ResourceSharing.AllowChildOUCrossTreeSharing)
 	fatalOnError(ctx, logger, err, "Failed to initialize SharingService")
 
-	projectService, err := project.Initialize(mux, mcpServer, ouService)
+	projectService, projectExporter, err := project.Initialize(mux, mcpServer, ouService)
 	fatalOnError(ctx, logger, err, "Failed to initialize ProjectService")
+	exporters = append(exporters, projectExporter)
 
 	hashCfg, err := buildHashConfig()
 	fatalOnError(ctx, logger, err, "Failed to build HashService config")
@@ -411,6 +412,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		sharingService,
 		authzDetailMgtService,
 		httpConnectionWriter,
+		// An imported root organization unit is created with its project.
+		projectService,
 		// A control plane keeps configuration as references and holds no values, so none are resolved.
 		nil,
 	)

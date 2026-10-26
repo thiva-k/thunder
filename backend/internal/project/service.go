@@ -36,6 +36,9 @@ type ProjectServiceInterface interface {
 	GetProjectList(ctx context.Context, limit, offset int) (*ProjectListResponse, *tidcommon.ServiceError)
 	UpdateProject(ctx context.Context, id string, request ProjectRequest) (*Project, *tidcommon.ServiceError)
 	DeleteProject(ctx context.Context, id string) *tidcommon.ServiceError
+	ProjectExists(ctx context.Context, id string) (bool, *tidcommon.ServiceError)
+	ImportProject(ctx context.Context, id, rootOUID, handle, displayName, description string, upsert bool) (
+		bool, *tidcommon.ServiceError)
 	GetResourceDependencies(
 		ctx context.Context, resourceType, id string) ([]resourcedependency.ResourceDependency, error)
 }
@@ -210,6 +213,110 @@ func (s *projectService) GetResourceDependencies(
 		DisplayName:      project.ID,
 		BehaviorOnDelete: resourcedependency.BehaviorRestrict,
 	}}, nil
+}
+
+// ProjectExists reports whether a project with the given ID exists.
+func (s *projectService) ProjectExists(ctx context.Context, id string) (bool, *tidcommon.ServiceError) {
+	_, err := s.store.GetProject(ctx, id)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, errProjectNotFound) {
+		return false, nil
+	}
+	s.logger.Error(ctx, "Failed to get project", log.Error(err))
+	return false, &tidcommon.InternalServerError
+}
+
+// ImportProject brings in a declared project with the ID another system gave it. A project that
+// does not exist is created with its root organization unit, or linked to that organization unit
+// when it already exists as a root without a project. With upsert, an existing project gets the
+// declared display name and description; its root organization unit and handle cannot change. It
+// reports whether it created the project, or tried to, rather than updating an existing one.
+func (s *projectService) ImportProject(ctx context.Context, id, rootOUID, handle, displayName,
+	description string, upsert bool) (bool, *tidcommon.ServiceError) {
+	if !utils.IsValidUUID(id) {
+		return false, &ErrorInvalidProjectID
+	}
+	details := ProjectRequest{Handle: handle, DisplayName: displayName, Description: description}
+	if svcErr := validateDetails(details); svcErr != nil {
+		return false, svcErr
+	}
+
+	existing, err := s.store.GetProject(ctx, id)
+	if err == nil {
+		if !upsert {
+			return false, &ErrorProjectIDConflict
+		}
+		if rootOUID != "" && rootOUID != existing.RootOUID {
+			return false, &ErrorRootOUMismatch
+		}
+		_, svcErr := s.UpdateProject(ctx, id, details)
+		return false, svcErr
+	}
+	if !errors.Is(err, errProjectNotFound) {
+		s.logger.Error(ctx, "Failed to get project", log.Error(err))
+		return false, &tidcommon.InternalServerError
+	}
+
+	if rootOUID != "" {
+		rootOU, svcErr := s.ouService.GetOrganizationUnit(ctx, rootOUID)
+		if svcErr == nil {
+			return true, s.linkProject(ctx, id, rootOU, details)
+		}
+		if svcErr.Code != ou.ErrorOrganizationUnitNotFound.Code {
+			return false, svcErr
+		}
+	}
+
+	_, svcErr := s.createProject(ctx, id, ou.OrganizationUnitRequestWithID{
+		ID: rootOUID, Handle: handle, Name: displayName, Description: description,
+	})
+	return true, svcErr
+}
+
+// linkProject makes an existing root organization unit the root of a new project with the given ID,
+// and gives the organization unit the project's display name and description.
+func (s *projectService) linkProject(ctx context.Context, id string, rootOU ou.OrganizationUnit,
+	details ProjectRequest) *tidcommon.ServiceError {
+	if rootOU.Parent != nil && *rootOU.Parent != "" {
+		return &ErrorNotARootOU
+	}
+	if details.Handle != "" && details.Handle != rootOU.Handle {
+		return &ErrorHandleChangeNotAllowed
+	}
+	if _, err := s.store.GetProjectByRootOUID(ctx, rootOU.ID); err == nil {
+		return &ErrorRootOUInUse
+	} else if !errors.Is(err, errProjectNotFound) {
+		s.logger.Error(ctx, "Failed to get project by root organization unit", log.Error(err))
+		return &tidcommon.InternalServerError
+	}
+
+	var capturedSvcErr *tidcommon.ServiceError
+	err := s.transactioner.Transact(ctx, func(txCtx context.Context) error {
+		if err := s.store.CreateProject(txCtx, projectRecord{
+			ID: id, RootOUID: rootOU.ID, CreatedAt: time.Now().UTC().Truncate(time.Microsecond),
+		}); err != nil {
+			return err
+		}
+		if rootOU.Name == details.DisplayName && rootOU.Description == details.Description {
+			return nil
+		}
+		if _, svcErr := s.ouService.UpdateOrganizationUnit(txCtx, rootOU.ID,
+			rootOUUpdateRequest(rootOU, details.DisplayName, details.Description)); svcErr != nil {
+			capturedSvcErr = svcErr
+			return errors.New("root organization unit update failed")
+		}
+		return nil
+	})
+	if capturedSvcErr != nil {
+		return capturedSvcErr
+	}
+	if err != nil {
+		s.logger.Error(ctx, "Failed to link project to its root organization unit", log.Error(err))
+		return &tidcommon.InternalServerError
+	}
+	return nil
 }
 
 // createProject creates the root organization unit and the project record in one transaction. An
