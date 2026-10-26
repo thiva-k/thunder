@@ -8,7 +8,7 @@
  * (same shape as `console-routes.fixture.ts`).
  *
  * - `usersApi` / `userTypesApi` / `applicationsApi` / `flowsApi` / `connectionsApi` / `agentsApi` /
- *   `organizationUnitsApi` / `serverConfigApi`: the shared API helpers bound to the test's request context. `beforeAll`/`afterAll` cannot take
+ *   `organizationUnitsApi`: the shared API helpers bound to the test's request context. `beforeAll`/`afterAll` cannot take
  *   test-scoped fixtures, so they construct `new UsersApi(request)` (etc.) themselves - same
  *   class, so no logic lives in two places.
  * - `isolatedPage`: a page in a throwaway browser context, closed on teardown. For
@@ -23,7 +23,6 @@ import { FlowsApi } from "../../utils/flows-api";
 import { ConnectionsApi } from "../../utils/connections-api";
 import { AgentsApi } from "../../utils/agents-api";
 import { OrganizationUnitsApi } from "../../utils/organization-units-api";
-import { ServerConfigApi } from "../../utils/server-config-api";
 
 type SupportFixtures = {
   usersApi: UsersApi;
@@ -33,7 +32,6 @@ type SupportFixtures = {
   connectionsApi: ConnectionsApi;
   agentsApi: AgentsApi;
   organizationUnitsApi: OrganizationUnitsApi;
-  serverConfigApi: ServerConfigApi;
   isolatedPage: Page;
 };
 
@@ -64,10 +62,6 @@ export const test = base.extend<SupportFixtures>({
 
   organizationUnitsApi: async ({ request }, use) => {
     await use(new OrganizationUnitsApi(request));
-  },
-
-  serverConfigApi: async ({ request }, use) => {
-    await use(new ServerConfigApi(request));
   },
 
   isolatedPage: async ({ browser }, use) => {

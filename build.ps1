@@ -814,6 +814,7 @@ function Package {
 
     Prepare-Frontend-For-Packaging
     Prepare-Backend-For-Packaging
+    Prepare-Admin-Console-For-Packaging -PackDir $package_folder
 
     # Copy the appropriate startup and setup scripts based on the target OS
     if ($GO_OS -eq "windows") {
@@ -910,23 +911,22 @@ function Prepare-Cp-Frontend-For-Packaging {
 
 # Prepare-Admin-Console-For-Packaging replaces the full console in the Data Plane folder named by
 # $PackDir with the admin console (Users, Agents, Groups, Roles). Applications, connections, flows
-# and roles are authored on a Control Plane in the quickstart, so its Data Plane only needs what
-# manages its own local identity data.
+# and roles are authored on a Control Plane, so a Data Plane only needs what manages its own local
+# identity data.
 function Prepare-Admin-Console-For-Packaging {
     param([string]$PackDir)
+
+    $dist = Join-Path $FRONTEND_ADMIN_CONSOLE_APP_SOURCE_DIR "dist"
+    if (-not (Test-Path $dist)) {
+        Write-Host "Warning: Admin Console build output not found at $dist"
+        return
+    }
 
     Write-Host "Replacing the Console with the Admin Console in $PackDir..."
     $console_dir = Join-Path $PackDir $CONSOLE_APP_DIST_DIR
     Remove-Item -Path $console_dir -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -Path $console_dir -ItemType Directory -Force | Out-Null
-
-    $dist = Join-Path $FRONTEND_ADMIN_CONSOLE_APP_SOURCE_DIR "dist"
-    if (Test-Path $dist) {
-        Copy-Item -Path (Join-Path $dist "*") -Destination $console_dir -Recurse -Force
-    }
-    else {
-        Write-Host "Warning: Admin Console build output not found at $dist"
-    }
+    Copy-Item -Path (Join-Path $dist "*") -Destination $console_dir -Recurse -Force
 }
 
 # Package-Cp mirrors Package for the Control Plane: a ready-to-run distribution with its own
