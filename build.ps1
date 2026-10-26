@@ -110,6 +110,7 @@ if ($PRODUCT_VERSION.StartsWith("v")) {
 }
 $BINARY_NAME = $PRODUCT_NAME_LOWERCASE
 $PRODUCT_FOLDER = "${BINARY_NAME}-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}"
+$CP_PRODUCT_FOLDER = "${BINARY_NAME}-cp-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}"
 
 # --- Sample App Distribution details ---
 
@@ -146,6 +147,8 @@ $LOCAL_CERT_DIR = Join-Path $OUTPUT_DIR ".cert"
 $BACKEND_BASE_DIR = "backend"
 $BACKEND_DIR = Join-Path $BACKEND_BASE_DIR "cmd/server"
 $REPOSITORY_DB_DIR = Join-Path $BACKEND_DIR "database"
+$CPSERVER_DIR = Join-Path $BACKEND_BASE_DIR "cmd/cpserver"
+$CP_REPOSITORY_DB_DIR = Join-Path $CPSERVER_DIR "database"
 $SERVER_SCRIPTS_DIR = Join-Path $BACKEND_BASE_DIR "scripts"
 $SERVER_DB_SCRIPTS_DIR = Join-Path $BACKEND_BASE_DIR "dbscripts"
 $SECURITY_DIR = "config/certs"
@@ -154,6 +157,8 @@ $GATE_APP_DIST_DIR = "apps/gate"
 $CONSOLE_APP_DIST_DIR = "apps/console"
 $FRONTEND_GATE_APP_SOURCE_DIR = Join-Path $FRONTEND_BASE_DIR "apps/gate"
 $FRONTEND_CONSOLE_APP_SOURCE_DIR = Join-Path $FRONTEND_BASE_DIR "apps/console"
+# The console the Control Plane serves, packaged into the same apps/console slot.
+$FRONTEND_CONSOLE_CP_APP_SOURCE_DIR = Join-Path $FRONTEND_BASE_DIR "apps/console-cp"
 $SAMPLE_BASE_DIR = "samples"
 $VANILLA_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/vanilla-sample"
 $REACT_SDK_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-sdk-sample"
@@ -383,6 +388,103 @@ function Build-Backend {
     Write-Host "================================================================"
 }
 
+function Build-CpBackend {
+    Write-Host "================================================================"
+    Write-Host "Building Go Control Plane backend..."
+    New-Item -Path $BUILD_DIR -ItemType Directory -Force | Out-Null
+
+    # The Control Plane ships alongside the all-in-one server rather than replacing it, so it takes
+    # its own binary name.
+    $output_binary = "${BINARY_NAME}-cp"
+    if ($GO_OS -eq "windows") {
+        $output_binary = "${BINARY_NAME}-cp.exe"
+    }
+
+    $buildDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+    $env:GOOS = $GO_OS
+    $env:GOARCH = $GO_ARCH
+    $env:CGO_ENABLED = "0"
+
+    $ldflags = "-X main.version=$VERSION -X main.buildDate=$buildDate"
+    $outputPath = Join-Path $BUILD_DIR $output_binary
+    $buildArgs = @('build', '-ldflags', $ldflags, '-o', $outputPath, './cmd/cpserver')
+
+    Write-Host "Executing: go $($buildArgs -join ' ')"
+
+    Push-Location $BACKEND_BASE_DIR
+    try {
+        & go @buildArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Go build failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    Write-Host "Control Plane binary: $outputPath"
+
+    Write-Host "Initializing Control Plane databases..."
+    Initialize-CpDatabases -override $true
+    Write-Host "================================================================"
+}
+
+# Initialize-CpDatabases is Initialize-Databases scoped to the datasources the Control Plane uses:
+# configuration and entities, plus the runtime persistent database that holds entity runtime state,
+# which entity and group management read. It issues no tokens, so it has no transient datastore.
+function Initialize-CpDatabases {
+    param(
+        [bool]$override = $false
+    )
+
+    Write-Host "================================================================"
+    Write-Host "Initializing Control Plane SQLite databases..."
+
+    if (-not (Get-Command sqlite3 -ErrorAction SilentlyContinue)) {
+        throw "sqlite3 CLI not found. Install sqlite3 and re-run the build."
+    }
+
+    New-Item -Path $CP_REPOSITORY_DB_DIR -ItemType Directory -Force | Out-Null
+
+    $db_files = @("configdb.db", "entitydb.db", "runtime_persistent.db")
+    $script_paths = @("configdb/sqlite.sql", "entitydb/sqlite.sql", "runtime_persistent/sqlite.sql")
+
+    for ($i = 0; $i -lt $db_files.Length; $i++) {
+        $db_file = $db_files[$i]
+        $db_path = Join-Path $CP_REPOSITORY_DB_DIR $db_file
+        $script_path = Join-Path $SERVER_DB_SCRIPTS_DIR $script_paths[$i]
+
+        if (Test-Path $script_path) {
+            if (Test-Path $db_path) {
+                if ($override) {
+                    Write-Host " - Removing existing $db_file as override is true"
+                    Remove-Item $db_path -Force
+                }
+                else {
+                    Write-Host " ! Skipping $db_file : DB already exists. Delete the existing and re-run to recreate."
+                    continue
+                }
+            }
+
+            Write-Host " - Creating $db_file using $script_path"
+            & sqlite3 $db_path ".read $script_path"
+            if ($LASTEXITCODE -ne 0) {
+                throw "SQLite operation failed with exit code $LASTEXITCODE"
+            }
+            & sqlite3 $db_path "PRAGMA journal_mode=WAL;"
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to enable WAL mode with exit code $LASTEXITCODE"
+            }
+        }
+        else {
+            Write-Host " ! Skipping $db_file : SQL script not found at $script_path"
+        }
+    }
+
+    Write-Host "Control Plane SQLite database initialization complete."
+    Write-Host "================================================================"
+}
 function Ensure-Pnpm {
     if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
         Write-Host "pnpm not found, installing..."
@@ -728,6 +830,110 @@ function Package {
     Write-Host "================================================================"
 }
 
+# Prepare-Cp-Backend-For-Packaging mirrors Prepare-Backend-For-Packaging for the Control Plane
+# binary. It reuses the data-plane's bootstrap resources: every resource type they declare is
+# wired into cpserver's own registerServices, so the same content imports cleanly there too.
+function Prepare-Cp-Backend-For-Packaging {
+    Write-Host "================================================================"
+    Write-Host "Copying Control Plane backend artifacts..."
+
+    $binary_name = "${BINARY_NAME}-cp"
+    if ($GO_OS -eq "windows") {
+        $binary_name = "${BINARY_NAME}-cp.exe"
+    }
+
+    $package_folder = Join-Path $DIST_DIR $CP_PRODUCT_FOLDER
+    Copy-Item -Path (Join-Path $BUILD_DIR $binary_name) -Destination $package_folder -Force
+    Copy-Item -Path (Join-Path $CPSERVER_DIR "deployment.yaml") -Destination $package_folder -Force
+    # config/default.json is shared across both binaries; take it from the data plane's copy.
+    Copy-Item -Path (Join-Path $BACKEND_DIR "config") -Destination $package_folder -Recurse -Force
+    if (Test-Path $CP_REPOSITORY_DB_DIR) {
+        Copy-Item -Path $CP_REPOSITORY_DB_DIR -Destination $package_folder -Recurse -Force
+    }
+    Copy-Item -Path $VERSION_FILE -Destination $package_folder -Force
+    Copy-Item -Path $SERVER_SCRIPTS_DIR -Destination $package_folder -Recurse -Force
+    Copy-Item -Path $SERVER_DB_SCRIPTS_DIR -Destination $package_folder -Recurse -Force
+
+    $security_dir = Join-Path $package_folder $SECURITY_DIR
+    New-Item -Path $security_dir -ItemType Directory -Force | Out-Null
+    # Never ship key material: strip any dev certs/keys that copying config above may have brought in.
+    Remove-Item -Path (Join-Path $security_dir "*.cert") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $security_dir "*.key") -Force -ErrorAction SilentlyContinue
+    # The Control Plane has no Direct Auth Secret of its own, so nothing under config/secrets
+    # belongs here; ship it empty.
+    $secrets_dir = Join-Path $package_folder "config/secrets"
+    Remove-Item -Path $secrets_dir -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -Path $secrets_dir -ItemType Directory -Force | Out-Null
+
+    Write-Host "Copying bootstrap scripts..."
+    Copy-Item -Path (Join-Path $BACKEND_DIR "bootstrap") -Destination $package_folder -Recurse -Force
+    # Never ship the dev-only CORS seed that Run stages into the source bootstrap dir.
+    Remove-Item -Path (Join-Path $package_folder "bootstrap/03-dev-server-configurations.yaml") -Force -ErrorAction SilentlyContinue
+
+    # Key material is not generated into the distribution; setup-cp.ps1 generates it per deployment.
+}
+
+# Prepare-Cp-Frontend-For-Packaging copies only the console app: the Control Plane serves no
+# login/registration traffic, so cpserver's own static file handlers mount no gate app to match.
+# It ships the Control Plane console, which runs every operation as a direct API call.
+function Prepare-Cp-Frontend-For-Packaging {
+    Write-Host "================================================================"
+    Write-Host "Copying Control Plane frontend artifacts..."
+
+    $console_dir = Join-Path (Join-Path $DIST_DIR $CP_PRODUCT_FOLDER) $CONSOLE_APP_DIST_DIR
+    New-Item -Path $console_dir -ItemType Directory -Force | Out-Null
+
+    $dist = Join-Path $FRONTEND_CONSOLE_CP_APP_SOURCE_DIR "dist"
+    if (Test-Path $dist) {
+        Write-Host "Copying Control Plane console build output..."
+        Copy-Item -Path (Join-Path $dist "*") -Destination $console_dir -Recurse -Force
+    }
+    else {
+        Write-Host "Warning: Control Plane console build output not found at $dist"
+    }
+
+    Write-Host "================================================================"
+}
+
+
+# Package-Cp mirrors Package for the Control Plane: a ready-to-run distribution with its own
+# start-cp.ps1/setup-cp.ps1 rather than the data plane's start.ps1/setup.ps1, since the two bind
+# different default ports and the Control Plane has no Direct Auth Secret to configure.
+function Package-Cp {
+    Write-Host "================================================================"
+    Write-Host "Packaging Control Plane backend & frontend artifacts..."
+
+    $package_folder = Join-Path $DIST_DIR $CP_PRODUCT_FOLDER
+    New-Item -Path $package_folder -ItemType Directory -Force | Out-Null
+
+    Prepare-Cp-Frontend-For-Packaging
+    Prepare-Cp-Backend-For-Packaging
+
+    if ($GO_OS -eq "windows") {
+        Write-Host "Including Windows scripts (start-cp.ps1, setup-cp.ps1)..."
+        Copy-Item -Path "start-cp.ps1" -Destination $package_folder -Force
+        Copy-Item -Path "setup-cp.ps1" -Destination $package_folder -Force
+    }
+    else {
+        Write-Host "Including Unix scripts (start-cp.sh, setup-cp.sh)..."
+        Copy-Item -Path "start-cp.sh" -Destination $package_folder -Force
+        Copy-Item -Path "setup-cp.sh" -Destination $package_folder -Force
+    }
+
+    Write-Host "Creating zip file..."
+    $zipFile = Join-Path $DIST_DIR "$CP_PRODUCT_FOLDER.zip"
+    if (Test-Path $zipFile) {
+        Remove-Item $zipFile -Force
+    }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($package_folder, $zipFile)
+
+    # $BUILD_DIR is deliberately left in place, unlike Package: it is what makes Package-Cp useful
+    # on its own (re-zip after editing start-cp.ps1/setup-cp.ps1 without recompiling).
+    Remove-Item -Path $package_folder -Recurse -Force
+    Write-Host "================================================================"
+}
 function Package-Sample-App {
     Write-Host "================================================================"
     Write-Host "Packaging sample apps..."
@@ -1753,6 +1959,10 @@ switch ($Command) {
         Build-Backend
         Package
     }
+    'build_cp_backend' {
+        Build-CpBackend
+        Package-Cp
+    }
     'build_frontend' {
         Build-Frontend
     }
@@ -1789,6 +1999,9 @@ switch ($Command) {
     'package_samples' {
         Package-Sample-App
     }
+    'package_cp' {
+        Package-Cp
+    }
     'test_unit' {
         Test-Unit
     }
@@ -1815,7 +2028,7 @@ switch ($Command) {
         Test-Integration
     }
     default {
-        Write-Host "Usage: $($MyInvocation.MyCommand.Name) {clean|build|build_backend|build_frontend|build_docs|tools_build|tools_test|tools_lint|tools_build_cli|tools_test_cli|tools_lint_cli|tools_build_i18n_extractor|tools_test_i18n_extractor|tools_lint_i18n_extractor|package_samples|test_unit|test_integration|merge_coverage|run|run_backend|run_frontend|run_docs|test}"
+        Write-Host "Usage: $($MyInvocation.MyCommand.Name) {clean|build|build_backend|build_cp_backend|build_frontend|build_docs|tools_build|tools_test|tools_lint|tools_build_cli|tools_test_cli|tools_lint_cli|tools_build_i18n_extractor|tools_test_i18n_extractor|tools_lint_i18n_extractor|package_samples|package_cp|test_unit|test_integration|merge_coverage|run|run_backend|run_frontend|run_docs|test}"
         exit 1
     }
 }
