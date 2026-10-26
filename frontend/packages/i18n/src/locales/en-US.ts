@@ -811,11 +811,36 @@ const translations = {
     'errors.USR-1027':
       'This user cannot be deleted because {{dependencies}} depend on it. Remove or reassign them first.',
     'errors.USR-1028': 'Credentials for this user cannot be updated here.',
+    'errors.USR-1029':
+      'This change is not allowed. A unit may have moved, or a unit that passed the user on would lose its own reach. Reopen the access and try again.',
+    'errors.USR-1030': 'This share no longer exists. It may have been removed already.',
+    'errors.USR-1031':
+      'This unit already shares the user, from a change made elsewhere. Reset to load it, then redo your change.',
+    'errors.USR-1032':
+      "Someone else changed this user's sharing while you were editing. Reset to load the latest, then redo your change.",
+    'errors.USR-1033': 'This share is declared in a resource file. Change it there.',
+    'errors.USR-1034': 'The user is not shared into this unit, so the unit cannot share it on.',
+    'errors.USR-1037':
+      'Sharing with every unit or every other organization comes only from a resource file or an import.',
 
     // Read failures
     'listing.error': 'Failed to load users',
     'manageUser.loadError': 'Failed to load user information',
     'manageUser.notFound': 'User not found',
+
+    // Affiliations
+    'manageUser.tabs.affiliations': 'Affiliations',
+    'organizationAccess.title': 'Where {{resource}} is affiliated',
+    'organizationAccess.description':
+      '{{resource}} can sign in and act within the units selected here. What they can do in each unit depends on the roles that unit grants.',
+    'organizationAccess.ownerOnly': "{{resource}} isn't affiliated with any other unit.",
+    'organizationAccess.stopSharingTitle': 'Keep {{resource}} in {{owner}} only?',
+    'organizationAccess.stopSharingIntro': '{{resource}} will be affiliated with {{owner}} only. This clears:',
+    'organizationAccess.stopSharingConfirm': 'Remove affiliations',
+    'organizationAccess.saved': 'Affiliations updated.',
+    'organizationAccess.loadFailedTitle': 'Failed to load affiliations',
+    'organizationAccess.loadFailedMessage': 'Something went wrong while loading the affiliations.',
+    'organizationAccess.save.error': 'Failed to update affiliations. Please try again.',
   },
 
   // ============================================================================
@@ -1683,7 +1708,7 @@ const translations = {
     'noneBlocked.dropsEveryTree': 'Not available. It also removes Every tree, which leaves nothing granted.',
     'noneBlocked.otherIsNone': 'Not available while {{section}} is set to None.',
     'noneBlocked.otherTrees': 'other trees',
-    nothingChosen: 'Nothing is granted below yet. Saving like this is the same as "Only {{owner}}".',
+    nothingChosen: 'Nothing is granted below yet. Saving like this is the same as "{{owner}} only".',
     'picker.alreadyExcluded': 'Already excluded',
     'picker.alreadyGranted': 'Already granted',
     'picker.collapse': 'Hide units under {{name}}',
@@ -1704,12 +1729,12 @@ const translations = {
     'reach.unitHint': "Units below it don't get access.",
     revoke: 'Revoke access for {{name}}',
     'save.success': 'Organization access updated.',
-    'scope.chosen.description': 'Pick child units of {{owner}} and other trees, separately below.',
-    'scope.chosen.title': 'Chosen organization units',
+    'scope.chosen.description': 'Choose child units of {{owner}} and other trees below.',
+    'scope.chosen.title': '{{owner}} and chosen units',
     'scope.everyUnit.description': 'Every unit in every tree, now and later, with optional exceptions.',
     'scope.everyUnit.title': 'Every organization unit',
     'scope.owner.description': 'No child unit and no other tree can use it.',
-    'scope.owner.title': 'Only {{owner}}',
+    'scope.owner.title': '{{owner}} only',
     'switch.cantRestore.everyTree':
       '"Every tree" can only be set in a resource file or by importing. Once you save, it can\'t be chosen again here.',
     'switch.cantRestore.everyUnit':
@@ -3241,8 +3266,9 @@ const translations = {
     'edit.page.tabs.token': 'Token',
     'edit.page.tabs.organizationAccess': 'Organization Access',
     'edit.organizationAccess.save.error': 'Failed to update organization access. Please try again.',
-    'edit.organizationAccess.tokenOnlyDescription':
-      '{{name}} can request tokens for a granted organization unit, to act within that unit.',
+    'organizationAccess.title': 'Where {{resource}} is available',
+    'organizationAccess.description': '{{resource}} can request tokens to act within the units selected here.',
+    'organizationAccess.ownerOnly': "{{resource}} isn't available in any other unit.",
     'edit.page.tabs.advanced': 'Advanced',
     'edit.page.unsavedChanges': 'Unsaved changes',
     'edit.page.validation.missingRedirectUri': 'A redirect URI is required.',

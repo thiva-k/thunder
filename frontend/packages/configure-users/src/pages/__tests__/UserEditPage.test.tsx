@@ -164,6 +164,23 @@ vi.mock('@/components/edit-user/EditUserAttributes', () => ({
   },
 }));
 
+// The Affiliations tab has its own tests. The page holds its access state and saves it through its own bar.
+vi.mock('@/components/edit-user/organization-access/EditOrganizationAccessSettings', () => ({
+  default: () => <div data-testid="user-organization-access" />,
+}));
+
+const mockAccess: {
+  hasChanges: boolean;
+  isSaving: boolean;
+  saveError: Error | null;
+  save: ReturnType<typeof vi.fn>;
+  reset: ReturnType<typeof vi.fn>;
+} = {hasChanges: false, isSaving: false, saveError: null, save: vi.fn(), reset: vi.fn()};
+
+vi.mock('@thunderid/configure-resource-sharing', () => ({
+  useOrganizationAccess: () => mockAccess,
+}));
+
 vi.mock('@/components/edit-user/CredentialsTabPanel', () => ({
   default: ({userId, credentialFields}: {userId: string; credentialFields: {fieldName: string}[]}) => (
     <div data-testid="credentials-tab-panel" data-user-id={userId}>
@@ -228,6 +245,8 @@ describe('UserEditPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAccess.hasChanges = false;
+    mockAccess.saveError = null;
     stagingCallbackIdentities.clear();
     mockNavigate.mockResolvedValue(undefined);
     mockUpdateMutateAsync.mockResolvedValue(mockUserData);
@@ -469,7 +488,12 @@ describe('UserEditPage', () => {
       const user = userEvent.setup();
       render(<UserEditPage />);
 
-      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['General', 'Attributes', 'Advanced']);
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+        'General',
+        'Attributes',
+        'Affiliations',
+        'Advanced',
+      ]);
 
       await user.click(screen.getByRole('tab', {name: 'Advanced'}));
       expect(screen.getByRole('button', {name: /^delete$/i})).toBeInTheDocument();
@@ -837,6 +861,7 @@ describe('UserEditPage', () => {
         'General',
         'Attributes',
         'Credentials',
+        'Affiliations',
         'Advanced',
       ]);
     });
@@ -874,6 +899,75 @@ describe('UserEditPage', () => {
       const panel = screen.getByTestId('credentials-tab-panel');
       expect(panel).toHaveAttribute('data-user-id', 'user123');
       expect(panel).toHaveTextContent('password,pin');
+    });
+  });
+
+  describe('Affiliations tab', () => {
+    it('shows the Affiliations tab for a read-only user, since a declared user can still be shared on', () => {
+      mockUseGetUser.mockReturnValue({
+        data: {...mockUserData, isReadOnly: true},
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      render(<UserEditPage />);
+
+      expect(screen.getByRole('tab', {name: 'Affiliations'})).toBeInTheDocument();
+    });
+
+    it('shows the affiliation settings when the tab is opened', async () => {
+      const user = userEvent.setup();
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Affiliations'}));
+
+      expect(screen.getByRole('tab', {name: 'Affiliations'})).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('user-organization-access')).toBeInTheDocument();
+    });
+
+    it('saves a sharing change through the page bar, without touching the user', async () => {
+      const user = userEvent.setup();
+      mockAccess.hasChanges = true;
+      mockAccess.save.mockResolvedValue(undefined);
+
+      render(<UserEditPage />);
+      await user.click(screen.getByRole('button', {name: 'Save'}));
+
+      expect(mockAccess.save).toHaveBeenCalled();
+      expect(mockUpdateMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('discards the sharing draft on Reset', async () => {
+      const user = userEvent.setup();
+      mockAccess.hasChanges = true;
+
+      render(<UserEditPage />);
+      await user.click(screen.getByRole('button', {name: 'Reset'}));
+
+      expect(mockAccess.reset).toHaveBeenCalled();
+    });
+
+    it('keeps Save and Reset disabled until the whole save has finished', async () => {
+      const user = userEvent.setup();
+      mockAccess.hasChanges = true;
+      let finishSave: () => void = () => undefined;
+      mockAccess.save.mockReturnValueOnce(
+        new Promise<void>((resolve) => {
+          finishSave = resolve;
+        }),
+      );
+
+      render(<UserEditPage />);
+      await user.click(screen.getByRole('button', {name: 'Save'}));
+
+      // A Reset now would discard a draft the running save still sends; a second Save would send it twice.
+      expect(screen.getByRole('button', {name: 'Reset'})).toBeDisabled();
+      expect(screen.getByRole('button', {name: /Saving/})).toBeDisabled();
+
+      finishSave();
+      await waitFor(() => expect(screen.getByRole('button', {name: 'Reset'})).not.toBeDisabled());
+      expect(mockAccess.save).toHaveBeenCalledTimes(1);
     });
   });
 
