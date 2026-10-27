@@ -877,6 +877,7 @@ var defaultMessages = map[string]string{
 	"error.flowmgtservice.start_node_has_on_incomplete_description": "START node '{{param(nodeID)}}' must not have onIncomplete",
 	"error.flowmgtservice.start_node_has_prompts_description": "START node '{{param(nodeID)}}' must not have prompts",
 	"error.flowmgtservice.start_node_missing_on_success_description": "START node '{{param(nodeID)}}' must have onSuccess",
+	"error.flowmgtservice.system_flow_prompt_node_description": "System flow node '{{param(nodeID)}}' waits for input, which a system flow cannot",
 	"error.flowmgtservice.task_node_invalid_failure_target_description": "TASK_EXECUTION node '{{param(nodeID)}}': onFailure must point to a PROMPT node",
 	"error.flowmgtservice.task_node_invalid_incomplete_target_description": "TASK_EXECUTION node '{{param(nodeID)}}': onIncomplete must point to a PROMPT node",
 	"error.flowmgtservice.task_node_missing_executor_description": "TASK_EXECUTION node '{{param(nodeID)}}' must have an executor with a non-empty name",

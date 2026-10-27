@@ -265,6 +265,76 @@ func (_c *FlowExecServiceInterfaceMock_ExecuteByID_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// ExecuteSystemFlow provides a mock function for the type FlowExecServiceInterfaceMock
+func (_mock *FlowExecServiceInterfaceMock) ExecuteSystemFlow(ctx context.Context, sysCtx *SystemFlowContext) (*SystemFlowResult, *common.ServiceError) {
+	ret := _mock.Called(ctx, sysCtx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExecuteSystemFlow")
+	}
+
+	var r0 *SystemFlowResult
+	var r1 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *SystemFlowContext) (*SystemFlowResult, *common.ServiceError)); ok {
+		return returnFunc(ctx, sysCtx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *SystemFlowContext) *SystemFlowResult); ok {
+		r0 = returnFunc(ctx, sysCtx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*SystemFlowResult)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *SystemFlowContext) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, sysCtx)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*common.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExecuteSystemFlow'
+type FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call struct {
+	*mock.Call
+}
+
+// ExecuteSystemFlow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - sysCtx *SystemFlowContext
+func (_e *FlowExecServiceInterfaceMock_Expecter) ExecuteSystemFlow(ctx any, sysCtx any) *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call {
+	return &FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call{Call: _e.mock.On("ExecuteSystemFlow", ctx, sysCtx)}
+}
+
+func (_c *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call) Run(run func(ctx context.Context, sysCtx *SystemFlowContext)) *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *SystemFlowContext
+		if args[1] != nil {
+			arg1 = args[1].(*SystemFlowContext)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call) Return(systemFlowResult *SystemFlowResult, serviceError *common.ServiceError) *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call {
+	_c.Call.Return(systemFlowResult, serviceError)
+	return _c
+}
+
+func (_c *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call) RunAndReturn(run func(ctx context.Context, sysCtx *SystemFlowContext) (*SystemFlowResult, *common.ServiceError)) *FlowExecServiceInterfaceMock_ExecuteSystemFlow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InitiateAndExecute provides a mock function for the type FlowExecServiceInterfaceMock
 func (_mock *FlowExecServiceInterfaceMock) InitiateAndExecute(ctx context.Context, initContext *FlowInitContext) (*FlowStep, *common.ServiceError) {
 	ret := _mock.Called(ctx, initContext)

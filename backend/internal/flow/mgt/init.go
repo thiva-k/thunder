@@ -5,6 +5,7 @@ package flowmgt
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -29,7 +30,8 @@ type serverConfigProvider interface {
 	GetMergedConfig(ctx context.Context, name string) (any, *tidcommon.ServiceError)
 }
 
-// Initialize initializes the flow management service and registers HTTP routes.
+// Initialize initializes the flow management service and registers HTTP routes. withSystemFlows loads
+// the system flows, for a server that executes flows.
 func Initialize(
 	mux *http.ServeMux,
 	mcpServer *mcp.Server,
@@ -43,6 +45,7 @@ func Initialize(
 	templateResolver notificationTemplateProvider,
 	connectionProvider httpConnectionProvider,
 	configHandler *FlowConfigHandler,
+	withSystemFlows bool,
 ) (FlowMgtServiceInterface, declarativeresource.ResourceExporter, error) {
 	flowValidator := newFlowValidator(executorRegistry, interceptorRegistry, graphBuilder, connectionProvider)
 	store, compositeStore, transactioner, err := initializeStore(cacheManager, flowValidator)
@@ -50,11 +53,21 @@ func Initialize(
 		return nil, nil, err
 	}
 
+	// A server that executes no flows has no system flows to load.
+	var systemFlows map[string]json.RawMessage
+	if withSystemFlows {
+		// Startup has no request to take a context from.
+		systemFlows, err = loadSystemFlows(context.Background(), systemFlowFiles, flowValidator)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	inferenceService := newFlowInferenceService()
 	service := newFlowMgtService(
 		store, inferenceService, graphBuilder, executorRegistry,
 		interceptorRegistry, flowValidator, compositeStore, transactioner, serverConfigSvc, ouSvc,
-		templateResolver,
+		templateResolver, systemFlows,
 	)
 
 	// TODO: Check whether this can be improved to avoid injecting configHandler to flow mgt service

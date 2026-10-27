@@ -3780,3 +3780,84 @@ func (s *ServiceTestSuite) TestExecuteRefusesAHeldApplicationOnAContinuingStep()
 	mockStore.AssertNotCalled(t, "UpdateFlowContext", mock.Anything, mock.Anything)
 	mockStore.AssertNotCalled(t, "DeleteFlowContext", mock.Anything, mock.Anything)
 }
+
+// systemFlowService is an execution service with a flow provider, a graph builder and an engine, and
+// nothing that loads an application or stores a context.
+func (s *ServiceTestSuite) systemFlowService() (*flowExecService, *FlowProviderMock, *flowEngineInterfaceMock) {
+	flows := NewFlowProviderMock(s.T())
+	graphs := NewGraphBuilderInterfaceMock(s.T())
+	graphs.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	engine := newFlowEngineInterfaceMock(s.T())
+	return &flowExecService{flowProvider: flows, graphBuilder: graphs, flowEngine: engine, cfg: testFlowExecCfg},
+		flows, engine
+}
+
+func systemFlow() *providers.CompleteFlowDefinition {
+	return &providers.CompleteFlowDefinition{
+		ID: "019a1f40-6a1c-7000-8000-5e5713d00001", Handle: "system-application-delete",
+		FlowType: providers.FlowTypeSystem,
+	}
+}
+
+// A system flow runs to completion as one, with the inputs it was given and no application loaded.
+func (s *ServiceTestSuite) TestExecuteSystemFlow_RunsToCompletion() {
+	service, flows, engine := s.systemFlowService()
+	flows.EXPECT().GetSystemFlow(mock.Anything, "system-application-delete").Return(systemFlow(), nil)
+	engine.EXPECT().Execute(mock.MatchedBy(func(ctx *EngineContext) bool {
+		return ctx.FlowType == providers.FlowTypeSystem && ctx.UserInputs["targetApplicationId"] == "app-1" &&
+			ctx.Application.ID == ""
+	})).Return(FlowStep{Status: providers.FlowStatusComplete}, nil)
+
+	result, svcErr := service.ExecuteSystemFlow(context.Background(), &SystemFlowContext{
+		Handle: "system-application-delete", Inputs: map[string]string{"targetApplicationId": "app-1"}})
+
+	s.Nil(svcErr)
+	s.NotEmpty(result.ExecutionID)
+}
+
+// A step's refusal is returned as it is, so the caller reports the real reason.
+func (s *ServiceTestSuite) TestExecuteSystemFlow_ReturnsAStepsRefusal() {
+	service, flows, engine := s.systemFlowService()
+	flows.EXPECT().GetSystemFlow(mock.Anything, mock.Anything).Return(systemFlow(), nil)
+	refusal := &tidcommon.ServiceError{Code: "APP-1030", Type: tidcommon.ClientErrorType}
+	engine.EXPECT().Execute(mock.Anything).Return(FlowStep{Status: providers.FlowStatusError, Error: refusal}, nil)
+
+	result, svcErr := service.ExecuteSystemFlow(context.Background(),
+		&SystemFlowContext{Handle: "system-application-delete"})
+	s.Nil(result)
+	s.Same(refusal, svcErr)
+}
+
+// A system flow that fails without a reason, stops for input, or cannot be found is a server error,
+// and its context is never stored.
+func (s *ServiceTestSuite) TestExecuteSystemFlow_AnythingButCompletionIsAServerError() {
+	for name, step := range map[string]FlowStep{
+		"failed without a reason": {Status: providers.FlowStatusError},
+		"stopped for input":       {Status: providers.FlowStatusIncomplete},
+	} {
+		s.Run(name, func() {
+			service, flows, engine := s.systemFlowService()
+			flows.EXPECT().GetSystemFlow(mock.Anything, mock.Anything).Return(systemFlow(), nil)
+			engine.EXPECT().Execute(mock.Anything).Return(step, nil)
+
+			result, svcErr := service.ExecuteSystemFlow(context.Background(),
+				&SystemFlowContext{Handle: "system-application-delete"})
+			s.Nil(result)
+			s.Equal(&tidcommon.InternalServerError, svcErr)
+		})
+	}
+
+	service, flows, engine := s.systemFlowService()
+	flows.EXPECT().GetSystemFlow(mock.Anything, "unknown").Return(nil, &tidcommon.ServiceError{Code: "FMS-1003"})
+	result, svcErr := service.ExecuteSystemFlow(context.Background(), &SystemFlowContext{Handle: "unknown"})
+	s.Nil(result)
+	s.Equal(&tidcommon.InternalServerError, svcErr)
+	engine.AssertNotCalled(s.T(), "Execute", mock.Anything)
+}
+
+// The flow execution API cannot start a system flow: its type is not one a request may name.
+func (s *ServiceTestSuite) TestExecutionAPIRefusesSystemFlows() {
+	_, svcErr := validateFlowType(string(providers.FlowTypeSystem))
+
+	s.Equal(&ErrorInvalidFlowType, svcErr)
+}

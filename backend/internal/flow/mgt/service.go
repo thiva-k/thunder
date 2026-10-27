@@ -6,6 +6,7 @@ package flowmgt
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -64,6 +65,7 @@ type FlowMgtServiceInterface interface {
 		ctx context.Context, resourceType, id string) ([]resourcedependency.ResourceDependency, error)
 	ResolveEffectiveFlowID(ctx context.Context, overriddenFlowID, ouID string, flowType providers.FlowType) (
 		string, *tidcommon.ServiceError)
+	GetSystemFlow(ctx context.Context, handle string) (*providers.CompleteFlowDefinition, *tidcommon.ServiceError)
 }
 
 // ouProvider is the minimal subset of the OU service consumed by flowmgt for OU-level default
@@ -89,7 +91,9 @@ type flowMgtService struct {
 	templateResolver    notificationTemplateProvider
 	serverConfigSvc     serverConfigProvider
 	ouSvc               ouProvider
-	logger              *log.Logger
+	// systemFlows are the system flows, by handle, as validated at startup.
+	systemFlows map[string]json.RawMessage
+	logger      *log.Logger
 }
 
 // notificationTemplateProvider maps a template handle (within a channel) to its id.
@@ -111,6 +115,7 @@ func newFlowMgtService(
 	serverConfigSvc serverConfigProvider,
 	ouSvc ouProvider,
 	templateResolver notificationTemplateProvider,
+	systemFlows map[string]json.RawMessage,
 ) FlowMgtServiceInterface {
 	return &flowMgtService{
 		store:               store,
@@ -124,6 +129,7 @@ func newFlowMgtService(
 		serverConfigSvc:     serverConfigSvc,
 		ouSvc:               ouSvc,
 		templateResolver:    templateResolver,
+		systemFlows:         systemFlows,
 		logger:              log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
 }
@@ -485,6 +491,21 @@ func flowReferencesTemplate(flow *providers.CompleteFlowDefinition, id string,
 		}
 	}
 	return false, nil
+}
+
+// GetSystemFlow returns the system flow with the given handle. Each call decodes a fresh copy, so a
+// caller changing it changes nothing another call sees.
+func (s *flowMgtService) GetSystemFlow(_ context.Context, handle string) (
+	*providers.CompleteFlowDefinition, *tidcommon.ServiceError) {
+	data, ok := s.systemFlows[handle]
+	if !ok {
+		return nil, &ErrorFlowNotFound
+	}
+	var flow providers.CompleteFlowDefinition
+	if err := json.Unmarshal(data, &flow); err != nil {
+		return nil, &tidcommon.InternalServerError
+	}
+	return &flow, nil
 }
 
 // GetFlowByHandle retrieves a flow definition by its handle and type.
