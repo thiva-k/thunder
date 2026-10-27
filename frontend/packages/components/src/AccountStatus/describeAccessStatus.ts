@@ -54,11 +54,11 @@ function lockedHint(category: LifecycleCategory, t: TFunction): string {
   return category === 'agent'
     ? t(
         'common:accountStatus.locked.hint.agent',
-        'The agent is locked and cannot authenticate. A timed lockout ends on its own; otherwise an administrator must unlock the agent.',
+        'The agent is locked and cannot authenticate. An administrator can unlock it.',
       )
     : t(
         'common:accountStatus.locked.hint.user',
-        'The account is locked and cannot sign in. A timed lockout ends on its own; otherwise the user must complete account recovery or an administrator must unlock the account.',
+        'The account is locked and cannot sign in. The user can complete account recovery, or an administrator can unlock the account.',
       );
 }
 
@@ -66,11 +66,23 @@ function lockedFailedAttemptsHint(category: LifecycleCategory, t: TFunction): st
   return category === 'agent'
     ? t(
         'common:accountStatus.locked.hint.failedAttempts.agent',
-        'The agent is locked after too many failed authentication attempts. It unlocks on its own, or sooner if an administrator unlocks it.',
+        'The agent was locked after too many failed authentication attempts. It unlocks automatically at the time shown below. An administrator unlock also removes the lock.',
       )
     : t(
         'common:accountStatus.locked.hint.failedAttempts.user',
-        'The account is locked after too many failed sign-in attempts. It unlocks on its own, or sooner if the user completes account recovery or an administrator unlocks it.',
+        'The account was locked after too many failed sign-in attempts. It unlocks automatically at the time shown below. Account recovery or an administrator unlock also removes the lock.',
+      );
+}
+
+function lockedFailedAttemptsPermanentHint(category: LifecycleCategory, t: TFunction): string {
+  return category === 'agent'
+    ? t(
+        'common:accountStatus.locked.hint.failedAttemptsPermanent.agent',
+        'The agent was locked after too many failed authentication attempts. It stays locked until an administrator unlocks it.',
+      )
+    : t(
+        'common:accountStatus.locked.hint.failedAttemptsPermanent.user',
+        'The account was locked after too many failed sign-in attempts. It stays locked until the user completes account recovery or an administrator unlocks it.',
       );
 }
 
@@ -84,11 +96,11 @@ function lockedSomeMethodsHint(category: LifecycleCategory, t: TFunction): strin
   return category === 'agent'
     ? t(
         'common:accountStatus.locked.hint.someMethods.agent',
-        'Some authentication methods are locked after too many failed attempts. Other methods are not affected. A timed lock ends on its own, or sooner if an administrator unlocks the agent.',
+        'Some authentication methods were locked after too many failed attempts. Other authentication methods are not affected. Each lock below shows when it ends. An administrator unlock removes them.',
       )
     : t(
         'common:accountStatus.locked.hint.someMethods.user',
-        'Some sign-in methods are locked after too many failed attempts. Other sign-in methods are not affected. A timed lock ends on its own, or sooner if the user completes account recovery or an administrator unlocks the account.',
+        'Some sign-in methods were locked after too many failed attempts. Other sign-in methods are not affected. Each lock below shows when it ends. Account recovery or an administrator unlock removes them.',
       );
 }
 
@@ -108,15 +120,16 @@ function methodName(method: string, t: TFunction): string {
 }
 
 /**
- * One live lock as a line: the method, unless it is every method, and when the lock ends.
+ * One live lock as a line: the method, unless it is every method, and when the lock ends. A lock on every
+ * method with no expiry has no line, since the hint already says how it ends.
  */
-function lockLine(method: string, expiresAt: string | undefined, t: TFunction): string {
+function lockLine(method: string, expiresAt: string | undefined, t: TFunction): string | undefined {
   if (method === ACCOUNT_METHOD) {
     return expiresAt
       ? t('common:accountStatus.locked.until', 'Locked until {{expiresAt}}', {
           expiresAt: new Date(expiresAt).toLocaleString(),
         })
-      : t('common:accountStatus.locked.untilReleased', 'Locked until released');
+      : undefined;
   }
   const name = methodName(method, t);
 
@@ -176,7 +189,9 @@ export default function describeAccessStatus(
     const lockedMethods = details?.lockedMethods ?? [];
     // An `account` entry locks every method; a report without entries reads the same way.
     const wholeAccount = lockedMethods.length === 0 || lockedMethods.some(({method}) => method === ACCOUNT_METHOD);
-    const locks = lockedMethods.map(({expiresAt, method}) => lockLine(method, expiresAt, t));
+    const locks = lockedMethods
+      .map(({expiresAt, method}) => lockLine(method, expiresAt, t))
+      .filter((line): line is string => line !== undefined);
 
     if (!wholeAccount) {
       return {
@@ -195,13 +210,11 @@ export default function describeAccessStatus(
         'common:accountStatus.locked.hint.suspensionReleased.user',
         'Suspension removed. The account remains locked until the user completes account recovery or an administrator unlocks it.',
       );
-    } else if (
-      details?.reason === 'FAILED_ATTEMPTS' &&
-      lockedMethods.length > 0 &&
+    } else if (details?.reason === 'FAILED_ATTEMPTS' && lockedMethods.length > 0) {
       // Promise that it unlocks on its own only when every live lock expires.
-      lockedMethods.every((locked) => Boolean(locked.expiresAt))
-    ) {
-      hint = lockedFailedAttemptsHint(category, t);
+      hint = lockedMethods.every((locked) => Boolean(locked.expiresAt))
+        ? lockedFailedAttemptsHint(category, t)
+        : lockedFailedAttemptsPermanentHint(category, t);
     }
     return {hint, label, locks, title: label, value};
   }

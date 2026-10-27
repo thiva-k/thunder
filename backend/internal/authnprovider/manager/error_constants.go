@@ -154,7 +154,7 @@ var (
 		},
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.authnmgrservice.account_locked_description",
-			DefaultValue: "Try again later or reset your password",
+			DefaultValue: "Sign-in is locked. Try again later or contact an administrator.",
 		},
 	}
 

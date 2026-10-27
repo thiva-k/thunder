@@ -76,11 +76,14 @@ describe('describeAccessStatus', () => {
       value: 'LOCKED',
     });
 
-    expect(timed.description?.hint).toMatch(/^The account is locked after too many failed sign-in attempts/);
-    expect(held.description?.hint).toMatch(/^The account is locked and cannot sign in/);
+    expect(timed.description?.hint).toMatch(/It unlocks automatically at the time shown below\./);
+    expect(held.description?.hint).toBe(
+      'The account was locked after too many failed sign-in attempts. It stays locked until the user completes account recovery or an administrator unlocks it.',
+    );
+    expect(held.keys).toContain('common:accountStatus.locked.hint.failedAttemptsPermanent.user');
   });
 
-  it('says when a lock on the whole account ends', () => {
+  it('says when a timed lock on the whole account ends, and adds no line to a held one', () => {
     const timed = describe_({
       details: {lockedMethods: [{expiresAt: EXPIRES_AT, method: 'account'}], reason: 'FAILED_ATTEMPTS'},
       value: 'LOCKED',
@@ -91,7 +94,8 @@ describe('describeAccessStatus', () => {
     });
 
     expect(timed.description).toMatchObject({locks: [`Locked until ${EXPIRES_AT_TEXT}`], title: 'Locked'});
-    expect(held.description).toMatchObject({locks: ['Locked until released'], title: 'Locked'});
+    // The hint already says a held lock lasts until recovery or an unlock.
+    expect(held.description).toMatchObject({locks: [], title: 'Locked'});
   });
 
   it('lists each locked sign-in method with when it ends, without calling the account locked', () => {
@@ -111,7 +115,7 @@ describe('describeAccessStatus', () => {
       ],
       title: 'Sign-in locked for some methods',
     });
-    expect(description?.hint).toMatch(/^Some sign-in methods are locked after too many failed attempts\./);
+    expect(description?.hint).toMatch(/^Some sign-in methods were locked after too many failed attempts\./);
     expect(description?.hint).not.toMatch(/The account is locked/);
     expect(keys).toEqual(
       expect.arrayContaining([
@@ -128,7 +132,7 @@ describe('describeAccessStatus', () => {
     );
 
     expect(description?.title).toBe('Authentication locked for some methods');
-    expect(description?.hint).toMatch(/^Some authentication methods are locked/);
+    expect(description?.hint).toMatch(/^Some authentication methods were locked/);
   });
 
   it('names a method this build has no label for by its value', () => {
@@ -143,6 +147,17 @@ describe('describeAccessStatus', () => {
   it('says a user left locked by an unsuspend needs recovery or an unlock', () => {
     expect(describe_({details: {reason: 'SUSPENSION_RELEASE_LOCK'}, value: 'LOCKED'}).description?.hint).toMatch(
       /^Suspension removed\. The account remains locked/,
+    );
+  });
+
+  it('says a held failed-attempts lock on an agent lasts until an administrator unlocks it', () => {
+    const {description} = describe_(
+      {details: {lockedMethods: [{method: 'account'}], reason: 'FAILED_ATTEMPTS'}, value: 'LOCKED'},
+      'agent',
+    );
+
+    expect(description?.hint).toBe(
+      'The agent was locked after too many failed authentication attempts. It stays locked until an administrator unlocks it.',
     );
   });
 

@@ -167,7 +167,7 @@ var (
 		},
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.authnservice.account_locked_description",
-			DefaultValue: "Try again later or reset your password",
+			DefaultValue: "Sign-in is locked. Try again later or contact an administrator.",
 		},
 	}
 	// ErrorAccountSuspended is the error returned when authentication is refused because the account is
