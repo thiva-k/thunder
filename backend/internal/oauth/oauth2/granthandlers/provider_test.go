@@ -69,6 +69,7 @@ func (suite *GrantHandlerProviderTestSuite) SetupTest() {
 		revocationmock.NewCriteriaRevokerInterfaceMock(suite.T()),
 		revocationmock.NewEnforcementServiceInterfaceMock(suite.T()),
 		nil,
+		nil,
 		testhelpers.OAuthConfig(),
 	)
 }
@@ -88,6 +89,7 @@ func (suite *GrantHandlerProviderTestSuite) TestNewGrantHandlerProvider() {
 		revocationmock.NewRefreshTokenRevokerInterfaceMock(suite.T()),
 		revocationmock.NewCriteriaRevokerInterfaceMock(suite.T()),
 		revocationmock.NewEnforcementServiceInterfaceMock(suite.T()),
+		nil,
 		nil,
 		testhelpers.OAuthConfig(),
 	)

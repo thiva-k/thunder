@@ -5,10 +5,25 @@ package common
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
+
+const flightSchema = `{
+  "type": "object",
+  "required": ["route", "maxFare"],
+  "properties": {
+    "locations": {"type": "array", "items": {"type": "string"}},
+    "actions":   {"type": "array", "items": {"type": "string"}},
+    "route":   {"type": "string", "pattern": "^[A-Z]{3}-[A-Z]{3}$"},
+    "maxFare": {"type": "object", "properties": {
+      "amount":   {"type": "number", "title": "Spend cap", "policy": {
+        "modification": "decrease", "modifiableBy": ["user", "client"]}},
+      "currency": {"type": "string"}}}
+  }
+}`
 
 type SchemaTestSuite struct {
 	suite.Suite
@@ -16,6 +31,14 @@ type SchemaTestSuite struct {
 
 func TestSchemaTestSuite(t *testing.T) {
 	suite.Run(t, new(SchemaTestSuite))
+}
+
+func (s *SchemaTestSuite) validate(schema, detail string) error {
+	resolved, err := CompileSchema(json.RawMessage(schema))
+	s.Require().NoError(err)
+	objects, err := ParseRequestedDetails("[" + detail + "]")
+	s.Require().NoError(err)
+	return ValidateDetail(resolved, objects[0])
 }
 
 func (s *SchemaTestSuite) TestCompileSchema_Rejects() {
@@ -34,6 +57,60 @@ func (s *SchemaTestSuite) TestCompileSchema_Rejects() {
 		_, err := CompileSchema(json.RawMessage(schema))
 		s.Error(err, name)
 	}
+}
+
+func (s *SchemaTestSuite) TestValidate_CommonFieldsOnlyWhenDeclared() {
+	s.NoError(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN","maxFare":{"amount":450},
+		"locations":["https://api.example/bookings"],"actions":["create"]}`))
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN","maxFare":{"amount":450},
+		"privileges":["economy"]}`), "an undeclared common field is an unknown field (RFC 9396 section 5)")
+	s.NoError(s.validate(`{"type":"object","properties":{"note":{"type":"string"}}}`, `{"type":"x","note":"a"}`),
+		"type is accepted without being declared")
+}
+
+func (s *SchemaTestSuite) TestValidate_RejectsUnknownFields() {
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN","maxFare":{"amount":1},"extra":1}`),
+		"unknown top-level field")
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN","maxFare":{"amount":1,"tip":"5"}}`),
+		"unknown nested field")
+}
+
+func (s *SchemaTestSuite) TestRequestSchema_DoesNotRequireProcessorFields() {
+	schema := json.RawMessage(`{"type":"object","required":["amount","debtor"],"properties":{` +
+		`"amount":{"type":"number"},` +
+		`"debtor":{"type":"object","required":["iban"],"properties":{` +
+		`"iban":{"type":"string","policy":{"suppliedBy":"processor"}}}}}}`)
+	objects, err := ParseRequestedDetails(`[{"type":"p","amount":10,"debtor":{}}]`)
+	s.Require().NoError(err)
+
+	request, err := CompileRequestSchema(schema)
+	s.Require().NoError(err)
+	s.NoError(ValidateDetail(request, objects[0]), "the client cannot send the field the processor supplies")
+
+	full, err := CompileSchema(schema)
+	s.Require().NoError(err)
+	s.Error(ValidateDetail(full, objects[0]), "once the processor has answered, it must have supplied the field")
+
+	missing, err := ParseRequestedDetails(`[{"type":"p","debtor":{}}]`)
+	s.Require().NoError(err)
+	s.Error(ValidateDetail(request, missing[0]), "fields the client sends stay required")
+
+	_, err = CompileRequestSchema(json.RawMessage(`{`))
+	s.Error(err)
+}
+
+func (s *SchemaTestSuite) TestValidate_EnforcesShape() {
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"colombo","maxFare":{"amount":1}}`), "pattern")
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN"}`), "required")
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN","maxFare":{"amount":"1"}}`), "type")
+	s.Error(s.validate(flightSchema, `{"type":"flight","route":"CMB-SIN","maxFare":{},"actions":"x"}`),
+		"common field shape")
+}
+
+func (s *SchemaTestSuite) TestCompileSchema_TypeIsRequired() {
+	resolved, err := CompileSchema(json.RawMessage(`{"type":"object","properties":{"a":{"type":"string"}}}`))
+	s.Require().NoError(err)
+	s.Error(ValidateDetail(resolved, Detail{Fields: map[string]json.RawMessage{"a": json.RawMessage(`"x"`)}}))
 }
 
 func (s *SchemaTestSuite) TestCompileSchema_RefusesUnknownTypeNames() {
@@ -139,6 +216,38 @@ func (s *SchemaTestSuite) TestCompileSchema_AcceptsAListOfObjectsWithoutPolicies
 	s.NoError(err)
 }
 
+func (s *SchemaTestSuite) TestValidate_AssertsDateFormats() {
+	schema := `{"type":"object","properties":{"until":{"type":"string","format":"date"},` +
+		`"at":{"type":"array","items":{"type":"string","format":"date-time"}}}}`
+	s.NoError(s.validate(schema, `{"type":"t","until":"2026-10-19","at":["2026-10-19T10:00:00Z"]}`))
+	s.Error(s.validate(schema, `{"type":"t","until":"not-a-date"}`))
+	s.Error(s.validate(schema, `{"type":"t","at":["2026-10-19"]}`))
+}
+
+// A number is refused when a double does not hold it exactly, since the schema checks it as a double while the
+// token carries its text.
+func (s *SchemaTestSuite) TestValidate_RefusesNumbersADoubleDoesNotHold() {
+	schema := `{"type":"object","properties":{"amount":{"type":"number","maximum":100},` +
+		`"limits":{"type":"object","properties":{"ids":{"type":"array","items":{"type":"number"}}}}}}`
+	for _, held := range []string{"100", "45.99", "0.1", "-0", "1E2", "5e-324", "1.5e-300"} {
+		s.NoError(s.validate(schema, `{"type":"t","amount":`+held+`}`), held)
+	}
+	for _, lost := range []string{"100.0000000000000001", "99.99999999999999999", "1e-400",
+		"1e-100000000", "0.10000000000000000001"} {
+		err := s.validate(schema, `{"type":"t","amount":`+lost+`}`)
+		s.Require().Error(err, lost)
+		s.Contains(err.Error(), "the number at amount", lost)
+	}
+	err := s.validate(schema, `{"type":"t","limits":{"ids":[1,9007199254740993]}}`)
+	s.Require().Error(err)
+	s.Contains(err.Error(), "the number at limits.ids")
+
+	long := "1." + strings.Repeat("0", maxNumberLength)
+	err = s.validate(schema, `{"type":"t","amount":`+long+`}`)
+	s.Require().Error(err, "a number too long to compare exactly, though a double holds its value")
+	s.Contains(err.Error(), "longer than")
+}
+
 func (s *SchemaTestSuite) TestCompileSchema_NamesTheUnsupportedKeywordFirst() {
 	_, err := CompileSchema(json.RawMessage(`{"type":"object","properties":{"a":{"anyOf":[{"type":"string"}]}}}`))
 	s.Require().Error(err)
@@ -201,4 +310,16 @@ func (s *SchemaTestSuite) TestCheckTypeValue() {
 	s.Equal(FieldType, fieldErr.Path)
 	s.Error(CheckTypeValue(json.RawMessage(`{"type":"object","properties":{"type":{"enum":["a"]}}}`), "payment"))
 	s.Error(CheckTypeValue(json.RawMessage(`{`), "payment"))
+}
+
+// multipleOf is checked exactly, so an amount in cents that floating-point division gets wrong is accepted.
+func (s *SchemaTestSuite) TestValidate_ChecksMultipleOfExactly() {
+	schema := `{"type":"object","properties":{"amount":{"type":"number","multipleOf":0.01},` +
+		`"steps":{"type":"array","items":{"type":"number","multipleOf":5}}}}`
+	for _, held := range []string{`"amount":0.07`, `"amount":10.05`, `"amount":0`, `"steps":[5,10]`} {
+		s.NoError(s.validate(schema, `{"type":"t",`+held+`}`), held)
+	}
+	for _, lost := range []string{`"amount":0.075`, `"steps":[5,7]`} {
+		s.Error(s.validate(schema, `{"type":"t",`+lost+`}`), lost)
+	}
 }

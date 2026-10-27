@@ -292,6 +292,9 @@ oauth:
     max_iat_age: {{ .Values.configuration.oauth.clientAssertion.maxIatAge }}
   cimd:
     enabled: {{ .Values.configuration.oauth.cimd.enabled }}
+  authorization_details:
+    processor_timeout: {{ .Values.configuration.oauth.authorizationDetails.processorTimeout }}
+    type_metadata_enabled: {{ .Values.configuration.oauth.authorizationDetails.typeMetadataEnabled }}
   revocation:
     criteria:
       max_entries_per_change: {{ .Values.configuration.oauth.revocation.criteria.maxEntriesPerChange }}

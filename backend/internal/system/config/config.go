@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 // Package config provides structures and functions for loading and managing server configurations.
@@ -702,6 +702,7 @@ type OAuthConfig struct {
 	SendServerErrorsToClient *bool                                   `yaml:"send_server_errors_to_client" json:"send_server_errors_to_client"` //nolint:lll
 	TokenRevocation          engineconfig.OAuthTokenRevocationConfig `yaml:"token_revocation" json:"token_revocation"`
 	Logout                   engineconfig.LogoutConfig               `yaml:"logout" json:"logout"`
+	AuthorizationDetails     engineconfig.AuthorizationDetailsConfig `yaml:"authorization_details" json:"authorization_details"` //nolint:lll
 }
 
 // ToEngineConfig copies the yaml-loaded fields into an engineconfig.OAuthConfig value.
@@ -727,6 +728,7 @@ func (c OAuthConfig) ToEngineConfig() engineconfig.OAuthConfig {
 		SendServerErrorsToClient: c.SendServerErrorsToClient,
 		TokenRevocation:          c.TokenRevocation,
 		Logout:                   c.Logout,
+		AuthorizationDetails:     c.AuthorizationDetails,
 	}
 }
 
@@ -944,6 +946,9 @@ func LoadConfig(configPath string, defaultPath string, serverHome string) (*Conf
 		return nil, err
 	}
 	if err := cfg.OAuth.Logout.Backchannel.Validate(); err != nil {
+		return nil, err
+	}
+	if err := cfg.OAuth.AuthorizationDetails.Validate(); err != nil {
 		return nil, err
 	}
 	if err := cfg.Notification.Validate(); err != nil {

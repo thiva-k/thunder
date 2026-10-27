@@ -6,7 +6,26 @@ package common
 import (
 	"errors"
 	"fmt"
+
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
+
+// ErrorAuthorizationDetailTypeChanged is the error returned when a type changes during a request.
+var ErrorAuthorizationDetailTypeChanged = tidcommon.ServiceError{
+	Type: tidcommon.ServerErrorType,
+	Code: "RAR-5002",
+	Error: tidcommon.I18nMessage{
+		Key:          "error.authorizationdetailservice.authorization_detail_type_changed",
+		DefaultValue: "Authorization details type changed",
+	},
+	ErrorDescription: tidcommon.I18nMessage{
+		Key:          "error.authorizationdetailservice.authorization_detail_type_changed_description",
+		DefaultValue: "An authorization details type was changed or deleted while the request was in progress",
+	},
+}
+
+// ErrChangeRefused is returned when ApplyChanges refuses a change.
+var ErrChangeRefused = errors.New("authorization detail change refused")
 
 // errLimitOrder is returned when a field's minimum is greater than its maximum.
 var errLimitOrder = errors.New("the minimum cannot be greater than the maximum")

@@ -97,6 +97,36 @@ func (s *PolicyTestSuite) TestPolicies_RejectedAtRegistration() {
 	s.Error(err)
 }
 
+func (s *PolicyTestSuite) TestCheckFieldLimits() {
+	policies := FieldPolicies{
+		"amount": {
+			ValueType: valueTypeDate,
+			Minimum:   json.RawMessage(`"2026-01-01"`),
+			Maximum:   json.RawMessage(`"2026-12-31"`),
+		},
+		"absent": {ValueType: valueTypeDate, Maximum: json.RawMessage(`"2026-12-31"`)},
+	}
+	object := func(amount string) Detail {
+		return Detail{Fields: map[string]json.RawMessage{"amount": json.RawMessage(amount)}}
+	}
+	s.NoError(CheckFieldLimits(policies, object(`"2026-12-31"`)))
+	s.Error(CheckFieldLimits(policies, object(`"2027-01-01"`)), "above the maximum")
+	s.Error(CheckFieldLimits(policies, object(`"2025-12-31"`)), "below the minimum")
+	s.Error(CheckFieldLimits(policies, object(`"lots"`)), "not comparable")
+}
+
+func (s *PolicyTestSuite) TestCheckRequestedFields() {
+	policies := FieldPolicies{"account": {SuppliedBy: PartyProcessor}}
+	requested := Detail{Fields: map[string]json.RawMessage{"account": json.RawMessage(`{"iban":"DE12"}`)}}
+	s.Error(CheckRequestedFields(policies, requested), "a client cannot send a field the processor supplies")
+	_, err := CompileSchema(json.RawMessage(`{"type":"object","properties":{"a":{"type":"object",` +
+		`"properties":{"b.c":{"type":"string"}}}}}`))
+	s.Error(err, "a property name with a dot would make field paths ambiguous")
+
+	other := Detail{Fields: map[string]json.RawMessage{"a": json.RawMessage(`1`)}}
+	s.NoError(CheckRequestedFields(policies, other))
+}
+
 func (s *PolicyTestSuite) TestPolicies_UnreadableSchemaFixesEveryField() {
 	s.Empty(Policies(json.RawMessage(`{`)))
 }

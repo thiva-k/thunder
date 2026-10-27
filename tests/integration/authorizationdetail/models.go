@@ -1,7 +1,8 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package authorizationdetail holds integration tests for the RFC 9396 authorization details type registry.
+// Package authorizationdetail holds integration tests for RFC 9396 rich authorization requests: the
+// authorization details type registry, its metadata, and details carried through token requests.
 package authorizationdetail
 
 import "encoding/json"
@@ -54,4 +55,51 @@ type typeListResponse struct {
 // errorResponse mirrors a management API error.
 type errorResponse struct {
 	Code string `json:"code"`
+}
+
+// oauthErrorResponse mirrors an OAuth error response.
+type oauthErrorResponse struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+// typeMetadata mirrors the client view of a type the metadata endpoint serves.
+type typeMetadata struct {
+	Type          string          `json:"type"`
+	Name          string          `json:"name"`
+	Version       int             `json:"version"`
+	Schema        json.RawMessage `json:"schema"`
+	Modifications json.RawMessage `json:"modifications"`
+}
+
+// typeMetadataList mirrors the list the metadata endpoint serves.
+type typeMetadataList struct {
+	Types []typeMetadata `json:"types"`
+}
+
+// processRequest mirrors the call ThunderID makes to a type's processor.
+type processRequest struct {
+	Subject struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	} `json:"subject"`
+	Client struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	} `json:"client"`
+	Resource string `json:"resource"`
+	Details  []struct {
+		DetailID    string          `json:"detailId"`
+		Type        string          `json:"type"`
+		TypeVersion int             `json:"typeVersion"`
+		Detail      json.RawMessage `json:"detail"`
+	} `json:"details"`
+}
+
+// processResult mirrors the processor's answer on one detail.
+type processResult struct {
+	DetailID string                     `json:"detailId"`
+	Decision bool                       `json:"decision"`
+	Patch    map[string]json.RawMessage `json:"patch,omitempty"`
+	Context  map[string]string          `json:"context,omitempty"`
 }
