@@ -65,6 +65,7 @@ test.describe("Application Onboarding", () => {
       });
 
       await test.step("Step 1 [configure-name]: Verify Next blocked on empty name, then fill name, restrict to Person, and click Next", async () => {
+        await applicationsPage.handleOptionalOuStep("application-configure-name");
         await applicationsPage.waitForStep("application-configure-name");
         await expect(applicationsPage.nextButton.first()).toBeDisabled();
         console.log("Next button is disabled with empty name — correct");
@@ -134,6 +135,7 @@ test.describe("Application Onboarding", () => {
       });
 
       await test.step("Step 1: Fill name and advance", async () => {
+        await applicationsPage.handleOptionalOuStep("application-configure-name");
         await applicationsPage.waitForStep("application-configure-name");
         await applicationsPage.fillAppName(`TestApp_SPA_${Date.now()}`);
         await applicationsPage.clickNext();

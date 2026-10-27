@@ -66,11 +66,17 @@ export class AgentOnboardingPage extends BasePage {
   /**
    * The heading the current flow step renders, once it has replaced the previous one. Scoped to
    * level 1: the breadcrumb trail repeats each step heading at a lower level as it is visited.
+   *
+   * A flow that fails shows an error alert instead of a step, so the wait ends on whichever appears
+   * first and a failure reports the alert's text rather than a missing heading.
    */
-  async expectStep(heading: RegExp) {
-    await expect(this.page.getByRole("heading", { level: 1, name: heading })).toBeVisible({
-      timeout: Timeouts.FORM_LOAD,
-    });
+  async expectStep(heading: RegExp, timeout: number = Timeouts.FORM_LOAD) {
+    const step = this.page.getByRole("heading", { level: 1, name: heading });
+    const problem = this.page.getByRole("alert");
+    await expect(step.or(problem).first()).toBeVisible({ timeout });
+    if (!(await step.isVisible())) {
+      throw new Error(`The onboarding flow showed an error instead of the step: ${await problem.first().innerText()}`);
+    }
   }
 
   /** Click the step's single submit action, identified by its label. */
@@ -98,8 +104,27 @@ export class AgentOnboardingPage extends BasePage {
     return labels.filter(label => !/^select /i.test(label.trim()));
   }
 
-  /** Leave the owner unset, so the agent is owned by the signed-in administrator. */
+  /**
+   * Leave the owner unset, so the agent is owned by the signed-in administrator.
+   *
+   * The flow asks for an organization unit before the owner, but only while the agent type's unit has
+   * child units, which tests running alongside this one create and remove. When it asks, the agent is
+   * kept in that unit, the root of the tree it offers, which is where it lands when it does not ask.
+   */
   async submitOwnerStep() {
+    const unitStep = this.page.getByRole("heading", { level: 1, name: /choose an organization unit/i });
+    const ownerStep = this.page.getByRole("heading", { level: 1, name: /select an owner/i });
+    // The first step also waits for the page to resolve the flow and start it, two requests in a row,
+    // so it gets the page load budget rather than the one for a single step.
+    await expect(unitStep.or(ownerStep).or(this.page.getByRole("alert")).first()).toBeVisible({
+      timeout: Timeouts.PAGE_LOAD,
+    });
+    if (await unitStep.isVisible()) {
+      // The root item is expanded, so its own name is clicked rather than the item, whose middle can
+      // fall on a child unit.
+      await this.page.getByRole("tree").getByRole("treeitem").first().locator("p").first().click();
+      await this.submitStep(/^continue$/i);
+    }
     await this.expectStep(/select an owner/i);
     await this.submitStep(/^continue$/i);
   }
