@@ -900,6 +900,8 @@ var defaultMessages = map[string]string{
 	"error.groupservice.group_not_found": "Group not found",
 	"error.groupservice.group_not_found_description": "The group with the specified id does not exist",
 	"error.groupservice.handle_path_required_description": "Handle path is required",
+	"error.groupservice.invalid_filter_parameter": "Invalid filter parameter",
+	"error.groupservice.invalid_filter_parameter_description": "The filter must be a single ouId eq expression with a quoted organization unit ID",
 	"error.groupservice.invalid_group_member_id": "Invalid group member ID",
 	"error.groupservice.invalid_group_member_id_description": "One or more group member IDs in the request do not exist",
 	"error.groupservice.invalid_limit_parameter": "Invalid limit parameter",

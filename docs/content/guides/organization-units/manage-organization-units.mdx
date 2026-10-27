@@ -324,6 +324,14 @@ curl -kL "https://localhost:8090/organization-units/tree/{path}/groups" \
 
 The response includes pagination fields and a `groups` array. Each group entry contains an `id` and `name`.
 
+To get the same groups as full group entries, filter the groups API on the OU ID:
+
+```bash
+curl -kL -G "https://localhost:8090/groups" \
+  --data-urlencode 'filter=ouId eq "{id}"' \
+  -H 'Authorization: Bearer <access-token>'
+```
+
 ## Delete an Organization Unit
 
 1. Open the OU from the **Organization units** list.

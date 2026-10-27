@@ -14,6 +14,7 @@ import (
 
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/error/apierror"
+	"github.com/thunder-id/thunderid/internal/system/filter"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -45,9 +46,15 @@ func (gh *groupHandler) HandleGroupListRequest(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	filters, svcErr := parseFilterParams(r.URL.Query())
+	if svcErr != nil {
+		gh.handleError(ctx, w, svcErr)
+		return
+	}
+
 	includeDisplay := r.URL.Query().Get(sysutils.QueryParamInclude) == sysutils.IncludeValueDisplay
 
-	groupListResponse, svcErr := gh.groupService.GetGroupList(ctx, limit, offset, includeDisplay)
+	groupListResponse, svcErr := gh.groupService.GetGroupList(ctx, limit, offset, filters, includeDisplay)
 	if svcErr != nil {
 		gh.handleError(ctx, w, svcErr)
 		return
@@ -403,7 +410,7 @@ func (gh *groupHandler) handleError(ctx context.Context, w http.ResponseWriter, 
 			statusCode = http.StatusConflict
 		case ErrorInvalidOUID.Code,
 			ErrorInvalidRequestFormat.Code, ErrorMissingGroupID.Code,
-			ErrorInvalidLimit.Code, ErrorInvalidOffset.Code,
+			ErrorInvalidLimit.Code, ErrorInvalidOffset.Code, ErrorInvalidFilter.Code,
 			ErrorEmptyMembers.Code, ErrorInvalidMemberType.Code,
 			ErrorInvalidMemberID.Code, ErrorInvalidGroupMemberID.Code:
 			statusCode = http.StatusBadRequest
@@ -495,6 +502,23 @@ func parsePaginationParams(query url.Values) (int, int, *tidcommon.ServiceError)
 	}
 
 	return limit, offset, nil
+}
+
+// parseFilterParams reads the filter query parameter as equality filters. A filter holds one
+// expression.
+func parseFilterParams(query url.Values) (map[string]interface{}, *tidcommon.ServiceError) {
+	group, err := filter.ParseFilterParam(query)
+	if err != nil {
+		return nil, &ErrorInvalidFilter
+	}
+	if group == nil {
+		return nil, nil
+	}
+	if len(group.Clauses) != 1 || group.Clauses[0].Expr.Operator != tidcommon.OperatorEq {
+		return nil, &ErrorInvalidFilter
+	}
+	expr := group.Clauses[0].Expr
+	return map[string]interface{}{expr.Attribute: expr.Value}, nil
 }
 
 // extractAndValidatePath extracts and validates the path parameter from the request.
