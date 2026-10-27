@@ -4,6 +4,9 @@
 package sharing
 
 import (
+	"bytes"
+	"encoding/json"
+
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
@@ -207,12 +210,55 @@ type OverlayRule struct {
 	AllowedValues *[]string `json:"allowedValues,omitempty" yaml:"allowedValues,omitempty"`
 	// ExcludedValues is subtracted from both Value and AllowedValues, last.
 	ExcludedValues *[]string `json:"excludedValues,omitempty" yaml:"excludedValues,omitempty"`
+	// editableMissing records that a decoded rule left editable out, which a field taking editable
+	// alone refuses rather than reading as false.
+	editableMissing bool
 }
 
-// UnmarshalYAML decodes a OverlayRule, refusing a key it does not declare.
+// overlayRuleDocument is an OverlayRule as written, where an absent editable stays absent.
+type overlayRuleDocument struct {
+	Editable       *bool     `json:"editable" yaml:"editable"`
+	Value          *[]string `json:"value,omitempty" yaml:"value,omitempty"`
+	AllowedValues  *[]string `json:"allowedValues,omitempty" yaml:"allowedValues,omitempty"`
+	ExcludedValues *[]string `json:"excludedValues,omitempty" yaml:"excludedValues,omitempty"`
+}
+
+// rule returns the OverlayRule the document states.
+func (d overlayRuleDocument) rule() OverlayRule {
+	return OverlayRule{
+		Editable:        d.Editable != nil && *d.Editable,
+		Value:           d.Value,
+		AllowedValues:   d.AllowedValues,
+		ExcludedValues:  d.ExcludedValues,
+		editableMissing: d.Editable == nil,
+	}
+}
+
+// UnmarshalJSON decodes an OverlayRule, refusing a key it does not declare.
+func (r *OverlayRule) UnmarshalJSON(data []byte) error {
+	var doc overlayRuleDocument
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&doc); err != nil {
+		return err
+	}
+	*r = doc.rule()
+	return nil
+}
+
+// UnmarshalYAML decodes an OverlayRule, refusing a key it does not declare.
 func (r *OverlayRule) UnmarshalYAML(node *yaml.Node) error {
-	type plain OverlayRule
-	return decodeYAMLStrict(node, (*plain)(r))
+	var doc overlayRuleDocument
+	if err := decodeYAMLStrict(node, &doc); err != nil {
+		return err
+	}
+	*r = doc.rule()
+	return nil
+}
+
+// statesEditableOnly reports whether the rule names editable and nothing else.
+func (r OverlayRule) statesEditableOnly() bool {
+	return !r.editableMissing && r.Value == nil && r.AllowedValues == nil && r.ExcludedValues == nil
 }
 
 // StoredRule keeps what an initiator asked for alongside what it was clamped to.
@@ -573,6 +619,8 @@ type FieldDeclaration struct {
 	Kind FieldKind
 	// DynamicKeys makes Key a prefix, so Key + "." + <id> is also a valid rule key.
 	DynamicKeys bool
+	// EditableOnly makes a rule for the field state editable and nothing else.
+	EditableOnly bool
 	// Default is the rule that applies when no policy names the field.
 	Default *OverlayRule
 }
@@ -646,9 +694,9 @@ const (
 // mounts sharing endpoints of its own.
 
 // PolicyCreateBody is a sharing policy as a management API creates one, which is narrower than what
-// the framework can hold. It carries no policy id and no terms: the id is the framework's to mint on
-// an interactive create, and no type that mounts these endpoints declares overlay fields yet.
-// Declaring either here would accept bodies the published schemas refuse.
+// the framework can hold. It carries no policy id, which is the framework's to mint on an
+// interactive create. Its terms are checked against the fields the resource type declares, so a type
+// that declares none refuses every rule.
 type PolicyCreateBody struct {
 	InitiatingOUID string `json:"initiatingOuId,omitempty"`
 	PolicyUpdateBody
@@ -667,32 +715,37 @@ type PolicyUpdateBody struct {
 // AllUnitsBody is the section reaching every organization unit. A create may not state it; an edit
 // restates it to rewrite the exclusions of a policy that already holds it.
 type AllUnitsBody struct {
-	ExcludedOUIDs []string `json:"excludedOuIds,omitempty"`
+	ExcludedOUIDs []string               `json:"excludedOuIds,omitempty"`
+	OverlayRules  map[string]OverlayRule `json:"overlayRules,omitempty"`
 }
 
 // ChildUnitsBody is the section about the organization units beneath the issuer.
 type ChildUnitsBody struct {
-	Mode          string          `json:"mode"`
-	ExcludedOUIDs []string        `json:"excludedOuIds,omitempty"`
-	Units         []ChildUnitBody `json:"units,omitempty"`
+	Mode          string                 `json:"mode"`
+	ExcludedOUIDs []string               `json:"excludedOuIds,omitempty"`
+	OverlayRules  map[string]OverlayRule `json:"overlayRules,omitempty"`
+	Units         []ChildUnitBody        `json:"units,omitempty"`
 }
 
 // ChildUnitBody names one direct child of the issuer and how far the resource carries from it.
 type ChildUnitBody struct {
-	OUID  string `json:"ouId"`
-	Reach string `json:"reach"`
+	OUID         string                 `json:"ouId"`
+	Reach        string                 `json:"reach"`
+	OverlayRules map[string]OverlayRule `json:"overlayRules,omitempty"`
 }
 
 // OtherTreeRootsBody is the section about the root organization units of other trees.
 type OtherTreeRootsBody struct {
-	Mode          string         `json:"mode"`
-	ExcludedOUIDs []string       `json:"excludedOuIds,omitempty"`
-	Units         []RootUnitBody `json:"units,omitempty"`
+	Mode          string                 `json:"mode"`
+	ExcludedOUIDs []string               `json:"excludedOuIds,omitempty"`
+	OverlayRules  map[string]OverlayRule `json:"overlayRules,omitempty"`
+	Units         []RootUnitBody         `json:"units,omitempty"`
 }
 
 // RootUnitBody names the root organization unit of one other tree.
 type RootUnitBody struct {
-	OUID string `json:"ouId"`
+	OUID         string                 `json:"ouId"`
+	OverlayRules map[string]OverlayRule `json:"overlayRules,omitempty"`
 }
 
 // ToPolicyRequest turns the body into the request the framework takes, naming whose decision it is.
@@ -708,19 +761,23 @@ func (b PolicyCreateBody) ToPolicyRequest() PolicyRequest {
 func (b PolicyUpdateBody) ToPolicyRequest() PolicyRequest {
 	req := PolicyRequest{Version: b.Version}
 	if b.AllUnits != nil {
-		req.AllUnits = &AllUnitsRequest{ExcludedOUIDs: b.AllUnits.ExcludedOUIDs}
+		req.AllUnits = &AllUnitsRequest{ExcludedOUIDs: b.AllUnits.ExcludedOUIDs, OverlayRules: b.AllUnits.OverlayRules}
 	}
 	if c := b.ChildUnits; c != nil {
-		req.ChildUnits = &ChildUnitsRequest{Mode: ChildUnitsMode(c.Mode), ExcludedOUIDs: c.ExcludedOUIDs}
+		req.ChildUnits = &ChildUnitsRequest{
+			Mode: ChildUnitsMode(c.Mode), ExcludedOUIDs: c.ExcludedOUIDs, OverlayRules: c.OverlayRules,
+		}
 		for _, u := range c.Units {
 			req.ChildUnits.Units = append(req.ChildUnits.Units,
-				ChildUnitRequest{OUID: u.OUID, Reach: UnitReach(u.Reach)})
+				ChildUnitRequest{OUID: u.OUID, Reach: UnitReach(u.Reach), OverlayRules: u.OverlayRules})
 		}
 	}
 	if t := b.OtherTreeRoots; t != nil {
-		req.OtherTreeRoots = &OtherTreeRootsRequest{Mode: OtherTreeRootsMode(t.Mode), ExcludedOUIDs: t.ExcludedOUIDs}
+		req.OtherTreeRoots = &OtherTreeRootsRequest{
+			Mode: OtherTreeRootsMode(t.Mode), ExcludedOUIDs: t.ExcludedOUIDs, OverlayRules: t.OverlayRules,
+		}
 		for _, u := range t.Units {
-			req.OtherTreeRoots.Units = append(req.OtherTreeRoots.Units, RootUnitRequest{OUID: u.OUID})
+			req.OtherTreeRoots.Units = append(req.OtherTreeRoots.Units, RootUnitRequest(u))
 		}
 	}
 	return req

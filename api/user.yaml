@@ -3785,7 +3785,7 @@ components:
       type: object
       description: |
         A recorded sharing policy. Its sections come back in the shape a request states them in, so
-        an edit copies them, with `version`, into a `SharingPolicyUpdateRequest`. The other fields
+        an edit copies them, with `version`, into a `UserSharingPolicyUpdateRequest`. The other fields
         are set by the server and are refused in a request body. A section the policy does not state
         is left out.
       properties:

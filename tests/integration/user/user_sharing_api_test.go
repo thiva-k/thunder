@@ -308,6 +308,16 @@ func (ts *UserSharingAPITestSuite) TestSharingPolicyRefusals() {
 	status, raw = ts.do(ts.rootClient, http.MethodPost, path, map[string]interface{}{})
 	ts.expectError(status, raw, http.StatusBadRequest, "USR-1029")
 
+	// A user declares no field for overlay rules to govern, on a section or on a named unit.
+	status, raw = ts.do(ts.rootClient, http.MethodPost, path, map[string]interface{}{"childUnits": map[string]interface{}{
+		"mode": "all", "overlayRules": map[string]interface{}{"roles": map[string]bool{"editable": false}}}})
+	ts.expectError(status, raw, http.StatusBadRequest, "USR-1029")
+	status, raw = ts.do(ts.rootClient, http.MethodPost, path, map[string]interface{}{"childUnits": map[string]interface{}{
+		"mode": "selected", "units": []map[string]interface{}{{
+			"ouId": ts.childOUID, "reach": "unit",
+			"overlayRules": map[string]interface{}{"roles": map[string]bool{"editable": false}}}}}})
+	ts.expectError(status, raw, http.StatusBadRequest, "USR-1029")
+
 	// Reaching every unit, or every other tree, is left to a resource file or an import.
 	status, raw = ts.do(ts.rootClient, http.MethodPost, path, map[string]interface{}{"allUnits": map[string]interface{}{}})
 	ts.expectError(status, raw, http.StatusBadRequest, "USR-1037")

@@ -1412,9 +1412,6 @@ func TestHandleSharingPolicyPostRequest_RefusesFieldsTheSchemaDoesNotList(t *tes
 		"UnknownTopLevel":     `{"childUnits":{"mode":"all"},"extra":true}`,
 		"FlatTargets":         `{"targets":[{"scope":"child","ouId":"ou-1"}]}`,
 		"PolicyID":            `{"id":"policy-1","childUnits":{"mode":"all"}}`,
-		"SectionTerms":        `{"childUnits":{"mode":"all","overlayRules":{"roles":{"editable":false}}}}`,
-		"UnitTerms": `{"childUnits":{"mode":"selected","units":[` +
-			`{"ouId":"ou-1","reach":"unit","overlayRules":{"roles":{"editable":true}}}]}}`,
 	}
 	for name, body := range bodies {
 		t.Run(name, func(t *testing.T) {
@@ -1480,6 +1477,33 @@ func TestHandleSharingPolicyPostRequest_PassesTheWireShapeToTheService(t *testin
 	handler.HandleSharingPolicyPostRequest(rr, req)
 
 	require.Equal(t, http.StatusCreated, rr.Code)
+}
+
+// Overlay rules decode and reach the service, on a section and on a named unit. The refusal is the
+// framework's, since a user declares no field for them to govern.
+func TestHandleSharingPolicyPostRequest_PassesOverlayRulesToTheService(t *testing.T) {
+	var recorded sharing.PolicyRequest
+	mockSvc := NewUserServiceInterfaceMock(t)
+	mockSvc.On("CreateSharingPolicy", mock.Anything, "user-1", mock.Anything).
+		Run(func(args mock.Arguments) { recorded = args.Get(2).(sharing.PolicyRequest) }).
+		Return(sharing.Policy{}, &ErrorInvalidSharingPolicy).Once()
+	handler := newUserHandler(mockSvc)
+	body := `{"childUnits":{"mode":"selected","overlayRules":{"roles":{"editable":false}},"units":[` +
+		`{"ouId":"ou-1","reach":"unit","overlayRules":{"roles":{"editable":true}}}]}}`
+	req := httptest.NewRequest(http.MethodPost, "/users/user-1/sharing-policies", strings.NewReader(body))
+	req.SetPathValue("id", "user-1")
+	rr := httptest.NewRecorder()
+
+	handler.HandleSharingPolicyPostRequest(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+	var errResp apierror.ErrorResponse
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&errResp))
+	require.Equal(t, ErrorInvalidSharingPolicy.Code, errResp.Code)
+	require.NotNil(t, recorded.ChildUnits)
+	require.Contains(t, recorded.ChildUnits.OverlayRules, "roles")
+	require.Len(t, recorded.ChildUnits.Units, 1)
+	require.Contains(t, recorded.ChildUnits.Units[0].OverlayRules, "roles")
 }
 
 func TestHandleSharingPolicyPutRequest_RefusesAChangeOfIssuer(t *testing.T) {

@@ -5397,6 +5397,20 @@ func (ts *ApplicationAPITestSuite) TestApplicationSharingPolicyRefusals() {
 			wantCode: http.StatusBadRequest, wantErr: ErrorInvalidSharingPolicyCode,
 		},
 		{
+			name: "overlay rules on a section",
+			body: map[string]interface{}{"childUnits": map[string]interface{}{
+				"mode": "all", "overlayRules": map[string]interface{}{
+					"isRecoveryFlowEnabled": map[string]bool{"editable": false}}}},
+			wantCode: http.StatusBadRequest, wantErr: ErrorInvalidSharingPolicyCode,
+		},
+		{
+			name: "overlay rules on a named unit",
+			body: map[string]interface{}{"childUnits": selectedChildUnits(map[string]interface{}{
+				"ouId": childOUID, "reach": "unit", "overlayRules": map[string]interface{}{
+					"isRecoveryFlowEnabled": map[string]bool{"editable": false}}})},
+			wantCode: http.StatusBadRequest, wantErr: ErrorInvalidSharingPolicyCode,
+		},
+		{
 			name: "an exclusion on a section that names its units",
 			body: map[string]interface{}{"childUnits": map[string]interface{}{
 				"mode":          "selected",
