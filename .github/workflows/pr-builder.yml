@@ -1354,9 +1354,17 @@ jobs:
               -subj "/O=ThunderID/OU=${{ env.PRODUCT_NAME }}/CN=localhost" \
               > /dev/null 2>&1
 
+          # Serve a production build, not the dev server. Since Vite 8.1 the dev server inlines each
+          # pre-bundled dependency's sourcemap (about 22 MB per page load), and over that congested
+          # HTTP/2 connection Node's RST_STREAM(NO_ERROR) can overtake a response's END_STREAM.
+          # Firefox treats that as NS_ERROR_NET_PARTIAL_TRANSFER and the app never mounts.
+          # public/runtime.json is still fetched at runtime, so the build needs no configuration.
+          echo "Building Sample App..."
+          npx vite build
+
           echo "Starting Sample App..."
           # See "Start the Server" step for why setsid is needed inside container jobs.
-          SAMPLE_PID=$(setsid bash -c 'npm run dev > "$GITHUB_WORKSPACE/sample-app.log" 2>&1 < /dev/null & echo $!' | tail -1)
+          SAMPLE_PID=$(setsid bash -c 'npx vite preview --port 3000 --strictPort > "$GITHUB_WORKSPACE/sample-app.log" 2>&1 < /dev/null & echo $!' | tail -1)
           echo "SAMPLE_APP_PID=$SAMPLE_PID" >> $GITHUB_ENV
           disown $SAMPLE_PID 2>/dev/null || true
           
