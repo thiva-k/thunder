@@ -6,6 +6,8 @@ package sharing
 import (
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+
+	"gopkg.in/yaml.v3"
 )
 
 // ResourceType identifies a resource type registered with the sharing framework.
@@ -207,6 +209,12 @@ type OverlayRule struct {
 	ExcludedValues *[]string `json:"excludedValues,omitempty" yaml:"excludedValues,omitempty"`
 }
 
+// UnmarshalYAML decodes a OverlayRule, refusing a key it does not declare.
+func (r *OverlayRule) UnmarshalYAML(node *yaml.Node) error {
+	type plain OverlayRule
+	return decodeYAMLStrict(node, (*plain)(r))
+}
+
 // StoredRule keeps what an initiator asked for alongside what it was clamped to.
 //
 // Both are needed because an ancestor policy can be edited: re-materializing a descendant against a
@@ -371,6 +379,12 @@ type AllUnitsRequest struct {
 	OverlayRules map[string]OverlayRule `json:"overlayRules,omitempty" yaml:"overlayRules,omitempty"`
 }
 
+// UnmarshalYAML decodes a AllUnitsRequest, refusing a key it does not declare.
+func (r *AllUnitsRequest) UnmarshalYAML(node *yaml.Node) error {
+	type plain AllUnitsRequest
+	return decodeYAMLStrict(node, (*plain)(r))
+}
+
 // ChildUnitRequest names one direct child of the initiator, with the terms it holds the resource on.
 type ChildUnitRequest struct {
 	// OUID names the direct child.
@@ -379,6 +393,12 @@ type ChildUnitRequest struct {
 	Reach UnitReach `json:"reach" yaml:"reach"`
 	// OverlayRules are the terms this unit holds the resource on.
 	OverlayRules map[string]OverlayRule `json:"overlayRules,omitempty" yaml:"overlayRules,omitempty"`
+}
+
+// UnmarshalYAML decodes a ChildUnitRequest, refusing a key it does not declare.
+func (r *ChildUnitRequest) UnmarshalYAML(node *yaml.Node) error {
+	type plain ChildUnitRequest
+	return decodeYAMLStrict(node, (*plain)(r))
 }
 
 // ChildUnitsRequest is the decision about the organization units beneath the initiator.
@@ -396,6 +416,12 @@ type ChildUnitsRequest struct {
 	Units []ChildUnitRequest `json:"units,omitempty" yaml:"units,omitempty"`
 }
 
+// UnmarshalYAML decodes a ChildUnitsRequest, refusing a key it does not declare.
+func (r *ChildUnitsRequest) UnmarshalYAML(node *yaml.Node) error {
+	type plain ChildUnitsRequest
+	return decodeYAMLStrict(node, (*plain)(r))
+}
+
 // RootUnitRequest names the root organization unit of one tree, with the terms it holds the
 // resource on.
 type RootUnitRequest struct {
@@ -403,6 +429,12 @@ type RootUnitRequest struct {
 	OUID string `json:"ouId" yaml:"ouId"`
 	// OverlayRules are the terms this unit holds the resource on.
 	OverlayRules map[string]OverlayRule `json:"overlayRules,omitempty" yaml:"overlayRules,omitempty"`
+}
+
+// UnmarshalYAML decodes a RootUnitRequest, refusing a key it does not declare.
+func (r *RootUnitRequest) UnmarshalYAML(node *yaml.Node) error {
+	type plain RootUnitRequest
+	return decodeYAMLStrict(node, (*plain)(r))
 }
 
 // OtherTreeRootsRequest is the decision about the root organization units of other trees. A tree is
@@ -422,6 +454,12 @@ type OtherTreeRootsRequest struct {
 	Units []RootUnitRequest `json:"units,omitempty" yaml:"units,omitempty"`
 }
 
+// UnmarshalYAML decodes a OtherTreeRootsRequest, refusing a key it does not declare.
+func (r *OtherTreeRootsRequest) UnmarshalYAML(node *yaml.Node) error {
+	type plain OtherTreeRootsRequest
+	return decodeYAMLStrict(node, (*plain)(r))
+}
+
 // PolicyRequest is one create or edit of a policy. It states up to three sections, and a resource
 // shared with nobody has no policy at all rather than one stating none of them.
 type PolicyRequest struct {
@@ -439,6 +477,19 @@ type PolicyRequest struct {
 	OtherTreeRoots *OtherTreeRootsRequest `json:"otherTreeRoots,omitempty" yaml:"otherTreeRoots,omitempty"`
 	// Version is the policy version the caller believes it is editing. Ignored on create.
 	Version int `json:"version,omitempty" yaml:"version,omitempty"`
+}
+
+// UnmarshalYAML decodes a PolicyRequest, refusing a key it does not declare.
+func (r *PolicyRequest) UnmarshalYAML(node *yaml.Node) error {
+	type plain PolicyRequest
+	return decodeYAMLStrict(node, (*plain)(r))
+}
+
+// IsDeploymentWide reports whether the request reaches beyond where its issuer sits in the tree:
+// every organization unit, or the root of every other tree. A management API leaves such a reach to
+// resource files and imports.
+func (r PolicyRequest) IsDeploymentWide() bool {
+	return r.AllUnits != nil || (r.OtherTreeRoots != nil && r.OtherTreeRoots.Mode == OtherTreeRootsAll)
 }
 
 // requestedGrant is the terms a request attaches to one grant.
@@ -705,11 +756,11 @@ type PolicyListResponse struct {
 // ResolvedOverlayResponse is what one organization unit may do with a resource. A type that
 // declares no overlay fields answers with empty rules.
 type ResolvedOverlayResponse struct {
-	OUID      string                 `json:"ouId"`
-	IsOwned   bool                   `json:"isOwned"`
-	Visible   bool                   `json:"visible"`
-	PolicyIDs []string               `json:"policyIds"`
-	Rules     map[string]OverlayRule `json:"rules"`
+	OUID        string                 `json:"ouId"`
+	IsOwnedByOU bool                   `json:"isOwnedByOU"`
+	Visible     bool                   `json:"visible"`
+	PolicyIDs   []string               `json:"policyIds"`
+	Rules       map[string]OverlayRule `json:"rules"`
 }
 
 // ToPolicyResponse shapes a stored policy for an API.
@@ -756,11 +807,11 @@ func ToResolvedOverlayResponse(overlay ResolvedOverlay) ResolvedOverlayResponse 
 		policyIDs = []string{}
 	}
 	return ResolvedOverlayResponse{
-		OUID:      overlay.OUID,
-		IsOwned:   overlay.Owned,
-		Visible:   overlay.Visible,
-		PolicyIDs: policyIDs,
-		Rules:     rules,
+		OUID:        overlay.OUID,
+		IsOwnedByOU: overlay.Owned,
+		Visible:     overlay.Visible,
+		PolicyIDs:   policyIDs,
+		Rules:       rules,
 	}
 }
 

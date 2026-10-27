@@ -52,7 +52,7 @@ func (a *ouUserResolverAdapter) GetUserListByOUID(
 
 	result := make([]oupkg.User, len(users))
 	for i, u := range users {
-		result[i] = oupkg.User{ID: u.ID, Type: u.Type, IsOwned: i < len(page.Owned)}
+		result[i] = oupkg.User{ID: u.ID, Type: u.Type, IsOwnedByOU: i < len(page.Owned)}
 		if includeDisplay {
 			result[i].Display = utils.ResolveDisplay(u.ID, u.Type, u.Attributes, displayAttrPaths)
 		}

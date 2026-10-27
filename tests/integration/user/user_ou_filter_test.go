@@ -324,8 +324,8 @@ func (ts *UserOUFilterTestSuite) assertListed(ouID string, users []testutils.Use
 	got := make([]string, len(users))
 	for i, u := range users {
 		got[i] = u.ID
-		ts.Require().NotNil(u.IsOwned, "user %s carries no isOwned field", u.ID)
-		ts.Equal(i < len(ownedIDs), *u.IsOwned, "user %s at position %d", ts.nameOf(u.ID), i)
+		ts.Require().NotNil(u.IsOwnedByOU, "user %s carries no isOwnedByOU field", u.ID)
+		ts.Equal(i < len(ownedIDs), *u.IsOwnedByOU, "user %s at position %d", ts.nameOf(u.ID), i)
 		if withOUID {
 			ts.Equal(ouID, u.OUID, "user %s is listed under the filtered unit", ts.nameOf(u.ID))
 		}
@@ -441,8 +441,8 @@ func (ts *UserOUFilterTestSuite) TestUnfilteredListMarksUsersOwned() {
 
 	ts.Require().NotEmpty(list.Users)
 	for _, u := range list.Users {
-		ts.Require().NotNil(u.IsOwned, "user %s", u.ID)
-		ts.True(*u.IsOwned)
+		ts.Require().NotNil(u.IsOwnedByOU, "user %s", u.ID)
+		ts.True(*u.IsOwnedByOU)
 	}
 }
 

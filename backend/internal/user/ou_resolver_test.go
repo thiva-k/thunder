@@ -49,9 +49,9 @@ func TestOUUserResolver_GetUserListByOUID(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 7, total)
 		require.Equal(t, []oupkg.User{
-			{ID: "user-1", IsOwned: true},
-			{ID: "user-2", IsOwned: true},
-			{ID: "user-3", IsOwned: false},
+			{ID: "user-1", IsOwnedByOU: true},
+			{ID: "user-2", IsOwnedByOU: true},
+			{ID: "user-3", IsOwnedByOU: false},
 		}, users)
 	})
 

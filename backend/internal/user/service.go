@@ -1161,7 +1161,7 @@ func (us *userService) validateOrganizationUnitForUserType(
 // markOwned records on each user whether the listed organization unit owns it.
 func markOwned(users []providers.User, owned bool) {
 	for i := range users {
-		users[i].IsOwned = new(owned)
+		users[i].IsOwnedByOU = new(owned)
 	}
 }
 

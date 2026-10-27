@@ -172,6 +172,7 @@ func (suite *ServiceTestSuite) setupTestService() (
 		Maybe().Return(nil)
 	mockSharing.EXPECT().ReplacePoliciesForResource(mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything).Maybe().Return(sharing.PolicyReplay{}, nil)
+	mockSharing.EXPECT().ListPolicies(mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil, nil)
 	governance := identitygovernancemock.NewIdentityGovernanceServiceInterfaceMock(suite.T())
 	governance.EXPECT().ReadAccess(mock.Anything, mock.Anything).RunAndReturn(activeReads).Maybe()
 	governance.EXPECT().ReadEntityAccess(mock.Anything, mock.Anything).
@@ -5652,4 +5653,33 @@ func (suite *ServiceTestSuite) TestCreateApplication_ReportsNoStatus() {
 
 	suite.Require().Nil(svcErr)
 	suite.Nil(result.Status)
+}
+
+// A shared application stays in its organization unit: its policies were issued against that unit.
+func (suite *ServiceTestSuite) TestUpdateApplication_SharedApplicationCannotMove() {
+	service, sharingMock := suite.sharingTestService()
+	sharingMock.EXPECT().ListPolicies(mock.Anything, ApplicationSharingType, testServiceAppID).
+		Return([]sharing.Policy{{ID: "p1"}}, nil).Once()
+
+	result, svcErr := service.UpdateApplication(context.Background(), testServiceAppID,
+		&model.ApplicationDTO{Name: "Test App", OUID: "another-ou"})
+
+	suite.Nil(result)
+	suite.Require().NotNil(svcErr)
+	suite.Equal(ErrorSharedApplicationCannotMove.Code, svcErr.Code)
+	mockStore(service).AssertNotCalled(suite.T(), "UpdateInboundClient",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (suite *ServiceTestSuite) TestUpdateApplication_SharingLookupFailureOnMove() {
+	service, sharingMock := suite.sharingTestService()
+	sharingMock.EXPECT().ListPolicies(mock.Anything, ApplicationSharingType, testServiceAppID).
+		Return(nil, &tidcommon.InternalServerError).Once()
+
+	result, svcErr := service.UpdateApplication(context.Background(), testServiceAppID,
+		&model.ApplicationDTO{Name: "Test App", OUID: "another-ou"})
+
+	suite.Nil(result)
+	suite.Require().NotNil(svcErr)
+	suite.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
 }

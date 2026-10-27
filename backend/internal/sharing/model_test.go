@@ -460,3 +460,22 @@ func (s *ModelTestSuite) TestErrorTranslationAnswersInTheTypesOwnCodes() {
 	s.Equal(&tidcommon.InternalServerError, translation.Translate(&tidcommon.InternalServerError))
 	s.Nil(translation.Translate(nil))
 }
+
+func (suite *ModelTestSuite) TestPolicyRequestIsDeploymentWide() {
+	everyOtherRoot := &OtherTreeRootsRequest{Mode: OtherTreeRootsAll}
+	namedRoots := &OtherTreeRootsRequest{Mode: OtherTreeRootsSelected}
+	for name, tc := range map[string]struct {
+		req  PolicyRequest
+		want bool
+	}{
+		"every organization unit":       {PolicyRequest{AllUnits: &AllUnitsRequest{}}, true},
+		"every other tree's root":       {PolicyRequest{OtherTreeRoots: everyOtherRoot}, true},
+		"named roots of other trees":    {PolicyRequest{OtherTreeRoots: namedRoots}, false},
+		"everything beneath the issuer": {PolicyRequest{ChildUnits: &ChildUnitsRequest{Mode: ChildUnitsAll}}, false},
+		"no section":                    {PolicyRequest{}, false},
+	} {
+		suite.Run(name, func() {
+			suite.Equal(tc.want, tc.req.IsDeploymentWide())
+		})
+	}
+}
