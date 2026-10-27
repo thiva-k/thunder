@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {ServerConfigLayers} from '@thunderid/utils';
 import type {JSX} from 'react';
 
 /**
@@ -536,6 +537,8 @@ export interface ConnectionCardModel {
   comingSoon: boolean;
   /** Route to navigate to when the card is activated; null for coming-soon. */
   navTarget: string | null;
+  /** Whether this card is the default email sender. */
+  isDefault?: boolean;
 }
 
 /**
@@ -590,3 +593,12 @@ export interface ConnectionMetaVendor {
 export interface ConnectionMetaResponse {
   vendors: ConnectionMetaVendor[];
 }
+
+/**
+ * Value of the `notification` server-config section.
+ */
+export interface NotificationConfigValue {
+  defaultEmailSenderId?: string;
+}
+
+export type NotificationConfigResponse = ServerConfigLayers<NotificationConfigValue>;

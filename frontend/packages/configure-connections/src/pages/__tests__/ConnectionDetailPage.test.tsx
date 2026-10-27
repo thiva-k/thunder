@@ -1,10 +1,10 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor, within} from '@thunderid/test-utils';
 import {type ReactNode, useEffect} from 'react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
-import type {ConnectionUsagesResponse, OutboundAuthMethod} from '../../models/connection';
+import type {ConnectionUsagesResponse, NotificationConfigResponse, OutboundAuthMethod} from '../../models/connection';
 import ConnectionDetailPage from '../ConnectionDetailPage';
 
 const updateMock = vi.fn().mockResolvedValue({});
@@ -253,6 +253,19 @@ vi.mock('../../api/useUpdateConnection', () => ({
 vi.mock('../../api/useDeleteConnection', () => ({default: () => ({mutate: deleteMock, isPending: false})}));
 vi.mock('../../api/useGetConnectionUsages', () => ({
   default: () => ({data: mockUsages.data, isLoading: false, error: null, refetch: vi.fn()}),
+}));
+const mockNotificationConfig: {data: NotificationConfigResponse | undefined; isLoading: boolean; error: Error | null} =
+  {
+    data: {readOnly: {}, writable: {}, merged: {}},
+    isLoading: false,
+    error: null,
+  };
+vi.mock('../../api/useGetNotificationConfig', () => ({default: () => mockNotificationConfig}));
+const mockEmailProviders: {data: {id: string}[] | undefined} = {data: []};
+vi.mock('../../api/useEmailProviders', () => ({default: () => mockEmailProviders}));
+const setDefaultSenderMock = vi.fn();
+vi.mock('../../api/useSetDefaultEmailSender', () => ({
+  default: () => ({mutate: setDefaultSenderMock, isPending: false}),
 }));
 
 vi.mock('../../components/OrganizationUnitSection', () => ({
@@ -1362,5 +1375,139 @@ describe('ConnectionDetailPage', () => {
     render(<ConnectionDetailPage />);
 
     expect(screen.queryByRole('region', {name: 'Usages'})).not.toBeInTheDocument();
+  });
+});
+
+describe('ConnectionDetailPage default email sender', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockParams.type = 'email-smtp';
+    mockParams.id = 'sm1';
+    mockConn.data = smtpConnection({username: 'mailer', password: '******'});
+    mockMeta.methods = SMTP_METHODS;
+    mockMeta.isError = false;
+    mockNotificationConfig.data = {readOnly: {}, writable: {}, merged: {}};
+    mockNotificationConfig.isLoading = false;
+    mockNotificationConfig.error = null;
+    mockEmailProviders.data = [{id: 'sm1'}, {id: 'sm9'}];
+  });
+
+  it('offers to set an email sender that is not the default', () => {
+    render(<ConnectionDetailPage />);
+    expect(screen.queryByText('Default')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Set as default'}));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', {name: 'Set as default'}));
+
+    expect(setDefaultSenderMock).toHaveBeenCalledWith({defaultEmailSenderId: 'sm1'}, expect.any(Object));
+    expect(within(dialog).queryByText('This will replace the current default email sender.')).not.toBeInTheDocument();
+  });
+
+  it('says the dialog replaces the current default when another sender holds it', () => {
+    mockNotificationConfig.data = {
+      readOnly: {},
+      writable: {defaultEmailSenderId: 'sm9'},
+      merged: {defaultEmailSenderId: 'sm9'},
+    };
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Set as default'}));
+    expect(
+      within(screen.getByRole('dialog')).getByText('This will replace the current default email sender.'),
+    ).toBeInTheDocument();
+  });
+
+  // The section keeps a deleted sender's ID, which is no default to replace.
+  it('does not say the dialog replaces a default whose sender no longer exists', () => {
+    mockNotificationConfig.data = {
+      readOnly: {},
+      writable: {defaultEmailSenderId: 'deleted'},
+      merged: {defaultEmailSenderId: 'deleted'},
+    };
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Set as default'}));
+    expect(
+      within(screen.getByRole('dialog')).queryByText('This will replace the current default email sender.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('marks the default sender and hides the action', () => {
+    mockNotificationConfig.data = {
+      readOnly: {},
+      writable: {defaultEmailSenderId: 'sm1'},
+      merged: {defaultEmailSenderId: 'sm1'},
+    };
+    render(<ConnectionDetailPage />);
+    expect(screen.getByText('Default')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Set as default'})).not.toBeInTheDocument();
+  });
+
+  // A declarative default rejects every write, so no other sender may set it.
+  it('disables the action with the reason when the deployment configuration fixes the default', async () => {
+    mockNotificationConfig.data = {
+      readOnly: {defaultEmailSenderId: 'other'},
+      writable: {},
+      merged: {defaultEmailSenderId: 'other'},
+    };
+    render(<ConnectionDetailPage />);
+    expect(screen.queryByText('Default')).not.toBeInTheDocument();
+    const action = screen.getByRole('button', {name: 'Set as default'});
+    expect(action).toBeDisabled();
+
+    fireEvent.mouseOver(action.parentElement!);
+    expect(
+      await screen.findByText('The default email sender is fixed by the deployment configuration.'),
+    ).toBeInTheDocument();
+  });
+
+  it('hides the action until the notification section loads', () => {
+    mockNotificationConfig.data = undefined;
+    mockNotificationConfig.isLoading = true;
+    render(<ConnectionDetailPage />);
+    expect(screen.queryByRole('button', {name: 'Set as default'})).not.toBeInTheDocument();
+  });
+
+  it('reports a notification section that fails to load and hides the action', () => {
+    mockNotificationConfig.data = undefined;
+    mockNotificationConfig.error = new Error('boom');
+    render(<ConnectionDetailPage />);
+    expect(screen.getByText('Failed to load the default email sender.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Set as default'})).not.toBeInTheDocument();
+  });
+
+  it('does not offer the action on a connection that is not an email sender', () => {
+    mockParams.type = 'google';
+    mockParams.id = 'g1';
+    mockConn.data = CONNECTION;
+    mockMeta.methods = [];
+    mockNotificationConfig.data = {
+      readOnly: {},
+      writable: {defaultEmailSenderId: 'g1'},
+      merged: {defaultEmailSenderId: 'g1'},
+    };
+    render(<ConnectionDetailPage />);
+    expect(screen.queryByRole('button', {name: 'Set as default'})).not.toBeInTheDocument();
+    expect(screen.queryByText('Default')).not.toBeInTheDocument();
+  });
+
+  it('warns before deleting the default sender', () => {
+    mockNotificationConfig.data = {
+      readOnly: {},
+      writable: {defaultEmailSenderId: 'sm1'},
+      merged: {defaultEmailSenderId: 'sm1'},
+    };
+    render(<ConnectionDetailPage />);
+    fireEvent.click(screen.getByTestId('connection-tab-advanced'));
+    fireEvent.click(screen.getByTestId('connection-delete-button'));
+    expect(screen.getByTestId('connection-delete-default-sender-warning')).toBeInTheDocument();
+  });
+
+  it('does not warn before deleting a sender that is not the default', () => {
+    render(<ConnectionDetailPage />);
+    fireEvent.click(screen.getByTestId('connection-tab-advanced'));
+    fireEvent.click(screen.getByTestId('connection-delete-button'));
+    expect(screen.queryByTestId('connection-delete-default-sender-warning')).not.toBeInTheDocument();
   });
 });
