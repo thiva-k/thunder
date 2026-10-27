@@ -566,7 +566,9 @@ export default function UserEditPage() {
         onSuccess={handleDeleteSuccess}
       />
 
-      {hasChanges && (
+      {/* Kept up until the whole save finishes: an attributes save clears the staged edit before the
+          refetch, so `hasChanges` alone would drop the bar while the form still shows the old values. */}
+      {(hasChanges || isSubmitting) && (
         <UnsavedChangesBar
           message={t('users:manageUser.unsavedChanges', 'You have unsaved changes')}
           resetLabel={t('users:manageUser.reset', 'Reset')}

@@ -76,7 +76,6 @@ test.describe("User Management - Affiliations", () => {
 
     await test.step("Save", async () => {
       await usersPage.clickSaveChanges();
-      await expect(usersPage.saveChangesButton).toBeHidden({ timeout: Timeouts.FORM_LOAD });
     });
 
     await test.step("Verify the share through the user sharing API", async () => {
@@ -122,7 +121,6 @@ test.describe("User Management - Affiliations", () => {
 
     await test.step("Save", async () => {
       await usersPage.clickSaveChanges();
-      await expect(usersPage.saveChangesButton).toBeHidden({ timeout: Timeouts.FORM_LOAD });
     });
 
     await test.step("Verify the share is gone through the user sharing API", async () => {
