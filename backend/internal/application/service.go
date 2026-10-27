@@ -1466,6 +1466,17 @@ func (as *applicationService) validateApplicationForUpdate(
 	}
 	app.Type = existingApp.Type
 
+	// A shared application stays in its organization unit: its policies were issued against that unit.
+	if app.OUID != existingApp.OUID {
+		policies, svcErr := as.sharingService.ListPolicies(ctx, ApplicationSharingType, appID)
+		if svcErr != nil {
+			return nil, nil, translateSharingError(svcErr)
+		}
+		if len(policies) > 0 {
+			return nil, nil, &ErrorSharedApplicationCannotMove
+		}
+	}
+
 	inboundAuthConfig, svcErr := as.processInboundAuthConfig(ctx, app, existingApp)
 	if svcErr != nil {
 		return nil, nil, svcErr

@@ -1974,7 +1974,7 @@ func (suite *OrganizationUnitServiceTestSuite) TestOUService_GetOrganizationUnit
 			},
 			resolverSetup: func(ur *OUUserResolverMock) {
 				ur.On("GetUserListByOUID", mock.Anything, "ou-1", 5, 0, false).
-					Return([]User{{ID: "user-1", IsOwned: true}, {ID: "user-2"}}, 2, nil).Once()
+					Return([]User{{ID: "user-1", IsOwnedByOU: true}, {ID: "user-2"}}, 2, nil).Once()
 			},
 		},
 	}
@@ -2025,7 +2025,7 @@ func (suite *OrganizationUnitServiceTestSuite) TestOUService_GetOrganizationUnit
 	userRes := NewOUUserResolverMock(suite.T())
 	userRes.On("GetUserListByOUID", mock.Anything, "ou-1", 5, 0, true).
 		Return([]User{
-			{ID: "user-1", Type: "employee", Display: "alice@example.com", IsOwned: true},
+			{ID: "user-1", Type: "employee", Display: "alice@example.com", IsOwnedByOU: true},
 			{ID: "user-2", Type: "contractor", Display: "Bob Smith"},
 		}, 2, nil).Once()
 
@@ -2040,8 +2040,8 @@ func (suite *OrganizationUnitServiceTestSuite) TestOUService_GetOrganizationUnit
 	suite.Equal("alice@example.com", resp.Users[0].Display)
 	suite.Equal("contractor", resp.Users[1].Type)
 	suite.Equal("Bob Smith", resp.Users[1].Display)
-	suite.True(resp.Users[0].IsOwned)
-	suite.False(resp.Users[1].IsOwned)
+	suite.True(resp.Users[0].IsOwnedByOU)
+	suite.False(resp.Users[1].IsOwnedByOU)
 }
 
 func (suite *OrganizationUnitServiceTestSuite) TestOUService_GetOrganizationUnitUsers_WithDisplay_FallbackToID() {

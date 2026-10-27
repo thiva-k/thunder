@@ -104,13 +104,13 @@ type OrganizationUnitBasic struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// User represents a user with basic information for OU endpoints. IsOwned reports whether the
+// User represents a user with basic information for OU endpoints. IsOwnedByOU reports whether the
 // organization unit owns the user rather than being shared it.
 type User struct {
-	ID      string `json:"id"`
-	Type    string `json:"type,omitempty"`
-	Display string `json:"display,omitempty"`
-	IsOwned bool   `json:"isOwned"`
+	ID          string `json:"id"`
+	Type        string `json:"type,omitempty"`
+	Display     string `json:"display,omitempty"`
+	IsOwnedByOU bool   `json:"isOwnedByOU"`
 }
 
 // Group represents a group with basic information for OU endpoints.

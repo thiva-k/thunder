@@ -228,7 +228,7 @@ func (suite *CompositeModeSuite) TestDeclaredUserListedInTheUnitsItIsSharedInto(
 
 			item := suite.findCollectionItemByID(items, "decl-user-1")
 			suite.Require().NotNil(item, "decl-user-1 should be listed; got IDs: %v", suite.extractCollectionIDs(items))
-			suite.Equal(tc.owned, item["isOwned"])
+			suite.Equal(tc.owned, item["isOwnedByOU"])
 		})
 	}
 }

@@ -1713,7 +1713,7 @@ func TestUserService_GetUserList(t *testing.T) {
 	require.NotNil(t, resp)
 	require.Equal(t, 5, resp.TotalResults)
 	require.Len(t, resp.Users, 1)
-	require.True(t, *resp.Users[0].IsOwned, "an unfiltered list holds every user in the unit that owns it")
+	require.True(t, *resp.Users[0].IsOwnedByOU, "an unfiltered list holds every user in the unit that owns it")
 }
 
 func TestUserService_GetUserList_ScopedByOUIDs(t *testing.T) {
@@ -1745,7 +1745,7 @@ func TestUserService_GetUserList_ScopedByOUIDs(t *testing.T) {
 	require.NotNil(t, resp)
 	require.Equal(t, 3, resp.TotalResults)
 	require.Len(t, resp.Users, 1)
-	require.True(t, *resp.Users[0].IsOwned)
+	require.True(t, *resp.Users[0].IsOwnedByOU)
 }
 
 func TestUserService_GetUserList_EmptyOUIDs(t *testing.T) {
@@ -1798,9 +1798,9 @@ func TestUserService_GetUserList_FilteredByOU_ListsOwnedThenShared(t *testing.T)
 	require.Equal(t, 3, resp.TotalResults)
 	require.Len(t, resp.Users, 2)
 	require.Equal(t, "owned-1", resp.Users[0].ID)
-	require.True(t, *resp.Users[0].IsOwned)
+	require.True(t, *resp.Users[0].IsOwnedByOU)
 	require.Equal(t, "shared-1", resp.Users[1].ID)
-	require.False(t, *resp.Users[1].IsOwned)
+	require.False(t, *resp.Users[1].IsOwnedByOU)
 	require.Len(t, resp.Links, 2)
 	for _, link := range resp.Links {
 		require.Contains(t, link.Href, "filter=ouId+eq+%22"+testOrgID+"%22",
@@ -2062,10 +2062,10 @@ func TestUserService_GetUsersByPath(t *testing.T) {
 	require.Equal(t, 20, resp.TotalResults)
 	require.Equal(t, 2, resp.Count)
 	require.Equal(t, "u1", resp.Users[0].ID)
-	require.True(t, *resp.Users[0].IsOwned)
+	require.True(t, *resp.Users[0].IsOwnedByOU)
 	require.Equal(t, "u2", resp.Users[1].ID)
 	require.Equal(t, "ou-1", resp.Users[1].OUID, "a shared user is listed under the unit it is shared into")
-	require.False(t, *resp.Users[1].IsOwned)
+	require.False(t, *resp.Users[1].IsOwnedByOU)
 	require.NotEmpty(t, resp.Links)
 	require.Contains(t, resp.Links[0].Href, "/users/tree/root")
 }

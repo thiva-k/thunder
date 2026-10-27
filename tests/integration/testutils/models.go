@@ -34,7 +34,7 @@ type User struct {
 	Type       string          `json:"type"`
 	Display    string          `json:"display,omitempty"`
 	Attributes json.RawMessage `json:"attributes"`
-	IsOwned    *bool           `json:"isOwned,omitempty"`
+	IsOwnedByOU    *bool           `json:"isOwnedByOU,omitempty"`
 }
 
 // Application represents an application in the system
