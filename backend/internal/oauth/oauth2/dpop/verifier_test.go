@@ -415,6 +415,22 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 		assert.Contains(suite.T(), err.Error(), "private")
 	})
 
+	suite.Run("priv member in jwk rejected", func() {
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
+		s := newPS256Signer(suite.T())
+		jwkWithPriv := map[string]any{}
+		for k, v := range s.jwk {
+			jwkWithPriv[k] = v
+		}
+		jwkWithPriv["priv"] = "NOT-PUBLIC-MATERIAL"
+		proof := s.signProof(suite.T(), map[string]any{"jwk": jwkWithPriv}, defaultPayload(suite.now))
+		params := defaultParams()
+		params.Proof = proof
+		_, err := v.Verify(context.Background(), params)
+		require.ErrorIs(suite.T(), err, ErrInvalidProof)
+		assert.Contains(suite.T(), err.Error(), `private-key member "priv"`)
+	})
+
 	suite.Run("htm mismatch", func() {
 		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())

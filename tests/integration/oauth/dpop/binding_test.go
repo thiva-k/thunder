@@ -141,6 +141,20 @@ func (ts *DPoPTestSuite) TestTokenInvalidProofs_Rejected() {
 			},
 		},
 		{
+			// priv is the ML-DSA (AKP) private key member. It is added to a valid key, so the proof
+			// would pass every other check.
+			name: "JWK leaks private key (priv member)",
+			make: func(k *testutils.DPoPKey) (string, error) {
+				jwk := map[string]any{"priv": "AAAA"}
+				for member, value := range k.JWK {
+					jwk[member] = value
+				}
+				return k.CreateProof(http.MethodPost, tokenEndpoint, testutils.DPoPProofOptions{
+					JWKOverride: jwk,
+				})
+			},
+		},
+		{
 			name: "JWK header missing",
 			make: func(k *testutils.DPoPKey) (string, error) {
 				return k.CreateProof(http.MethodPost, tokenEndpoint, testutils.DPoPProofOptions{

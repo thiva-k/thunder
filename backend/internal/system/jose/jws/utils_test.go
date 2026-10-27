@@ -109,6 +109,32 @@ func (suite *JWSUtilsTestSuite) TestIsValidJKT() {
 	}
 }
 
+func (suite *JWSUtilsTestSuite) TestContainsPrivateMember() {
+	testCases := []struct {
+		name       string
+		jwk        map[string]interface{}
+		wantMember string
+	}{
+		{"RSAPublic", map[string]interface{}{"kty": "RSA", "n": "AQAB", "e": "AQAB"}, ""},
+		{"ECPublic", map[string]interface{}{"kty": "EC", "crv": "P-256", "x": "AA", "y": "AA"}, ""},
+		{"OKPPublic", map[string]interface{}{"kty": "OKP", "crv": "Ed25519", "x": "AA"}, ""},
+		{"AKPPublic", map[string]interface{}{"kty": "AKP", "alg": "ML-DSA-44", "pub": "AA"}, ""},
+		{"RSAPrivate", map[string]interface{}{"kty": "RSA", "n": "AQAB", "e": "AQAB", "d": "AA"}, "d"},
+		{"RSAPrimeOnly", map[string]interface{}{"kty": "RSA", "n": "AQAB", "e": "AQAB", "qi": "AA"}, "qi"},
+		{"Symmetric", map[string]interface{}{"kty": "oct", "k": "AA"}, "k"},
+		{"AKPPrivate", map[string]interface{}{"kty": "AKP", "alg": "ML-DSA-44", "pub": "AA", "priv": "AA"}, "priv"},
+		{"Empty", map[string]interface{}{}, ""},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			member, found := ContainsPrivateMember(tc.jwk)
+			assert.Equal(t, tc.wantMember != "", found)
+			assert.Equal(t, tc.wantMember, member)
+		})
+	}
+}
+
 func TestComputeJKTAKPMissingMembers(t *testing.T) {
 	_, err := ComputeJKT(map[string]interface{}{"kty": "AKP", "alg": "ML-DSA-65"})
 	assert.ErrorContains(t, err, "AKP JWK missing required members alg/pub")
