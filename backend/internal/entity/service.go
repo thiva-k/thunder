@@ -17,6 +17,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/identitygovernance"
 	"github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -62,6 +63,10 @@ type EntityServiceInterface interface {
 		ouIDs []string, filters map[string]interface{}) (int, error)
 	GetEntityListByOUIDs(ctx context.Context, category providers.EntityCategory,
 		ouIDs []string, limit, offset int, filters map[string]interface{}) ([]providers.Entity, error)
+	// GetEntityPageInOU lists the entities of a category an organization unit owns, in the store's list
+	// order, then the ones shared into it.
+	GetEntityPageInOU(ctx context.Context, category providers.EntityCategory, ouID string,
+		scope OUEntityScope, limit, offset int, filters map[string]interface{}) (*OUEntityPage, error)
 	GetEntityListCountBySystemAttributes(ctx context.Context, category providers.EntityCategory,
 		sysQuery SystemAttributeQuery) (int, error)
 	GetEntityListBySystemAttributes(ctx context.Context, category providers.EntityCategory,
@@ -99,6 +104,14 @@ type EntityServiceInterface interface {
 	// GroupMembershipProvider registration
 	SetGroupMembershipProvider(provider GroupMembershipProvider)
 
+	// Sharing registration
+	// RegisterSharedCategory makes entities of a category shareable under the given sharing resource
+	// type, so an organization unit's entity pages list the ones shared into it.
+	RegisterSharedCategory(category providers.EntityCategory, resourceType sharing.ResourceType)
+	// GetSharedResourceType returns the sharing resource type a category is shareable under, and
+	// false when the category cannot be shared.
+	GetSharedResourceType(category providers.EntityCategory) (sharing.ResourceType, bool)
+
 	// Runtime state, used by the governance service.
 	GetGovernedEntity(ctx context.Context, entityID string,
 		seedMissing bool) (*identitygovernance.GovernedEntity, error)
@@ -130,6 +143,8 @@ type entityService struct {
 	hashService             cryptolib.HashServiceInterface
 	entityTypeService       entitytype.EntityTypeServiceInterface
 	ouService               ou.OrganizationUnitServiceInterface
+	sharingService          sharing.SharingServiceInterface
+	sharedTypes             map[providers.EntityCategory]sharing.ResourceType
 	transactioner           providers.Transactioner
 	logger                  *log.Logger
 	groupMembershipProvider GroupMembershipProvider
@@ -149,6 +164,7 @@ func newEntityService(
 	entityTypeService entitytype.EntityTypeServiceInterface,
 	ouService ou.OrganizationUnitServiceInterface,
 	transactioner providers.Transactioner,
+	sharingService sharing.SharingServiceInterface,
 ) EntityServiceInterface {
 	return &entityService{
 		store:             store,
@@ -156,6 +172,8 @@ func newEntityService(
 		hashService:       hashService,
 		entityTypeService: entityTypeService,
 		ouService:         ouService,
+		sharingService:    sharingService,
+		sharedTypes:       map[providers.EntityCategory]sharing.ResourceType{},
 		transactioner:     transactioner,
 		logger:            log.GetLogger().With(log.String(log.LoggerKeyComponentName, "EntityService")),
 	}
@@ -600,6 +618,87 @@ func (s *entityService) GetEntityListByOUIDs(ctx context.Context, category provi
 	return entities, nil
 }
 
+// GetEntityPageInOU retrieves one page of the entities of a category an organization unit owns,
+// followed by the ones shared into it, as the scope selects. Only the page's entities are read.
+func (s *entityService) GetEntityPageInOU(ctx context.Context, category providers.EntityCategory, ouID string,
+	scope OUEntityScope, limit, offset int, filters map[string]interface{}) (*OUEntityPage, error) {
+	// A shared entity is matched on its own values and the sharee's overlays, which no filter reads
+	// yet. Refusing keeps a page from listing shared entities a filter would have left out.
+	if len(filters) > 0 && scope != OUEntityScopeOwned {
+		return nil, errSharedEntityFilterUnsupported
+	}
+	ouIDs := []string{ouID}
+	ownedCount := 0
+	if scope != OUEntityScopeShared {
+		count, err := s.store.GetEntityListCountByOUIDs(ctx, string(category), ouIDs, filters)
+		if err != nil {
+			return nil, err
+		}
+		ownedCount = count
+	}
+
+	var sharedIDs []string
+	if scope != OUEntityScopeOwned {
+		ids, err := s.sharedEntityIDs(ctx, category, ouID)
+		if err != nil {
+			return nil, err
+		}
+		sharedIDs = ids
+	}
+
+	owned, shared, err := sysutils.PaginateOwnedThenShared(
+		ownedCount,
+		func(limit, offset int) ([]providers.Entity, error) {
+			return s.store.GetEntityListByOUIDs(ctx, string(category), ouIDs, limit, offset, filters)
+		},
+		sharedIDs,
+		func(ids []string) ([]providers.Entity, error) {
+			entities, err := s.store.GetEntitiesByIDs(ctx, ids)
+			if err != nil {
+				return nil, err
+			}
+			return slices.DeleteFunc(entities, func(e providers.Entity) bool {
+				return e.Category != category
+			}), nil
+		},
+		func(e providers.Entity) string { return e.ID },
+		limit, offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	page := slices.Concat(owned, shared)
+	if err := s.populateRuntime(ctx, page); err != nil {
+		return nil, err
+	}
+	return &OUEntityPage{
+		Owned:        page[:len(owned)],
+		Shared:       page[len(owned):],
+		TotalResults: ownedCount + len(sharedIDs),
+	}, nil
+}
+
+// sharedEntityIDs returns the entities of a category shared into an organization unit, sorted by ID.
+// A category that cannot be shared, or an organization unit that does not exist, has none.
+func (s *entityService) sharedEntityIDs(
+	ctx context.Context, category providers.EntityCategory, ouID string,
+) ([]string, error) {
+	resourceType, ok := s.sharedTypes[category]
+	if !ok {
+		return nil, nil
+	}
+	ids, svcErr := s.sharingService.ListVisibleResourceIDs(ctx, resourceType, ouID)
+	if svcErr != nil {
+		if svcErr.Code == ou.ErrorOrganizationUnitNotFound.Code {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to list %s entities shared into organization unit: %s",
+			category, svcErr.Error.DefaultValue)
+	}
+	return ids, nil
+}
+
 // GetEntityListCountBySystemAttributes retrieves the number of entities a system attribute query selects.
 func (s *entityService) GetEntityListCountBySystemAttributes(ctx context.Context,
 	category providers.EntityCategory, sysQuery SystemAttributeQuery) (int, error) {
@@ -680,6 +779,18 @@ func (s *entityService) GetEntityGroups(ctx context.Context, entityID string,
 // SetGroupMembershipProvider registers the group store used to resolve all group memberships.
 func (s *entityService) SetGroupMembershipProvider(provider GroupMembershipProvider) {
 	s.groupMembershipProvider = provider
+}
+
+// RegisterSharedCategory makes entities of a category shareable under the given sharing resource type.
+// It is called while the server starts, before any page is read.
+func (s *entityService) RegisterSharedCategory(category providers.EntityCategory, resourceType sharing.ResourceType) {
+	s.sharedTypes[category] = resourceType
+}
+
+// GetSharedResourceType returns the sharing resource type a category is shareable under.
+func (s *entityService) GetSharedResourceType(category providers.EntityCategory) (sharing.ResourceType, bool) {
+	resourceType, ok := s.sharedTypes[category]
+	return resourceType, ok
 }
 
 // GetTransitiveEntityGroups retrieves all groups an entity belongs to, including nested group membership.

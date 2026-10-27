@@ -207,7 +207,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	exporters = append(exporters, agentTypeExporter)
 
 	// Initialize entity service
-	entityService, err := entity.Initialize(cacheManager, hashService, entityTypeService, ouService)
+	entityService, err := entity.Initialize(cacheManager, hashService, entityTypeService, ouService,
+		sharingService)
 	fatalOnError(ctx, logger, err, "Failed to initialize EntityService")
 
 	// Initialize entity provider
@@ -483,9 +484,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	inboundClientService, err := inboundclient.Initialize(
 		cacheManager, certservice, entityProvider,
 		themeMgtService, layoutMgtService, flowMgtService, entityTypeService, runtimeCryptoSvc, jweService,
-		cimdService, sharingService, map[providers.EntityCategory]sharing.ResourceType{
-			providers.EntityCategoryApp: application.ApplicationSharingType,
-		})
+		cimdService, sharingService, entityService)
 	fatalOnError(ctx, logger, err, "Failed to initialize InboundClientService")
 
 	// Inject the consent service into the consent enforcer. It is wired here rather than at enforcer
