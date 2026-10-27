@@ -51,6 +51,7 @@ test.describe("Application User Access", () => {
     });
 
     await test.step("Step 1 [configure-name]: Fill app name, verify allow-all is checked by default", async () => {
+      await applicationsPage.handleOptionalOuStep("application-configure-name");
       await applicationsPage.waitForStep("application-configure-name");
       await applicationsPage.fillAppName(appData.name);
       await expect(applicationsPage.allowAllUserTypesCheckbox).toBeChecked();

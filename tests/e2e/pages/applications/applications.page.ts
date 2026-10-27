@@ -83,7 +83,10 @@ export class ApplicationsPage extends BasePage {
     // Create wizard — steps
     this.configureNameStep = page.locator('[data-testid="application-configure-name"]');
     this.appNameInput = page.locator('[data-testid="app-name-input"]');
-    this.configureOrganizationUnitStep = page.locator('[data-testid="application-configure-organization-unit"]');
+    // The organization unit step carries no test id, so it is told apart by its heading.
+    this.configureOrganizationUnitStep = page.getByRole("heading", {
+      name: /^where should this application belong\?$/i,
+    });
     this.configureDesignStep = page.locator('[data-testid="application-configure-design"]');
     this.configureSignInStep = page.locator('[data-testid="application-configure-sign-in"]');
     this.configureDetailsStep = page.locator('[data-testid="application-configure-details"]');
@@ -234,17 +237,16 @@ export class ApplicationsPage extends BasePage {
       return;
     }
 
-    // Wait for the tree to finish loading
-    await this.page
-      .locator('[data-testid="application-configure-organization-unit"] [role="progressbar"]')
-      .waitFor({ state: "detached", timeout: Timeouts.ELEMENT_VISIBILITY })
-      .catch(() => {});
-    // Select the first real tree item (not a placeholder)
-    const firstItem = this.configureOrganizationUnitStep
+    // Select the root unit, where the application lands when the step is skipped. The root item is
+    // expanded, so its own name is clicked rather than the item, whose middle can fall on a child unit.
+    const rootUnit = this.page
+      .getByRole("tree")
       .locator('[role="treeitem"]:not([aria-disabled="true"])')
+      .first()
+      .locator("p")
       .first();
-    await firstItem.waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
-    await firstItem.click();
+    await rootUnit.waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
+    await rootUnit.click();
     await this.clickNext();
   }
 

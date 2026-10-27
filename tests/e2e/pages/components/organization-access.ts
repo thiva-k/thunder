@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { Page, Locator } from "@playwright/test";
+import { expect, Page, Locator } from "@playwright/test";
 import { Timeouts } from "../../constants/timeouts";
 
 const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -65,8 +65,13 @@ export class OrganizationAccessSettings {
     await this.grantChildUnitsButton.click();
     await this.childUnitsDialog.waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
     for (const { name, reach } of units) {
-      // Each picker row is a label holding the checkbox, the unit's name and its handle.
-      await this.childUnitsDialog.getByRole("checkbox", { name: new RegExp(`^${escape(name)}`) }).check();
+      // Each picker row is a label holding the checkbox, the unit's name and its handle. The units load
+      // after the dialog opens, so the row is awaited before it is checked: checking a row the list is
+      // still rendering fails at once instead of retrying.
+      const unit = this.childUnitsDialog.getByRole("checkbox", { name: new RegExp(`^${escape(name)}`) });
+      await expect(unit).toBeVisible({ timeout: Timeouts.ELEMENT_VISIBILITY });
+      await unit.check();
+      await expect(unit).toBeChecked();
       await this.childUnitsDialog
         .getByRole("group", { name: `Reach for ${name}`, exact: true })
         .getByRole("button", { name: reach, exact: true })
