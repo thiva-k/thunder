@@ -35,7 +35,10 @@ const WORKERS = process.env.PLAYWRIGHT_WORKERS ? parseInt(process.env.PLAYWRIGHT
 const BROWSERS = [
   { id: "chromium", device: devices["Desktop Chrome"] },
   { id: "firefox", device: devices["Desktop Firefox"] },
-  { id: "webkit", device: devices["Desktop Safari"] },
+  // Desktop Safari renders at a device scale factor of 2. WebKit on Linux paints in software and a
+  // click waits for that paint, so 2x (four times the pixels) made every click several times slower
+  // than in the other browsers and pushed click-heavy specs past their timeouts in CI.
+  { id: "webkit", device: { ...devices["Desktop Safari"], deviceScaleFactor: 1 } },
 ];
 
 /**

@@ -72,7 +72,6 @@ test.describe("User Management - Edit User", () => {
 
     await test.step("Hit Save", async () => {
       await usersPage.clickSaveChanges();
-      await expect(usersPage.saveChangesButton).toBeHidden({ timeout: Timeouts.FORM_LOAD });
     });
 
     await test.step("Switch tabs and verify the edited values are still shown", async () => {

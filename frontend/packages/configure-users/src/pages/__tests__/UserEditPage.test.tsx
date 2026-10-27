@@ -905,6 +905,32 @@ describe('UserEditPage', () => {
       });
     });
 
+    it('keeps the bar up, saving, until the refetch after the update has finished', async () => {
+      const user = userEvent.setup();
+      let finishRefetch: () => void = () => undefined;
+      mockRefetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishRefetch = () => resolve({});
+          }),
+      );
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+      await user.click(screen.getByRole('button', {name: 'Save'}));
+
+      await waitFor(() => expect(mockRefetch).toHaveBeenCalled());
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Saving…'})).toBeDisabled();
+
+      finishRefetch();
+
+      await waitFor(() => {
+        expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+      });
+    });
+
     it('clears the staged edit and hides the bar when Reset is clicked', async () => {
       const user = userEvent.setup();
       render(<UserEditPage />);

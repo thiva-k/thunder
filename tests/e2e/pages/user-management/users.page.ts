@@ -529,10 +529,15 @@ export class UsersPage extends BasePage {
     await this.resetChangesButton.click();
   }
 
-  /** Click the page-level "Save" button that persists unsaved attribute edits. */
+  /**
+   * Click the page-level "Save" button and wait for the save to finish. The wait is on the bar's
+   * "Reset" button: "Save" is relabelled "Saving…" while the request is in flight, so it stops
+   * matching the moment it is clicked, while "Reset" leaves only once the bar unmounts after the save.
+   */
   async clickSaveChanges() {
     await this.saveChangesButton.waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
     await this.saveChangesButton.click();
+    await expect(this.resetChangesButton).toBeHidden({ timeout: Timeouts.FORM_LOAD });
   }
 
   /** Click "Reset Password" (or another credential field's reset button) on the Credentials tab. */
