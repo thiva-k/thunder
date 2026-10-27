@@ -26,13 +26,12 @@ const (
 type DefaultAgentMgtProviderTestSuite struct {
 	suite.Suite
 	mockService *agentmock.AgentServiceInterfaceMock
-	provider    AgentMgtProviderService
+	provider    providers.AgentMgtProvider
 }
 
 func (suite *DefaultAgentMgtProviderTestSuite) SetupTest() {
 	suite.mockService = agentmock.NewAgentServiceInterfaceMock(suite.T())
-	suite.provider = newDefaultAgentMgtProvider()
-	suite.provider.SetAgentService(suite.mockService)
+	suite.provider = newDefaultAgentMgtProvider(suite.mockService)
 }
 
 func TestDefaultAgentMgtProviderTestSuite(t *testing.T) {
@@ -149,18 +148,6 @@ func (suite *DefaultAgentMgtProviderTestSuite) TestCreateAgentWithNilRequestIsRe
 	suite.mockService.AssertNotCalled(suite.T(), "CreateAgent", mock.Anything, mock.Anything)
 }
 
-// The agent service is injected after construction, so a wiring mistake must surface as a refused
-// operation at the call site rather than a nil dereference.
-func (suite *DefaultAgentMgtProviderTestSuite) TestCreateAgentBeforeAgentServiceIsInjected() {
-	provider := newDefaultAgentMgtProvider()
-
-	resp, svcErr := provider.CreateAgent(context.Background(), newTestAgent())
-
-	suite.Nil(resp)
-	suite.NotNil(svcErr)
-	suite.Equal(ErrorAgentProvisioningDisabled.Code, svcErr.Code)
-}
-
 // Failures raised by the agent service must reach the caller with their original code. A runtime
 // caller distinguishes a name clash it can retry with different input from a configuration problem
 // it cannot, so collapsing these into one generic error would remove the only signal it has.
@@ -205,8 +192,7 @@ func (suite *DefaultAgentMgtProviderTestSuite) TestCreateAgentPreservesServiceEr
 	for _, tt := range tests {
 		suite.Run(tt.name, func() {
 			mockService := agentmock.NewAgentServiceInterfaceMock(suite.T())
-			provider := newDefaultAgentMgtProvider()
-			provider.SetAgentService(mockService)
+			provider := newDefaultAgentMgtProvider(mockService)
 			mockService.On("CreateAgent", mock.Anything, mock.Anything).
 				Return(nil, tt.svcErr).Once()
 

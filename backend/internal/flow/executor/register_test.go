@@ -21,6 +21,7 @@ import (
 
 	flowconfig "github.com/thunder-id/thunderid/internal/flow/config"
 	"github.com/thunder-id/thunderid/tests/mocks/actorprovidermock"
+	"github.com/thunder-id/thunderid/tests/mocks/agentmgtprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/authn/githubmock"
 	"github.com/thunder-id/thunderid/tests/mocks/authn/googlemock"
 	"github.com/thunder-id/thunderid/tests/mocks/authn/oauthmock"
@@ -329,6 +330,29 @@ func (suite *BuiltInExecutorRegistrationTestSuite) TestRegisterBuiltInExecutor_R
 	require.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "failed to register built-in executor")
 	assert.False(suite.T(), reg.IsRegistered(ExecutorNamePermissionValidator))
+}
+
+func (suite *BuiltInExecutorRegistrationTestSuite) TestSetAgentMgtProvider_InjectsIntoProvisioningExecutor() {
+	err := registerBuiltInExecutors(suite.registry, suite.depsForBuiltInRegistration(),
+		[]string{ExecutorNameProvisioning})
+	require.NoError(suite.T(), err)
+	provider := agentmgtprovidermock.NewAgentMgtProviderMock(suite.T())
+
+	require.NoError(suite.T(), SetAgentMgtProvider(suite.registry, provider))
+
+	exec, err := suite.registry.GetExecutor(ExecutorNameProvisioning)
+	require.NoError(suite.T(), err)
+	provisioningExec, ok := exec.(*provisioningExecutor)
+	require.True(suite.T(), ok)
+	assert.Same(suite.T(), provider, provisioningExec.agentMgtProvider)
+}
+
+func (suite *BuiltInExecutorRegistrationTestSuite) TestSetAgentMgtProvider_UnsupportedRegistry() {
+	err := SetAgentMgtProvider(NewExecutorRegistryInterfaceMock(suite.T()),
+		agentmgtprovidermock.NewAgentMgtProviderMock(suite.T()))
+
+	require.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "does not support agent provider injection")
 }
 
 func (suite *BuiltInExecutorRegistrationTestSuite) TestFlowConfig_ExecutorsYAMLUnmarshal() {
