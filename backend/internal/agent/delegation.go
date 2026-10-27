@@ -24,8 +24,8 @@ func applyGrantTypes(agent *providers.Agent) *tidcommon.ServiceError {
 // resolveGrantTypes fills in and checks the OAuth grant types of an agent being created or updated,
 // before the inbound client service sees them. Every agent holds client credentials, except a public
 // client, which cannot use them. A delegated agent also needs a grant type that lets it act for a
-// signed-in user, or gets the delegated defaults when it asks for none. The given configs are copied,
-// not mutated.
+// user, or gets the delegated defaults when it asks for none. The given configs are copied, not
+// mutated.
 //
 // A non-delegated agent with no OAuth configuration gets none, since the caller did not ask for a
 // client. A delegated one always gets one.

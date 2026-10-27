@@ -204,36 +204,13 @@ paths:
     post:
       summary: Token endpoint
       description: |
-        Issues access tokens, refresh tokens, and ID tokens. Supports the following grant types:
-        `authorization_code`, `client_credentials`, `refresh_token`, `password`,
-        `urn:openid:params:grant-type:ciba` (CIBA Core 1.0),
-        `urn:ietf:params:oauth:grant-type:token-exchange` (RFC 8693), and
-        `urn:ietf:params:oauth:grant-type:jwt-bearer` (draft-ietf-oauth-identity-assertion-authz-grant).
-        Requires client authentication via HTTP Basic auth or `client_id`/`client_secret` form parameters.
+        Issues access tokens, refresh tokens, and ID tokens. Supports the following grant types: `authorization_code`, `client_credentials`, `refresh_token`, `urn:openid:params:grant-type:ciba` (CIBA Core 1.0), `urn:ietf:params:oauth:grant-type:token-exchange` (RFC 8693), and `urn:ietf:params:oauth:grant-type:jwt-bearer` (draft-ietf-oauth-identity-assertion-authz-grant). Confidential clients authenticate with HTTP Basic auth, `client_id`/`client_secret` form parameters, or a `private_key_jwt` client assertion; a public client sends only `client_id`.
 
-        An access token issued for a user through the `authorization_code` or
-        `urn:openid:params:grant-type:ciba` grant keeps that user in `sub` and adds an on-behalf-of
-        `act` claim naming the client that obtained it. Agent clients always receive the claim;
-        application clients receive it when `includeActClaim` is enabled on the client. The `act.sub`
-        value is the agent or application resource id rather than the client id, and the claim is
-        present on the access token only, never on the ID token.
+        An access token issued for a user through the `authorization_code`, `urn:openid:params:grant-type:ciba` or `urn:ietf:params:oauth:grant-type:jwt-bearer` grant keeps that user in `sub` and adds an on-behalf-of `act` claim naming the client that obtained it. Token exchange adds the same claim when no `actor_token` is given, and a refreshed access token keeps the claim its refresh token was issued with. Agent clients always receive the claim; application clients receive it when `includeActClaim` is enabled on the client. The `act.sub` value is the agent or application resource id rather than the client id, and the claim is present on the access token only, never on the ID token.
 
-        Token exchange additionally supports requesting an Identity Assertion Authorization Grant
-        (ID-JAG) by setting `requested_token_type` to
-        `urn:ietf:params:oauth:token-type:id-jag`, with `subject_token_type` set to
-        `urn:ietf:params:oauth:token-type:id_token` and a single required `audience` value matching
-        one of the client's configured `allowedAudiences`. The `resource` parameter is optional and,
-        when present, is embedded in the issued ID-JAG for the resource authorization server to
-        process. Requires the client to be confidential and to have ID-JAG issuance enabled
-        (`token.idJag.enabled`) on its application configuration. The response has
-        `issued_token_type=urn:ietf:params:oauth:token-type:id-jag` and `token_type=N_A`, since the
-        issued value is a JWT authorization grant rather than an access token.
+        Token exchange additionally supports requesting an Identity Assertion Authorization Grant (ID-JAG) by setting `requested_token_type` to `urn:ietf:params:oauth:token-type:id-jag`, with `subject_token_type` set to `urn:ietf:params:oauth:token-type:id_token` and a single required `audience` value matching one of the client's configured `allowedAudiences`. The `resource` parameter is optional and, when present, is embedded in the issued ID-JAG for the resource authorization server to process. Requires the client to be confidential and to have ID-JAG issuance enabled (`token.idJag.enabled`) on its OAuth configuration. The response has `issued_token_type=urn:ietf:params:oauth:token-type:id-jag` and `token_type=N_A`, since the issued value is a JWT authorization grant rather than an access token.
 
-        The `urn:ietf:params:oauth:grant-type:jwt-bearer` grant presents an ID-JAG assertion (obtained
-        from a trusted external IdP) via the required `assertion` parameter, and exchanges it for a
-        ThunderID access token. Optional `scope` and `resource` parameters further narrow the granted
-        scopes and audience; `resource` must be a subset of the assertion's own `resource` claim when
-        the assertion carries one. No refresh token is issued for this grant.
+        The `urn:ietf:params:oauth:grant-type:jwt-bearer` grant presents an ID-JAG assertion (obtained from a trusted external IdP) via the required `assertion` parameter, and exchanges it for a ThunderID access token. Optional `scope` and `resource` parameters further narrow the granted scopes and audience; `resource` must be a subset of the assertion's own `resource` claim when the assertion carries one. No refresh token is issued for this grant.
       tags:
         - Token
       requestBody:
@@ -801,7 +778,6 @@ components:
             - authorization_code
             - client_credentials
             - refresh_token
-            - password
             - urn:ietf:params:oauth:grant-type:token-exchange
             - urn:ietf:params:oauth:grant-type:jwt-bearer
             - urn:openid:params:grant-type:ciba
@@ -827,12 +803,6 @@ components:
         refresh_token:
           type: string
           description: The refresh token (required for refresh_token grant).
-        username:
-          type: string
-          description: The resource owner username (required for password grant).
-        password:
-          type: string
-          description: The resource owner password (required for password grant).
         subject_token:
           type: string
           description: The subject token for token exchange (RFC 8693).
