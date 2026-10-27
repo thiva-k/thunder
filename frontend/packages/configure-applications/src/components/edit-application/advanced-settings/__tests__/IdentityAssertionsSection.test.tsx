@@ -3,6 +3,7 @@
 
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {useState} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {OAuth2Config} from '../../../../models/oauth';
 import IdentityAssertionsSection from '../IdentityAssertionsSection';
@@ -234,16 +235,70 @@ describe('IdentityAssertionsSection', () => {
       });
     });
 
-    it('should clear the validity period when the field is emptied', () => {
-      render(<IdentityAssertionsSection oauth2Config={enabledConfig} onTokenConfigChange={mockOnTokenConfigChange} />);
+    it('should keep the field empty, show an inline error and not call onTokenConfigChange when the field is emptied', () => {
+      const onValidationChange = vi.fn();
+
+      render(
+        <IdentityAssertionsSection
+          oauth2Config={enabledConfig}
+          onTokenConfigChange={mockOnTokenConfigChange}
+          onValidationChange={onValidationChange}
+        />,
+      );
 
       const input = screen.getByDisplayValue('300');
       fireEvent.change(input, {target: {value: ''}});
 
-      expect(mockOnTokenConfigChange).toHaveBeenCalledWith({
-        idJag: {enabled: true, allowedAudiences: ['https://api.example.com'], validityPeriod: undefined},
+      expect(input).toHaveValue(null);
+      expect(screen.getByText('Enter a value of at least 1 second.')).toBeInTheDocument();
+      expect(onValidationChange).toHaveBeenLastCalledWith(true);
+      expect(mockOnTokenConfigChange).not.toHaveBeenCalled();
+    });
+
+    // Applies each token change to its own config, the way EditAdvancedSettings does, so the card
+    // re-renders with what it pushed.
+    function Harness({onValidationChange = undefined}: {onValidationChange?: (hasErrors: boolean) => void}) {
+      const [config, setConfig] = useState<OAuth2Config>(enabledConfig);
+      return (
+        <IdentityAssertionsSection
+          oauth2Config={config}
+          onTokenConfigChange={(tokenUpdates) => {
+            mockOnTokenConfigChange(tokenUpdates);
+            setConfig((prev) => ({...prev, token: {...prev.token, ...tokenUpdates} as OAuth2Config['token']}));
+          }}
+          onValidationChange={onValidationChange}
+        />
+      );
+    }
+
+    it('should let a cleared field take a new value when the parent applies each change', () => {
+      render(<Harness />);
+
+      const input = screen.getByDisplayValue('300');
+      fireEvent.change(input, {target: {value: ''}});
+      expect(input).toHaveValue(null);
+
+      fireEvent.change(input, {target: {value: '600'}});
+      expect(input).toHaveValue(600);
+      expect(mockOnTokenConfigChange).toHaveBeenLastCalledWith({
+        idJag: {enabled: true, allowedAudiences: ['https://api.example.com'], validityPeriod: 600},
       });
+    });
+
+    it('should drop a cleared field and its error when ID-JAG is turned off and on again', () => {
+      const onValidationChange = vi.fn();
+      render(<Harness onValidationChange={onValidationChange} />);
+
+      fireEvent.change(screen.getByDisplayValue('300'), {target: {value: ''}});
+      expect(onValidationChange).toHaveBeenLastCalledWith(true);
+
+      const toggle = screen.getByLabelText('Identity assertions (ID-JAG)');
+      fireEvent.click(toggle);
+      fireEvent.click(toggle);
+
+      expect(screen.getByDisplayValue('300')).toBeInTheDocument();
       expect(screen.queryByText('Enter a value of at least 1 second.')).not.toBeInTheDocument();
+      expect(onValidationChange).toHaveBeenLastCalledWith(false);
     });
 
     it('should show an inline error and not call onTokenConfigChange when the value is 0', () => {

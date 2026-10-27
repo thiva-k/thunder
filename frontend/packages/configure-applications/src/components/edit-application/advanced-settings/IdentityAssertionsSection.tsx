@@ -146,14 +146,8 @@ export default function IdentityAssertionsSection({
   };
 
   const handleValidityPeriodChange = (value: string) => {
-    if (value === '') {
-      setInvalidValidityPeriodInput(null);
-      onTokenConfigChange({idJag: {...currentIdJag, validityPeriod: undefined}});
-      return;
-    }
-
     const parsed = Number(value);
-    if (Number.isNaN(parsed) || parsed < 1) {
+    if (value.trim() === '' || Number.isNaN(parsed) || parsed < 1) {
       setInvalidValidityPeriodInput(value);
       return;
     }
