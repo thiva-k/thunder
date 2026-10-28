@@ -67,14 +67,18 @@ describe('AccessStatusBanner', () => {
   it('promises a lock lifts on its own only when it has an expiry', () => {
     const timed = {lockedMethods: [{expiresAt: '2026-10-07T10:00:00Z', method: 'account'}], reason: 'FAILED_ATTEMPTS'};
     const {unmount} = render(<AccessStatusBanner status={report('LOCKED', timed)} />);
-    expect(screen.getByRole('status')).toHaveTextContent('It unlocks on its own');
+    expect(screen.getByRole('status')).toHaveTextContent('It unlocks automatically');
     unmount();
 
     const permanent = {lockedMethods: [{method: 'account'}], reason: 'FAILED_ATTEMPTS'};
     render(<AccessStatusBanner status={report('LOCKED', permanent)} />);
-    expect(screen.getByRole('status')).not.toHaveTextContent('It unlocks on its own');
-    // A held lockout ends on account recovery or an unlock, so the generic line says so.
-    expect(screen.getByRole('status')).toHaveTextContent('the user must complete account recovery');
+    expect(screen.getByRole('status')).not.toHaveTextContent('It unlocks automatically');
+    // A held lockout ends on account recovery or an unlock, so the hint says so.
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'It stays locked until the user completes account recovery or an administrator unlocks it.',
+    );
+    // That hint is the whole story; no lock line repeats it.
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
   it('says when a lock on the whole account ends', () => {

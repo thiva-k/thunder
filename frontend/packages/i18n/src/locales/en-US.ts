@@ -17,23 +17,25 @@ const translations = {
     'accountStatus.active.hint.application': 'This application can authenticate normally.',
     'accountStatus.locked.label': 'Locked',
     'accountStatus.locked.hint.user':
-      'The account is locked and cannot sign in. A timed lockout ends on its own; otherwise the user must complete account recovery or an administrator must unlock the account.',
-    'accountStatus.locked.hint.agent':
-      'The agent is locked and cannot authenticate. A timed lockout ends on its own; otherwise an administrator must unlock the agent.',
+      'The account is locked and cannot sign in. The user can complete account recovery, or an administrator can unlock the account.',
+    'accountStatus.locked.hint.agent': 'The agent is locked and cannot authenticate. An administrator can unlock it.',
     'accountStatus.locked.hint.failedAttempts.user':
-      'The account is locked after too many failed sign-in attempts. It unlocks on its own, or sooner if the user completes account recovery or an administrator unlocks it.',
+      'The account was locked after too many failed sign-in attempts. It unlocks automatically at the time shown below. Account recovery or an administrator unlock also removes the lock.',
     'accountStatus.locked.hint.failedAttempts.agent':
-      'The agent is locked after too many failed authentication attempts. It unlocks on its own, or sooner if an administrator unlocks it.',
+      'The agent was locked after too many failed authentication attempts. It unlocks automatically at the time shown below. An administrator unlock also removes the lock.',
+    'accountStatus.locked.hint.failedAttemptsPermanent.user':
+      'The account was locked after too many failed sign-in attempts. It stays locked until the user completes account recovery or an administrator unlocks it.',
+    'accountStatus.locked.hint.failedAttemptsPermanent.agent':
+      'The agent was locked after too many failed authentication attempts. It stays locked until an administrator unlocks it.',
     'accountStatus.locked.hint.suspensionReleased.user':
       'Suspension removed. The account remains locked until the user completes account recovery or an administrator unlocks it.',
     'accountStatus.locked.title.someMethods.user': 'Sign-in locked for some methods',
     'accountStatus.locked.title.someMethods.agent': 'Authentication locked for some methods',
     'accountStatus.locked.hint.someMethods.user':
-      'Some sign-in methods are locked after too many failed attempts. Other sign-in methods are not affected. A timed lock ends on its own, or sooner if the user completes account recovery or an administrator unlocks the account.',
+      'Some sign-in methods were locked after too many failed attempts. Other sign-in methods are not affected. Each lock below shows when it ends. Account recovery or an administrator unlock removes them.',
     'accountStatus.locked.hint.someMethods.agent':
-      'Some authentication methods are locked after too many failed attempts. Other methods are not affected. A timed lock ends on its own, or sooner if an administrator unlocks the agent.',
+      'Some authentication methods were locked after too many failed attempts. Other authentication methods are not affected. Each lock below shows when it ends. An administrator unlock removes them.',
     'accountStatus.locked.until': 'Locked until {{expiresAt}}',
-    'accountStatus.locked.untilReleased': 'Locked until released',
     'accountStatus.locked.method.until': '{{method}}: locked until {{expiresAt}}',
     'accountStatus.locked.method.untilReleased': '{{method}}: locked until released',
     'accountStatus.method.credential': 'Password or other stored credential',

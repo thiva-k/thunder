@@ -129,7 +129,8 @@ test.describe("User Management - Suspension", { tag: [TestTags.USER_MANAGEMENT, 
       await expect(accountStatus.toast(copy.toasts.unsuspended)).toBeVisible();
       await expect(accountStatus.statusBanner).toContainText(UIMessages.accountStatus.lockedLabel);
       await expect(accountStatus.statusBanner).toContainText(copy.releasedHint);
-      await expect(accountStatus.statusBanner).toContainText(UIMessages.accountStatus.lockedUntilReleased);
+      // The hint says how a held lock ends, so no lock row repeats it.
+      await expect(accountStatus.statusBanner.getByRole("listitem")).toHaveCount(0);
       expect((await usersApi.get(user.id)).status?.value).toBe("LOCKED");
     });
 

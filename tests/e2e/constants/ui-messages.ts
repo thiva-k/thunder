@@ -25,7 +25,6 @@ export const UIMessages = {
     operatorNote: (note: string) => `Operator note: ${note}`,
     suspendedLabel: "Suspended",
     lockedLabel: "Locked",
-    lockedUntilReleased: "Locked until released",
     user: {
       toasts: {
         suspended: "User suspended",
