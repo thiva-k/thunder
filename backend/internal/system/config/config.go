@@ -7,6 +7,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/log/rollingfile"
@@ -365,6 +367,40 @@ type GatewayConfig struct {
 	// gateways generally wants to keep reviewing and applying a version itself rather than having
 	// every write push one out immediately.
 	AutoApply *bool `yaml:"auto_apply" json:"auto_apply"`
+	// ApplyTimeoutSeconds is how long a request to apply a version to a gateway, or to revert one,
+	// may take to answer, in place of the server's write timeout. It covers waiting for an apply
+	// already running on that gateway and the gateway's own import.
+	ApplyTimeoutSeconds int `yaml:"apply_timeout_seconds" json:"apply_timeout_seconds"`
+}
+
+// ApplyTimeout reports how long an apply or revert request may take to answer; zero leaves the
+// server's write timeout in place.
+func (c GatewayConfig) ApplyTimeout() time.Duration {
+	return secondsWithin(c.ApplyTimeoutSeconds)
+}
+
+// secondsWithin is seconds as a duration, or zero when it is not positive or too large for a duration,
+// which would otherwise wrap around to an arbitrary value. Zero leaves the server's write timeout in
+// place.
+func secondsWithin(seconds int) time.Duration {
+	if seconds <= 0 || int64(seconds) > int64(math.MaxInt64/time.Second) {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+// ImportConfig holds the configuration of the import API.
+type ImportConfig struct {
+	// TimeoutSeconds is how long an import request may take to answer, in place of the server's
+	// write timeout. An import writes every resource it carries, and the import a control plane
+	// sends to apply a version carries the whole configuration.
+	TimeoutSeconds int `yaml:"timeout_seconds" json:"timeout_seconds"`
+}
+
+// Timeout reports how long an import request may take to answer; zero leaves the server's write
+// timeout in place.
+func (c ImportConfig) Timeout() time.Duration {
+	return secondsWithin(c.TimeoutSeconds)
 }
 
 // MaxGatewayCount reports how many gateways a deployment may register, defaulting to none when
@@ -749,6 +785,7 @@ func (c AuthZENPDPConfig) Validate() error {
 type Config struct {
 	Server                     engineconfig.ServerConfig         `yaml:"server"                json:"server"`
 	Gateway                    GatewayConfig                     `yaml:"gateway"               json:"gateway"`
+	Import                     ImportConfig                      `yaml:"import"                json:"import"`
 	AuthZENPDP                 AuthZENPDPConfig                  `yaml:"authzen_pdp"           json:"authzen_pdp"`
 	Log                        LogConfig                         `yaml:"log"                   json:"log"`
 	GateClient                 engineconfig.GateClientConfig     `yaml:"gate_client"           json:"gate_client"`
