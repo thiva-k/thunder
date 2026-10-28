@@ -10,6 +10,10 @@ const (
 	// list as SQLite reports it.
 	nameIndexName    = "idx_http_connection_name_deployment"
 	nameIndexColumns = "HTTP_CONNECTION.DEPLOYMENT_ID, HTTP_CONNECTION.NAME"
+	// primaryKeyName is the name PostgreSQL gives the table's primary key, and primaryKeyColumns its
+	// column list as SQLite reports it.
+	primaryKeyName    = "HTTP_CONNECTION_pkey"
+	primaryKeyColumns = "HTTP_CONNECTION.DEPLOYMENT_ID, HTTP_CONNECTION.ID"
 )
 
 var (
@@ -49,5 +53,18 @@ var (
 		ID: "HCQ-HTTP_CONN_MGT-05",
 		Query: `DELETE FROM "HTTP_CONNECTION"
 			WHERE ID = $1 AND DEPLOYMENT_ID = $2`,
+	}
+
+	queryCountHTTPConnections = dbmodel.DBQuery{
+		ID: "HCQ-HTTP_CONN_MGT-06",
+		Query: `SELECT COUNT(*) AS count FROM "HTTP_CONNECTION"
+			WHERE DEPLOYMENT_ID = $1`,
+	}
+
+	queryGetHTTPConnectionByName = dbmodel.DBQuery{
+		ID: "HCQ-HTTP_CONN_MGT-07",
+		Query: `SELECT ID, NAME, DESCRIPTION, OU_ID, PROPERTIES
+			FROM "HTTP_CONNECTION"
+			WHERE NAME = $1 AND DEPLOYMENT_ID = $2`,
 	}
 )

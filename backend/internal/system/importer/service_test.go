@@ -26,6 +26,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
 	"github.com/thunder-id/thunderid/internal/connection/connectionou"
+	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entitytype"
@@ -41,7 +42,9 @@ import (
 	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
+	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	"github.com/thunder-id/thunderid/internal/system/outboundauth"
 	"github.com/thunder-id/thunderid/internal/user"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 
@@ -4863,4 +4866,176 @@ func (s *ImportConnectionOUTestSuite) TestDryRunAcceptsTheOwnerAnExistingConnect
 			s.Equal(operationUpdate, outcome.Operation)
 		})
 	}
+}
+
+const httpConnectionImportDoc = `resource_type: connection
+id: http-1
+type: http
+name: Risk Engine
+url: %s
+timeoutMs: 5000
+authentication:
+  type: basic
+  properties:
+    username: svc-user
+%s`
+
+const (
+	httpImportURL          = "https://risk.example.com/evaluate"
+	httpImportPasswordLine = "    password: doc-pw\n"
+)
+
+type ImportHTTPConnectionTestSuite struct {
+	suite.Suite
+	adapter *httpConnectionAdapterMock
+	svc     ImportServiceInterface
+}
+
+func TestImportHTTPConnectionTestSuite(t *testing.T) {
+	suite.Run(t, new(ImportHTTPConnectionTestSuite))
+}
+
+func (s *ImportHTTPConnectionTestSuite) SetupTest() {
+	s.adapter = newHttpConnectionAdapterMock(s.T())
+	s.svc = s.newService(nil, nil, s.adapter)
+}
+
+// newService builds an import service over the connection adapters an HTTP connection test reaches.
+func (s *ImportHTTPConnectionTestSuite) newService(idpSvc idpAdapter, senderSvc senderAdapter,
+	httpSvc httpConnectionAdapter) ImportServiceInterface {
+	svc := newImportService(newAppService(), idpSvc, senderSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil)
+	svc.(*importService).httpConnectionService = httpSvc
+	return svc
+}
+
+func (s *ImportHTTPConnectionTestSuite) importHTTPConnection(url, passwordLine string, dryRun bool) ImportItemOutcome {
+	s.T().Helper()
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{
+		Content: fmt.Sprintf(httpConnectionImportDoc, url, passwordLine),
+		DryRun:  dryRun,
+		Options: &ImportOptions{Upsert: boolPtr(true), ContinueOnError: boolPtr(true), Target: importTargetRuntime},
+	})
+	s.Require().Nil(err)
+	s.Require().Len(resp.Results, 1)
+	return resp.Results[0]
+}
+
+func (s *ImportHTTPConnectionTestSuite) storedPassword(props []cmodels.Property) string {
+	s.T().Helper()
+	authConfig, err := outboundauth.FromProperties(props)
+	s.Require().NoError(err)
+	return authConfig.Get(outboundauth.FieldBasicPassword)
+}
+
+func (s *ImportHTTPConnectionTestSuite) stored() *httpconnection.HTTPConnection {
+	authProps, err := outboundauth.ToProperties(outboundauth.Config{Type: outboundauth.TypeBasic,
+		Properties: map[string]string{
+			outboundauth.FieldBasicUsername: "svc-user",
+			outboundauth.FieldBasicPassword: "stored-pw",
+		}})
+	s.Require().NoError(err)
+	return &httpconnection.HTTPConnection{ID: "http-1", Name: "Risk Engine", URL: httpImportURL,
+		AuthProperties: authProps}
+}
+
+// Flows reference a connection by ID, so an imported one must keep the document's.
+func (s *ImportHTTPConnectionTestSuite) TestCreateKeepsTheDocumentID() {
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(nil, &httpconnection.ErrorNotFound)
+	var created httpconnection.HTTPConnection
+	s.adapter.EXPECT().CreateHTTPConnection(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, connection httpconnection.HTTPConnection) { created = connection }).
+		Return(&httpconnection.HTTPConnection{ID: "http-1", Name: "Risk Engine"}, nil)
+
+	outcome := s.importHTTPConnection(httpImportURL, httpImportPasswordLine, false)
+
+	s.Equal(statusSuccess, outcome.Status, outcome.Message)
+	s.Equal(operationCreate, outcome.Operation)
+	s.Equal("http-1", created.ID)
+	s.NotContains(fmt.Sprint(created.AuthProperties), "doc-pw")
+	s.Equal("doc-pw", s.storedPassword(created.AuthProperties))
+}
+
+// An upsert hands the writer the connection it read, so the retention rule is applied against it.
+func (s *ImportHTTPConnectionTestSuite) TestAnUpsertUpdatesTheConnectionItRead() {
+	stored := s.stored()
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(stored, nil)
+	var updated httpconnection.HTTPConnection
+	s.adapter.EXPECT().UpdateHTTPConnection(mock.Anything, stored, mock.Anything).
+		Run(func(_ context.Context, _ *httpconnection.HTTPConnection, connection httpconnection.HTTPConnection) {
+			updated = connection
+		}).Return(stored, nil)
+
+	outcome := s.importHTTPConnection("https://risk.example.com/v2", "", false)
+
+	s.Equal(statusSuccess, outcome.Status, outcome.Message)
+	s.Equal(operationUpdate, outcome.Operation)
+	s.Equal("https://risk.example.com/v2", updated.URL)
+	s.Empty(s.storedPassword(updated.AuthProperties), "the document's omission is the writer's to resolve")
+}
+
+func (s *ImportHTTPConnectionTestSuite) TestDryRunWritesNothing() {
+	stored := s.stored()
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(stored, nil)
+	s.adapter.EXPECT().ValidateHTTPConnectionUpdate(mock.Anything, stored, mock.Anything).Return(nil)
+
+	outcome := s.importHTTPConnection(httpImportURL, httpImportPasswordLine, true)
+
+	s.Equal(statusSuccess, outcome.Status, outcome.Message)
+	s.Equal(operationUpdate, outcome.Operation)
+}
+
+func (s *ImportHTTPConnectionTestSuite) TestADryRunUpsertReportsTheUpdateRefusal() {
+	stored := s.stored()
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(stored, nil)
+	s.adapter.EXPECT().ValidateHTTPConnectionUpdate(mock.Anything, stored, mock.Anything).
+		Return(&declarativeresource.ErrorDeclarativeResourceUpdateOperation)
+
+	outcome := s.importHTTPConnection(httpImportURL, httpImportPasswordLine, true)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(operationUpdate, outcome.Operation)
+	s.Equal(declarativeresource.ErrorDeclarativeResourceUpdateOperation.Code, outcome.Code)
+}
+
+func (s *ImportHTTPConnectionTestSuite) TestADryRunCreateReportsTheValidationRefusal() {
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(nil, &httpconnection.ErrorNotFound)
+	s.adapter.EXPECT().ValidateHTTPConnectionCreate(mock.Anything, mock.Anything).
+		Return(&httpconnection.ErrorInvalidURL)
+
+	outcome := s.importHTTPConnection("http://risk.example.com/evaluate", httpImportPasswordLine, true)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(operationCreate, outcome.Operation)
+	s.Equal(httpconnection.ErrorInvalidURL.Code, outcome.Code)
+}
+
+func (s *ImportHTTPConnectionTestSuite) TestFailsWithoutTheAdapter() {
+	s.svc = s.newService(nil, nil, nil)
+
+	outcome := s.importHTTPConnection(httpImportURL, httpImportPasswordLine, false)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(ErrorInvalidImportRequest.Code, outcome.Code)
+}
+
+func (s *ImportHTTPConnectionTestSuite) TestReportsTheServiceRefusal() {
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(nil, &httpconnection.ErrorNotFound)
+	s.adapter.EXPECT().CreateHTTPConnection(mock.Anything, mock.Anything).
+		Return(nil, &httpconnection.ErrorInvalidURL)
+
+	outcome := s.importHTTPConnection("http://risk.example.com/evaluate", httpImportPasswordLine, false)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(httpconnection.ErrorInvalidURL.Code, outcome.Code)
+}
+
+func (s *ImportHTTPConnectionTestSuite) TestALookupFailureIsReportedWithoutWriting() {
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").Return(nil, &tidcommon.InternalServerError)
+
+	outcome := s.importHTTPConnection(httpImportURL, httpImportPasswordLine, false)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(operationUpdate, outcome.Operation)
+	s.Equal(tidcommon.InternalServerError.Code, outcome.Code)
 }

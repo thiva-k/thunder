@@ -85,6 +85,24 @@ func (s *HTTPConnectionStoreTestSuite) TestUniqueNameViolationIsAConflict() {
 	}
 }
 
+func (s *HTTPConnectionStoreTestSuite) TestPrimaryKeyViolationIsAnIDConflict() {
+	for name, dbErr := range map[string]error{
+		"sqlite":   errors.New("constraint failed: UNIQUE constraint failed: " + primaryKeyColumns + " (1555)"),
+		"postgres": &pq.Error{Code: "23505", Constraint: primaryKeyName},
+	} {
+		s.Run(name, func() {
+			s.SetupTest()
+			s.mockClient.On("ExecuteContext", mock.Anything, queryCreateHTTPConnection, mock.Anything,
+				mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), dbErr)
+
+			err := s.store.CreateHTTPConnection(s.ctx, s.connection())
+
+			s.ErrorIs(err, errIDConflict)
+			s.NotErrorIs(err, errNameConflict)
+		})
+	}
+}
+
 func (s *HTTPConnectionStoreTestSuite) TestOtherWriteErrorsAreNotConflicts() {
 	s.mockClient.On("ExecuteContext", mock.Anything, queryCreateHTTPConnection, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -94,6 +112,7 @@ func (s *HTTPConnectionStoreTestSuite) TestOtherWriteErrorsAreNotConflicts() {
 
 	s.Require().Error(err)
 	s.NotErrorIs(err, errNameConflict)
+	s.NotErrorIs(err, errIDConflict)
 }
 
 func (s *HTTPConnectionStoreTestSuite) TestUpdateAndDeleteReportMissingRows() {
@@ -123,6 +142,10 @@ func (s *HTTPConnectionStoreTestSuite) TestGetAndList() {
 		Return([]map[string]interface{}{row}, nil)
 	s.mockClient.On("QueryContext", mock.Anything, queryGetHTTPConnectionByID, "missing", testDeploymentID).
 		Return([]map[string]interface{}{}, nil)
+	s.mockClient.On("QueryContext", mock.Anything, queryGetHTTPConnectionByName, "Risk", testDeploymentID).
+		Return([]map[string]interface{}{row}, nil)
+	s.mockClient.On("QueryContext", mock.Anything, queryGetHTTPConnectionByName, "Missing", testDeploymentID).
+		Return([]map[string]interface{}{}, nil)
 	s.mockClient.On("QueryContext", mock.Anything, queryListHTTPConnections, testDeploymentID).
 		Return([]map[string]interface{}{row}, nil)
 	want := HTTPConnection{ID: "conn-1", Name: "Risk", OUID: "ou-1", URL: testURL, TimeoutMS: 1000}
@@ -132,6 +155,14 @@ func (s *HTTPConnectionStoreTestSuite) TestGetAndList() {
 	s.Equal(&want, got)
 
 	got, err = s.store.GetHTTPConnection(s.ctx, "missing")
+	s.NoError(err)
+	s.Nil(got)
+
+	got, err = s.store.GetHTTPConnectionByName(s.ctx, "Risk")
+	s.Require().NoError(err)
+	s.Equal(&want, got)
+
+	got, err = s.store.GetHTTPConnectionByName(s.ctx, "Missing")
 	s.NoError(err)
 	s.Nil(got)
 
@@ -151,8 +182,12 @@ func (s *HTTPConnectionStoreTestSuite) TestDatabaseErrorsPropagate() {
 	s.ErrorIs(err, failure)
 	_, err = store.GetHTTPConnection(s.ctx, "conn-1")
 	s.ErrorIs(err, failure)
+	_, err = store.GetHTTPConnectionByName(s.ctx, "Risk")
+	s.ErrorIs(err, failure)
 	s.ErrorIs(store.UpdateHTTPConnection(s.ctx, s.connection()), failure)
 	s.ErrorIs(store.DeleteHTTPConnection(s.ctx, "conn-1"), failure)
+	_, err = store.CountHTTPConnections(s.ctx)
+	s.ErrorIs(err, failure)
 }
 
 func (s *HTTPConnectionStoreTestSuite) TestMalformedPropertiesAreAnError() {
@@ -160,4 +195,31 @@ func (s *HTTPConnectionStoreTestSuite) TestMalformedPropertiesAreAnError() {
 		_, err := buildHTTPConnectionFromRow(map[string]interface{}{"id": "1", "properties": raw})
 		s.Error(err, raw)
 	}
+}
+
+func (s *HTTPConnectionStoreTestSuite) TestCount() {
+	s.mockClient.On("QueryContext", mock.Anything, queryCountHTTPConnections, testDeploymentID).
+		Return([]map[string]interface{}{{"count": int64(3)}}, nil).Once()
+
+	count, err := s.store.CountHTTPConnections(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(3, count)
+
+	s.mockClient.On("QueryContext", mock.Anything, queryCountHTTPConnections, testDeploymentID).
+		Return([]map[string]interface{}{{"count": "three"}}, nil).Once()
+	_, err = s.store.CountHTTPConnections(s.ctx)
+	s.Error(err)
+}
+
+func (s *HTTPConnectionStoreTestSuite) TestCountFailures() {
+	failure := errors.New("query failed")
+	s.mockClient.On("QueryContext", mock.Anything, queryCountHTTPConnections, testDeploymentID).
+		Return(nil, failure).Once()
+	_, err := s.store.CountHTTPConnections(s.ctx)
+	s.ErrorIs(err, failure)
+
+	s.mockClient.On("QueryContext", mock.Anything, queryCountHTTPConnections, testDeploymentID).
+		Return([]map[string]interface{}{}, nil).Once()
+	_, err = s.store.CountHTTPConnections(s.ctx)
+	s.ErrorContains(err, "returned no rows")
 }
