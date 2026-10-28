@@ -273,4 +273,5 @@ export const EXECUTORS_WITH_FIXED_INPUTS = new Set<string>([
   ExecutionTypes.GroupExecutor,
   ExecutionTypes.PreSuspend,
   ExecutionTypes.IdentityGovernance,
+  ExecutionTypes.ExtensionExecutor,
 ]);

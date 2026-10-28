@@ -533,6 +533,38 @@ func (suite *SessionExecutorTestSuite) TestSanitizeSnapshotRuntimeData_DropsRequ
 	suite.Equal("value", sanitized["keep_me"], "unrelated runtime data must still be snapshotted")
 }
 
+func (suite *SessionExecutorTestSuite) TestSanitizeSnapshotRuntimeData_DropsPendingFailureReason() {
+	sanitized := sanitizeSnapshotRuntimeData(map[string]string{
+		"failureReasonJSON": `{"code":"FET-1118"}`,
+		"keep_me":           "value",
+	})
+
+	suite.NotContains(sanitized, "failureReasonJSON")
+	suite.Equal("value", sanitized["keep_me"])
+}
+
+func (suite *SessionExecutorTestSuite) TestFreshSave_LeavesExtensionDataOutOfTheSnapshot() {
+	ctx := freshCtx()
+	ctx.RuntimeData["extension.risk_check.riskScore"] = "12"
+	ctx.RuntimeData["extension.risk_check.email"] = "svc@example.com"
+	ctx.RuntimeData[common.ExtensionAttemptCountKey("risk_check")] = "1"
+	ctx.RuntimeData["failureReason"] = "flow-owned"
+	sso := sessionmock.NewServiceMock(suite.T())
+	var in session.SaveCheckpointInput
+	captureSave(sso, &in, session.SaveCheckpointResult{Handle: "handle-xyz", Created: true})
+	exec := suite.newExecutor(sso, suite.saveAuthnMock())
+
+	_, err := exec.Execute(ctx)
+	suite.Require().NoError(err)
+
+	for key := range in.RuntimeData {
+		suite.False(strings.HasPrefix(key, common.ExtensionDataKeyPrefix), "%s entered the snapshot", key)
+	}
+	suite.NotContains(in.RuntimeData, common.ExtensionAttemptCountKey("risk_check"))
+	suite.Equal("alice@example.com", in.RuntimeData["email"], "the flow's own data is still snapshotted")
+	suite.Equal("flow-owned", in.RuntimeData["failureReason"], "a key named failureReason is not special")
+}
+
 // TestFreshSave_PublishesSessionID verifies a save publishes the session id on RuntimeData, and not
 // on the transport channel the handle uses.
 func (suite *SessionExecutorTestSuite) TestFreshSave_PublishesSessionID() {

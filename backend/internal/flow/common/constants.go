@@ -142,6 +142,17 @@ const (
 	// checkpoint it guards. The checkpoint id is that join node's id, so the skip and join of one
 	// checkpoint pair by it. Absent/empty means the node is not part of a checkpoint pair.
 	NodePropertyCheckpointRef = "checkpointRef"
+	// NodePropertyConnectionID names the HTTP endpoint connection an extension step calls.
+	NodePropertyConnectionID = "connectionId"
+	// NodePropertyInputKeys names the user inputs an extension step sends.
+	NodePropertyInputKeys = "inputKeys"
+	// NodePropertyRuntimeDataKeys restricts the runtime data an extension step sends.
+	NodePropertyRuntimeDataKeys = "runtimeDataKeys"
+	// NodePropertyResponseKeys restricts the response fields an extension step stores.
+	NodePropertyResponseKeys = "responseKeys"
+	// NodePropertyMaxAttempts bounds the attempts a step accepts in one flow execution, such as OTP
+	// sends or an extension step's FAILED and INCOMPLETE answers.
+	NodePropertyMaxAttempts = "maxAttempts"
 )
 
 // RuntimeData keys.
@@ -320,7 +331,28 @@ const (
 	// RuntimeKeyMappedPermissions holds the JSON-encoded []providers.AuthorizationTarget permission
 	// targets a federated login's authorization mapping (rule-based or direct) resolved.
 	RuntimeKeyMappedPermissions = "mapped_permissions"
+	// RuntimeKeyExtensionAttemptCount holds the number of FAILED and INCOMPLETE answers an extension
+	// step has had in the current flow execution, scoped to the step by ExtensionAttemptCountKey.
+	RuntimeKeyExtensionAttemptCount = "extensionAttemptCount"
 )
+
+// ExtensionDataKeyPrefix starts every runtime-data key an extension step stores from its service's
+// answer, as extension.<nodeId>.<field>, so a returned field never names an engine key, a profile
+// attribute or a credential.
+const ExtensionDataKeyPrefix = "extension."
+
+// Bounds and default of an extension step's maxAttempts property.
+const (
+	extensionMinAttempts     = 1
+	extensionMaxAttempts     = 20
+	extensionDefaultAttempts = 5
+)
+
+// ExtensionAttemptCountKey scopes RuntimeKeyExtensionAttemptCount to an extension step's node ID, so
+// two extension steps in one flow count separately.
+func ExtensionAttemptCountKey(nodeID string) string {
+	return RuntimeKeyExtensionAttemptCount + ":" + nodeID
+}
 
 // SSOCheckpointKey scopes a per-checkpoint SSO control key (RuntimeKeySSOSessionPresent,
 // RuntimeKeySSOSessionSaved) to a checkpoint id, so multiple skip/join checkpoints in one flow keep

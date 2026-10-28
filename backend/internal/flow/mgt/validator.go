@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/flow/executormeta"
@@ -26,13 +27,19 @@ type FlowValidatorInterface interface {
 	ValidateFlowDefinition(ctx context.Context, flowDef *FlowDefinition) *tidcommon.ServiceError
 }
 
+// httpConnectionProvider checks that an extension step's HTTP connection exists.
+type httpConnectionProvider interface {
+	GetHTTPConnection(ctx context.Context, id string) (*httpconnection.HTTPConnection, *tidcommon.ServiceError)
+}
+
 // flowValidator is responsible for validating flow definitions,
 // including metadata, structure, node configurations, and registry-dependent checks.
 type flowValidator struct {
-	executorRegistry    core.ExecutorMetadataProvider
-	interceptorRegistry interceptor.InterceptorRegistryInterface
-	graphBuilder        graphbuilder.GraphBuilderInterface
-	logger              *log.Logger
+	executorRegistry       core.ExecutorMetadataProvider
+	interceptorRegistry    interceptor.InterceptorRegistryInterface
+	graphBuilder           graphbuilder.GraphBuilderInterface
+	httpConnectionProvider httpConnectionProvider
+	logger                 *log.Logger
 }
 
 // newFlowValidator creates a new instance of flowValidator with the provided dependencies.
@@ -40,12 +47,14 @@ func newFlowValidator(
 	executorRegistry core.ExecutorMetadataProvider,
 	interceptorRegistry interceptor.InterceptorRegistryInterface,
 	graphBuilder graphbuilder.GraphBuilderInterface,
+	connectionProvider httpConnectionProvider,
 ) *flowValidator {
 	return &flowValidator{
-		executorRegistry:    executorRegistry,
-		interceptorRegistry: interceptorRegistry,
-		graphBuilder:        graphBuilder,
-		logger:              log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowValidator")),
+		executorRegistry:       executorRegistry,
+		interceptorRegistry:    interceptorRegistry,
+		graphBuilder:           graphBuilder,
+		httpConnectionProvider: connectionProvider,
+		logger:                 log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowValidator")),
 	}
 }
 
@@ -71,6 +80,10 @@ func (v *flowValidator) ValidateFlowDefinition(
 	}
 
 	if err := v.validateInterceptors(flowDef.Interceptors, nodeIndex); err != nil {
+		return err
+	}
+
+	if err := v.validateExtensionSteps(ctx, flowDef.Nodes); err != nil {
 		return err
 	}
 
@@ -1149,6 +1162,59 @@ func (v *flowValidator) validateSessionExecutor(
 			"by any SSOCheckExecutor via checkpointRef",
 		Params: map[string]string{"nodeID": node.ID},
 	})
+}
+
+// validateExtensionSteps refuses a flow whose extension step has an unusable property value or names
+// an HTTP connection that does not exist.
+func (v *flowValidator) validateExtensionSteps(
+	ctx context.Context, nodes []providers.NodeDefinition,
+) *tidcommon.ServiceError {
+	for i := range nodes {
+		if nodes[i].Executor == nil || nodes[i].Executor.Name != executormeta.ExecutorNameExtension {
+			continue
+		}
+		if err := v.validateExtensionExecutor(ctx, &nodes[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateExtensionExecutor applies the executor's own property rule to an extension step and checks
+// that its HTTP connection exists.
+func (v *flowValidator) validateExtensionExecutor(
+	ctx context.Context, node *providers.NodeDefinition,
+) *tidcommon.ServiceError {
+	props, invalidProperty := common.ParseExtensionProperties(node.Properties)
+	if invalidProperty != "" {
+		return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+			Key: "error.flowmgtservice.invalid_executor_property_value_description",
+			DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' " +
+				"has an invalid value for property '{{param(propertyKey)}}'",
+			Params: map[string]string{
+				"nodeID":       node.ID,
+				"executorName": node.Executor.Name,
+				"propertyKey":  invalidProperty,
+			},
+		})
+	}
+	_, svcErr := v.httpConnectionProvider.GetHTTPConnection(ctx, props.ConnectionID)
+	if svcErr == nil {
+		return nil
+	}
+	if svcErr.Code == httpconnection.ErrorNotFound.Code {
+		return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+			Key: "error.flowmgtservice.extension_connection_not_found_description",
+			DefaultValue: "Node '{{param(nodeID)}}': HTTP connection '{{param(connectionID)}}' " +
+				"does not exist",
+			Params: map[string]string{
+				"nodeID":       node.ID,
+				"connectionID": props.ConnectionID,
+				"propertyKey":  common.NodePropertyConnectionID,
+			},
+		})
+	}
+	return &tidcommon.InternalServerError
 }
 
 // validateAccountLinkingExecutor checks that a linking node has an onIncomplete prompt whose

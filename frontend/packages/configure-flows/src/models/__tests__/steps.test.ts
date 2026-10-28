@@ -211,8 +211,12 @@ describe('steps models', () => {
       expect(ExecutionTypes.PreSuspend).toBe('PreSuspendExecutor');
     });
 
-    it('should have exactly 40 execution types', () => {
-      expect(Object.keys(ExecutionTypes)).toHaveLength(40);
+    it('should have ExtensionExecutor type', () => {
+      expect(ExecutionTypes.ExtensionExecutor).toBe('ExtensionExecutor');
+    });
+
+    it('should have exactly 41 execution types', () => {
+      expect(Object.keys(ExecutionTypes)).toHaveLength(41);
     });
   });
 

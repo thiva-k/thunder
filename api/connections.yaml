@@ -251,8 +251,24 @@ paths:
     delete:
       tags: [Connections]
       summary: Delete an HTTP endpoint connection
+      description: |
+        Refused while other resources use the connection, and while its usages cannot be determined.
+        Deleting a connection that does not exist succeeds.
       responses:
         "204": { description: Connection deleted }
+        "409": { $ref: '#/components/responses/HTTPConnectionDependencyConflict' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "500": { $ref: '#/components/responses/InternalServerError' }
+  /connections/http/{id}/usages:
+    parameters:
+      - { $ref: '#/components/parameters/ConnectionID' }
+    get:
+      tags: [Connections]
+      summary: Get HTTP endpoint connection usages
+      description: Returns the resources that use this HTTP endpoint connection.
+      responses:
+        "200": { $ref: '#/components/responses/ConnectionUsages' }
         "404": { $ref: '#/components/responses/HTTPConnectionNotFound' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
@@ -1391,6 +1407,19 @@ components:
             description:
               key: "error.connectionservice.http_connection_not_found_description"
               defaultValue: "No HTTP connection exists for the supplied identifier"
+    HTTPConnectionDependencyConflict:
+      description: The HTTP endpoint connection cannot be deleted because other resources use it
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: "CON-1026"
+            message:
+              key: "error.connectionservice.http_connection_has_blocking_dependencies"
+              defaultValue: "HTTP connection cannot be deleted"
+            description:
+              key: "error.connectionservice.http_connection_has_blocking_dependencies_description"
+              defaultValue: "The HTTP connection cannot be deleted because 1 flow(s) depend on it. Remove or reassign them first."
     ConnectionDependencyConflict:
       description: The connection cannot be deleted because it is still in use
       content:
