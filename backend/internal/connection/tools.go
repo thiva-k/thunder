@@ -48,6 +48,7 @@ type httpConnectionMCPInput struct {
 	ID             string                           `json:"id,omitempty" jsonschema:"ID of the connection to update"`
 	Name           string                           `json:"name" jsonschema:"Display name, unique among HTTP connections, at most 255 characters"`
 	Description    string                           `json:"description,omitempty" jsonschema:"Optional description, at most 500 characters"`
+	OUID           string                           `json:"ouId,omitempty" jsonschema:"ID of the organization unit that owns the connection. Required on create. It cannot be changed: on update, leave it out or give the one the connection has."`
 	URL            string                           `json:"url" jsonschema:"Absolute http or https URL of the service. Must be https when authentication is not none."`
 	TimeoutMS      int                              `json:"timeoutMs,omitempty" jsonschema:"Request timeout in milliseconds, 1 to 20000. Defaults to 10000 when omitted."`
 	Headers        []httpConnectionMCPHeader        `json:"headers,omitempty" jsonschema:"Plain headers sent on every call. Names must be unique."`
@@ -59,6 +60,7 @@ type httpConnectionMCPOutput struct {
 	ID             string                          `json:"id"`
 	Name           string                          `json:"name"`
 	Description    string                          `json:"description,omitempty"`
+	OUID           string                          `json:"ouId"`
 	Type           string                          `json:"type"`
 	URL            string                          `json:"url"`
 	TimeoutMS      int                             `json:"timeoutMs"`
@@ -226,6 +228,7 @@ func httpMCPInputToDTO(input httpConnectionMCPInput,
 	req := httpConnectionRequest{
 		Name:        input.Name,
 		Description: input.Description,
+		OUID:        input.OUID,
 		URL:         input.URL,
 		TimeoutMS:   input.TimeoutMS,
 	}
@@ -262,6 +265,7 @@ func httpConnectionToolOutput(connection *httpconnection.HTTPConnection, failure
 		ID:          resp.ID,
 		Name:        resp.Name,
 		Description: resp.Description,
+		OUID:        resp.OUID,
 		Type:        resp.Type,
 		URL:         resp.URL,
 		TimeoutMS:   resp.TimeoutMS,
@@ -286,7 +290,7 @@ func getHTTPConnectionSchemaModifiers() []func(*jsonschema.Schema) {
 
 // getCreateHTTPConnectionSchema generates the schema for the create_http_connection tool.
 func getCreateHTTPConnectionSchema() *jsonschema.Schema {
-	modifiers := append(getHTTPConnectionSchemaModifiers(), tool.WithRemove("", "id"))
+	modifiers := append(getHTTPConnectionSchemaModifiers(), tool.WithRemove("", "id"), tool.WithRequired("", "ouId"))
 	return tool.GenerateSchema[httpConnectionMCPInput](modifiers...)
 }
 

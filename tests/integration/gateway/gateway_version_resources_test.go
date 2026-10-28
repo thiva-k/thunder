@@ -336,6 +336,7 @@ func (ts *GatewayVersionsTestSuite) TestAnAppliedResourceServerShowsWithItsResou
 func (ts *GatewayVersionsTestSuite) TestAppliedConnectionsShowWithTheirSecretsMasked() {
 	suffix := uniqueSuffix()
 	const secret = "viewed-connection-secret"
+	ouID := ts.createUnit("viewed-connections-" + suffix)
 	connections := []struct {
 		vendor string
 		body   map[string]any
@@ -362,6 +363,7 @@ func (ts *GatewayVersionsTestSuite) TestAppliedConnectionsShowWithTheirSecretsMa
 	ids := make([]string, len(connections))
 	for i, connection := range connections {
 		connection.body["name"] = fmt.Sprintf("viewed-%s-%s", connection.vendor, suffix)
+		connection.body["ouId"] = ouID
 		ids[i] = ts.create("/connections/"+connection.vendor, connection.body)
 		vendorPath := "/connections/" + connection.vendor + "/" + ids[i]
 		ts.T().Cleanup(func() { ts.call(http.MethodDelete, vendorPath, nil, nil) })

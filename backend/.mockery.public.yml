@@ -317,6 +317,15 @@ packages:
       pkgname: idpmock
       filename: "{{.InterfaceName}}_mock.go"
 
+  github.com/thunder-id/thunderid/internal/connection/authzenpdp:
+    interfaces:
+      AuthZENPDPServiceInterface:
+        config:
+          dir: tests/mocks/connection/authzenpdpmock
+          structname: '{{.InterfaceName}}Mock'
+          pkgname: authzenpdpmock
+          filename: "{{.InterfaceName}}_mock.go"
+
   github.com/thunder-id/thunderid/internal/connection/httpconnection:
     interfaces:
       HTTPConnectionServiceInterface:

@@ -2,12 +2,13 @@
 // github.com/vektra/mockery
 // template: testify
 
-package authzenpdp
+package authzenpdpmock
 
 import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
+	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
 
@@ -48,26 +49,26 @@ func (_m *AuthZENPDPServiceInterfaceMock) EXPECT() *AuthZENPDPServiceInterfaceMo
 }
 
 // CreateAuthZENPDPConnection provides a mock function for the type AuthZENPDPServiceInterfaceMock
-func (_mock *AuthZENPDPServiceInterfaceMock) CreateAuthZENPDPConnection(ctx context.Context, request ConnectionRequest) (*AuthZENPDPConnection, *common.ServiceError) {
+func (_mock *AuthZENPDPServiceInterfaceMock) CreateAuthZENPDPConnection(ctx context.Context, request authzenpdp.ConnectionRequest) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError) {
 	ret := _mock.Called(ctx, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAuthZENPDPConnection")
 	}
 
-	var r0 *AuthZENPDPConnection
+	var r0 *authzenpdp.AuthZENPDPConnection
 	var r1 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, ConnectionRequest) (*AuthZENPDPConnection, *common.ServiceError)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authzenpdp.ConnectionRequest) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError)); ok {
 		return returnFunc(ctx, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, ConnectionRequest) *AuthZENPDPConnection); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, authzenpdp.ConnectionRequest) *authzenpdp.AuthZENPDPConnection); ok {
 		r0 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*AuthZENPDPConnection)
+			r0 = ret.Get(0).(*authzenpdp.AuthZENPDPConnection)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, ConnectionRequest) *common.ServiceError); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, authzenpdp.ConnectionRequest) *common.ServiceError); ok {
 		r1 = returnFunc(ctx, request)
 	} else {
 		if ret.Get(1) != nil {
@@ -84,20 +85,20 @@ type AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call struct {
 
 // CreateAuthZENPDPConnection is a helper method to define mock.On call
 //   - ctx context.Context
-//   - request ConnectionRequest
+//   - request authzenpdp.ConnectionRequest
 func (_e *AuthZENPDPServiceInterfaceMock_Expecter) CreateAuthZENPDPConnection(ctx any, request any) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
 	return &AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call{Call: _e.mock.On("CreateAuthZENPDPConnection", ctx, request)}
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) Run(run func(ctx context.Context, request ConnectionRequest)) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) Run(run func(ctx context.Context, request authzenpdp.ConnectionRequest)) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 ConnectionRequest
+		var arg1 authzenpdp.ConnectionRequest
 		if args[1] != nil {
-			arg1 = args[1].(ConnectionRequest)
+			arg1 = args[1].(authzenpdp.ConnectionRequest)
 		}
 		run(
 			arg0,
@@ -107,12 +108,12 @@ func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) Run(ru
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) Return(authZENPDPConnection *AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) Return(authZENPDPConnection *authzenpdp.AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
 	_c.Call.Return(authZENPDPConnection, serviceError)
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) RunAndReturn(run func(ctx context.Context, request ConnectionRequest) (*AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call) RunAndReturn(run func(ctx context.Context, request authzenpdp.ConnectionRequest) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_CreateAuthZENPDPConnection_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -177,23 +178,23 @@ func (_c *AuthZENPDPServiceInterfaceMock_DeleteAuthZENPDPConnection_Call) RunAnd
 }
 
 // GetAuthZENPDP provides a mock function for the type AuthZENPDPServiceInterfaceMock
-func (_mock *AuthZENPDPServiceInterfaceMock) GetAuthZENPDP(ctx context.Context, id string) (*AuthZENPDPConnection, *common.ServiceError) {
+func (_mock *AuthZENPDPServiceInterfaceMock) GetAuthZENPDP(ctx context.Context, id string) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError) {
 	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAuthZENPDP")
 	}
 
-	var r0 *AuthZENPDPConnection
+	var r0 *authzenpdp.AuthZENPDPConnection
 	var r1 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*AuthZENPDPConnection, *common.ServiceError)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError)); ok {
 		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *AuthZENPDPConnection); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *authzenpdp.AuthZENPDPConnection); ok {
 		r0 = returnFunc(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*AuthZENPDPConnection)
+			r0 = ret.Get(0).(*authzenpdp.AuthZENPDPConnection)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *common.ServiceError); ok {
@@ -236,34 +237,34 @@ func (_c *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call) Run(run func(ctx co
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call) Return(authZENPDPConnection *AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call) Return(authZENPDPConnection *authzenpdp.AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call {
 	_c.Call.Return(authZENPDPConnection, serviceError)
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call) RunAndReturn(run func(ctx context.Context, id string) (*AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call) RunAndReturn(run func(ctx context.Context, id string) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_GetAuthZENPDP_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListAuthZENPDPs provides a mock function for the type AuthZENPDPServiceInterfaceMock
-func (_mock *AuthZENPDPServiceInterfaceMock) ListAuthZENPDPs(ctx context.Context) ([]AuthZENPDPConnection, *common.ServiceError) {
+func (_mock *AuthZENPDPServiceInterfaceMock) ListAuthZENPDPs(ctx context.Context) ([]authzenpdp.AuthZENPDPConnection, *common.ServiceError) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListAuthZENPDPs")
 	}
 
-	var r0 []AuthZENPDPConnection
+	var r0 []authzenpdp.AuthZENPDPConnection
 	var r1 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]AuthZENPDPConnection, *common.ServiceError)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]authzenpdp.AuthZENPDPConnection, *common.ServiceError)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []AuthZENPDPConnection); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []authzenpdp.AuthZENPDPConnection); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]AuthZENPDPConnection)
+			r0 = ret.Get(0).([]authzenpdp.AuthZENPDPConnection)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context) *common.ServiceError); ok {
@@ -300,37 +301,96 @@ func (_c *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call) Run(run func(ctx 
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call) Return(authZENPDPConnections []AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call) Return(authZENPDPConnections []authzenpdp.AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call {
 	_c.Call.Return(authZENPDPConnections, serviceError)
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call) RunAndReturn(run func(ctx context.Context) ([]AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call) RunAndReturn(run func(ctx context.Context) ([]authzenpdp.AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_ListAuthZENPDPs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResolveConnectionOU provides a mock function for the type AuthZENPDPServiceInterfaceMock
+func (_mock *AuthZENPDPServiceInterfaceMock) ResolveConnectionOU(ctx context.Context, connection *authzenpdp.AuthZENPDPConnection) *common.ServiceError {
+	ret := _mock.Called(ctx, connection)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolveConnectionOU")
+	}
+
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *authzenpdp.AuthZENPDPConnection) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, connection)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
+	}
+	return r0
+}
+
+// AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveConnectionOU'
+type AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call struct {
+	*mock.Call
+}
+
+// ResolveConnectionOU is a helper method to define mock.On call
+//   - ctx context.Context
+//   - connection *authzenpdp.AuthZENPDPConnection
+func (_e *AuthZENPDPServiceInterfaceMock_Expecter) ResolveConnectionOU(ctx any, connection any) *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call {
+	return &AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call{Call: _e.mock.On("ResolveConnectionOU", ctx, connection)}
+}
+
+func (_c *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call) Run(run func(ctx context.Context, connection *authzenpdp.AuthZENPDPConnection)) *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *authzenpdp.AuthZENPDPConnection
+		if args[1] != nil {
+			arg1 = args[1].(*authzenpdp.AuthZENPDPConnection)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call) Return(serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call {
+	_c.Call.Return(serviceError)
+	return _c
+}
+
+func (_c *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call) RunAndReturn(run func(ctx context.Context, connection *authzenpdp.AuthZENPDPConnection) *common.ServiceError) *AuthZENPDPServiceInterfaceMock_ResolveConnectionOU_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateAuthZENPDPConnection provides a mock function for the type AuthZENPDPServiceInterfaceMock
-func (_mock *AuthZENPDPServiceInterfaceMock) UpdateAuthZENPDPConnection(ctx context.Context, id string, request ConnectionRequest) (*AuthZENPDPConnection, *common.ServiceError) {
+func (_mock *AuthZENPDPServiceInterfaceMock) UpdateAuthZENPDPConnection(ctx context.Context, id string, request authzenpdp.ConnectionRequest) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError) {
 	ret := _mock.Called(ctx, id, request)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateAuthZENPDPConnection")
 	}
 
-	var r0 *AuthZENPDPConnection
+	var r0 *authzenpdp.AuthZENPDPConnection
 	var r1 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ConnectionRequest) (*AuthZENPDPConnection, *common.ServiceError)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, authzenpdp.ConnectionRequest) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError)); ok {
 		return returnFunc(ctx, id, request)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ConnectionRequest) *AuthZENPDPConnection); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, authzenpdp.ConnectionRequest) *authzenpdp.AuthZENPDPConnection); ok {
 		r0 = returnFunc(ctx, id, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*AuthZENPDPConnection)
+			r0 = ret.Get(0).(*authzenpdp.AuthZENPDPConnection)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, ConnectionRequest) *common.ServiceError); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, authzenpdp.ConnectionRequest) *common.ServiceError); ok {
 		r1 = returnFunc(ctx, id, request)
 	} else {
 		if ret.Get(1) != nil {
@@ -348,12 +408,12 @@ type AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call struct {
 // UpdateAuthZENPDPConnection is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id string
-//   - request ConnectionRequest
+//   - request authzenpdp.ConnectionRequest
 func (_e *AuthZENPDPServiceInterfaceMock_Expecter) UpdateAuthZENPDPConnection(ctx any, id any, request any) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
 	return &AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call{Call: _e.mock.On("UpdateAuthZENPDPConnection", ctx, id, request)}
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) Run(run func(ctx context.Context, id string, request ConnectionRequest)) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) Run(run func(ctx context.Context, id string, request authzenpdp.ConnectionRequest)) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -363,9 +423,9 @@ func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) Run(ru
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 ConnectionRequest
+		var arg2 authzenpdp.ConnectionRequest
 		if args[2] != nil {
-			arg2 = args[2].(ConnectionRequest)
+			arg2 = args[2].(authzenpdp.ConnectionRequest)
 		}
 		run(
 			arg0,
@@ -376,12 +436,12 @@ func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) Run(ru
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) Return(authZENPDPConnection *AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) Return(authZENPDPConnection *authzenpdp.AuthZENPDPConnection, serviceError *common.ServiceError) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
 	_c.Call.Return(authZENPDPConnection, serviceError)
 	return _c
 }
 
-func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) RunAndReturn(run func(ctx context.Context, id string, request ConnectionRequest) (*AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
+func (_c *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call) RunAndReturn(run func(ctx context.Context, id string, request authzenpdp.ConnectionRequest) (*authzenpdp.AuthZENPDPConnection, *common.ServiceError)) *AuthZENPDPServiceInterfaceMock_UpdateAuthZENPDPConnection_Call {
 	_c.Call.Return(run)
 	return _c
 }

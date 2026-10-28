@@ -303,6 +303,9 @@ func (suite *ImportDeletionsSuite) TestADeletionRemovesAConnectionFromWhicheverS
 func (suite *ImportDeletionsSuite) plantConnection(vendor string, body map[string]interface{}) string {
 	suite.T().Helper()
 
+	ouID, ouErr := testutils.DefaultConnectionOUID()
+	suite.Require().NoError(ouErr, "could not resolve the connection organization unit")
+	body["ouId"] = ouID
 	payload, err := json.Marshal(body)
 	suite.Require().NoError(err)
 	req, err := http.NewRequest(http.MethodPost,

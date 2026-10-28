@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/net/http/httpguts"
 
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/outboundauth"
@@ -35,17 +36,20 @@ type HTTPConnectionServiceInterface interface {
 
 // httpConnectionService validates and manages HTTP connections.
 type httpConnectionService struct {
-	store  httpConnectionStoreInterface
-	logger *log.Logger
+	store      httpConnectionStoreInterface
+	ouResolver connectionou.ResolverInterface
+	logger     *log.Logger
 }
 
 var _ HTTPConnectionServiceInterface = (*httpConnectionService)(nil)
 
 // newHTTPConnectionService creates an HTTP connection service.
-func newHTTPConnectionService(store httpConnectionStoreInterface) *httpConnectionService {
+func newHTTPConnectionService(store httpConnectionStoreInterface,
+	ouResolver connectionou.ResolverInterface) *httpConnectionService {
 	return &httpConnectionService{
-		store:  store,
-		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
+		store:      store,
+		ouResolver: ouResolver,
+		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
 }
 
@@ -56,6 +60,9 @@ func (s *httpConnectionService) CreateHTTPConnection(ctx context.Context, connec
 		return nil, svcErr
 	}
 	if svcErr := s.validate(ctx, &connection); svcErr != nil {
+		return nil, svcErr
+	}
+	if svcErr := s.resolveOU(ctx, &connection); svcErr != nil {
 		return nil, svcErr
 	}
 	id, err := sysutils.GenerateUUIDv7()
@@ -113,6 +120,16 @@ func (s *httpConnectionService) UpdateHTTPConnection(ctx context.Context, id str
 	if svcErr := s.validate(ctx, &connection); svcErr != nil {
 		return nil, svcErr
 	}
+	current, svcErr := s.GetHTTPConnection(ctx, id)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	// An owner cannot change. Leaving it out keeps the one the connection has.
+	ouID, ouErr := s.ouResolver.ResolveForUpdate(ctx, connection.OUID, "", current.OUID)
+	if ouErr != nil {
+		return nil, ouErr
+	}
+	connection.OUID = ouID
 	connection.ID = id
 
 	if err := s.store.UpdateHTTPConnection(ctx, connection); err != nil {
@@ -222,5 +239,18 @@ func (s *httpConnectionService) validateAuthentication(ctx context.Context, conn
 			}
 		}
 	}
+	return nil
+}
+
+// resolveOU checks the organization unit an HTTP connection is owned by. A connection has to name an organization unit
+// by its id, and it has to exist.
+func (s *httpConnectionService) resolveOU(
+	ctx context.Context, connection *HTTPConnection,
+) *tidcommon.ServiceError {
+	ouID, svcErr := s.ouResolver.Resolve(ctx, connection.OUID, "")
+	if svcErr != nil {
+		return svcErr
+	}
+	connection.OUID = ouID
 	return nil
 }

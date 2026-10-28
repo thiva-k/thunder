@@ -572,7 +572,7 @@ func (ts *MCPTestSuite) TestHTTPConnectionTools_MaskAndRetainPassword() {
 	token := ts.mcpScopedAdminToken()
 
 	created, raw := ts.callMCPTool(token, "thunderid_create_http_connection", map[string]any{
-		"name": "MCP Tools HTTP Connection", "url": "https://risk.example.com/evaluate",
+		"ouId": ts.ouID, "name": "MCP Tools HTTP Connection", "url": "https://risk.example.com/evaluate",
 		"authentication": map[string]any{"type": "basic",
 			"properties": map[string]any{"username": "svc-user", "password": password}},
 	})
@@ -618,7 +618,7 @@ func (ts *MCPTestSuite) TestHTTPConnectionTools_MaskedPasswordReadBackIsRefused(
 	token := ts.mcpScopedAdminToken()
 
 	created, raw := ts.callMCPTool(token, "thunderid_create_http_connection", map[string]any{
-		"name": name, "url": "https://risk.example.com/evaluate",
+		"ouId": ts.ouID, "name": name, "url": "https://risk.example.com/evaluate",
 		"authentication": map[string]any{"type": "basic",
 			"properties": map[string]any{"username": "svc-user", "password": password}},
 	})

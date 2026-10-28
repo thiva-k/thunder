@@ -60,6 +60,8 @@ export interface ConnectionInstance {
   name: string;
   description?: string;
   type: ConnectionType;
+  /** The organization unit the connection belongs to. */
+  ouId?: string;
   categories: ConnectionInstanceCategory[];
   /**
    * Present only for trust-only OIDC instances (trusted issuers); absent for plain federation
@@ -422,6 +424,15 @@ export type ConnectionRequest =
   | HTTPConnectionRequest;
 
 /**
+ * Request payload for creating a connection of any type. Every connection is owned by an organization unit,
+ * chosen once at creation; an update does not carry it, since the owner cannot change.
+ */
+export type CreateConnectionRequest = ConnectionRequest & {
+  /** The organization unit that will own the connection. */
+  ouId: string;
+};
+
+/**
  * Vendor response — secrets are never returned. A superset carrying every vendor's
  * fields (IdP + SMS); the shared form mapping reads only the fields relevant to each type.
  */
@@ -429,6 +440,8 @@ export interface ConnectionResponse extends Partial<OIDCConnectionRequest> {
   id: string;
   type: ConnectionType;
   name: string;
+  /** The organization unit the connection belongs to. */
+  ouId: string;
   /** SMS (Twilio) fields. */
   accountSid?: string;
   authToken?: string;

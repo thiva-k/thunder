@@ -112,6 +112,7 @@ func (s *service) listInstances(ctx context.Context, category connectionCategory
 				Name:         instance.Name,
 				Description:  instance.Description,
 				Type:         vendor,
+				OUID:         instance.OUID,
 				Categories:   []connectionCategory{categoryIdentityProvider},
 				IDJagEnabled: instance.IDJagEnabled,
 			})
@@ -132,6 +133,7 @@ func (s *service) listInstances(ctx context.Context, category connectionCategory
 				ID:          sender.ID,
 				Name:        sender.Name,
 				Description: sender.Description,
+				OUID:        sender.OUID,
 				Type:        vendor,
 				Categories:  []connectionCategory{categorySMSProvider},
 			})
@@ -148,6 +150,7 @@ func (s *service) listInstances(ctx context.Context, category connectionCategory
 				ID:          connection.ID,
 				Name:        connection.Name,
 				Description: connection.Description,
+				OUID:        connection.OUID,
 				Type:        "authzen-pdp",
 				Categories:  []connectionCategory{categoryAuthorizationPDP},
 			})
@@ -168,6 +171,7 @@ func (s *service) listInstances(ctx context.Context, category connectionCategory
 				ID:          sender.ID,
 				Name:        sender.Name,
 				Description: sender.Description,
+				OUID:        sender.OUID,
 				Type:        vendor,
 				Categories:  []connectionCategory{categoryEmailProvider},
 			})
@@ -184,6 +188,7 @@ func (s *service) listInstances(ctx context.Context, category connectionCategory
 				ID:          connection.ID,
 				Name:        connection.Name,
 				Description: connection.Description,
+				OUID:        connection.OUID,
 				Type:        httpVendorName,
 				Categories:  []connectionCategory{categoryHTTP},
 			})

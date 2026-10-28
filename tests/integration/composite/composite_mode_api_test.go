@@ -324,6 +324,46 @@ func (suite *CompositeModeSuite) TestIdentityProviderDeclarativeVisibility() {
 		"/connections?category=identity-provider", "connections", "decl-idp-1", "identity_provider")
 }
 
+// declarativeOUID reads the id the server reports for the declarative organization unit decl-ou-1.
+func (suite *CompositeModeSuite) declarativeOUID() string {
+	client := testutils.GetHTTPClient()
+	resp, err := client.Get(fmt.Sprintf("%s/organization-units/decl-ou-1", testutils.TestServerURL))
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
+	suite.Require().Equal(http.StatusOK, resp.StatusCode)
+
+	var ou map[string]interface{}
+	suite.Require().NoError(json.NewDecoder(resp.Body).Decode(&ou))
+	id, ok := ou["id"].(string)
+	suite.Require().True(ok, "declarative organization unit should carry an id: %v", ou)
+	return id
+}
+
+// TestDeclarativeConnectionOwnerResolvedFromOUHandle verifies a declarative connection that names its owner by
+// ouHandle (decl-idp-1 and decl-authzen-pdp-1 both give ouHandle: decl-ou-1) is owned by that organization unit.
+func (suite *CompositeModeSuite) TestDeclarativeConnectionOwnerResolvedFromOUHandle() {
+	ouID := suite.declarativeOUID()
+	client := testutils.GetHTTPClient()
+
+	for _, vendorPath := range []string{"google/decl-idp-1", "authzen-pdp/decl-authzen-pdp-1"} {
+		suite.Run(vendorPath, func() {
+			resp, err := client.Get(fmt.Sprintf("%s/connections/%s", testutils.TestServerURL, vendorPath))
+			suite.Require().NoError(err)
+			defer resp.Body.Close()
+			suite.Require().Equal(http.StatusOK, resp.StatusCode)
+
+			var connection map[string]interface{}
+			suite.Require().NoError(json.NewDecoder(resp.Body).Decode(&connection))
+			suite.Equal(ouID, connection["ouId"], "the owner should be the unit the ouHandle names")
+		})
+	}
+
+	items := suite.getCollectionItems("/connections?category=identity-provider", "connections")
+	listed := suite.findCollectionItemByID(items, "decl-idp-1")
+	suite.Require().NotNil(listed, "the merged listing should include the declarative connection")
+	suite.Equal(ouID, listed["ouId"], "the flat listing should report the same owner")
+}
+
 // AD4: a declarative connection's attributeConfiguration survives the file store and is returned by
 // both the vendor GET and the merged listing, and a database-backed connection created at runtime in the
 // same composite deployment returns its own. This is also the first test to execute
@@ -394,6 +434,7 @@ func (suite *CompositeModeSuite) createRuntimeConnectionWithAttributeConfigurati
 	suite.T().Helper()
 	body := map[string]interface{}{
 		"name":         fmt.Sprintf("Composite Runtime IDP %d", time.Now().UnixNano()),
+		"ouId":         "decl-ou-1",
 		"clientId":     "composite-runtime-client",
 		"clientSecret": "composite-runtime-secret",
 		"redirectUri":  "https://localhost:8095/callback",
@@ -753,6 +794,7 @@ func (suite *CompositeModeSuite) TestOrganizationUnitCreate() {
 func (suite *CompositeModeSuite) TestIdentityProviderCreate() {
 	idp := map[string]interface{}{
 		"name":                  "Test Runtime IDP",
+		"ouId":                  "decl-ou-1",
 		"clientId":              "test-client-id",
 		"clientSecret":          "test-client-secret",
 		"redirectUri":           "https://localhost:3000/oidc/callback",

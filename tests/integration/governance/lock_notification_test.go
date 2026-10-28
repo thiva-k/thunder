@@ -52,8 +52,15 @@ const noEmailWait = deliveryTimeout
 const declarativeSenderID = "governance-declarative-email-sender"
 
 // declarativeSenderResources declares an email sender and a notification section naming it.
-const declarativeSenderResources = `resource_type: connection
+const declarativeSenderResources = `resource_type: organization_unit
+id: governance-declarative-ou
+handle: governance-declarative-ou
+name: Governance Declarative OU
+description: Owns the declarative sender
+---
+resource_type: connection
 id: ` + declarativeSenderID + `
+ouHandle: governance-declarative-ou
 type: email-smtp
 name: Governance Declarative Email Sender
 host: localhost

@@ -19,6 +19,7 @@ type HTTPConnection struct {
 	ID             string
 	Name           string
 	Description    string
+	OUID           string
 	URL            string
 	TimeoutMS      int
 	Headers        []Header

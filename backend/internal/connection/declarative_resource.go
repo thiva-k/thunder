@@ -280,6 +280,7 @@ func connectionModelFromIDPDTO(dto providers.IDPDTO) (connectionExportModel, err
 		Type:                   vendor,
 		Name:                   dto.Name,
 		Description:            dto.Description,
+		OUID:                   dto.OUID,
 		ClientID:               values[idp.PropClientID],
 		ClientSecret:           values[idp.PropClientSecret],
 		RedirectURI:            values[idp.PropRedirectURI],
@@ -320,6 +321,7 @@ func connectionModelFromSenderDTO(dto ncommon.NotificationSenderDTO) (connection
 		Type:        vendor,
 		Name:        dto.Name,
 		Description: dto.Description,
+		OUID:        dto.OUID,
 	}
 	switch dto.Provider {
 	case ncommon.NotificationProviderTypeTwilio:
@@ -367,6 +369,7 @@ func connectionModelFromAuthZENPDP(connection authzenpdp.AuthZENPDPConnection) (
 		Type:                     authZENPDPVendorName,
 		Name:                     connection.Name,
 		Description:              connection.Description,
+		OUID:                     connection.OUID,
 		AuthZENPDPEndpoint:       connection.Endpoint,
 		AuthZENPDPBatchEndpoint:  connection.BatchEndpoint,
 		AuthZENPDPTimeoutMS:      connection.TimeoutMS,
@@ -383,7 +386,7 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 	switch model.Type {
 	case "google":
 		dto, err := googleToIDPDTO(googleConnectionRequest{
-			Name: model.Name, Description: model.Description, ClientID: model.ClientID,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, ClientID: model.ClientID,
 			ClientSecret: model.ClientSecret, RedirectURI: model.RedirectURI, Scopes: model.Scopes,
 			Prompt: model.Prompt, JwksEndpoint: model.JwksEndpoint, Issuer: model.Issuer,
 			TokenExchangeEnabled: model.TokenExchangeEnabled, AttributeConfiguration: model.AttributeConfiguration,
@@ -392,10 +395,11 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return dto, nil, nil
 	case "github":
 		dto, err := githubToIDPDTO(githubConnectionRequest{
-			Name: model.Name, Description: model.Description, ClientID: model.ClientID,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, ClientID: model.ClientID,
 			ClientSecret: model.ClientSecret, RedirectURI: model.RedirectURI, Scopes: model.Scopes,
 			Prompt: model.Prompt, AttributeConfiguration: model.AttributeConfiguration,
 		})
@@ -403,10 +407,11 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return dto, nil, nil
 	case "oidc":
 		dto, err := oidcToIDPDTO(oidcConnectionRequest{
-			Name: model.Name, Description: model.Description, ClientID: model.ClientID,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, ClientID: model.ClientID,
 			ClientSecret: model.ClientSecret, RedirectURI: model.RedirectURI,
 			AuthorizationEndpoint: model.AuthorizationEndpoint, TokenEndpoint: model.TokenEndpoint,
 			UserInfoEndpoint: model.UserInfoEndpoint, JwksEndpoint: model.JwksEndpoint,
@@ -418,10 +423,11 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return dto, nil, nil
 	case "oauth":
 		dto, err := oauthToIDPDTO(oauthConnectionRequest{
-			Name: model.Name, Description: model.Description, ClientID: model.ClientID,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, ClientID: model.ClientID,
 			ClientSecret: model.ClientSecret, RedirectURI: model.RedirectURI,
 			AuthorizationEndpoint: model.AuthorizationEndpoint, TokenEndpoint: model.TokenEndpoint,
 			UserInfoEndpoint: model.UserInfoEndpoint, Scopes: model.Scopes, Prompt: model.Prompt,
@@ -431,30 +437,33 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return dto, nil, nil
 	case "twilio":
 		dto, err := twilioToSenderDTO(twilioConnectionRequest{
-			Name: model.Name, Description: model.Description, AccountSID: model.AccountSID,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, AccountSID: model.AccountSID,
 			AuthToken: model.AuthToken, SenderID: model.SenderID,
 		})
 		if err != nil {
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return nil, dto, nil
 	case "vonage":
 		dto, err := vonageToSenderDTO(vonageConnectionRequest{
-			Name: model.Name, Description: model.Description, APIKey: model.APIKey,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, APIKey: model.APIKey,
 			APISecret: model.APISecret, SenderID: model.SenderID,
 		})
 		if err != nil {
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return nil, dto, nil
 	case smsGatewayVendorName:
 		dto, err := smsGatewayToSenderDTO(smsGatewayConnectionRequest{
-			Name: model.Name, Description: model.Description, URL: model.URL,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, URL: model.URL,
 			HTTPMethod: model.HTTPMethod, HTTPHeaders: &model.HTTPHeaders,
 			Authentication: model.Authentication, ContentType: model.ContentType,
 		})
@@ -462,10 +471,11 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return nil, dto, nil
 	case emailSMTPVendorName:
 		dto, err := emailSMTPToSenderDTO(emailSMTPConnectionRequest{
-			Name: model.Name, Description: model.Description, Host: model.Host, Port: model.Port,
+			Name: model.Name, Description: model.Description, OUID: model.OUID, Host: model.Host, Port: model.Port,
 			FromAddress: model.FromAddress, FromName: model.FromName, TLS: model.TLS,
 			Authentication: model.Authentication,
 		})
@@ -473,6 +483,7 @@ func connectionModelToDTO(model connectionExportModel) (*providers.IDPDTO, *ncom
 			return nil, nil, err
 		}
 		dto.ID = model.ID
+		dto.OUHandle = model.OUHandle
 		return nil, dto, nil
 	default:
 		return nil, nil, fmt.Errorf("unsupported connection vendor: %s", model.Type)
@@ -489,6 +500,8 @@ func connectionModelToAuthZENPDP(model connectionExportModel) (*authzenpdp.AuthZ
 		ID:                       model.ID,
 		Name:                     model.Name,
 		Description:              model.Description,
+		OUID:                     model.OUID,
+		OUHandle:                 model.OUHandle,
 		Endpoint:                 model.AuthZENPDPEndpoint,
 		BatchEndpoint:            model.AuthZENPDPBatchEndpoint,
 		TimeoutMS:                model.AuthZENPDPTimeoutMS,
@@ -567,9 +580,13 @@ func connectionResourceID(dto interface{}) string {
 // get a name presence check; their full semantic validation (e.g. a custom sender's required URL)
 // is deferred to runtime use, matching the legacy declarative notification-sender behavior.
 //
-// idpService may be nil, in which case the schema-aware defaults the live API applies are skipped
-// and the declarative document stands entirely on its own.
-func validateConnectionDTOWrapper(dto interface{}, idpService idp.IDPServiceInterface) error {
+// A connection has to name its organization unit by ouId or ouHandle. The owner is resolved by the service of the
+// connection's kind, the way the live API resolves it. A service may be nil, in which case the owner has to be given as
+// an ouId and, for an identity provider, the schema-aware defaults the live API applies are skipped, so the declarative
+// document stands entirely on its own.
+func validateConnectionDTOWrapper(dto interface{}, idpService idp.IDPServiceInterface,
+	notificationService notification.NotificationSenderMgtSvcInterface,
+	authZENPDPService authzenpdp.AuthZENPDPServiceInterface) error {
 	switch d := dto.(type) {
 	case *providers.IDPDTO:
 		if d.Name == "" {
@@ -579,6 +596,9 @@ func validateConnectionDTOWrapper(dto interface{}, idpService idp.IDPServiceInte
 			return err
 		}
 		if idpService != nil {
+			if svcErr := idpService.ResolveIdentityProviderOU(declarativeOwnerContext(), d); svcErr != nil {
+				return ownerError(d.ID, d.OUHandle, svcErr)
+			}
 			// Declarative resources load at startup with no authenticated subject, so the
 			// entity-type reads the seeding performs would otherwise be authorized against nothing
 			// and return nothing. Elevate here, where the absence of a subject is a fact about the
@@ -586,7 +606,7 @@ func validateConnectionDTOWrapper(dto interface{}, idpService idp.IDPServiceInte
 			// administrator's scope on the REST path.
 			idpService.ApplySchemaAwareDefaults(security.WithRuntimeContext(context.Background()), d)
 		}
-		return nil
+		return requireOwner(d.ID, d.OUID)
 	case *ncommon.NotificationSenderDTO:
 		if d.Name == "" {
 			return fmt.Errorf("connection resource %q is missing a name", d.ID)
@@ -596,12 +616,48 @@ func validateConnectionDTOWrapper(dto interface{}, idpService idp.IDPServiceInte
 				return fmt.Errorf("connection resource %q is invalid: %w", d.ID, err)
 			}
 		}
+		if notificationService != nil {
+			if svcErr := notificationService.ResolveSenderOU(declarativeOwnerContext(), d); svcErr != nil {
+				return ownerError(d.ID, d.OUHandle, svcErr)
+			}
+		}
+		return requireOwner(d.ID, d.OUID)
 	case *authzenpdp.AuthZENPDPConnection:
 		if d.Name == "" || d.Endpoint == "" {
 			return fmt.Errorf("connection resource %q requires a name and endpoint", d.ID)
 		}
+		if authZENPDPService != nil {
+			if svcErr := authZENPDPService.ResolveConnectionOU(declarativeOwnerContext(), d); svcErr != nil {
+				return ownerError(d.ID, d.OUHandle, svcErr)
+			}
+		}
+		return requireOwner(d.ID, d.OUID)
 	}
 	return nil
+}
+
+// declarativeOwnerContext returns the context the owner of a declarative connection is resolved with. Declarative
+// resources load at startup with no authenticated subject, so the lookup runs with the runtime context.
+func declarativeOwnerContext() context.Context {
+	return security.WithRuntimeContext(context.Background())
+}
+
+// requireOwner fails a connection document that names no organization unit.
+func requireOwner(id, ouID string) error {
+	if ouID == "" {
+		return fmt.Errorf("connection resource %q needs an organization unit, give its ouId or ouHandle", id)
+	}
+	return nil
+}
+
+// ownerError describes why the owner of a connection document could not be resolved.
+func ownerError(id, ouHandle string, svcErr *tidcommon.ServiceError) error {
+	if ouHandle != "" {
+		return fmt.Errorf("organization unit %q of connection resource %q could not be resolved: %s",
+			ouHandle, id, svcErr.ErrorDescription.DefaultValue)
+	}
+	return fmt.Errorf("organization unit of connection resource %q could not be resolved: %s",
+		id, svcErr.ErrorDescription.DefaultValue)
 }
 
 // connectionDeclarativeStore dispatches parsed connections to their file-based stores.
@@ -634,7 +690,9 @@ func (s *connectionDeclarativeStore) Create(id string, data interface{}) error {
 }
 
 // loadDeclarativeResources loads connection files when a connection file store is enabled.
-func loadDeclarativeResources(idpService idp.IDPServiceInterface) error {
+func loadDeclarativeResources(idpService idp.IDPServiceInterface,
+	notificationService notification.NotificationSenderMgtSvcInterface,
+	authZENPDPService authzenpdp.AuthZENPDPServiceInterface) error {
 	if !declarativeresource.IsDeclarativeModeEnabled() &&
 		!idp.ShouldLoadDeclarativeIDPResources() &&
 		!authzenpdp.ShouldLoadDeclarativeAuthZENPDPResources() {
@@ -651,7 +709,7 @@ func loadDeclarativeResources(idpService idp.IDPServiceInterface) error {
 		DirectoryName: "connections",
 		Parser:        parseToConnectionDTOWrapper,
 		Validator: func(dto interface{}) error {
-			return validateConnectionDTOWrapper(dto, idpService)
+			return validateConnectionDTOWrapper(dto, idpService, notificationService, authZENPDPService)
 		},
 		IDExtractor: connectionResourceID,
 	}

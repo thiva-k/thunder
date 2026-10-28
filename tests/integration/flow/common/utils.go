@@ -373,7 +373,12 @@ func UpdateAppConfig(appID, authFlowID, registrationFlowID string) error {
 // CreateNotificationSender creates a custom SMS sender with a specified URL and name via
 // /connections/sms-gateway.
 func CreateNotificationSender(senderURL, senderName string) (string, error) {
+	ouID, err := testutils.DefaultConnectionOUID()
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve the connection organization unit: %w", err)
+	}
 	senderRequest := map[string]interface{}{
+		"ouId":        ouID,
 		"name":        senderName,
 		"description": "Custom SMS sender for integration tests",
 		"url":         senderURL,

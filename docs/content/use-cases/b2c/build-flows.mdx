@@ -221,7 +221,7 @@ The recovery flow sends its email through an email provider, so create the provi
 
 ### Create the email provider
 
-Point the provider at the Wayfinder sample's local SMTP server on `127.0.0.1:2525`. The local server needs neither TLS nor credentials, so set both to `none`:
+Point the provider at the Wayfinder sample's local SMTP server on `127.0.0.1:2525`. The local server needs neither TLS nor credentials, so set both to `none`. Replace `<default-ou-id>` with the ID of your default organization unit (look it up via `GET /organization-units`). Every connection belongs to one organization unit, and it has to be named when the connection is created:
 
 ```bash
 curl -k -X POST https://localhost:8090/connections/email-smtp \
@@ -229,6 +229,7 @@ curl -k -X POST https://localhost:8090/connections/email-smtp \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Wayfinder Mock SMTP",
+    "ouId": "<default-ou-id>",
     "host": "127.0.0.1",
     "port": 2525,
     "fromAddress": "noreply@thunderid.dev",

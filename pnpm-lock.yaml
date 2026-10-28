@@ -2033,6 +2033,9 @@ importers:
       '@thunderid/configure-agent-types':
         specifier: workspace:^
         version: link:../configure-agent-types
+      '@thunderid/configure-organization-units':
+        specifier: workspace:^
+        version: link:../configure-organization-units
       '@thunderid/configure-resource-servers':
         specifier: workspace:^
         version: link:../configure-resource-servers

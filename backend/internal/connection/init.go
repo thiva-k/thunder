@@ -16,13 +16,16 @@ import (
 	"github.com/thunder-id/thunderid/internal/resource"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
+	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize wires the connection service over the identity-provider and notification-sender
 // services, registers the /connections routes, loads declarative connection resources, and
-// returns the connection exporter for the export API. Given an MCP server, it also registers the
-// HTTP endpoint connection tools.
+// returns the connection exporter for the export API and the provider of the connections that block the deletion of
+// the organization unit that owns them. Given an MCP server, it also registers the HTTP endpoint connection tools.
+//
+// A declarative connection names its owner, and the service of its kind resolves and checks it.
 //
 // valueCapturer is optional. Given one, the service hands it every connection it creates or changes,
 // so the values the connection's export refers to are kept where a reference finds them.
@@ -32,7 +35,7 @@ func Initialize(mux *http.ServeMux, mcpServer *mcp.Server, idpService idp.IDPSer
 	authZENPDPService authzenpdp.AuthZENPDPServiceInterface,
 	httpService httpconnection.HTTPConnectionServiceInterface,
 	valueCapturer declarativeresource.ValueCapturer) (
-	declarativeresource.ResourceExporter, error) {
+	declarativeresource.ResourceExporter, resourcedependency.Provider, error) {
 	svc := newService(idpService, notificationService, resourceService, authZENPDPService, httpService)
 	svc.valueCapturer = valueCapturer
 	h := newHandler(svc)
@@ -42,11 +45,12 @@ func Initialize(mux *http.ServeMux, mcpServer *mcp.Server, idpService idp.IDPSer
 		registerMCPTools(mcpServer, svc)
 	}
 
-	if err := loadDeclarativeResources(idpService); err != nil {
-		return nil, err
+	if err := loadDeclarativeResources(idpService, notificationService, authZENPDPService); err != nil {
+		return nil, nil, err
 	}
 
-	return newConnectionExporter(idpService, notificationService, authZENPDPService), nil
+	return newConnectionExporter(idpService, notificationService, authZENPDPService),
+		newOUDependencyProvider(idpService, notificationService, authZENPDPService, httpService), nil
 }
 
 func noContent(w http.ResponseWriter, _ *http.Request) {

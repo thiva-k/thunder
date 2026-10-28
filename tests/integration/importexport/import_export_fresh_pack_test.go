@@ -28,6 +28,7 @@ type exportRequest struct {
 	Themes            []string `json:"themes,omitempty"`
 	Layouts           []string `json:"layouts,omitempty"`
 	ServerConfigs     []string `json:"serverConfigs,omitempty"`
+	Connections       []string `json:"connections,omitempty"`
 }
 
 type importRequest struct {
@@ -644,6 +645,11 @@ vct: urn:import:invalid-ou
 }
 
 func (suite *ImportExportFreshPackSuite) exportResources(reqBody exportRequest) (string, error) {
+	return postExport(reqBody)
+}
+
+// postExport sends an export request to the server and returns the exported YAML.
+func postExport(reqBody exportRequest) (string, error) {
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal export request: %w", err)
@@ -702,6 +708,11 @@ func (suite *ImportExportFreshPackSuite) exportResources(reqBody exportRequest) 
 }
 
 func (suite *ImportExportFreshPackSuite) importResources(reqBody importRequest) (*importResponse, error) {
+	return postImport(reqBody)
+}
+
+// postImport sends an import request to the server and returns the parsed report.
+func postImport(reqBody importRequest) (*importResponse, error) {
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal import request: %w", err)

@@ -64,6 +64,11 @@ const ConnectionQueryKeys = {
    * Key for all user and agent types used by the Subject Mapping tab.
    */
   SUBJECT_MAPPING_TYPES: 'subject-mapping-types',
+
+  /**
+   * Key for the organization unit the signed-in user belongs to, read from the ID token.
+   */
+  CALLER_OU_ID: 'caller-ou-id',
 } as const;
 
 export const SUBJECT_MAPPING_TYPES_PAGE_SIZE = 100;

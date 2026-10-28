@@ -33,6 +33,8 @@ import validateTrustedIssuerForm, {
 interface TrustedIssuerCreateFormProps {
   /** Connection name collected on the wizard's name step. */
   name: string;
+  /** The organization unit that will own the trusted issuer. */
+  ouId: string;
   /** Call when the create request 409s on a duplicate name, to bounce back to the name step. */
   onNameConflict: () => void;
   /** Call when the wizard's Back button is pressed, to return to the name step. */
@@ -49,6 +51,7 @@ interface TrustedIssuerCreateFormProps {
  */
 export default function TrustedIssuerCreateForm({
   name,
+  ouId,
   onNameConflict,
   onBack,
 }: TrustedIssuerCreateFormProps): JSX.Element {
@@ -110,6 +113,7 @@ export default function TrustedIssuerCreateForm({
     setGeneralError(null);
     createTrustedIssuer.mutate(
       {
+        ouId,
         name,
         issuer: issuer.trim(),
         jwksEndpoint: jwksEndpoint.trim(),
@@ -280,6 +284,15 @@ export default function TrustedIssuerCreateForm({
         </Stack>
       </Paper>
 
+      {!ouId && (
+        <Alert severity="error" data-testid="trusted-issuer-ou-required">
+          {t(
+            'connections:wizard.organizationUnit.required',
+            'Your session does not name an organization unit. Sign out and sign in again.',
+          )}
+        </Alert>
+      )}
+
       {generalError && (
         <Alert severity="error" onClose={clearCreateError}>
           {generalError}
@@ -292,7 +305,7 @@ export default function TrustedIssuerCreateForm({
         </Button>
         <Button
           variant="contained"
-          disabled={!formValid || createTrustedIssuer.isPending}
+          disabled={!formValid || !ouId || createTrustedIssuer.isPending}
           onClick={handleCreate}
           data-testid="trusted-issuer-create-submit"
         >

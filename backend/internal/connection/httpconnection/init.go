@@ -5,7 +5,17 @@
 // URL, timeout, plain headers and authentication, whose secrets are stored encrypted.
 package httpconnection
 
+import (
+	"github.com/thunder-id/thunderid/internal/connection/connectionou"
+	"github.com/thunder-id/thunderid/internal/ou"
+)
+
 // Initialize creates the HTTP connection service over the configuration database.
-func Initialize() HTTPConnectionServiceInterface {
-	return newHTTPConnectionService(newHTTPConnectionStore())
+func Initialize(ouService ou.OrganizationUnitServiceInterface) HTTPConnectionServiceInterface {
+	ouResolver := connectionou.Initialize(ouService, connectionou.Errors{
+		Required: connectionou.ErrorOURequired,
+		NotFound: connectionou.ErrorInvalidOU,
+		Changed:  connectionou.ErrorOUUpdateNotAllowed,
+	})
+	return newHTTPConnectionService(newHTTPConnectionStore(), ouResolver)
 }

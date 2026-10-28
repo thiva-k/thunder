@@ -39,7 +39,7 @@ func (s *HTTPConnectionStoreTestSuite) SetupTest() {
 
 func (s *HTTPConnectionStoreTestSuite) connection() HTTPConnection {
 	return HTTPConnection{
-		ID: "conn-1", Name: "Risk", Description: "Risk engine", URL: testURL, TimeoutMS: 5000,
+		ID: "conn-1", Name: "Risk", Description: "Risk engine", OUID: "ou-1", URL: testURL, TimeoutMS: 5000,
 		Headers:        []Header{{Name: "X-Tenant", Value: "acme"}},
 		AuthProperties: basicAuthProperties(s.T()),
 	}
@@ -48,8 +48,8 @@ func (s *HTTPConnectionStoreTestSuite) connection() HTTPConnection {
 func (s *HTTPConnectionStoreTestSuite) TestCreateStoresEncryptedPropertiesAndRoundTrips() {
 	var stored string
 	s.mockClient.On("ExecuteContext", mock.Anything, queryCreateHTTPConnection,
-		"conn-1", "Risk", "Risk engine", mock.Anything, testDeploymentID).
-		Run(func(args mock.Arguments) { stored = args.String(5) }).Return(int64(1), nil)
+		"conn-1", "Risk", "Risk engine", "ou-1", mock.Anything, testDeploymentID).
+		Run(func(args mock.Arguments) { stored = args.String(6) }).Return(int64(1), nil)
 
 	connection := s.connection()
 	s.Require().NoError(s.store.CreateHTTPConnection(s.ctx, connection))
@@ -57,7 +57,8 @@ func (s *HTTPConnectionStoreTestSuite) TestCreateStoresEncryptedPropertiesAndRou
 	s.NotContains(stored, testPassword)
 	s.True(json.Valid([]byte(stored)))
 	built, err := buildHTTPConnectionFromRow(map[string]interface{}{
-		"id": "conn-1", "name": []byte("Risk"), "description": "Risk engine", "properties": []byte(stored),
+		"id": "conn-1", "name": []byte("Risk"), "description": "Risk engine", "ou_id": "ou-1",
+		"properties": []byte(stored),
 	})
 	s.Require().NoError(err)
 	s.Equal(connection, built)
@@ -74,7 +75,7 @@ func (s *HTTPConnectionStoreTestSuite) TestUniqueNameViolationIsAConflict() {
 		s.Run(name, func() {
 			s.SetupTest()
 			s.mockClient.On("ExecuteContext", mock.Anything, queryCreateHTTPConnection, mock.Anything,
-				mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), dbErr)
+				mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), dbErr)
 			s.mockClient.On("ExecuteContext", mock.Anything, queryUpdateHTTPConnection, mock.Anything,
 				mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), dbErr)
 
@@ -86,7 +87,8 @@ func (s *HTTPConnectionStoreTestSuite) TestUniqueNameViolationIsAConflict() {
 
 func (s *HTTPConnectionStoreTestSuite) TestOtherWriteErrorsAreNotConflicts() {
 	s.mockClient.On("ExecuteContext", mock.Anything, queryCreateHTTPConnection, mock.Anything,
-		mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(int64(0), errors.New("disk full"))
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(int64(0), errors.New("disk full"))
 
 	err := s.store.CreateHTTPConnection(s.ctx, s.connection())
 
@@ -115,7 +117,7 @@ func (s *HTTPConnectionStoreTestSuite) TestUpdateAndDeleteSucceed() {
 }
 
 func (s *HTTPConnectionStoreTestSuite) TestGetAndList() {
-	row := map[string]interface{}{"id": "conn-1", "name": "Risk", "description": nil,
+	row := map[string]interface{}{"id": "conn-1", "name": "Risk", "description": nil, "ou_id": "ou-1",
 		"properties": `{"url":"` + testURL + `","timeoutMs":1000}`}
 	s.mockClient.On("QueryContext", mock.Anything, queryGetHTTPConnectionByID, "conn-1", testDeploymentID).
 		Return([]map[string]interface{}{row}, nil)
@@ -123,7 +125,7 @@ func (s *HTTPConnectionStoreTestSuite) TestGetAndList() {
 		Return([]map[string]interface{}{}, nil)
 	s.mockClient.On("QueryContext", mock.Anything, queryListHTTPConnections, testDeploymentID).
 		Return([]map[string]interface{}{row}, nil)
-	want := HTTPConnection{ID: "conn-1", Name: "Risk", URL: testURL, TimeoutMS: 1000}
+	want := HTTPConnection{ID: "conn-1", Name: "Risk", OUID: "ou-1", URL: testURL, TimeoutMS: 1000}
 
 	got, err := s.store.GetHTTPConnection(s.ctx, "conn-1")
 	s.Require().NoError(err)
