@@ -48,13 +48,14 @@ func newGrantHandlerProvider(
 	criteriaRevoker revocation.CriteriaRevokerInterface,
 	enforcementService revocation.EnforcementServiceInterface,
 	governance providers.IdentityGovernanceProvider,
+	authzDetails providers.AuthorizationDetailProvider,
 	cfg oauthconfig.Config,
 ) GrantHandlerProviderInterface {
 	allowedGrantTypes := cfg.OAuth.AllowedGrantTypes
 	grantProvider := &GrantHandlerProvider{}
 	if isGrantTypeAllowed(allowedGrantTypes, providers.GrantTypeClientCredentials) {
 		grantProvider.clientCredentialsGrantHandler = newClientCredentialsGrantHandler(
-			tokenBuilder, ouService, rbacAuthzService, actorProvider, resourceService, governance)
+			tokenBuilder, ouService, rbacAuthzService, actorProvider, resourceService, governance, authzDetails)
 	}
 	if isGrantTypeAllowed(allowedGrantTypes, providers.GrantTypeAuthorizationCode) {
 		grantProvider.authorizationCodeGrantHandler = newAuthorizationCodeGrantHandler(

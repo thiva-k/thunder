@@ -6,6 +6,7 @@ package authorizationdetail
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -75,4 +76,14 @@ func (s *DeclarativeTypeTestSuite) TestRegisteringTheDeclaredValueIsAConflict() 
 	deleteIfCreated(s.T(), status, body)
 	s.Equal(http.StatusConflict, status, string(body))
 	s.Equal(codeTypeConflict, errorCode(s.T(), body))
+}
+
+func (s *DeclarativeTypeTestSuite) TestMetadataServesTheDeclaredType() {
+	status, _, body := getPublic(s.T(), metadataPath+"/"+url.PathEscape(declarativeTypeValue), nil)
+	s.Require().Equal(http.StatusOK, status, string(body))
+
+	var metadata typeMetadata
+	s.Require().NoError(json.Unmarshal(body, &metadata))
+	s.Equal(declarativeTypeValue, metadata.Type)
+	s.NotContains(string(body), "Book a {{route}} flight", "the consent template is not published")
 }

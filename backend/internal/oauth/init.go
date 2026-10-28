@@ -61,6 +61,8 @@ func Initialize(
 	ssoTransport session.HandleTransportInterface,
 	flowProvider providers.FlowProvider,
 	governance providers.IdentityGovernanceProvider,
+	authzDetails providers.AuthorizationDetailProvider,
+	authzDetailTypes providers.AuthorizationDetailTypeProvider,
 	cfg oauthconfig.Config,
 ) (tokenservice.TokenValidatorInterface, backchannel.DispatcherInterface, error) {
 	jwks.Initialize(mux, runtimeCrypto)
@@ -69,7 +71,7 @@ func Initialize(
 	})
 	resolver := jwksresolver.Initialize(httpClient)
 	scopeValidator := scope.Initialize()
-	discoveryService := discovery.Initialize(mux, runtimeCrypto, jweService, cfg)
+	discoveryService := discovery.Initialize(mux, runtimeCrypto, jweService, authzDetailTypes, cfg)
 	jtiStore := jti.Initialize(runtimeStore)
 	// The revocation services are constructed by the service manager, not here: the session service
 	// needs the same criteria revoker, and it is wired before the OAuth engine. This registers the
@@ -103,7 +105,7 @@ func Initialize(
 	grantHandlerProvider := granthandlers.Initialize(
 		jwtService, oauth2AuthzService, tokenBuilder, tokenValidator,
 		attributeCacheSvc, ouService, authzService, actorProvider, resourceService,
-		cibaService, revocationSvc, revocationSvc, enforcementService, governance, cfg)
+		cibaService, revocationSvc, revocationSvc, enforcementService, governance, authzDetails, cfg)
 
 	token.Initialize(mux, jwtService, actorProvider, authnProvider, grantHandlerProvider,
 		scopeValidator, observabilitySvc, discoveryService, dpopVerifier, jtiStore, ouService, governance, cfg)

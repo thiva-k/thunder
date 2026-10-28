@@ -6,6 +6,7 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
@@ -199,6 +200,21 @@ type ConsentProvider interface {
 		decisions *ConsentDecisions, sessionToken string, validityPeriod int64,
 		runtimeMetadata map[string][]string) (
 		*Consent, *common.ServiceError)
+}
+
+// AuthorizationDetailProvider validates, prepares and processes RFC 9396 authorization details at runtime.
+type AuthorizationDetailProvider interface {
+	// ValidateAuthorizationDetails validates the authorization_details a client requested.
+	ValidateAuthorizationDetails(ctx context.Context, raw string) (json.RawMessage, *common.ServiceError)
+	// PrepareAuthorizationDetails stamps validated details with identifiers and type versions for a flow.
+	PrepareAuthorizationDetails(ctx context.Context, validated json.RawMessage) (
+		[]AuthorizationDetail, *common.ServiceError)
+	// ProcessAuthorizationDetails runs the type processors on the details and returns those admitted, each with
+	// Admitted set: consent refuses a detail of a type that declares a processor unless it is admitted. A
+	// detail is returned with any value the processor filled in or lowered. It fails with a client error when
+	// every detail is refused. client is the requesting application or agent, and clientID its OAuth client_id.
+	ProcessAuthorizationDetails(ctx context.Context, details []AuthorizationDetail, client EntityReference,
+		clientID string, subject EntityReference, resourceServer string) ([]AuthorizationDetail, *common.ServiceError)
 }
 
 // AuthorizationDetailTypeProvider provides the registered RFC 9396 authorization details types.

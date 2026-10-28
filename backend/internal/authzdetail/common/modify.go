@@ -6,12 +6,136 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
+	"sort"
 
 	"github.com/thunder-id/thunderid/internal/system/valuecompare"
 )
+
+// CheckModification checks that candidate grants no more than base under the policies for party.
+// An empty party allows every modification regardless of who may make it.
+func CheckModification(base, candidate Detail, policies FieldPolicies, party string) error {
+	baseFields := leafFields(base.Fields)
+	candidateFields := leafFields(candidate.Fields)
+
+	paths := make([]string, 0, len(baseFields)+len(candidateFields))
+	for path := range baseFields {
+		paths = append(paths, path)
+	}
+	for path := range candidateFields {
+		if _, ok := baseFields[path]; !ok {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		if policies.suppliedByProcessor(path) && party == PartyProcessor {
+			continue
+		}
+		policy := policies[path]
+		modification := policy.Modification
+		if party != "" && !slices.Contains(policy.ModifiableBy, party) {
+			modification = modificationNone
+		}
+		baseValue, inBase := baseFields[path]
+		candidateValue, inCandidate := candidateFields[path]
+		if err := checkFieldModification(path, modification, policy.ValueType,
+			baseValue, inBase, candidateValue, inCandidate); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkFieldModification checks one field change against the modification the field allows.
+func checkFieldModification(path, modification, valueType string, base json.RawMessage, inBase bool,
+	candidate json.RawMessage, inCandidate bool) error {
+	switch modification {
+	case modificationDecrease, modificationIncrease:
+		if !inBase || !inCandidate {
+			if inBase == inCandidate {
+				return nil
+			}
+			return fmt.Errorf("field %s cannot be added or removed", path)
+		}
+		order, err := compareOrdered(candidate, base, valueType)
+		if err != nil {
+			return fmt.Errorf("field %s: %w", path, err)
+		}
+		if (modification == modificationDecrease && order > 0) ||
+			(modification == modificationIncrease && order < 0) {
+			return fmt.Errorf("field %s exceeds the granted value", path)
+		}
+		return nil
+	case modificationRemoveItems, modificationAddItems:
+		// A list the baseline has is never left out, since a missing list can read as unrestricted; an empty
+		// list is the narrowest value. An absent baseline counts as empty.
+		if inBase && !inCandidate {
+			return fmt.Errorf("field %s cannot be removed; send an empty list instead", path)
+		}
+		baseItems, err := arrayItems(base, inBase)
+		if err != nil {
+			return fmt.Errorf("field %s: %w", path, err)
+		}
+		candidateItems, err := arrayItems(candidate, inCandidate)
+		if err != nil {
+			return fmt.Errorf("field %s: %w", path, err)
+		}
+		// Removing items may only drop items of the earlier list; adding items must keep all of them.
+		required, allowed := candidateItems, baseItems
+		if modification == modificationAddItems {
+			required, allowed = baseItems, candidateItems
+		}
+		// Each allowed item answers for one required item, so a removal cannot repeat a granted item.
+		used := make([]bool, len(allowed))
+		for _, item := range required {
+			match := -1
+			for j, o := range allowed {
+				if !used[j] && valuesEqual(o, item) {
+					match = j
+					break
+				}
+			}
+			if match < 0 {
+				if modification == modificationAddItems {
+					return fmt.Errorf("field %s must keep every granted item", path)
+				}
+				return fmt.Errorf("field %s exceeds the granted value", path)
+			}
+			used[match] = true
+		}
+		return nil
+	default:
+		if inBase != inCandidate || (inBase && !jsonEqual(base, candidate)) {
+			return fmt.Errorf("field %s cannot change", path)
+		}
+		return nil
+	}
+}
+
+// leafFields indexes the leaf fields of a detail by their dot-separated path. An empty object holds no
+// field, so a processor can fill one in.
+func leafFields(fields map[string]json.RawMessage) map[string]json.RawMessage {
+	entries := flattenFields(fields, "", nil)
+	leaves := make(map[string]json.RawMessage, len(entries))
+	for _, entry := range entries {
+		if isEmptyObject(entry.Value) {
+			continue
+		}
+		leaves[entry.Path] = entry.Value
+	}
+	return leaves
+}
+
+// isEmptyObject reports whether a raw JSON value is an object with no members.
+func isEmptyObject(raw json.RawMessage) bool {
+	var members map[string]json.RawMessage
+	return len(raw) > 0 && raw[0] == '{' && json.Unmarshal(raw, &members) == nil && len(members) == 0
+}
 
 // decodeJSON decodes a value keeping numbers as their literal text, so that no precision is lost.
 func decodeJSON(raw json.RawMessage) (any, error) {
@@ -22,6 +146,13 @@ func decodeJSON(raw json.RawMessage) (any, error) {
 		return nil, err
 	}
 	return v, nil
+}
+
+// jsonEqual reports whether two JSON values are equal, comparing numbers by value.
+func jsonEqual(a, b json.RawMessage) bool {
+	av, errA := decodeJSON(a)
+	bv, errB := decodeJSON(b)
+	return errA == nil && errB == nil && valuesEqual(av, bv)
 }
 
 // SchemaEquivalent reports whether two registered schemas define the same type, ignoring order and defaults.
@@ -157,6 +288,22 @@ func valuesEqual(a, b any) bool {
 	default:
 		return reflect.DeepEqual(a, b)
 	}
+}
+
+// arrayItems decodes an array field. An absent field, which only a baseline can be, is an empty array.
+func arrayItems(raw json.RawMessage, present bool) ([]any, error) {
+	if !present {
+		return nil, nil
+	}
+	v, err := decodeJSON(raw)
+	if err != nil {
+		return nil, err
+	}
+	items, ok := v.([]any)
+	if !ok {
+		return nil, errors.New("value is not an array")
+	}
+	return items, nil
 }
 
 // compareOrdered compares two scalar values of an ordered value type, returning -1, 0 or 1.

@@ -1137,6 +1137,23 @@ type AuthorizationDetailProcessor struct {
 	AuthenticationProperties []cmodels.Property `json:"-" yaml:"-"`
 }
 
+// AuthorizationDetail is a validated RFC 9396 authorization detail carried through an authentication flow.
+type AuthorizationDetail struct {
+	// ID identifies the detail within the request and is never sent to the client.
+	ID string `json:"id"`
+	// Type is the detail's authorization details type value.
+	Type string `json:"type"`
+	// TypeID and TypeVersion identify the type definition the request started on.
+	TypeID      string `json:"typeId"`
+	TypeVersion int    `json:"typeVersion"`
+	// Requested is the detail as the client requested it.
+	Requested json.RawMessage `json:"requested"`
+	// Value is the detail after processing.
+	Value json.RawMessage `json:"value"`
+	// Admitted reports whether the detail passed its type's processor, or the type declares none.
+	Admitted bool `json:"admitted"`
+}
+
 // PromptElement represents a single element within a consent purpose prompt. Parent carries
 // rollup linkage for permission elements (zero value, omitted on the wire, for attribute elements).
 type PromptElement struct {
@@ -1546,6 +1563,9 @@ type AccessEvaluationResponse struct {
 type AccessEvaluationsRequest struct {
 	Evaluations []AccessEvaluationRequest `json:"evaluations"`
 }
+
+// AccessEvaluationContextAuthorizationDetails is the evaluation context key for requested authorization details.
+const AccessEvaluationContextAuthorizationDetails = "authorization_details"
 
 // AccessEvaluationsResponse represents a batched fine-grained access evaluation response.
 type AccessEvaluationsResponse struct {

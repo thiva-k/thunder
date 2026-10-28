@@ -119,7 +119,7 @@ func (s *cibaService) InitiateBackchannelAuth(
 	// OIDC-only (no resource, no permission scopes) stays unbound; a permission-bearing request resolves
 	// an explicit resource or the configured default, rejecting with invalid_target when none applies.
 	targetRS, rsErr := resourceindicators.ResolveAudienceBinding(
-		ctx, s.resourceService, request.Resources, permissionScopes)
+		ctx, s.resourceService, request.Resources, permissionScopes, false)
 	if rsErr != nil {
 		return nil, &CIBAError{Code: rsErr.Error, Message: rsErr.ErrorDescription}
 	}

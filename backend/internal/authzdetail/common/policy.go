@@ -266,6 +266,40 @@ func errLimitFormat(valueType string) error {
 	return errors.New("a limit must be an RFC 3339 date and time with an offset, such as 2026-01-31T09:00:00Z")
 }
 
+// CheckRequestedFields checks that a requested detail has no processor-supplied field and is within limits.
+func CheckRequestedFields(policies FieldPolicies, obj Detail) error {
+	for path := range leafFields(obj.Fields) {
+		if policies.suppliedByProcessor(path) {
+			return fmt.Errorf("field %s is supplied by the processor", path)
+		}
+	}
+	return CheckFieldLimits(policies, obj)
+}
+
+// CheckFieldLimits checks that every field with a minimum or maximum is within it.
+func CheckFieldLimits(policies FieldPolicies, obj Detail) error {
+	for path, policy := range policies {
+		if len(policy.Minimum) == 0 && len(policy.Maximum) == 0 {
+			continue
+		}
+		value, ok := lookupPath(obj.Fields, path)
+		if !ok {
+			continue
+		}
+		if len(policy.Minimum) > 0 {
+			if order, err := compareOrdered(value, policy.Minimum, policy.ValueType); err != nil || order < 0 {
+				return fmt.Errorf("field %s is below its minimum", path)
+			}
+		}
+		if len(policy.Maximum) > 0 {
+			if order, err := compareOrdered(value, policy.Maximum, policy.ValueType); err != nil || order > 0 {
+				return fmt.Errorf("field %s is above its maximum", path)
+			}
+		}
+	}
+	return nil
+}
+
 // parentPath returns the path of the field that holds the one at path, reporting whether there is one.
 func parentPath(path string) (string, bool) {
 	i := strings.LastIndex(path, ".")

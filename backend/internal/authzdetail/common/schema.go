@@ -5,12 +5,15 @@
 package common
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
+	"math/big"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -24,10 +27,17 @@ var TemplatePlaceholder = regexp.MustCompile(`\{\{\s*([^{}\s]+)\s*\}\}`)
 const (
 	// FieldType is the member every authorization detail carries, naming its type.
 	FieldType = "type"
+	// exactMultipleOfKeyword carries a schema's multipleOf past the validator, which divides as floating point
+	// and so refuses 0.07 as a multiple of 0.01. ValidateDetail checks it exactly instead.
+	exactMultipleOfKeyword = "x-exactMultipleOf"
 	// schemaTypeObject is the JSON Schema type of an authorization details object.
 	schemaTypeObject = "object"
 	// schemaDraft202012 is the only JSON Schema dialect a type may declare.
 	schemaDraft202012 = "https://json-schema.org/draft/2020-12/schema"
+	// maxNumberExponent bounds the decimal exponent of a number in a detail.
+	maxNumberExponent = 1000
+	// maxNumberLength bounds the text of a number in a detail, which is compared exactly.
+	maxNumberLength = 1024
 )
 
 // jsonSchemaTypes are the JSON Schema type names a type's schema may use.
@@ -86,12 +96,50 @@ func CompileSchema(raw json.RawMessage) (*jsonschema.Resolved, error) {
 		root.Required = append(root.Required, FieldType)
 	}
 	closeObjects(root)
+	deferMultipleOf(root)
 
 	resolved, err := root.Resolve(nil)
 	if err != nil {
 		return nil, fmt.Errorf("schema is not valid JSON Schema 2020-12: %w", err)
 	}
 	return resolved, nil
+}
+
+// CompileRequestSchema compiles a schema for client requests, where processor-supplied fields are optional.
+func CompileRequestSchema(raw json.RawMessage) (*jsonschema.Resolved, error) {
+	var root map[string]any
+	if err := json.Unmarshal(raw, &root); err != nil {
+		return nil, fmt.Errorf("schema is not valid JSON Schema: %w", err)
+	}
+	dropSuppliedRequirements(root)
+	stripped, err := json.Marshal(root)
+	if err != nil {
+		return nil, err
+	}
+	return CompileSchema(stripped)
+}
+
+// dropSuppliedRequirements removes processor-supplied properties from every required list in a schema.
+func dropSuppliedRequirements(schema map[string]any) {
+	properties, _ := schema["properties"].(map[string]any)
+	for _, property := range properties {
+		if child, ok := property.(map[string]any); ok {
+			dropSuppliedRequirements(child)
+		}
+	}
+	required, ok := schema["required"].([]any)
+	if !ok {
+		return
+	}
+	kept := make([]any, 0, len(required))
+	for _, name := range required {
+		property, _ := properties[fmt.Sprint(name)].(map[string]any)
+		policy, _ := property[policyKeyword].(map[string]any)
+		if policy["suppliedBy"] != PartyProcessor {
+			kept = append(kept, name)
+		}
+	}
+	schema["required"] = kept
 }
 
 // describesObject reports whether a schema describes an object.
@@ -111,6 +159,90 @@ func closeObjects(s *jsonschema.Schema) {
 		closeObjects(child)
 	}
 	closeObjects(s.Items)
+}
+
+// ValidateDetail validates one detail against its type's compiled schema.
+func ValidateDetail(resolved *jsonschema.Resolved, obj Detail) error {
+	if err := checkPrecision(obj); err != nil {
+		return err
+	}
+	instance, err := obj.instance()
+	if err != nil {
+		return err
+	}
+	if err := resolved.Validate(instance); err != nil {
+		return err
+	}
+	if err := checkFormats(resolved.Schema(), instance, ""); err != nil {
+		return err
+	}
+	return checkMultiples(resolved.Schema(), obj)
+}
+
+// deferMultipleOf moves every multipleOf in the schema tree to exactMultipleOfKeyword.
+func deferMultipleOf(s *jsonschema.Schema) {
+	if s == nil {
+		return
+	}
+	if s.MultipleOf != nil {
+		if s.Extra == nil {
+			s.Extra = map[string]any{}
+		}
+		s.Extra[exactMultipleOfKeyword] = strconv.FormatFloat(*s.MultipleOf, 'g', -1, 64)
+		s.MultipleOf = nil
+	}
+	for _, child := range s.Properties {
+		deferMultipleOf(child)
+	}
+	deferMultipleOf(s.Items)
+}
+
+// checkMultiples checks each number of a detail exactly against the multipleOf its schema declares.
+func checkMultiples(schema *jsonschema.Schema, obj Detail) error {
+	for name, raw := range obj.Fields {
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.UseNumber()
+		var value any
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+		if err := checkValueMultiples(schema.Properties[name], value, name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkValueMultiples refuses the first number in value that is not a multiple of its schema's multipleOf.
+func checkValueMultiples(schema *jsonschema.Schema, value any, path string) error {
+	if schema == nil {
+		return nil
+	}
+	switch v := value.(type) {
+	case json.Number:
+		divisor, ok := schema.Extra[exactMultipleOfKeyword].(string)
+		if !ok {
+			return nil
+		}
+		number, okNumber := new(big.Rat).SetString(v.String())
+		step, okStep := new(big.Rat).SetString(divisor)
+		if !okNumber || !okStep || step.Sign() == 0 || !new(big.Rat).Quo(number, step).IsInt() {
+			return fmt.Errorf("the number at %s is not a multiple of %s", path, divisor)
+		}
+	case map[string]any:
+		for name, member := range v {
+			if err := checkValueMultiples(schema.Properties[name], member, path+"."+name); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if err := checkValueMultiples(schema.Items, item, path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // parseSchema reads a registered schema.
@@ -157,6 +289,32 @@ func SchemaFieldPaths(raw json.RawMessage) map[string]bool {
 	return paths
 }
 
+// objectMembers returns a JSON object's member names in order and their values.
+func objectMembers(raw json.RawMessage) ([]string, map[string]json.RawMessage, bool) {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
+		return nil, nil, false
+	}
+	names := []string{}
+	members := map[string]json.RawMessage{}
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return nil, nil, false
+		}
+		name, _ := token.(string)
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return nil, nil, false
+		}
+		if _, seen := members[name]; !seen {
+			names = append(names, name)
+		}
+		members[name] = value
+	}
+	return names, members, true
+}
+
 // joinPath appends a property name to a dot-separated path.
 func joinPath(path, name string) string {
 	if path == "" {
@@ -187,6 +345,71 @@ func checkKeywords(raw json.RawMessage) error {
 		return err
 	}
 	return checkTypeMember(root)
+}
+
+// checkPrecision refuses a number with more precision than a double holds. The schema checks a detail's numbers
+// as doubles while the detail keeps their text, so such a number could pass a limit it exceeds.
+func checkPrecision(obj Detail) error {
+	for name, raw := range obj.Fields {
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.UseNumber()
+		var value any
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+		if err := checkValuePrecision(value, name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkValuePrecision refuses the first number in value that a double does not hold exactly.
+func checkValuePrecision(value any, path string) error {
+	switch v := value.(type) {
+	case json.Number:
+		if len(v.String()) > maxNumberLength {
+			return fmt.Errorf("the number at %s is longer than %d characters", path, maxNumberLength)
+		}
+		if !heldByDouble(v.String()) {
+			return fmt.Errorf("the number at %s has more precision than is supported", path)
+		}
+	case map[string]any:
+		for name, member := range v {
+			if err := checkValuePrecision(member, path+"."+name); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if err := checkValuePrecision(item, path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// heldByDouble reports whether a JSON number has the value of the shortest text of its nearest double, so
+// reading it as a double loses nothing a reader of the text would see.
+func heldByDouble(text string) bool {
+	f, err := strconv.ParseFloat(text, 64)
+	if err != nil {
+		return false
+	}
+	// Bounds the exact decimal arithmetic; a double's exponent never comes near it.
+	if i := strings.IndexAny(text, "eE"); i >= 0 {
+		exponent, err := strconv.Atoi(text[i+1:])
+		if err != nil || exponent > maxNumberExponent || exponent < -maxNumberExponent {
+			return false
+		}
+	}
+	exact, ok := new(big.Rat).SetString(text)
+	if !ok {
+		return false
+	}
+	nearest, ok := new(big.Rat).SetString(strconv.FormatFloat(f, 'g', -1, 64))
+	return ok && exact.Cmp(nearest) == 0
 }
 
 // checkNumbers refuses a number no double can hold, naming the field it is in.
@@ -478,4 +701,32 @@ func schemaTypes(value any) ([]string, error) {
 	default:
 		return nil, errors.New("type must name one JSON Schema type")
 	}
+}
+
+// checkFormats checks date and date-time values, which the validator treats as annotations.
+func checkFormats(schema *jsonschema.Schema, value any, path string) error {
+	if schema == nil {
+		return nil
+	}
+	switch v := value.(type) {
+	case string:
+		if t := inferValueType(schema); t != "" && t != valueTypeNumber {
+			if err := valuecompare.Validate(v, valuecompare.Type(t)); err != nil {
+				return fmt.Errorf("%s is not a valid %s", describePath(path), schema.Format)
+			}
+		}
+	case map[string]any:
+		for name, member := range v {
+			if err := checkFormats(schema.Properties[name], member, joinPath(path, name)); err != nil {
+				return err
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if err := checkFormats(schema.Items, item, path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

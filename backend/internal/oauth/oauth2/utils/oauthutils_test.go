@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	authzdetailexec "github.com/thunder-id/thunderid/internal/authzdetail/exec"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -1990,6 +1991,57 @@ func (suite *OAuth2UtilsTestSuite) TestIsClientHeld_NothingToCheck() {
 
 			suite.False(held)
 			suite.Nil(svcErr)
+		})
+	}
+}
+
+func (suite *OAuth2UtilsTestSuite) TestAuthorizationDetailsErrorResponse() {
+	testCases := []struct {
+		name     string
+		svcErr   *tidcommon.ServiceError
+		expected *model.ErrorResponse
+	}{
+		{
+			name: "InvalidDetails",
+			svcErr: authzdetailexec.ErrorAuthorizationDetailNotAllowed.WithParams(
+				map[string]string{"index": "1", "reason": "field amount is above its maximum"}),
+			expected: &model.ErrorResponse{
+				Error: constants.ErrorInvalidAuthorizationDetails,
+				ErrorDescription: "authorization_details entry 1 is not allowed: " +
+					"field amount is above its maximum",
+			},
+		},
+		{
+			name: "DescriptionLimitedToAllowedCharacters",
+			svcErr: authzdetailexec.ErrorMalformedAuthorizationDetails.WithParams(
+				map[string]string{"reason": `invalid character '"' after object key \ é`}),
+			expected: &model.ErrorResponse{
+				Error:            constants.ErrorInvalidAuthorizationDetails,
+				ErrorDescription: "invalid character '' after object key",
+			},
+		},
+		{
+			name: "EmptyDescriptionFallsBackToError",
+			svcErr: authzdetailexec.ErrorMalformedAuthorizationDetails.WithParams(
+				map[string]string{"reason": `"\"`}),
+			expected: &model.ErrorResponse{
+				Error:            constants.ErrorInvalidAuthorizationDetails,
+				ErrorDescription: "Malformed authorization details",
+			},
+		},
+		{
+			name:   "ServerError",
+			svcErr: &authzdetailexec.ErrorProcessorUnavailable,
+			expected: &model.ErrorResponse{
+				Error:            constants.ErrorServerError,
+				ErrorDescription: "Failed to process authorization details",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			assert.Equal(suite.T(), tc.expected, AuthorizationDetailsErrorResponse(tc.svcErr))
 		})
 	}
 }

@@ -36,6 +36,7 @@ import (
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
 	"github.com/thunder-id/thunderid/internal/authnprovider/restprovider"
 	"github.com/thunder-id/thunderid/internal/authz"
+	authzdetailexec "github.com/thunder-id/thunderid/internal/authzdetail/exec"
 	authzdetailmgt "github.com/thunder-id/thunderid/internal/authzdetail/mgt"
 	"github.com/thunder-id/thunderid/internal/authzen"
 	"github.com/thunder-id/thunderid/internal/cert"
@@ -268,10 +269,12 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// The base resourceService is still used for resource-management APIs and server-config validation.
 	resourceServerProvider := resource.NewDefaultAwareResourceServerProvider(resourceService, serverConfigService)
 
-	// Initialize authorization details type management.
+	// Initialize authorization details type management and processing.
 	authzDetailMgtService, authzDetailExporter, err := authzdetailmgt.Initialize(mux, mcpServer, nil)
 	fatalOnError(ctx, logger, err, "Failed to initialize AuthorizationDetailMgtService")
 	exporters = append(exporters, authzDetailExporter)
+	authzDetailService := authzdetailexec.Initialize(authzDetailMgtService,
+		runtime.Config.OAuth.AuthorizationDetails.ProcessorTimeoutOrDefault())
 
 	// The security-headers middleware reads the deny-first CSP policy from the server-config csp section.
 	csp.InitializeConfigReader(serverConfigService)
@@ -619,7 +622,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		flowExecService, observabilitySvc, runtimeCryptoSvc, ouProvider, attributeCacheService, authZService,
 		resourceServerProvider, i18nService, idpService, dpopVerifier,
 		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc,
-		sessionService, ssoTransport, flowMgtService, governanceProvider, oauthCfg)
+		sessionService, ssoTransport, flowMgtService, governanceProvider, authzDetailService, authzDetailMgtService,
+		oauthCfg)
 	fatalOnError(ctx, logger, err, "Failed to initialize OAuth services")
 	if dispatcher != nil {
 		err = terminationHook.Add(dispatcher)

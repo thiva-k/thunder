@@ -20,6 +20,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/thunder-id/thunderid/tests/mocks/authzdetailprovidermock"
+	"github.com/thunder-id/thunderid/tests/mocks/authzdetailtypeprovidermock"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -462,6 +465,27 @@ func (suite *EngineTestSuite) TestNew_HappyPath() {
 	assert.NotNil(t, eng.engineCtx.attributeCacheService)
 	assert.NotNil(t, eng.engineCtx.authAssertGen)
 	assert.Equal(t, runtimeStoreProvider, eng.engineCtx.runtimeStoreProvider)
+	assert.Nil(t, eng.engineCtx.authorizationDetailTypes,
+		"without a registry, no authorization details types are registered")
+	assert.NotNil(t, eng.engineCtx.authzDetailProvider, "without a provider, the built-in processing is used")
+}
+
+func (suite *EngineTestSuite) TestWithAuthorizationDetailTypeProvider() {
+	types := authzdetailtypeprovidermock.NewAuthorizationDetailTypeProviderMock(suite.T())
+	ctx := &engineContext{}
+
+	WithAuthorizationDetailTypeProvider(types)(ctx)
+
+	suite.Equal(types, ctx.authorizationDetailTypes)
+}
+
+func (suite *EngineTestSuite) TestWithAuthorizationDetailProvider() {
+	provider := authzdetailprovidermock.NewAuthorizationDetailProviderMock(suite.T())
+	ctx := &engineContext{}
+
+	WithAuthorizationDetailProvider(provider)(ctx)
+
+	suite.Equal(provider, ctx.authzDetailProvider)
 }
 
 // TestNew_InitializesRuntimeStoreWhenNotInjected drives New() without WithRuntimeStoreProvider,
