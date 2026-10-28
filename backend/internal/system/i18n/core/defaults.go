@@ -213,6 +213,8 @@ var defaultMessages = map[string]string{
 	"error.applicationservice.invalid_client_id_description": "The provided client ID is invalid or empty",
 	"error.applicationservice.invalid_credential": "Invalid credential",
 	"error.applicationservice.invalid_credential_description": "The provided credential is invalid",
+	"error.applicationservice.invalid_filter_parameter": "Invalid filter parameter",
+	"error.applicationservice.invalid_filter_parameter_description": "The filter must be a single ouId eq expression with a quoted organization unit ID",
 	"error.applicationservice.invalid_grant_type": "Invalid grant type",
 	"error.applicationservice.invalid_grant_type_description": "One or more provided grant types are invalid",
 	"error.applicationservice.invalid_inbound_auth_config": "Invalid inbound auth config",

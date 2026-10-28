@@ -824,4 +824,17 @@ var (
 				"policies before moving it to another organization unit",
 		},
 	}
+	// ErrorInvalidFilter is returned when an application listing carries a filter it cannot apply.
+	ErrorInvalidFilter = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "APP-1062",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_filter_parameter",
+			DefaultValue: "Invalid filter parameter",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_filter_parameter_description",
+			DefaultValue: "The filter must be a single ouId eq expression with a quoted organization unit ID",
+		},
+	}
 )

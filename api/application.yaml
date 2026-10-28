@@ -32,10 +32,13 @@ paths:
       tags:
         - Applications
       summary: List applications
-      description: Retrieve a list of all applications.
+      description: |
+        Retrieve a list of all applications. An `ouId` filter lists the applications the organization
+        unit owns, followed by the applications shared into it.
       parameters:
         - $ref: '#/components/parameters/limitQueryParam'
         - $ref: '#/components/parameters/offsetQueryParam'
+        - $ref: '#/components/parameters/applicationFilterQueryParam'
       responses:
         "200":
           description: List of applications
@@ -57,6 +60,7 @@ paths:
                     isRegistrationFlowEnabled: true
                     recoveryFlowId: "f60d3e8a-8c9a-4b2f-9e1a-5b3c8d7e2f4a"
                     isRecoveryFlowEnabled: true
+                    isOwnedByOU: true
                   - id: "660e8400-e29b-41d4-a716-446655440001"
                     name: "Mobile App"
                     description: "Mobile application for customers"
@@ -67,12 +71,21 @@ paths:
                     isRegistrationFlowEnabled: false
                     recoveryFlowId: "f60d3e8a-8c9a-4b2f-9e1a-5b3c8d7e2f4a"
                     isRecoveryFlowEnabled: false
+                    isOwnedByOU: true
         "400":
           description: Bad request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+              example:
+                code: "APP-1062"
+                message:
+                  key: "error.applicationservice.invalid_filter_parameter"
+                  defaultValue: "Invalid filter parameter"
+                description:
+                  key: "error.applicationservice.invalid_filter_parameter_description"
+                  defaultValue: "The filter must be a single ouId eq expression with a quoted organization unit ID"
         "500":
           description: Internal server error
           content:
@@ -1097,7 +1110,20 @@ components:
       schema:
         type: integer
         default: 0
-
+    applicationFilterQueryParam:
+      in: query
+      name: filter
+      required: false
+      description: |
+        Filter applications by organization unit. The only supported expression is
+        `ouId eq "<id>"`, which lists the applications the organization unit owns, followed by the
+        applications shared into it.
+      schema:
+        type: string
+      examples:
+        organization-unit:
+          summary: Applications owned by or shared into an organization unit
+          value: 'ouId eq "456e8400-e29b-41d4-a716-446655440001"'
     applicationIdPathParam:
       in: path
       name: id
@@ -1906,10 +1932,18 @@ components:
           example: "spa"
         isReadOnly:
           type: boolean
-          description: Indicates if the application is read-only (declarative/immutable).
+          description: |
+            Indicates if the application is read-only: declared in a resource file, or listed in an
+            organization unit it is shared into.
           example: false
         status:
           $ref: '#/components/schemas/ApplicationAccessStatus'
+        isOwnedByOU:
+          type: boolean
+          readOnly: true
+          description: |
+            Whether the listed organization unit owns the application rather than being shared it.
+            Without an `ouId` filter, every listed application is owned.
 
     ApplicationListResponse:
       type: object

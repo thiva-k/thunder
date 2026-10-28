@@ -44,6 +44,26 @@ func ParseFilterParam(query url.Values) (*tidcommon.FilterGroup, error) {
 	return ParseFilterGroup(filterStr)
 }
 
+// ParseEqualityFilterParam reads the "filter" query parameter as a single equality expression and
+// returns it as an attribute to value map. Returns nil when no filter parameter is present.
+func ParseEqualityFilterParam(query url.Values) (map[string]interface{}, error) {
+	if values := query["filter"]; len(values) > 1 {
+		return nil, fmt.Errorf("expected one filter parameter, got %d", len(values))
+	}
+	group, err := ParseFilterParam(query)
+	if err != nil || group == nil {
+		return nil, err
+	}
+	if len(group.Clauses) != 1 {
+		return nil, fmt.Errorf("expected one filter expression, got %d", len(group.Clauses))
+	}
+	expr := group.Clauses[0].Expr
+	if expr.Operator != tidcommon.OperatorEq {
+		return nil, fmt.Errorf("unsupported filter operator: %s", expr.Operator)
+	}
+	return map[string]interface{}{expr.Attribute: expr.Value}, nil
+}
+
 // ParseFilterGroup parses a filter string that may contain multiple expressions joined by AND or OR.
 // AND has higher precedence than OR, matching standard SQL behavior.
 // Examples:

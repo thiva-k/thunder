@@ -351,7 +351,7 @@ func (suite *HandlerTestSuite) TestHandleApplicationListRequest_Success() {
 		},
 	}
 
-	mockService.On("GetApplicationList", mock.Anything).Return(expectedList, nil)
+	mockService.On("GetApplicationList", mock.Anything, mock.Anything).Return(expectedList, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/applications", nil)
 	w := httptest.NewRecorder()
@@ -394,7 +394,7 @@ func (suite *HandlerTestSuite) TestHandleApplicationListRequest_WithTemplate() {
 		},
 	}
 
-	mockService.On("GetApplicationList", mock.Anything).Return(expectedList, nil)
+	mockService.On("GetApplicationList", mock.Anything, mock.Anything).Return(expectedList, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/applications", nil)
 	w := httptest.NewRecorder()
@@ -413,13 +413,55 @@ func (suite *HandlerTestSuite) TestHandleApplicationListRequest_WithTemplate() {
 	mockService.AssertExpectations(suite.T())
 }
 
+func (suite *HandlerTestSuite) TestHandleApplicationListRequest_WithOrganizationUnitFilter() {
+	mockService := NewApplicationServiceInterfaceMock(suite.T())
+	handler := newApplicationHandler(mockService)
+
+	mockService.On("GetApplicationList", mock.Anything, map[string]interface{}{"ouId": "ou-1"}).
+		Return(&model.ApplicationListResponse{Applications: []model.BasicApplicationResponse{}}, nil)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/applications?filter="+url.QueryEscape(`ouId eq "ou-1"`), nil)
+	w := httptest.NewRecorder()
+
+	handler.HandleApplicationListRequest(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+	mockService.AssertExpectations(suite.T())
+}
+
+func (suite *HandlerTestSuite) TestHandleApplicationListRequest_InvalidFilter() {
+	for name, expression := range map[string]string{
+		"an empty filter":                   "",
+		"no value":                          "ouId eq",
+		"an unquoted ID":                    "ouId eq ou-1",
+		"another operator":                  `ouId sw "ou-1"`,
+		"a second expression joined by and": `ouId eq "ou-1" and name eq "App 1"`,
+	} {
+		suite.Run(name, func() {
+			mockService := NewApplicationServiceInterfaceMock(suite.T())
+			handler := newApplicationHandler(mockService)
+
+			req := httptest.NewRequest(http.MethodGet, "/applications?filter="+url.QueryEscape(expression), nil)
+			w := httptest.NewRecorder()
+
+			handler.HandleApplicationListRequest(w, req)
+
+			assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+			var errResp apierror.ErrorResponse
+			suite.Require().NoError(json.Unmarshal(w.Body.Bytes(), &errResp))
+			assert.Equal(suite.T(), ErrorInvalidFilter.Code, errResp.Code)
+		})
+	}
+}
+
 func (suite *HandlerTestSuite) TestHandleApplicationListRequest_ServiceError() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
 
 	svcErr := &tidcommon.InternalServerError
 
-	mockService.On("GetApplicationList", mock.Anything).Return(nil, svcErr)
+	mockService.On("GetApplicationList", mock.Anything, mock.Anything).Return(nil, svcErr)
 
 	req := httptest.NewRequest(http.MethodGet, "/applications", nil)
 	w := httptest.NewRecorder()
@@ -1736,7 +1778,7 @@ func (suite *HandlerTestSuite) TestHandleApplicationListRequest_EncodeResponseEr
 		Count:        1,
 	}
 
-	mockService.On("GetApplicationList", mock.Anything).Return(listResponse, nil)
+	mockService.On("GetApplicationList", mock.Anything, mock.Anything).Return(listResponse, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/applications", nil)
 	w := &failingResponseWriter{failOnce: true}
