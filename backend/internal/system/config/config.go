@@ -806,7 +806,7 @@ type AccountAccessConfig struct {
 
 // CategoryAccessConfig is the lockout policy for one entity category.
 type CategoryAccessConfig struct {
-	// LockGranularity is "authentication_method" (the default) or "entity".
+	// LockGranularity is "authentication_method" (the default) or "account".
 	LockGranularity string `yaml:"lock_granularity" json:"lock_granularity"`
 	// RecordLastLogin turns on the lastLoginAt write when access is granted. Unset resolves to false.
 	RecordLastLogin *bool `yaml:"record_last_login" json:"record_last_login"`

@@ -267,10 +267,10 @@ components:
       properties:
         lockGranularity:
           type: string
-          enum: [authentication_method, entity]
+          enum: [authentication_method, account]
           description: |
             What a lock applies to. `authentication_method` (the default) locks only the method that
-            failed, so wrong passwords do not block a one-time code. `entity` counts failures from
+            failed, so wrong passwords do not block a one-time code. `account` counts failures from
             every method together and locks them all.
         recordLastLogin:
           type: boolean
@@ -338,7 +338,7 @@ components:
         overrides them for a lock on one sign-in method. An override field that is not set uses the
         default. With no template for a lock, no email is sent.
 
-        A template can use `{{ctx(authenticationMethod)}}`, the sign-in method that locked
+        A template can use `{{ctx(lockedAuthenticationMethod)}}`, the sign-in method that locked
         (`credential` or `otp`, empty for a lock on every sign-in method), `{{ctx(lockDuration)}}`
         and `{{ctx(unlockTime)}}`, the time a temporary lock lifts in UTC. The method is not
         translated; to word each method in its own language, set a template for each in `methods`.
@@ -425,9 +425,9 @@ components:
           minimum: 0
           description: |
             Failures with no success in between, counted per authentication method (or for the whole
-            account under `entity` granularity), that leave the lock in place until a recovery or an
+            account under `account` granularity), that leave the lock in place until a recovery or an
             unlock, whatever the window and lock durations say. Neither time nor a lock ending resets
-            this count; a success with that method (under `entity` granularity, a completed sign-in),
+            this count; a success with that method (under `account` granularity, a completed sign-in),
             a completed recovery, or an unlock does. `0` sets no limit; otherwise it must be at least
             `threshold`.
           example: 50

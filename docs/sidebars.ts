@@ -522,6 +522,30 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
+          label: 'Account Protection',
+          collapsed: true,
+          collapsible: true,
+          items: [
+            {
+              type: 'doc',
+              id: 'guides/account-protection/overview',
+              label: 'Overview',
+              key: 'account-protection-overview',
+            },
+            {
+              type: 'doc',
+              id: 'guides/account-protection/configure-account-lockout',
+              label: 'Configure Account Lockout',
+            },
+            {
+              type: 'doc',
+              id: 'guides/account-protection/suspend-and-restore-accounts',
+              label: 'Suspend and Restore Accounts',
+            },
+          ],
+        },
+        {
+          type: 'category',
           label: 'MCP',
           key: 'guides-mcp',
           collapsed: true,

@@ -124,7 +124,7 @@ type EntityServiceInterface interface {
 		revision int64) (bool, error)
 	RecordLogin(ctx context.Context, entityID string, at, notBefore time.Time) error
 	SetSuspension(ctx context.Context, entityID string, at time.Time, operatorNote string) (bool, error)
-	ClearSuspension(ctx context.Context, entityID string, hold *identitygovernance.EntityHold,
+	ClearSuspension(ctx context.Context, entityID string, hold *identitygovernance.AccountHold,
 		suspendedAt string) (bool, error)
 }
 
@@ -1400,7 +1400,7 @@ func (s *entityService) validateEntityType(
 	return nil
 }
 
-// checkIDNotDeclarative refuses a caller-supplied id that a declarative entity holds. Creating it in
+// checkIDNotDeclarative refuses a caller-supplied id that a declarative account holds. Creating it in
 // the database would shadow that entity and reset its runtime row.
 func (s *entityService) checkIDNotDeclarative(ctx context.Context, entityID string) error {
 	declarative, err := s.store.IsEntityDeclarative(ctx, entityID)
@@ -1731,9 +1731,9 @@ func (s *entityService) SetSuspension(ctx context.Context, entityID string,
 }
 
 // ClearSuspension removes the suspension placed at suspendedAt, optionally replacing it with an
-// entity-wide hold in the same write. It reports false when that suspension is no longer there.
+// account-wide hold in the same write. It reports false when that suspension is no longer there.
 func (s *entityService) ClearSuspension(ctx context.Context, entityID string,
-	hold *identitygovernance.EntityHold, suspendedAt string) (bool, error) {
+	hold *identitygovernance.AccountHold, suspendedAt string) (bool, error) {
 	return s.runtimeStore.ClearAccessSuspension(ctx, entityID, hold, suspendedAt)
 }
 

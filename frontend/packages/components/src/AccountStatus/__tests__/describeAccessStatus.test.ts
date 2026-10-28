@@ -68,11 +68,11 @@ describe('describeAccessStatus', () => {
 
   it('says a failed-attempts lock lifts on its own only when it expires', () => {
     const timed = describe_({
-      details: {lockedMethods: [{expiresAt: EXPIRES_AT, method: 'entity'}], reason: 'FAILED_ATTEMPTS'},
+      details: {lockedMethods: [{expiresAt: EXPIRES_AT, method: 'account'}], reason: 'FAILED_ATTEMPTS'},
       value: 'LOCKED',
     });
     const held = describe_({
-      details: {lockedMethods: [{method: 'entity'}], reason: 'FAILED_ATTEMPTS'},
+      details: {lockedMethods: [{method: 'account'}], reason: 'FAILED_ATTEMPTS'},
       value: 'LOCKED',
     });
 
@@ -82,11 +82,11 @@ describe('describeAccessStatus', () => {
 
   it('says when a lock on the whole account ends', () => {
     const timed = describe_({
-      details: {lockedMethods: [{expiresAt: EXPIRES_AT, method: 'entity'}], reason: 'FAILED_ATTEMPTS'},
+      details: {lockedMethods: [{expiresAt: EXPIRES_AT, method: 'account'}], reason: 'FAILED_ATTEMPTS'},
       value: 'LOCKED',
     });
     const held = describe_({
-      details: {lockedMethods: [{method: 'entity'}], reason: 'SUSPENSION_RELEASE_LOCK'},
+      details: {lockedMethods: [{method: 'account'}], reason: 'SUSPENSION_RELEASE_LOCK'},
       value: 'LOCKED',
     });
 

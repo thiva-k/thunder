@@ -22,7 +22,7 @@ export type AccessHoldReason = 'FAILED_ATTEMPTS' | 'SUSPENSION_RELEASE_LOCK' | '
  */
 export interface AccessLockedMethod {
   /**
-   * The authentication method this lock holds, or `entity` for all of them.
+   * The authentication method this lock holds, or `account` for all of them.
    */
   method: string;
   /**

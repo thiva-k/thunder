@@ -330,20 +330,29 @@ describe('findAdministrationFlows', () => {
 });
 
 describe('resolveAdministrationFlows', () => {
-  it('returns only the purposes whose configured handle names an existing flow', async () => {
+  it('returns the listed flow for each purpose whose configured handle names one', async () => {
     // Either half missing means the operation is not offered.
+    const suspend = {
+      flowType: 'ADMINISTRATION',
+      handle: 'suspend-handle',
+      id: 'flow-1',
+      isReadOnly: true,
+      name: 'Suspend',
+      updatedAt: '2026-10-01T00:00:00Z',
+    };
     const {http} = httpReturning({
-      '/flows': {flows: [{flowType: 'ADMINISTRATION', handle: 'suspend-handle', id: 'flow-1'}]},
+      '/flows': {flows: [suspend]},
       '/server-config/flow': {
         merged: {
           userSuspendFlow: {defaultHandle: 'suspend-handle'},
+          agentSuspendFlow: {defaultHandle: 'suspend-handle'},
           userUnlockFlow: {defaultHandle: 'handle-of-a-deleted-flow'},
         },
       },
     });
 
-    await expect(resolveAdministrationFlows(http, SERVER, ['userSuspendFlow', 'userUnlockFlow'])).resolves.toEqual({
-      userSuspendFlow: 'flow-1',
-    });
+    await expect(
+      resolveAdministrationFlows(http, SERVER, ['userSuspendFlow', 'agentSuspendFlow', 'userUnlockFlow']),
+    ).resolves.toStrictEqual({userSuspendFlow: suspend, agentSuspendFlow: suspend});
   });
 });

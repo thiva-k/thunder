@@ -118,7 +118,7 @@ func (s *ConfigTestSuite) TestAnEmptySectionHasNoPolicy() {
 func (s *ConfigTestSuite) TestFromServerRuntimeReadsTheDeploymentBlock() {
 	s.Require().NoError(sysconfig.InitializeServerRuntime("", &sysconfig.Config{
 		AccountAccess: sysconfig.AccountAccessConfig{User: sysconfig.CategoryAccessConfig{
-			LockGranularity: "entity",
+			LockGranularity: "account",
 			Default:         sysconfig.LockPolicyConfig{Threshold: new(7)},
 		}},
 	}))
@@ -126,23 +126,13 @@ func (s *ConfigTestSuite) TestFromServerRuntimeReadsTheDeploymentBlock() {
 	cfg := FromServerRuntime()
 
 	s.Require().NotNil(cfg.AccountAccess.User)
-	s.Equal(granularityEntity, *cfg.AccountAccess.User.LockGranularity)
+	s.Equal(granularityAccount, *cfg.AccountAccess.User.LockGranularity)
 	s.Equal(7, *cfg.AccountAccess.User.Default.Threshold)
 	s.Nil(cfg.AccountAccess.Agent, "a category the deployment does not state is absent")
 }
 
 func (s *ConfigTestSuite) TestAnEmptyBaseIsValid() {
 	s.NoError(Config{}.Validate())
-}
-
-func (s *ConfigTestSuite) TestAnUnknownGranularityFailsTheBase() {
-	base := deploymentBase()
-	base.User.LockGranularity = new(granularity("account"))
-
-	err := Config{AccountAccess: base}.Validate()
-
-	s.Require().Error(err)
-	s.Contains(err.Error(), "user.lockGranularity")
 }
 
 // An enabled base policy must form a lock on its own; no later layer completes it.

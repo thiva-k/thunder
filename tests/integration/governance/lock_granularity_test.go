@@ -26,7 +26,7 @@ func TestLockGranularityTestSuite(t *testing.T) {
 func (ts *LockGranularityTestSuite) SetupSuite() {
 	// One counter for the whole identity, whose single rung is `0`: a lock the clock never lifts.
 	applyPolicy(ts.T(), lockoutPolicyWith(map[string]interface{}{"user": map[string]interface{}{
-		"lockGranularity": "entity",
+		"lockGranularity": "account",
 		"default":         nonExpiringRung(),
 	}}))
 
@@ -36,18 +36,18 @@ func (ts *LockGranularityTestSuite) SetupSuite() {
 	ts.mfa = newMFAFixture(ts.T(), "granularity", ts.users.ouID, ts.users.userType)
 }
 
-// The lock is reported under the reserved `entity` method, since it refuses the identity rather than
+// The lock is reported under the reserved `account` method, since it refuses the identity rather than
 // the password. The direct send is not governed, so the held account still receives a code to present.
-func (ts *LockGranularityTestSuite) TestEntityGranularityHoldsEveryAuthenticationMethod() {
-	userID, username, mobile, _ := ts.newUser("entity_wide")
-	_, _, liveMobile, _ := ts.newUser("entity_wide_live")
+func (ts *LockGranularityTestSuite) TestAccountGranularityHoldsEveryAuthenticationMethod() {
+	userID, username, mobile, _ := ts.newUser("account_wide")
+	_, _, liveMobile, _ := ts.newUser("account_wide_live")
 
 	failAuthentication(ts.T(), "username", username, lockThreshold)
 
 	status := readStatus(ts.T(), userID)
 	ts.Require().Equal("LOCKED", status.Value, "failing to the threshold must form a lock")
-	ts.Equal([]string{"entity"}, status.lockedMethods(),
-		"under entity granularity the lock must be held against the identity, not one method")
+	ts.Equal([]string{"account"}, status.lockedMethods(),
+		"under account granularity the lock must be held against the identity, not one method")
 
 	heldSession, heldCode := sendDirectOTP(ts.T(), ts.mfa.server, ts.mfa.senderID, mobile)
 	liveSession, liveCode := sendDirectOTP(ts.T(), ts.mfa.server, ts.mfa.senderID, liveMobile)
@@ -55,42 +55,42 @@ func (ts *LockGranularityTestSuite) TestEntityGranularityHoldsEveryAuthenticatio
 	held := verifyDirectOTP(ts.T(), heldSession, heldCode)
 	wrong := verifyDirectOTP(ts.T(), liveSession, wrongCodeFor(liveCode))
 
-	requireStatedHold(ts.T(), wrong, held, statedLockCode, "entity")
+	requireStatedHold(ts.T(), wrong, held, statedLockCode, "account")
 }
 
-func (ts *LockGranularityTestSuite) TestAWrongPasswordOnAnEntityLockStatesTheLockWithoutCounting() {
-	userID, username, _, _ := ts.newUser("entity_wrong")
-	_, liveName, _, _ := ts.newUser("entity_wrong_live")
+func (ts *LockGranularityTestSuite) TestAWrongPasswordOnAnAccountLockStatesTheLockWithoutCounting() {
+	userID, username, _, _ := ts.newUser("account_wrong")
+	_, liveName, _, _ := ts.newUser("account_wrong_live")
 
 	failAuthentication(ts.T(), "username", username, lockThreshold)
-	ts.Require().Equal([]string{"entity"}, readStatus(ts.T(), userID).lockedMethods(),
-		"the entity must be locked")
+	ts.Require().Equal([]string{"account"}, readStatus(ts.T(), userID).lockedMethods(),
+		"the account must be locked")
 	revision := runtimeRevision(ts.T(), userID)
 
 	wrong := authenticate(ts.T(), "username", liveName, "Not-The-Secret-8!")
 	held := authenticate(ts.T(), "username", username, "Not-The-Secret-8!")
 
-	requireStatedHold(ts.T(), wrong, held, statedLockCode, "entity")
+	requireStatedHold(ts.T(), wrong, held, statedLockCode, "account")
 	ts.NotContains(wrong.body, statedLockCode, "a wrong password on an unheld identity must not state a lock")
 	ts.Equal(revision, runtimeRevision(ts.T(), userID), "a wrong password during the lock must not be counted")
 }
 
-func (ts *LockGranularityTestSuite) TestAnEntityLockHoldsAFederatedSignIn() {
+func (ts *LockGranularityTestSuite) TestAnAccountLockHoldsAFederatedSignIn() {
 	userID, username, _, password := ts.newUser("federated")
 	email := ts.federated.addIdentity(federatedSub("federated", ts.users.suffix))
 	ts.federated.link(ts.T(), email, username, password)
 	ts.Require().True(ts.federated.signedIn(ts.T(), email), "the linked account must sign in first")
 
 	failAuthentication(ts.T(), "username", username, lockThreshold)
-	ts.Require().Equal([]string{"entity"}, readStatus(ts.T(), userID).lockedMethods(),
-		"the entity must be locked")
+	ts.Require().Equal([]string{"account"}, readStatus(ts.T(), userID).lockedMethods(),
+		"the account must be locked")
 
-	ts.federated.requireRefusedWithStatedHold(ts.T(), email, flowStatedLockCode, "entity lock")
+	ts.federated.requireRefusedWithStatedHold(ts.T(), email, flowStatedLockCode, "account lock")
 }
 
 // The counter clears only when the sign-in completes, or a caller holding the password could guess
 // the second factor forever.
-func (ts *LockGranularityTestSuite) TestAFirstFactorDoesNotClearTheEntityCounter() {
+func (ts *LockGranularityTestSuite) TestAFirstFactorDoesNotClearTheAccountCounter() {
 	userID, username, _, password := ts.newUser("mfa_step")
 
 	failAuthentication(ts.T(), "username", username, lockThreshold-1)
@@ -98,11 +98,11 @@ func (ts *LockGranularityTestSuite) TestAFirstFactorDoesNotClearTheEntityCounter
 	step := ts.mfa.passPassword(ts.T(), username, password)
 	ts.mfa.submitCode(ts.T(), step, wrongCodeFor(ts.mfa.sentCode(ts.T())))
 
-	ts.Equal([]string{"entity"}, readStatus(ts.T(), userID).lockedMethods(),
+	ts.Equal([]string{"account"}, readStatus(ts.T(), userID).lockedMethods(),
 		"a failed second factor after a correct password must reach the threshold")
 }
 
-func (ts *LockGranularityTestSuite) TestACompletedMFASignInClearsTheEntityCounter() {
+func (ts *LockGranularityTestSuite) TestACompletedMFASignInClearsTheAccountCounter() {
 	userID, username, _, password := ts.newUser("mfa_complete")
 
 	failAuthentication(ts.T(), "username", username, lockThreshold-1)
@@ -113,12 +113,12 @@ func (ts *LockGranularityTestSuite) TestACompletedMFASignInClearsTheEntityCounte
 
 	failAuthentication(ts.T(), "username", username, lockThreshold-1)
 	ts.Equal("ACTIVE", readStatus(ts.T(), userID).Value,
-		"a completed sign-in must have cleared the entity counter")
+		"a completed sign-in must have cleared the account counter")
 }
 
 // The rung is `0`, so this fails to one short, authenticates, and fails to one short again without
 // locking.
-func (ts *LockGranularityTestSuite) TestASuccessfulAuthenticationClearsTheEntityCounter() {
+func (ts *LockGranularityTestSuite) TestASuccessfulAuthenticationClearsTheAccountCounter() {
 	userID, username, _, password := ts.newUser("success_clears")
 
 	failAuthentication(ts.T(), "username", username, lockThreshold-1)
@@ -140,7 +140,7 @@ func (ts *LockGranularityTestSuite) TestARungOfZeroNeverLifts() {
 	failAuthentication(ts.T(), "username", username, lockThreshold)
 	ts.Require().Equal("LOCKED", readStatus(ts.T(), userID).Value, "the account must be locked")
 
-	_, reported := readStatus(ts.T(), userID).expiryOf("entity")
+	_, reported := readStatus(ts.T(), userID).expiryOf("account")
 	ts.False(reported, "a lock the clock never lifts must not report an expiry")
 
 	// A lock with a duration reports its expiry, so the missing expiry already rules out a rung; this

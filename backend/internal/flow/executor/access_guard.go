@@ -56,7 +56,7 @@ func (g *accessGuard) refuseIfHeld(ctx context.Context, entityID string, plane p
 }
 
 // refuseSignInIfHeld is refuseIfHeld at the session plane for a completing sign-in, through
-// AdmitSignIn, which also clears a lapsed entity-wide failure record when admitted.
+// AdmitSignIn, which also clears a lapsed account-wide failure record when admitted.
 func (g *accessGuard) refuseSignInIfHeld(ctx context.Context, entityID string,
 	logger *log.Logger) (*tidcommon.ServiceError, error) {
 	if g.governance == nil || entityID == "" {

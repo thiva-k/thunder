@@ -205,7 +205,7 @@ func authenticate(t *testing.T, identifierKey, identifierValue, credential strin
 
 // requireStatedHold checks a held account's refusal against a wrong secret's on an unheld one: both
 // are refused with the same status, and the held one states the hold by code. It also requires the
-// refusal to name neither the method nor when the lock ends: not the method's identifier, not
+// refusal to name neither the method nor when the lock ends: not the method's identifier as a word, not
 // "unlock", no date, and no count of seconds, minutes, hours or attempts.
 func requireStatedHold(t *testing.T, wrong, held authResult, code, method string) {
 	t.Helper()
@@ -213,7 +213,7 @@ func requireStatedHold(t *testing.T, wrong, held authResult, code, method string
 	require.False(t, held.succeeded(), "a held account must be refused")
 	require.Equal(t, wrong.status, held.status, "a stated hold keeps the status a refused sign-in has")
 	require.Contains(t, held.body, code, "the refusal must state the hold: %s", held.body)
-	require.NotContains(t, held.body, method, "the refusal must not name the %s method", method)
+	require.NotRegexp(t, `\b`+regexp.QuoteMeta(method)+`\b`, held.body, "the refusal must not name the %s method", method)
 	require.NotContains(t, held.body, "unlock", "the refusal must not say when the lock ends")
 	require.NotRegexp(t, heldRefusalLeak, held.body, "the refusal must not give a time, a rung or a count")
 }
@@ -298,8 +298,8 @@ func runtimeRevision(t *testing.T, entityID string) string {
 	return revision
 }
 
-// servedRung returns the duration of the lock the runtime row holds for a method ("entity" for the
-// entity-wide entry): its unlock time less the failure that formed it, both written from one clock
+// servedRung returns the duration of the lock the runtime row holds for a method ("account" for the
+// account-wide entry): its unlock time less the failure that formed it, both written from one clock
 // reading, so the answer does not depend on how long the test took to read it.
 func servedRung(t *testing.T, entityID, method string) time.Duration {
 	t.Helper()
@@ -315,8 +315,8 @@ func storedExpiry(t *testing.T, entityID, method string) time.Time {
 	return unlockAt
 }
 
-// storedLock returns the unlock time of the lock the runtime row holds for a method ("entity" for the
-// entity-wide entry), and the time of the failure that formed it.
+// storedLock returns the unlock time of the lock the runtime row holds for a method ("account" for the
+// account-wide entry), and the time of the failure that formed it.
 func storedLock(t *testing.T, entityID, method string) (time.Time, time.Time) {
 	t.Helper()
 	raw := runtimeColumn(t, entityID, "RUNTIME_ATTRIBUTES")
@@ -328,7 +328,7 @@ func storedLock(t *testing.T, entityID, method string) (time.Time, time.Time) {
 	var row struct {
 		AccessState struct {
 			Lock struct {
-				Entity                *lockEntry           `json:"entity"`
+				Account               *lockEntry           `json:"account"`
 				AuthenticationMethods map[string]lockEntry `json:"authenticationMethods"`
 			} `json:"lock"`
 		} `json:"accessState"`
@@ -336,8 +336,8 @@ func storedLock(t *testing.T, entityID, method string) (time.Time, time.Time) {
 	require.NoError(t, json.Unmarshal([]byte(raw), &row), "unreadable runtime row: %s", raw)
 
 	entry, recorded := row.AccessState.Lock.AuthenticationMethods[method]
-	if method == "entity" && row.AccessState.Lock.Entity != nil {
-		entry, recorded = *row.AccessState.Lock.Entity, true
+	if method == "account" && row.AccessState.Lock.Account != nil {
+		entry, recorded = *row.AccessState.Lock.Account, true
 	}
 	require.True(t, recorded, "the runtime row must hold a %s lock: %s", method, raw)
 	unlockAt, err := time.Parse(time.RFC3339, entry.UnlockAt)

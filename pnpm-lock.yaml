@@ -3411,6 +3411,9 @@ importers:
       '@thunderid/eslint-plugin':
         specifier: workspace:^
         version: link:../eslint-plugin
+      '@thunderid/hooks':
+        specifier: workspace:^
+        version: link:../hooks
       '@thunderid/prettier-config':
         specifier: workspace:^
         version: link:../prettier-config
@@ -3444,6 +3447,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)(supports-color@10.2.2)
+      i18next:
+        specifier: 25.6.0
+        version: 25.6.0(typescript@5.9.3)
       prettier:
         specifier: 'catalog:'
         version: 3.6.2
@@ -3456,6 +3462,9 @@ importers:
       react-i18next:
         specifier: 'catalog:'
         version: 16.0.1(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      react-router:
+        specifier: 'catalog:'
+        version: 8.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3

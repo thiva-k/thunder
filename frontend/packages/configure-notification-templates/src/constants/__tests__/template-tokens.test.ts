@@ -15,17 +15,17 @@ describe('CONTEXT_TOKEN_KEYS', () => {
 
   // The account-lock email templates fill these keys, so the editor must not flag them as unknown.
   it('offers the account-lock email keys', () => {
-    expect(CONTEXT_TOKEN_KEYS.has('authenticationMethod')).toBe(true);
+    expect(CONTEXT_TOKEN_KEYS.has('lockedAuthenticationMethod')).toBe(true);
     expect(CONTEXT_TOKEN_KEYS.has('lockDuration')).toBe(true);
     expect(CONTEXT_TOKEN_KEYS.has('unlockTime')).toBe(true);
   });
 
   it('gives every lock email token a context label key', () => {
     const lockTokens = CONTEXT_TOKENS.filter((token) =>
-      ['{{ctx(authenticationMethod)}}', '{{ctx(lockDuration)}}', '{{ctx(unlockTime)}}'].includes(token.insert),
+      ['{{ctx(lockedAuthenticationMethod)}}', '{{ctx(lockDuration)}}', '{{ctx(unlockTime)}}'].includes(token.insert),
     );
     expect(lockTokens.map((token) => token.labelKey)).toEqual([
-      'editor.tokens.labels.context.authenticationMethod',
+      'editor.tokens.labels.context.lockedAuthenticationMethod',
       'editor.tokens.labels.context.lockDuration',
       'editor.tokens.labels.context.unlockTime',
     ]);
