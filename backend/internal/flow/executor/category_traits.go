@@ -20,9 +20,6 @@ type categoryTraits struct {
 	// attributeConflictCode is what the category's management service raises when a unique
 	// attribute already belongs to another entity.
 	attributeConflictCode string
-	// autoProvisionedAtAuthentication marks a category that federated authentication may create
-	// on the fly, gated on the eligibility flag that authentication writes.
-	autoProvisionedAtAuthentication bool
 	// applicationAllowedTypes returns the entity types the application admits for the category.
 	applicationAllowedTypes func(ctx *providers.NodeContext) []string
 	// allowedTypesProperty names the node property that narrows the category's types.
@@ -37,10 +34,9 @@ type categoryTraits struct {
 // means adding an entry.
 var categoryTraitsByCategory = map[entitytype.TypeCategory]categoryTraits{
 	entitytype.TypeCategoryUser: {
-		groupMemberType:                 group.MemberTypeUser,
-		roleAssigneeType:                role.AssigneeTypeUser,
-		attributeConflictCode:           user.ErrorAttributeConflict.Code,
-		autoProvisionedAtAuthentication: true,
+		groupMemberType:       group.MemberTypeUser,
+		roleAssigneeType:      role.AssigneeTypeUser,
+		attributeConflictCode: user.ErrorAttributeConflict.Code,
 		applicationAllowedTypes: func(ctx *providers.NodeContext) []string {
 			return ctx.Application.AllowedUserTypes
 		},
