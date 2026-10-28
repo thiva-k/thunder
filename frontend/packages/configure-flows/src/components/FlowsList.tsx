@@ -71,8 +71,8 @@ export default function FlowsList(): JSX.Element {
 
   return (
     <>
-      <ListingTable.Provider variant="data-grid-card" loading={isLoading}>
-        <ListingTable.Container disablePaper>
+      <ListingTable.Provider variant="data-grid" loading={isLoading}>
+        <ListingTable.Container>
           <ListingTable.DataGrid
             rows={data?.flows ?? []}
             columns={columns}
@@ -80,6 +80,7 @@ export default function FlowsList(): JSX.Element {
             onRowClick={(params) => {
               handleOpenClick(params.row as BasicFlowDefinition);
             }}
+            rowHeight={64}
             initialState={{
               pagination: {
                 paginationModel: {pageSize: 10},
