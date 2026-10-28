@@ -329,6 +329,25 @@ func TestHandleAgentListRequest_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+func TestHandleAgentListRequest_WithOrganizationUnitFilter(t *testing.T) {
+	var gotFilters map[string]interface{}
+	stubService := &InlineStubAgentService{
+		OnGetAgentList: func(
+			ctx context.Context, limit, offset int, filters map[string]interface{}, inc bool,
+		) (*model.AgentListResponse, *tidcommon.ServiceError) {
+			gotFilters = filters
+			return &model.AgentListResponse{}, nil
+		},
+	}
+	handler := newAgentHandler(stubService)
+	req := httptest.NewRequest(http.MethodGet, `/agents?filter=ouId+eq+%22ou-1%22`, nil)
+	w := httptest.NewRecorder()
+
+	handler.HandleAgentListRequest(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, map[string]interface{}{"ouId": "ou-1"}, gotFilters)
+}
+
 func TestHandleAgentListRequest_InvalidFilter(t *testing.T) {
 	stubService := &InlineStubAgentService{}
 	handler := newAgentHandler(stubService)

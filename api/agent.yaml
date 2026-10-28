@@ -30,6 +30,9 @@ paths:
       tags:
         - Agents
       summary: List agents
+      description: |
+        Retrieve a paginated list of agents. An `ouId` filter lists the agents the organization unit
+        owns, followed by the agents shared into it.
       parameters:
         - $ref: '#/components/parameters/limitQueryParam'
         - $ref: '#/components/parameters/offsetQueryParam'
@@ -57,6 +60,7 @@ paths:
                       name: "Nightly Sync Worker"
                       llmModel: "claude-3-5-sonnet"
                       team: "platform"
+                    isOwnedByOU: true
                   - id: "039bda67-a80d-4b7b-ac0f-36db85332089"
                     ouId: "456e8400-e29b-41d4-a716-446655440001"
                     ouHandle: "platform/automations"
@@ -68,6 +72,7 @@ paths:
                       name: "Calendar Agent"
                       llmModel: "claude-3-5-sonnet"
                       environment: "production"
+                    isOwnedByOU: true
                 links:
                   - href: "agents?offset=2&limit=2"
                     rel: "next"
@@ -1820,14 +1825,23 @@ components:
       name: filter
       required: false
       description: |
-        Filter agents by a custom attribute value. Only keys inside the `attributes` JSON
-        object are filterable, including `name`; system fields (`description`, `type`, `ouId`,
-        `owner`, `clientId`) are not supported.
+        Filter agents by a custom attribute value or by organization unit. Keys inside the
+        `attributes` JSON object are filterable, including `name`. Of the system fields, only
+        `ouId` is supported: `ouId eq "<id>"` lists the agents the organization unit owns, followed
+        by the agents shared into it, and cannot be combined with another expression. The other
+        system fields (`description`, `type`, `owner`, `clientId`) are not supported.
         Supported operators: `eq`.
         Format: `attribute operator "value"`. The value must be wrapped in double quotes.
         Example: `name eq "Calendar Agent"`.
       schema:
         type: string
+      examples:
+        attribute:
+          summary: Agents with a custom attribute value
+          value: 'name eq "Calendar Agent"'
+        organization-unit:
+          summary: Agents owned by or shared into an organization unit
+          value: 'ouId eq "456e8400-e29b-41d4-a716-446655440001"'
 
   schemas:
     Agent:
@@ -1896,7 +1910,8 @@ components:
           readOnly: true
           description: |
             Indicates whether the agent is immutable. When `true`, update and delete
-            operations are rejected. Set by the system for declaratively provisioned agents.
+            operations are rejected. Set by the system for declaratively provisioned agents, and
+            for agents listed in an organization unit they are shared into.
           example: false
         status:
           $ref: '#/components/schemas/AgentAccessStatus'
@@ -1912,6 +1927,12 @@ components:
             `accountAccess.agent.recordLastLogin` is enabled, and the value can lag the latest
             sign-in by up to `accountAccess.agent.lastLoginResolutionSeconds` (one hour by default).
           example: "2026-09-09T18:22:04Z"
+        isOwnedByOU:
+          type: boolean
+          readOnly: true
+          description: |
+            Whether the listed organization unit owns the agent rather than being shared it. Present
+            only in agent lists. Without an `ouId` filter, every listed agent is owned.
 
     AgentListResponse:
       type: object

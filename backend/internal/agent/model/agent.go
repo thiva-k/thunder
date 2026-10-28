@@ -126,6 +126,8 @@ type BasicAgentResponse struct {
 	// LastLoginAt is when this agent was last granted access. Absent until a sign-in has been
 	// recorded.
 	LastLoginAt string `json:"lastLoginAt,omitempty"`
+	// IsOwnedByOU says whether the listed organization unit owns the agent rather than being shared it.
+	IsOwnedByOU *bool `json:"isOwnedByOU,omitempty"`
 }
 
 // AgentListResponse is the paginated list response.

@@ -924,6 +924,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentList_Success() {
 	assert.Equal(suite.T(), 1, resp.TotalResults)
 	suite.Require().Len(resp.Agents, 1)
 	assert.JSONEq(suite.T(), `{"name":"test-agent"}`, string(resp.Agents[0].Attributes))
+	assert.Equal(suite.T(), new(true), resp.Agents[0].IsOwnedByOU)
 }
 
 func (suite *AgentServiceTestSuite) TestGetAgentList_ReturnsLogoFromInboundClients() {
@@ -3380,6 +3381,115 @@ func (suite *AgentServiceTestSuite) TestGetAgentList_NoAccessibleOUs() {
 	assert.Empty(suite.T(), resp.Agents)
 	mockEntity.AssertNotCalled(suite.T(), "GetEntityListByOUIDs", mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+// An organization unit filter lists the agents it owns, then the ones shared into it, each shared
+// agent under the listed organization unit.
+func (suite *AgentServiceTestSuite) TestGetAgentList_InOrganizationUnit() {
+	svc, mockEntity, _, _, _ := suite.setupService()
+
+	mockEntity.On("GetEntityPageInOU", mock.Anything, providers.EntityCategoryAgent, testOUID,
+		entity.OUEntityScopeAll, 1, 0, map[string]interface{}(nil)).
+		Return(&entity.OUEntityPage{
+			Owned: []providers.Entity{{ID: "owned-agent", Category: providers.EntityCategoryAgent,
+				OUID: testOUID}},
+			Shared: []providers.Entity{{ID: "shared-agent", Category: providers.EntityCategoryAgent,
+				OUID: "owner-ou", OUHandle: "owner"}},
+			TotalResults: 3,
+		}, nil)
+
+	resp, svcErr := svc.GetAgentList(context.Background(), 1, 0,
+		map[string]interface{}{"ouId": testOUID}, false)
+
+	suite.Require().Nil(svcErr)
+	assert.Equal(suite.T(), 3, resp.TotalResults)
+	assert.Equal(suite.T(), 2, resp.Count)
+	suite.Require().Len(resp.Agents, 2)
+	assert.Equal(suite.T(), "owned-agent", resp.Agents[0].ID)
+	assert.Equal(suite.T(), new(true), resp.Agents[0].IsOwnedByOU)
+	assert.False(suite.T(), resp.Agents[0].IsReadOnly)
+	assert.Equal(suite.T(), "shared-agent", resp.Agents[1].ID)
+	assert.Equal(suite.T(), new(false), resp.Agents[1].IsOwnedByOU)
+	assert.True(suite.T(), resp.Agents[1].IsReadOnly)
+	assert.Equal(suite.T(), testOUID, resp.Agents[1].OUID)
+	assert.Empty(suite.T(), resp.Agents[1].OUHandle)
+	suite.Require().NotEmpty(resp.Links)
+	assert.Contains(suite.T(), resp.Links[0].Href, "&filter=ouId+eq+%22"+testOUID+"%22")
+	mockEntity.AssertNotCalled(suite.T(), "GetEntityList", mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything)
+}
+
+// A caller who cannot list agents from the filtered organization unit gets an empty page.
+func (suite *AgentServiceTestSuite) TestGetAgentList_InOrganizationUnitWithoutAccess() {
+	authzMock := sysauthzmock.NewSystemAuthorizationServiceInterfaceMock(suite.T())
+	authzMock.On("GetAccessibleResources", mock.Anything, security.ActionListAgents,
+		security.ResourceTypeOU).
+		Return(&sysauthz.AccessibleResources{AllAllowed: false, IDs: []string{"other-ou"}}, nil).Once()
+	svc, mockEntity := suite.setupServiceWithAuthz(authzMock)
+
+	resp, svcErr := svc.GetAgentList(context.Background(), 10, 0,
+		map[string]interface{}{"ouId": testOUID}, false)
+
+	suite.Require().Nil(svcErr)
+	assert.Zero(suite.T(), resp.TotalResults)
+	assert.Empty(suite.T(), resp.Agents)
+	mockEntity.AssertNotCalled(suite.T(), "GetEntityPageInOU", mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+// A restricted caller lists an organization unit it has access to.
+func (suite *AgentServiceTestSuite) TestGetAgentList_InAccessibleOrganizationUnit() {
+	authzMock := sysauthzmock.NewSystemAuthorizationServiceInterfaceMock(suite.T())
+	authzMock.On("GetAccessibleResources", mock.Anything, security.ActionListAgents,
+		security.ResourceTypeOU).
+		Return(&sysauthz.AccessibleResources{AllAllowed: false, IDs: []string{testOUID}}, nil).Once()
+	svc, mockEntity := suite.setupServiceWithAuthz(authzMock)
+
+	mockEntity.On("GetEntityPageInOU", mock.Anything, providers.EntityCategoryAgent, testOUID,
+		entity.OUEntityScopeAll, 10, 0, map[string]interface{}(nil)).
+		Return(&entity.OUEntityPage{
+			Owned:        []providers.Entity{*buildAgentEntityFixture(testAgentName, "", "", "")},
+			TotalResults: 1,
+		}, nil)
+
+	resp, svcErr := svc.GetAgentList(context.Background(), 10, 0,
+		map[string]interface{}{"ouId": testOUID}, false)
+
+	suite.Require().Nil(svcErr)
+	assert.Equal(suite.T(), 1, resp.TotalResults)
+	suite.Require().Len(resp.Agents, 1)
+	assert.Equal(suite.T(), new(true), resp.Agents[0].IsOwnedByOU)
+}
+
+func (suite *AgentServiceTestSuite) TestGetAgentList_InOrganizationUnitError() {
+	svc, mockEntity, _, _, _ := suite.setupService()
+
+	mockEntity.On("GetEntityPageInOU", mock.Anything, providers.EntityCategoryAgent, testOUID,
+		entity.OUEntityScopeAll, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, errors.New("db error"))
+
+	resp, svcErr := svc.GetAgentList(context.Background(), 10, 0,
+		map[string]interface{}{"ouId": testOUID}, false)
+
+	assert.Nil(suite.T(), resp)
+	assert.Equal(suite.T(), &tidcommon.InternalServerError, svcErr)
+}
+
+func (suite *AgentServiceTestSuite) TestGetAgentList_InvalidOrganizationUnitFilter() {
+	for name, filters := range map[string]map[string]interface{}{
+		"a number":               {"ouId": int64(5)},
+		"an empty ID":            {"ouId": ""},
+		"with another attribute": {"ouId": testOUID, "name": testAgentName},
+	} {
+		suite.Run(name, func() {
+			svc, _, _, _, _ := suite.setupService()
+
+			resp, svcErr := svc.GetAgentList(context.Background(), 10, 0, filters, false)
+
+			assert.Nil(suite.T(), resp)
+			assert.Equal(suite.T(), &ErrorInvalidFilter, svcErr)
+		})
+	}
 }
 
 // A failed authorization check is a refusal, not a pass.
