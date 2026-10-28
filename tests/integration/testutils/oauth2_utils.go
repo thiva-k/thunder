@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -1627,6 +1628,12 @@ func signProof(priv crypto.Signer, alg, signingInput string) ([]byte, error) {
 			return nil, fmt.Errorf("alg EdDSA requires ed25519.PrivateKey")
 		}
 		return ed25519.Sign(k, []byte(signingInput)), nil
+	case "ML-DSA-44", "ML-DSA-65", "ML-DSA-87":
+		k, ok := priv.(*mldsa.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("alg %s requires *mldsa.PrivateKey", alg)
+		}
+		return k.Sign(nil, []byte(signingInput), &mldsa.Options{})
 	default:
 		return nil, fmt.Errorf("unsupported alg for signing: %s", alg)
 	}
@@ -1701,7 +1708,7 @@ func RandomJTI() string {
 }
 
 // SignJWT signs a JWS signing input using the given private key and algorithm.
-// Supported algorithms: ES256, ES384, ES512, PS256, RS256, EdDSA.
+// Supported algorithms: ES256, ES384, ES512, PS256, RS256, EdDSA, ML-DSA-44, ML-DSA-65, ML-DSA-87.
 func SignJWT(priv crypto.Signer, alg, signingInput string) ([]byte, error) {
 	return signProof(priv, alg, signingInput)
 }
