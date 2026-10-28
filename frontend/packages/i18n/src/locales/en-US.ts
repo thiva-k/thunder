@@ -834,6 +834,40 @@ const translations = {
   },
 
   // ============================================================================
+  // Manage namespace - Admin App pages for users, groups, roles and agents
+  // ============================================================================
+  manage: {
+    title: 'Admin',
+    'nav.label': 'Admin Console',
+    'userMenu.signOut': 'Sign out',
+    'organizationUnit.label': 'Organization unit',
+    'organizationUnit.badge': 'OU',
+    'nav.users': 'Users',
+    'nav.groups': 'Groups',
+    'nav.roles': 'Roles',
+    'nav.agents': 'Agents',
+    'actions.add': 'Add',
+    'actions.add.users': 'Add people',
+    'actions.invite.users': 'Invite people',
+    'actions.add.groups': 'New group',
+    'actions.add.roles': 'New role',
+    'actions.add.agents': 'Register agent',
+    'actions.back': 'Back',
+    'actions.close': 'Close',
+    'create.users': 'Add a user',
+    'create.groups': 'Create a group',
+    'create.roles': 'Create a role',
+    'create.agents': 'Register an agent',
+    'users.description': 'Everyone who can sign in through this organization unit.',
+    'groups.description': 'Give roles to many people at once. Members inherit every role on the group.',
+    'roles.description': 'Assign roles to people, groups and agents in this organization unit.',
+    'agents.description': 'AI agents that act for this organization unit.',
+    loading: 'Loading',
+    'empty.title': 'Nothing to manage',
+    'empty.description': 'You do not have permission to manage anything here.',
+  },
+
+  // ============================================================================
   // Users namespace - User management feature translations
   // ============================================================================
   users: {

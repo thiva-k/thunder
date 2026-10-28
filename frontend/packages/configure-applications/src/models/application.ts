@@ -348,5 +348,5 @@ export interface Application {
   /**
    * Effective access status, derived by the server at read time. Read-only; never LOCKED.
    */
-  status?: Pick<AccessStatusReport, 'value'>;
+  status?: {value: Exclude<AccessStatusReport['value'], 'LOCKED'>};
 }
