@@ -6,6 +6,7 @@ package connection
 import (
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/outboundauth"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -77,4 +78,8 @@ type connectionExportModel struct {
 
 	// Outbound authentication, shared by every vendor that dials out with credentials.
 	Authentication *outboundauth.Authentication `yaml:"authentication,omitempty" json:"authentication,omitempty"`
+
+	// SharingPolicies are the organization units the connection is shared with. They are read by the sharing
+	// framework and the importer, not by the service of the connection's kind.
+	SharingPolicies []sharing.PolicyRequest `yaml:"sharingPolicies,omitempty" json:"sharingPolicies,omitempty"`
 }

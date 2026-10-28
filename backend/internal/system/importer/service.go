@@ -105,6 +105,7 @@ type httpConnectionAdapter interface {
 	UpdateHTTPConnection(ctx context.Context, existing *httpconnection.HTTPConnection,
 		connection httpconnection.HTTPConnection) (*httpconnection.HTTPConnection, *tidcommon.ServiceError)
 	DeleteHTTPConnection(ctx context.Context, id string) *tidcommon.ServiceError
+	ResolveConnectionOU(ctx context.Context, connection *httpconnection.HTTPConnection) *tidcommon.ServiceError
 	ValidateHTTPConnectionCreate(ctx context.Context, connection *httpconnection.HTTPConnection) *tidcommon.ServiceError
 	ValidateHTTPConnectionUpdate(ctx context.Context, existing *httpconnection.HTTPConnection,
 		connection httpconnection.HTTPConnection) *tidcommon.ServiceError
@@ -651,7 +652,8 @@ func (s *importService) importDocument(
 }
 
 // importConnection imports a "connection" document, dispatching to the adapter of the service that
-// holds the DTO connection.ParseConnectionFromNode resolves.
+// holds the DTO connection.ParseConnectionFromNode resolves. The sharing policies the document
+// carries are replayed once the connection is written.
 func (s *importService) importConnection(
 	ctx context.Context, doc parsedDocument, options *ImportOptions, dryRun bool,
 ) ImportItemOutcome {
@@ -667,13 +669,17 @@ func (s *importService) importConnection(
 
 	switch dto := resource.(type) {
 	case *authzenpdp.AuthZENPDPConnection:
-		return s.importConnectionAuthZENPDP(ctx, dto, options, dryRun)
+		outcome := s.importConnectionAuthZENPDP(ctx, dto, options, dryRun)
+		return s.applyConnectionSharing(ctx, doc, outcome, dto.OUID, dryRun)
 	case *httpconnection.HTTPConnection:
-		return s.importConnectionHTTP(ctx, dto, options, dryRun)
+		outcome := s.importConnectionHTTP(ctx, dto, options, dryRun)
+		return s.applyConnectionSharing(ctx, doc, outcome, dto.OUID, dryRun)
 	case *providers.IDPDTO:
-		return s.importConnectionIDP(ctx, dto, options, dryRun)
+		outcome := s.importConnectionIDP(ctx, dto, options, dryRun)
+		return s.applyConnectionSharing(ctx, doc, outcome, dto.OUID, dryRun)
 	case *ncommon.NotificationSenderDTO:
-		return s.importConnectionSender(ctx, dto, options, dryRun)
+		outcome := s.importConnectionSender(ctx, dto, options, dryRun)
+		return s.applyConnectionSharing(ctx, doc, outcome, dto.OUID, dryRun)
 	default:
 		return ImportItemOutcome{
 			ResourceType: resourceTypeConnection,
@@ -682,6 +688,34 @@ func (s *importService) importConnection(
 			Message:      "unsupported connection document",
 		}
 	}
+}
+
+// applyConnectionSharing replays the sharing policies a connection document carries, after the connection
+// itself is written, since a policy names the resource it governs. A refusal on a create undoes it: the
+// caller is told the document failed and gets no id back, so a connection left behind would hold the name
+// a retry needs. The owning organization unit is the one the import resolved on the connection.
+func (s *importService) applyConnectionSharing(
+	ctx context.Context, doc parsedDocument, outcome ImportItemOutcome, owningOUID string, dryRun bool,
+) ImportItemOutcome {
+	if dryRun || outcome.Status != statusSuccess {
+		return outcome
+	}
+	policies, err := connection.ParseConnectionSharingPolicies(doc.Node)
+	if err != nil {
+		return decodeErrorOutcome(resourceTypeConnection, outcome.ResourceID, outcome.ResourceName, err)
+	}
+	refused := s.applySharingPolicies(ctx, connection.ConnectionSharingType, resourceTypeConnection,
+		outcome.ResourceID, outcome.ResourceName, owningOUID, policies, outcome.Operation)
+	if refused == nil {
+		return outcome
+	}
+	if outcome.Operation == operationCreate {
+		if delErr := s.deleteConnection(ctx, outcome.ResourceID); delErr != nil {
+			log.GetLogger().Error(ctx, "Failed to remove a connection whose sharing policies were refused",
+				log.String("connectionID", outcome.ResourceID), log.String("code", delErr.Code))
+		}
+	}
+	return *refused
 }
 
 // importConnectionAuthZENPDP creates or updates an AuthZEN PDP connection from an import document.
@@ -733,6 +767,9 @@ func (s *importService) importConnectionHTTP(
 ) ImportItemOutcome {
 	if s.httpConnectionService == nil {
 		return unsupportedAdapterOutcome(resourceTypeConnection, "HTTP connection")
+	}
+	if svcErr := s.httpConnectionService.ResolveConnectionOU(ctx, req); svcErr != nil {
+		return serviceErrorOutcome(resourceTypeConnection, req.ID, req.Name, operationCreate, svcErr)
 	}
 	if options.IsUpsertEnabled() && req.ID != "" {
 		existing, svcErr := s.httpConnectionService.GetHTTPConnection(ctx, req.ID)

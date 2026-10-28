@@ -24,6 +24,7 @@ import (
 	agentmodel "github.com/thunder-id/thunderid/internal/agent/model"
 	"github.com/thunder-id/thunderid/internal/application"
 	"github.com/thunder-id/thunderid/internal/application/model"
+	"github.com/thunder-id/thunderid/internal/connection"
 	"github.com/thunder-id/thunderid/internal/connection/authzenpdp"
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
@@ -5041,6 +5042,7 @@ func (s *ImportHTTPConnectionTestSuite) newService(idpSvc idpAdapter, senderSvc 
 
 func (s *ImportHTTPConnectionTestSuite) importHTTPConnection(url, passwordLine string, dryRun bool) ImportItemOutcome {
 	s.T().Helper()
+	s.adapter.EXPECT().ResolveConnectionOU(mock.Anything, mock.Anything).Return(nil).Maybe()
 	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{
 		Content: fmt.Sprintf(httpConnectionImportDoc, url, passwordLine),
 		DryRun:  dryRun,
@@ -5067,6 +5069,81 @@ func (s *ImportHTTPConnectionTestSuite) stored() *httpconnection.HTTPConnection 
 	s.Require().NoError(err)
 	return &httpconnection.HTTPConnection{ID: "http-1", Name: "Risk Engine", URL: httpImportURL,
 		AuthProperties: authProps}
+}
+
+// httpSharingImportDoc is an HTTP connection document that names its owner by handle only and carries one
+// sharing policy.
+const httpSharingImportDoc = `resource_type: connection
+id: http-1
+type: http
+name: Risk Engine
+url: https://risk.example.com/evaluate
+ouHandle: root
+sharingPolicies:
+  - childUnits:
+      mode: all
+`
+
+func (s *ImportHTTPConnectionTestSuite) importSharedHTTPConnection(sharingSvc *fakeSharingService) ImportItemOutcome {
+	s.T().Helper()
+	s.svc.(*importService).sharingService = sharingSvc
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{
+		Content: httpSharingImportDoc,
+		Options: &ImportOptions{Upsert: boolPtr(false), Target: importTargetRuntime},
+	})
+	s.Require().Nil(err)
+	s.Require().Len(resp.Results, 1)
+	return resp.Results[0]
+}
+
+// A document that names its owner by handle is shared against the unit the handle resolves to.
+func (s *ImportHTTPConnectionTestSuite) TestSharingIsReplayedAgainstTheResolvedOwner() {
+	sharingSvc := &fakeSharingService{}
+	s.adapter.EXPECT().ResolveConnectionOU(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, connection *httpconnection.HTTPConnection) { connection.OUID = "ou-root" }).
+		Return(nil)
+	s.adapter.EXPECT().CreateHTTPConnection(mock.Anything, mock.Anything).
+		Return(&httpconnection.HTTPConnection{ID: "http-1", Name: "Risk Engine"}, nil)
+
+	outcome := s.importSharedHTTPConnection(sharingSvc)
+
+	s.Equal(statusSuccess, outcome.Status, outcome.Message)
+	s.Require().Len(sharingSvc.calls, 1)
+	s.Equal(connection.ConnectionSharingType, sharingSvc.calls[0].resourceType)
+	s.Equal("http-1", sharingSvc.calls[0].resourceID)
+	s.Equal("ou-root", sharingSvc.calls[0].owningOUID)
+	s.Len(sharingSvc.calls[0].policies, 1)
+}
+
+// A refused policy fails the document, and a connection the import just created is removed.
+func (s *ImportHTTPConnectionTestSuite) TestRefusedPoliciesRemoveTheCreatedConnection() {
+	sharingSvc := &fakeSharingService{failure: &sharing.PolicyReplayError{
+		Index: 0, InitiatingOUID: "ou-root", Err: &sharing.ErrorPolicyExists}}
+	s.adapter.EXPECT().ResolveConnectionOU(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, connection *httpconnection.HTTPConnection) { connection.OUID = "ou-root" }).
+		Return(nil)
+	s.adapter.EXPECT().CreateHTTPConnection(mock.Anything, mock.Anything).
+		Return(&httpconnection.HTTPConnection{ID: "http-1", Name: "Risk Engine"}, nil)
+	s.adapter.EXPECT().GetHTTPConnection(mock.Anything, "http-1").
+		Return(&httpconnection.HTTPConnection{ID: "http-1"}, nil)
+	s.adapter.EXPECT().DeleteHTTPConnection(mock.Anything, "http-1").Return(nil)
+
+	outcome := s.importSharedHTTPConnection(sharingSvc)
+
+	s.Equal(statusFailed, outcome.Status)
+}
+
+// An owner that cannot be resolved fails the document before anything is written.
+func (s *ImportHTTPConnectionTestSuite) TestAnUnresolvableOwnerWritesNothing() {
+	sharingSvc := &fakeSharingService{}
+	s.adapter.EXPECT().ResolveConnectionOU(mock.Anything, mock.Anything).
+		Return(&httpconnection.ErrorInvalidOU)
+
+	outcome := s.importSharedHTTPConnection(sharingSvc)
+
+	s.Equal(statusFailed, outcome.Status)
+	s.Equal(httpconnection.ErrorInvalidOU.Code, outcome.Code)
+	s.Empty(sharingSvc.calls)
 }
 
 // Flows reference a connection by ID, so an imported one must keep the document's.
@@ -5382,6 +5459,23 @@ func roleDocWithPolicies(id string) string {
 	}, "\n")
 }
 
+// connectionDocWithPolicies is an identity provider connection document in ou-1 that carries one sharing
+// policy.
+func connectionDocWithPolicies(id string) string {
+	return strings.Join([]string{
+		"resource_type: connection",
+		"id: " + id,
+		"name: idp-one",
+		"type: google",
+		"clientId: abc",
+		"ouId: ou-1",
+		"sharingPolicies:",
+		"  - childUnits:",
+		"      mode: all",
+		"",
+	}, "\n")
+}
+
 // The importer replays the policies a role document carries once the role exists, against the
 // organization unit that owns it.
 func (s *ImportRoleSharingTestSuite) TestPoliciesAreReplayedOnCreate() {
@@ -5465,4 +5559,69 @@ func (s *ImportRoleSharingTestSuite) TestMisspelledPolicyFieldFailsTheDocument()
 	s.Contains(resp.Results[0].Message, `unknown sharing policy field "excludeOuIds"`)
 	s.Empty(s.roleSvc.created, "nothing is written for a document that does not decode")
 	s.Empty(s.sharingSvc.calls)
+}
+
+func newTestConnectionImportWithSharing(sharingSvc *fakeSharingService) ImportServiceInterface {
+	idpSvc := &fakeIDPService{byID: map[string]*providers.IDPDTO{}, byName: map[string]*providers.IDPDTO{}}
+	svc := newImportService(
+		nil, idpSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	if sharingSvc != nil {
+		svc.(*importService).sharingService = sharingSvc
+	}
+	return svc
+}
+
+// A connection's sharing is replayed by the importer once the connection exists, against the unit it lives in.
+func TestImportConnectionAppliesSharingPolicies(t *testing.T) {
+	sharingSvc := &fakeSharingService{}
+	svc := newTestConnectionImportWithSharing(sharingSvc)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: connectionDocWithPolicies("idp-1"), Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, sharingSvc.calls, 1)
+	assert.Equal(t, connection.ConnectionSharingType, sharingSvc.calls[0].resourceType)
+	assert.Equal(t, "idp-1", sharingSvc.calls[0].resourceID)
+	assert.Equal(t, "ou-1", sharingSvc.calls[0].owningOUID)
+	assert.Len(t, sharingSvc.calls[0].policies, 1)
+}
+
+// A refused policy fails the document rather than importing a connection that is not shared as declared.
+func TestImportConnectionFailsWhenPoliciesAreRefused(t *testing.T) {
+	sharingSvc := &fakeSharingService{failure: &sharing.PolicyReplayError{
+		Index: 0, InitiatingOUID: "ou-1", Err: &sharing.ErrorPolicyExists}}
+	svc := newTestConnectionImportWithSharing(sharingSvc)
+
+	resp, _ := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: connectionDocWithPolicies("idp-2"), Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Contains(t, resp.Results[0].Message, "sharing policy 1")
+}
+
+func TestImportConnectionRefusesPoliciesWithoutASharingAdapter(t *testing.T) {
+	svc := newTestConnectionImportWithSharing(nil)
+
+	resp, _ := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: connectionDocWithPolicies("idp-3"), Options: &ImportOptions{Upsert: boolPtr(false)}})
+
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Contains(t, resp.Results[0].Message, "sharing")
+}
+
+// A dry run writes nothing, so it replays nothing.
+func TestImportConnectionDryRunReplaysNoPolicies(t *testing.T) {
+	sharingSvc := &fakeSharingService{}
+	svc := newTestConnectionImportWithSharing(sharingSvc)
+
+	resp, _ := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: connectionDocWithPolicies("idp-4"), DryRun: true})
+
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Empty(t, sharingSvc.calls)
 }

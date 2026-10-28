@@ -22,6 +22,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	"github.com/thunder-id/thunderid/internal/idp"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
@@ -33,6 +34,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/connection/httpconnectionmock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/notification/notificationmock"
+	"github.com/thunder-id/thunderid/tests/mocks/sharingmock"
 )
 
 // testCryptoKey is the shared key used so secret property encryption works in tests.
@@ -87,6 +89,19 @@ func newHTTPConnectionServiceMock(t *testing.T) *httpconnectionmock.HTTPConnecti
 	return mockHTTP
 }
 
+// newSharingServiceMock returns a sharing service mock that accepts the resource type registration
+// Initialize performs and reports connections as holding no sharing policies.
+func newSharingServiceMock(t *testing.T) *sharingmock.SharingServiceInterfaceMock {
+	t.Helper()
+	mockSharing := sharingmock.NewSharingServiceInterfaceMock(t)
+	mockSharing.On("RegisterResourceType", mock.Anything).Maybe()
+	mockSharing.On("DeletePoliciesForResource", mock.Anything, ConnectionSharingType, mock.Anything).
+		Return((*tidcommon.ServiceError)(nil)).Maybe()
+	mockSharing.On("ListPolicies", mock.Anything, ConnectionSharingType, mock.Anything).
+		Return([]sharing.Policy{}, (*tidcommon.ServiceError)(nil)).Maybe()
+	return mockSharing
+}
+
 // mustProperty builds a property, failing the test on error.
 func mustProperty(t *testing.T, name, value string, isSecret bool) cmodels.Property {
 	t.Helper()
@@ -122,7 +137,7 @@ func (s *InitTestSuite) SetupTest() {
 	s.mockHTTP = httpconnectionmock.NewHTTPConnectionServiceInterfaceMock(s.T())
 	s.mux = http.NewServeMux()
 	_, _, _, err := Initialize(s.mux, nil, s.mockIDP, s.mockNotif, s.mockResource,
-		s.authZENPDP, s.mockHTTP, nil)
+		s.authZENPDP, s.mockHTTP, nil, newSharingServiceMock(s.T()))
 	s.Require().NoError(err)
 }
 
@@ -143,7 +158,7 @@ func (s *InitTestSuite) TestInitializeFailsWhenDeclarativeResourcesCannotBeLoade
 	}))
 
 	exporter, provider, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource,
-		s.authZENPDP, s.mockHTTP, nil)
+		s.authZENPDP, s.mockHTTP, nil, newSharingServiceMock(s.T()))
 
 	s.ErrorContains(err, "failed to load connection resources")
 	s.Nil(exporter)
@@ -163,7 +178,8 @@ func (s *InitTestSuite) TestInitializeFailsWhenADeclarativeConnectionIsInvalid()
 		DeclarativeResources: config.DeclarativeResources{Enabled: true},
 	}))
 
-	_, _, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource, nil, s.mockHTTP, nil)
+	_, _, _, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, s.mockResource, nil, s.mockHTTP, nil,
+		newSharingServiceMock(s.T()))
 
 	s.ErrorContains(err, "failed to load connection resources")
 	s.ErrorContains(err, "needs an organization unit")
