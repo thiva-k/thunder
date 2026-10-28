@@ -5825,11 +5825,13 @@ const translations = {
     'create.name.namePlaceholder': 'e.g. Payments API',
     'create.name.identifierLabel': 'Identifier',
     'create.name.identifierPlaceholder': 'https://api.example.com',
-    'create.name.identifierPlaceholderMcp': 'https://mcp.example.com',
+    'create.name.identifierPlaceholderMcp': 'https://mcp.example.com/mcp',
     'create.name.identifierHint':
       'A unique identifier for this resource server. When set as an absolute URI, it becomes the token audience for RFC 8707 resource indicators.',
     'create.name.identifierHintMcp':
-      'A unique identifier for this MCP server. When set as an absolute URI, it becomes the token audience for RFC 8707 resource indicators.',
+      'The URL MCP clients use to reach this server, such as https://mcp.example.com/mcp. MCP clients send it as the resource parameter, and it becomes the token audience.',
+    'create.name.identifierInvalidMcp':
+      'Enter an http or https URL with no fragment, such as https://mcp.example.com/mcp.',
     'create.name.makeDefaultLabel': 'Make this the default resource server',
     'create.setDefaultError': 'Resource server created, but it could not be made the default.',
     'create.separator.title': 'Choose your permission delimiter',
@@ -5871,9 +5873,11 @@ const translations = {
     'edit.advanced.identifier.hint':
       'A unique value that identifies this resource server. When set as an URI, enables RFC 8707 resource indicator support in OAuth2 authorization requests.',
     'edit.advanced.identifier.hintMcp':
-      'A unique value that identifies this MCP server. When set as an URI, enables RFC 8707 resource indicator support in OAuth2 authorization requests.',
+      'The URL MCP clients use to reach this server, such as https://mcp.example.com/mcp. MCP clients send it as the resource parameter, and it becomes the token audience.',
+    'edit.advanced.identifier.invalidMcp':
+      'Enter an http or https URL with no fragment, such as https://mcp.example.com/mcp.',
     'edit.advanced.identifier.placeholder': 'https://api.example.com',
-    'edit.advanced.identifier.placeholderMcp': 'https://mcp.example.com',
+    'edit.advanced.identifier.placeholderMcp': 'https://mcp.example.com/mcp',
     'edit.advanced.identifier.saved': 'Identifier saved.',
     'edit.advanced.identifier.saveError': 'Failed to save identifier.',
     'edit.advanced.authorizationEngine.label': 'Authorization engine',
@@ -5940,6 +5944,8 @@ const translations = {
     'errors.RES-1020': 'This action is managed declaratively and cannot be modified.',
     'errors.RES-1021': 'The number of records exceeds the maximum allowed in composite mode.',
     'errors.RES-1023': 'A resource server with the specified ID already exists.',
+    'errors.RES-1024':
+      'An MCP server identifier must be an http or https URL with no fragment, such as https://mcp.example.com/mcp.',
   },
 
   // ============================================================================
