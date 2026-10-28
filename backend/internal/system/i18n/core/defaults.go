@@ -891,6 +891,8 @@ var defaultMessages = map[string]string{
 	"error.flowmgtservice.invalid_request_format": "Invalid request format",
 	"error.flowmgtservice.invalid_request_format_description": "The request body is malformed or contains invalid data",
 	"error.flowmgtservice.invalid_validation_rule_type_description": "Node '{{param(nodeID)}}': input '{{param(inputID)}}' has invalid validation rule type '{{param(ruleType)}}'",
+	"error.flowmgtservice.invalid_variable_description": "{{param(reason)}}",
+	"error.flowmgtservice.invalid_variables_description": "Node '{{param(nodeID)}}': {{param(reason)}}",
 	"error.flowmgtservice.linking_decision_action_misrouted_description": "Node '{{param(nodeID)}}': the '{{param(actionType)}}' action '{{param(actionRef)}}' on '{{param(promptNodeID)}}' must point back to this node, since a forwarded action type reaches only the node it points at",
 	"error.flowmgtservice.linking_failure_path_returns_description": "Node '{{param(nodeID)}}': the path from its onFailure target '{{param(failureNodeID)}}' must sign in at a connection again before it returns to this node",
 	"error.flowmgtservice.linking_requires_on_incomplete_description": "Node '{{param(nodeID)}}': AccountLinkingExecutor requires onIncomplete, which must point to the step that verifies the account",

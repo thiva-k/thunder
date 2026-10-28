@@ -72,7 +72,7 @@ func (s *ValidatorTestSuite) SetupTest() {
 	s.mockGraphBuilder = newGraphBuilderInterfaceMock(s.T())
 	s.mockConnections = newHttpConnectionProviderMock(s.T())
 	s.v = newFlowValidator(s.mockExecutorRegistry, s.mockInterceptorRegistry, s.mockGraphBuilder,
-		s.mockConnections)
+		s.mockConnections, nil)
 }
 
 // ---------------------------------------------------------------------------
@@ -1332,7 +1332,7 @@ func (s *ValidatorTestSuite) TestValidateFlowDefinition_InvalidStructure() {
 func (s *ValidatorTestSuite) TestValidateFlowDefinition_InvalidNodeFormat() {
 	fd := minimalValidFlow()
 	// START node with onFailure set -- structure is valid but node format is not.
-	fd.Nodes[0].OnFailure = "end"
+	fd.Nodes[0].OnFailure = endNode
 	err := s.v.ValidateFlowDefinition(context.Background(), fd)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidFlowData.Code, err.Code)
@@ -2495,4 +2495,245 @@ func (s *ValidatorTestSuite) TestValidateOUResolverExecutor_Inputs() {
 			s.Equal(tc.wantProperty, err.ErrorDescription.Params["propertyKey"])
 		})
 	}
+}
+
+const endNode = "end"
+
+func variablesNode(id, next string, defs ...providers.VariableDefinition) providers.NodeDefinition {
+	return providers.NodeDefinition{ID: id, Type: "VARIABLES", OnSuccess: next, Inputs: defs}
+}
+
+func booleanVariable(id string) providers.VariableDefinition {
+	return providers.VariableDefinition{Identifier: id, Type: providers.InputTypeBoolean, DefaultValue: false}
+}
+
+func taskUsing(id, next, variable string) providers.NodeDefinition {
+	return providers.NodeDefinition{
+		ID: id, Type: "TASK_EXECUTION", OnSuccess: next,
+		Executor:   &providers.ExecutorDefinition{Name: "GoogleOIDCAuthExecutor"},
+		Properties: map[string]interface{}{"allowRegistrationWithExistingUser": "{{var(" + variable + ")}}"},
+	}
+}
+
+// linearFlow is START -> a -> b -> c -> END with the given steps in place of a, b and c.
+func linearFlow(steps ...providers.NodeDefinition) *FlowDefinition {
+	nodes := make([]providers.NodeDefinition, 0, len(steps)+2)
+	nodes = append(nodes, providers.NodeDefinition{ID: "start", Type: "START", OnSuccess: steps[0].ID})
+	nodes = append(nodes, steps...)
+	nodes = append(nodes, providers.NodeDefinition{ID: endNode, Type: "END"})
+	return &FlowDefinition{Nodes: nodes}
+}
+
+type ValidatorVariablesTestSuite struct {
+	suite.Suite
+}
+
+func TestValidatorVariablesTestSuite(t *testing.T) {
+	suite.Run(t, new(ValidatorVariablesTestSuite))
+}
+
+func (s *ValidatorVariablesTestSuite) reasonOf(svcErr *tidcommon.ServiceError) string {
+	s.Require().NotNil(svcErr)
+	s.Require().Equal(ErrorInvalidFlowData.Code, svcErr.Code)
+	return svcErr.ErrorDescription.Params["reason"]
+}
+
+func (s *ValidatorVariablesTestSuite) TestValidateVariables() {
+	v := &flowValidator{}
+	ctx := context.Background()
+
+	s.Run("a flow with no variables is valid", func() {
+		s.Nil(v.validateVariables(ctx, &FlowDefinition{Nodes: []providers.NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "end"}, {ID: "end", Type: "END"}}}))
+	})
+	s.Run("declared variables and a step that uses one later", func() {
+		flow := linearFlow(
+			variablesNode("vars", "mid", booleanVariable("allowSignup")),
+			providers.NodeDefinition{ID: "mid", Type: "START", OnSuccess: "idp"},
+			taskUsing("idp", "end", "allowSignup"),
+		)
+		s.Nil(v.validateVariables(ctx, flow), "the step need not be the next one")
+	})
+	s.Run("a placeholder naming an undeclared variable", func() {
+		flow := linearFlow(
+			variablesNode("vars", "idp", booleanVariable("other")), taskUsing("idp", "end", "allowSignup"))
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flow)), "allowSignup")
+	})
+	s.Run("a placeholder in a flow with no variables node", func() {
+		s.Contains(s.reasonOf(v.validateVariables(ctx, linearFlow(taskUsing("idp", "end", "x")))), "x")
+	})
+	s.Run("a placeholder in the text a prompt shows is not a reference", func() {
+		prompt := providers.NodeDefinition{
+			ID: "p", Type: "PROMPT", Next: "end",
+			Meta: map[string]interface{}{"components": []interface{}{
+				map[string]interface{}{"label": "Write to {{var(supportEmail)}}"}}},
+		}
+		s.Nil(v.validateVariables(ctx, linearFlow(prompt)))
+	})
+	s.Run("a step before the node that declares the variable", func() {
+		flow := linearFlow(
+			taskUsing("idp", "vars", "allowSignup"), variablesNode("vars", "end", booleanVariable("allowSignup")))
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flow)), "without passing that node")
+	})
+	s.Run("a step that one route reaches around the node", func() {
+		flow := &FlowDefinition{Nodes: []providers.NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "choose"},
+			{
+				ID: "choose", Type: "PROMPT",
+				Prompts: []providers.PromptDefinition{
+					{Action: &providers.ActionDefinition{Ref: "a", NextNode: "vars"}},
+					{Action: &providers.ActionDefinition{Ref: "b", NextNode: "idp"}},
+				},
+			},
+			variablesNode("vars", "idp", booleanVariable("allowSignup")),
+			taskUsing("idp", "end", "allowSignup"),
+			{ID: "end", Type: "END"},
+		}}
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flow)), "without passing that node")
+	})
+	s.Run("a step on every branch after the node", func() {
+		flow := &FlowDefinition{Nodes: []providers.NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "vars"},
+			variablesNode("vars", "choose", booleanVariable("allowSignup")),
+			{
+				ID: "choose", Type: "PROMPT",
+				Prompts: []providers.PromptDefinition{
+					{Action: &providers.ActionDefinition{Ref: "a", NextNode: "one"}},
+					{Action: &providers.ActionDefinition{Ref: "b", NextNode: "two"}},
+				},
+			},
+			taskUsing("one", "end", "allowSignup"),
+			taskUsing("two", "end", "allowSignup"),
+			{ID: "end", Type: "END"},
+		}}
+		s.Nil(v.validateVariables(ctx, flow))
+	})
+	s.Run("two nodes each declaring variables", func() {
+		flow := linearFlow(
+			variablesNode("a", "b", booleanVariable("first")),
+			variablesNode("b", "idp", booleanVariable("second")),
+			taskUsing("idp", "end", "second"),
+		)
+		s.Nil(v.validateVariables(ctx, flow))
+
+		later := linearFlow(
+			variablesNode("a", "idp", booleanVariable("first")),
+			taskUsing("idp", "b", "second"),
+			variablesNode("b", "end", booleanVariable("second")),
+		)
+		s.Contains(s.reasonOf(v.validateVariables(ctx, later)), "without passing that node")
+	})
+	s.Run("two nodes declaring the same variable", func() {
+		flow := linearFlow(
+			variablesNode("a", "b", booleanVariable("x")), variablesNode("b", "end", booleanVariable("x")))
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flow)), "already declared")
+	})
+	s.Run("a variable with no default", func() {
+		bad := booleanVariable("allowSignup")
+		bad.DefaultValue = nil
+		s.Contains(s.reasonOf(v.validateVariables(ctx, linearFlow(variablesNode("vars", "end", bad)))),
+			"no default")
+	})
+	s.Run("a duplicate variable on one node", func() {
+		flow := linearFlow(variablesNode("vars", "end", booleanVariable("x"), booleanVariable("x")))
+		s.Require().NotNil(v.validateVariables(ctx, flow))
+	})
+}
+
+func (s *ValidatorVariablesTestSuite) TestValidateVariablesNodeShape() {
+	v := &flowValidator{}
+	ctx := context.Background()
+	reason := func(node providers.NodeDefinition) string {
+		return s.reasonOf(v.validateVariables(ctx, &FlowDefinition{Nodes: []providers.NodeDefinition{node}}))
+	}
+	valid := func() providers.NodeDefinition { return variablesNode("vars", "end", booleanVariable("x")) }
+
+	s.Run("the flow declares at least one variable", func() {
+		s.Contains(reason(variablesNode("vars", "end")), "at least one")
+	})
+	s.Run("a node may declare none when another does", func() {
+		flow := linearFlow(variablesNode("first", "second"), variablesNode("second", endNode, booleanVariable("x")))
+		s.Nil(v.validateVariables(ctx, flow))
+	})
+	s.Run("it names the node to go on to", func() {
+		node := valid()
+		node.OnSuccess = ""
+		s.Contains(reason(node), "onSuccess")
+	})
+	s.Run("it goes on through onSuccess only", func() {
+		node := valid()
+		node.OnFailure = endNode
+		s.Contains(reason(node), "onSuccess only")
+		node = valid()
+		node.Next = endNode
+		s.Contains(reason(node), "onSuccess only")
+	})
+	s.Run("it shows and runs nothing", func() {
+		node := valid()
+		node.Prompts = []providers.PromptDefinition{{}}
+		s.Contains(reason(node), "no executor")
+		node = valid()
+		node.Executor = &providers.ExecutorDefinition{Name: "Anything"}
+		s.Contains(reason(node), "no executor")
+		node = valid()
+		node.Properties = map[string]interface{}{"k": "v"}
+		s.Contains(reason(node), "no executor")
+	})
+}
+
+type fakeIDPProvider struct {
+	idps map[string]*providers.IDPDTO
+}
+
+func (f fakeIDPProvider) GetIdentityProvider(
+	_ context.Context, id string,
+) (*providers.IDPDTO, *tidcommon.ServiceError) {
+	if id == "c-broken" {
+		return nil, &tidcommon.InternalServerError
+	}
+	if idp, ok := f.idps[id]; ok {
+		return idp, nil
+	}
+	return nil, &ErrorFlowNotFound
+}
+
+func (s *ValidatorVariablesTestSuite) TestValidateVariablesConnectionInputs() {
+	ctx := context.Background()
+	connection := func(category string, types ...string) providers.VariableDefinition {
+		return providers.VariableDefinition{
+			Identifier: "conn", Type: providers.InputTypeConnectionSelect, DefaultValue: "c-1",
+			Category: category, ConnectionTypes: types,
+		}
+	}
+	flowWith := func(def providers.VariableDefinition) *FlowDefinition {
+		return linearFlow(variablesNode("vars", "end", def))
+	}
+
+	s.Run("the category and the kinds have to be supported", func() {
+		v := &flowValidator{}
+		s.Nil(v.validateVariables(ctx, flowWith(connection("IDENTITY_PROVIDER", "google", "oidc"))))
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flowWith(connection("SMS_PROVIDER")))), "category")
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flowWith(connection("IDENTITY_PROVIDER", "twilio")))),
+			"twilio")
+	})
+
+	reader := fakeIDPProvider{idps: map[string]*providers.IDPDTO{
+		"c-1": {ID: "c-1", Type: providers.IDPTypeGoogle},
+	}}
+	v := &flowValidator{idpProvider: reader}
+	s.Run("the default is a connection of a kind the variable takes", func() {
+		s.Nil(v.validateVariables(ctx, flowWith(connection("IDENTITY_PROVIDER", "google"))))
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flowWith(connection("IDENTITY_PROVIDER", "github")))),
+			"does not take")
+
+		missing := connection("IDENTITY_PROVIDER")
+		missing.DefaultValue = "c-9"
+		s.Contains(s.reasonOf(v.validateVariables(ctx, flowWith(missing))), "not an existing connection")
+
+		broken := connection("IDENTITY_PROVIDER")
+		broken.DefaultValue = "c-broken"
+		svcErr := v.validateVariables(ctx, flowWith(broken))
+		s.Require().NotNil(svcErr)
+		s.Equal(tidcommon.InternalServerError.Code, svcErr.Code, "a failed lookup is not a missing connection")
+	})
 }
