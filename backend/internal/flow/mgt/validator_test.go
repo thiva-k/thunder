@@ -147,7 +147,7 @@ func (s *ValidatorTestSuite) TestIsValidFlowType_InvalidTypes() {
 // ---------------------------------------------------------------------------
 
 func (s *ValidatorTestSuite) TestValidateMetadata_NilFlowDef() {
-	err := s.v.validateMetadata(nil)
+	err := s.v.validateMetadata(nil, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidRequestFormat.Code, err.Code)
 }
@@ -155,7 +155,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_NilFlowDef() {
 func (s *ValidatorTestSuite) TestValidateMetadata_MissingHandle() {
 	fd := minimalValidFlow()
 	fd.Handle = ""
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorMissingFlowHandle.Code, err.Code)
 }
@@ -163,7 +163,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_MissingHandle() {
 func (s *ValidatorTestSuite) TestValidateMetadata_InvalidHandleFormat() {
 	fd := minimalValidFlow()
 	fd.Handle = "-invalid"
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidFlowHandleFormat.Code, err.Code)
 }
@@ -171,7 +171,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_InvalidHandleFormat() {
 func (s *ValidatorTestSuite) TestValidateMetadata_MissingName() {
 	fd := minimalValidFlow()
 	fd.Name = ""
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorMissingFlowName.Code, err.Code)
 }
@@ -179,7 +179,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_MissingName() {
 func (s *ValidatorTestSuite) TestValidateMetadata_InvalidFlowType() {
 	fd := minimalValidFlow()
 	fd.FlowType = "UNKNOWN"
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidFlowType.Code, err.Code)
 }
@@ -187,7 +187,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_InvalidFlowType() {
 func (s *ValidatorTestSuite) TestValidateMetadata_InvalidIDFormat() {
 	fd := minimalValidFlow()
 	fd.ID = "not-a-uuid"
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidFlowIDFormat.Code, err.Code)
 }
@@ -195,7 +195,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_InvalidIDFormat() {
 func (s *ValidatorTestSuite) TestValidateMetadata_ValidID() {
 	fd := minimalValidFlow()
 	fd.ID = "550e8400-e29b-41d4-a716-446655440000"
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Nil(err)
 }
 
@@ -204,7 +204,7 @@ func (s *ValidatorTestSuite) TestValidateMetadata_TooFewNodes_One() {
 	fd.Nodes = []providers.NodeDefinition{
 		{ID: "start", Type: string(common.NodeTypeStart)},
 	}
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidFlowData.Code, err.Code)
 }
@@ -215,13 +215,13 @@ func (s *ValidatorTestSuite) TestValidateMetadata_TooFewNodes_Two() {
 		{ID: "start", Type: string(common.NodeTypeStart)},
 		{ID: "end", Type: string(common.NodeTypeEnd)},
 	}
-	err := s.v.validateMetadata(fd)
+	err := s.v.validateMetadata(fd, isValidFlowType)
 	s.Require().NotNil(err)
 	s.Equal(ErrorInvalidFlowData.Code, err.Code)
 }
 
 func (s *ValidatorTestSuite) TestValidateMetadata_Valid() {
-	err := s.v.validateMetadata(minimalValidFlow())
+	err := s.v.validateMetadata(minimalValidFlow(), isValidFlowType)
 	s.Nil(err)
 }
 
@@ -2336,4 +2336,21 @@ func (s *ValidatorTestSuite) TestValidateExecutorSpecificConstraints_LinkingFail
 			s.Equal("linking_error", err.ErrorDescription.Params["failureNodeID"])
 		})
 	}
+}
+
+// A system flow is validated as one: only the SYSTEM type, and no node that waits for input, which the
+// flow API's validation does not accept as a type at all.
+func (s *ValidatorTestSuite) TestValidateSystemFlowDefinition() {
+	flow := minimalValidFlow()
+	flow.FlowType = providers.FlowTypeSystem
+	s.Equal(&ErrorInvalidFlowType, s.v.ValidateFlowDefinition(context.Background(), flow))
+
+	flow.FlowType = providers.FlowTypeAuthentication
+	s.Equal(&ErrorInvalidFlowType, s.v.ValidateSystemFlowDefinition(context.Background(), flow))
+
+	flow.FlowType = providers.FlowTypeSystem
+	flow.Nodes = append(flow.Nodes, providers.NodeDefinition{ID: "ask", Type: string(common.NodeTypePrompt)})
+	svcErr := s.v.ValidateSystemFlowDefinition(context.Background(), flow)
+	s.Require().NotNil(svcErr)
+	s.Equal("ask", svcErr.ErrorDescription.Params["nodeID"])
 }

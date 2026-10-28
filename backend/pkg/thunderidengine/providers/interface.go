@@ -151,6 +151,9 @@ type FlowProvider interface {
 	GetFlowByHandle(ctx context.Context, handle string, flowType FlowType) (
 		*CompleteFlowDefinition, *common.ServiceError)
 	GetFlow(ctx context.Context, flowID string) (*CompleteFlowDefinition, *common.ServiceError)
+	// GetSystemFlow returns the system flow with the given handle. A provider that serves no system
+	// flows returns a not-found error.
+	GetSystemFlow(ctx context.Context, handle string) (*CompleteFlowDefinition, *common.ServiceError)
 }
 
 // ResourceServerProvider defines the interface for the resource provider.

@@ -674,7 +674,8 @@ func (s *flowExecService) setApplicationToContext(engineCtx *EngineContext,
 	logger *log.Logger) *tidcommon.ServiceError {
 	// Skip application loading for app-independent flows
 	if engineCtx.FlowType == providers.FlowTypeUserOnboarding ||
-		engineCtx.FlowType == providers.FlowTypeAdministration {
+		engineCtx.FlowType == providers.FlowTypeAdministration ||
+		engineCtx.FlowType == providers.FlowTypeSystem {
 		return nil
 	}
 
@@ -1055,6 +1056,46 @@ func (s *flowExecService) InitiateAndExecute(ctx context.Context,
 	}
 
 	return &flowStep, nil
+}
+
+// ExecuteSystemFlow runs the system flow sysCtx names to completion, with its inputs as the user
+// inputs. A step's refusal is returned as it is. The context is never stored, since a system flow
+// cannot pause.
+func (s *flowExecService) ExecuteSystemFlow(ctx context.Context, sysCtx *SystemFlowContext) (
+	*SystemFlowResult, *tidcommon.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowExecService"),
+		log.String("handle", sysCtx.Handle))
+	flow, svcErr := s.flowProvider.GetSystemFlow(ctx, sysCtx.Handle)
+	if svcErr != nil {
+		logger.Error(ctx, "Failed to get the system flow", log.String("error", svcErr.Error.DefaultValue))
+		return nil, &tidcommon.InternalServerError
+	}
+
+	engineCtx, svcErr := s.initContext(ctx, flow.ID, "", providers.FlowTypeSystem, flow, false, logger)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	prepareContext(engineCtx, "", sysCtx.Inputs)
+
+	flowStep, svcErr := s.flowEngine.Execute(engineCtx)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	switch flowStep.Status {
+	case providers.FlowStatusComplete:
+		return &SystemFlowResult{ExecutionID: engineCtx.ExecutionID}, nil
+	case providers.FlowStatusError:
+		if flowStep.Error != nil {
+			return nil, flowStep.Error
+		}
+		logger.Error(ctx, "The system flow failed without a reason",
+			log.String(log.LoggerKeyExecutionID, engineCtx.ExecutionID))
+		return nil, &tidcommon.InternalServerError
+	default:
+		logger.Error(ctx, "The system flow stopped for input",
+			log.String(log.LoggerKeyExecutionID, engineCtx.ExecutionID), log.String("status", string(flowStep.Status)))
+		return nil, &tidcommon.InternalServerError
+	}
 }
 
 // refuseHeldApplication refuses a flow driven by a suspended application, at the application plane.

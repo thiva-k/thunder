@@ -25,6 +25,9 @@ import (
 type FlowValidatorInterface interface {
 	// ValidateFlowDefinition validates the provided flow definition and returns a ServiceError if validation fails.
 	ValidateFlowDefinition(ctx context.Context, flowDef *FlowDefinition) *tidcommon.ServiceError
+	// ValidateSystemFlowDefinition validates a system flow definition, which must be of the SYSTEM type
+	// and must not wait for input.
+	ValidateSystemFlowDefinition(ctx context.Context, flowDef *FlowDefinition) *tidcommon.ServiceError
 }
 
 // httpConnectionProvider checks that an extension step's HTTP connection exists.
@@ -62,10 +65,42 @@ func newFlowValidator(
 func (v *flowValidator) ValidateFlowDefinition(
 	ctx context.Context, flowDef *FlowDefinition,
 ) *tidcommon.ServiceError {
-	if err := v.validateMetadata(flowDef); err != nil {
+	if err := v.validateMetadata(flowDef, isValidFlowType); err != nil {
 		return err
 	}
+	return v.validateFlow(ctx, flowDef)
+}
 
+// ValidateSystemFlowDefinition runs all validation scopes on a system flow definition.
+func (v *flowValidator) ValidateSystemFlowDefinition(
+	ctx context.Context, flowDef *FlowDefinition,
+) *tidcommon.ServiceError {
+	isSystem := func(flowType providers.FlowType) bool { return flowType == providers.FlowTypeSystem }
+	if err := v.validateMetadata(flowDef, isSystem); err != nil {
+		return err
+	}
+	if err := v.validateSystemNodes(flowDef.Nodes); err != nil {
+		return err
+	}
+	return v.validateFlow(ctx, flowDef)
+}
+
+// validateSystemNodes refuses a node that waits for input, which no one could give a system flow.
+func (v *flowValidator) validateSystemNodes(nodes []providers.NodeDefinition) *tidcommon.ServiceError {
+	for _, node := range nodes {
+		if node.Type == string(common.NodeTypePrompt) {
+			return tidcommon.CustomServiceError(ErrorInvalidFlowData, tidcommon.I18nMessage{
+				Key:          "error.flowmgtservice.system_flow_prompt_node_description",
+				DefaultValue: "System flow node '{{param(nodeID)}}' waits for input, which a system flow cannot",
+				Params:       map[string]string{"nodeID": node.ID},
+			})
+		}
+	}
+	return nil
+}
+
+// validateFlow runs the validation scopes after the metadata.
+func (v *flowValidator) validateFlow(ctx context.Context, flowDef *FlowDefinition) *tidcommon.ServiceError {
 	nodeIndex, err := v.validateStructure(flowDef.Nodes)
 	if err != nil {
 		return err
@@ -113,7 +148,10 @@ func (v *flowValidator) validateGraph(
 // ---------------------------------------------------------------------------
 
 // validateMetadata validates flow-level fields: handle, name, type, ID format, and minimum node count.
-func (v *flowValidator) validateMetadata(flowDef *FlowDefinition) *tidcommon.ServiceError {
+// validType says which flow types the definition may take.
+func (v *flowValidator) validateMetadata(
+	flowDef *FlowDefinition, validType func(providers.FlowType) bool,
+) *tidcommon.ServiceError {
 	if flowDef == nil {
 		return &ErrorInvalidRequestFormat
 	}
@@ -126,7 +164,7 @@ func (v *flowValidator) validateMetadata(flowDef *FlowDefinition) *tidcommon.Ser
 	if flowDef.Name == "" {
 		return &ErrorMissingFlowName
 	}
-	if !isValidFlowType(flowDef.FlowType) {
+	if !validType(flowDef.FlowType) {
 		return &ErrorInvalidFlowType
 	}
 	if flowDef.ID != "" && !utils.IsValidUUID(flowDef.ID) {

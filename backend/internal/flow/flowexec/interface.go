@@ -19,4 +19,5 @@ type FlowExecServiceInterface interface {
 		action string, inputs map[string]string, challengeToken string) (*FlowStep, *tidcommon.ServiceError)
 	InitiateFlow(ctx context.Context, initContext *FlowInitContext) (string, *tidcommon.ServiceError)
 	InitiateAndExecute(ctx context.Context, initContext *FlowInitContext) (*FlowStep, *tidcommon.ServiceError)
+	ExecuteSystemFlow(ctx context.Context, sysCtx *SystemFlowContext) (*SystemFlowResult, *tidcommon.ServiceError)
 }
