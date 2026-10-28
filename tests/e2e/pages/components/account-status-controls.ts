@@ -5,89 +5,57 @@ import { Page, Locator } from "@playwright/test";
 import { Timeouts } from "../../constants/timeouts";
 import { UIMessages } from "../../constants/ui-messages";
 
+const { actions, status } = UIMessages.accountStatus;
+
+/** Matches exactly one of the given labels. */
+const oneOf = (labels: readonly string[]): RegExp => new RegExp(`^(${labels.join("|")})$`);
+
 /**
- * The lifecycle controls a user, agent or application details page shares: the header's Actions
- * menu (suspend, unsuspend, unsuspend and unlock, unlock), its confirmation dialog, the status
- * banner above the tabs, and the toast an operation ends with. Each details page object composes
- * one, the same way pages compose the UnsavedChangesBar.
+ * The lifecycle controls a user or agent details page shares: a button per action the record's
+ * status allows (Suspend, Unsuspend, Unlock), the inline confirmation Suspend and Unsuspend ask for,
+ * and the status the page shows. Each details page object composes one.
  */
 export class AccountStatusControls {
-  /** Renders only once the lifecycle flows resolve, so it doubles as the page's readiness signal. */
-  readonly actionsButton: Locator;
-  /** Every operation the open Actions menu offers. */
-  readonly menuItems: Locator;
-  readonly dialog: Locator;
-  readonly dialogTitle: Locator;
+  readonly main: Locator;
+  /** The lifecycle buttons the page offers, in page order. Only rendered once the flows resolve. */
+  readonly actionButtons: Locator;
+  /** The inline confirmation an action asks for; absent until one is chosen. */
+  readonly confirmation: Locator;
   readonly operatorNoteField: Locator;
-  /** The banner a suspended or locked record shows; absent while the record is active. */
-  readonly statusBanner: Locator;
+  /** The record's access status: Active, Locked or Suspended. */
+  readonly status: Locator;
 
   constructor(readonly page: Page) {
-    this.actionsButton = page.getByTestId("account-status-actions");
-    this.menuItems = page.getByRole("menuitem");
-    this.dialog = page.getByRole("dialog");
-    this.dialogTitle = this.dialog.locator("h2");
-    this.operatorNoteField = this.dialog.getByLabel(UIMessages.accountStatus.operatorNoteLabel);
-    this.statusBanner = page.getByTestId("access-status-banner");
+    this.main = page.getByRole("main");
+    this.actionButtons = this.main.getByRole("button", { name: oneOf(Object.values(actions)) });
+    this.confirmation = this.main
+      .getByRole("group")
+      .filter({ has: page.getByRole("button", { name: UIMessages.accountStatus.cancel, exact: true }) });
+    this.operatorNoteField = this.confirmation.getByLabel(UIMessages.accountStatus.operatorNoteLabel);
+    this.status = this.main.getByText(oneOf(Object.values(status)), { exact: true });
   }
 
-  /** Wait for the Actions menu, which appears once the record and its lifecycle flows have loaded. */
+  /** Wait for the record and its lifecycle flows to load, which renders the first lifecycle button. */
   async waitForReady(): Promise<void> {
-    await this.actionsButton.waitFor({ state: "visible", timeout: Timeouts.PAGE_LOAD });
+    await this.actionButtons.first().waitFor({ state: "visible", timeout: Timeouts.PAGE_LOAD });
   }
 
-  /**
-   * The menu entry for an operation. Matched on its label alone, since each entry's accessible name
-   * also carries its hint, and "Unsuspend" is a prefix of "Unsuspend and unlock".
-   */
-  menuItem(label: string): Locator {
-    return this.menuItems.filter({ has: this.page.getByText(label, { exact: true }) });
+  /** The button for an action, outside its confirmation. */
+  action(label: string): Locator {
+    return this.actionButtons.filter({ hasText: oneOf([label]) });
   }
 
-  async openActions(): Promise<void> {
-    await this.actionsButton.click();
-    await this.menuItems.first().waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
-  }
-
-  /** Close the Actions menu without choosing anything. */
-  async closeActions(): Promise<void> {
-    await this.page.keyboard.press("Escape");
-    await this.menuItems.first().waitFor({ state: "hidden", timeout: Timeouts.ELEMENT_VISIBILITY });
-  }
-
-  /** The visible labels of every operation the Actions menu offers, in menu order. */
-  async offeredActions(): Promise<string[]> {
-    await this.openActions();
-    const labels: string[] = [];
-    for (const item of await this.menuItems.all()) {
-      // The label is the entry's primary text; the hint is its secondary text.
-      labels.push(((await item.locator(".MuiListItemText-primary").textContent()) ?? "").trim());
-    }
-    await this.closeActions();
-    return labels;
-  }
-
-  /** Open the Actions menu and choose an operation. Unlock runs at once; the others open a dialog. */
+  /** Choose an action. Unlock runs at once; Suspend and Unsuspend ask for confirmation first. */
   async chooseAction(label: string): Promise<void> {
-    await this.openActions();
-    await this.menuItem(label).click();
+    await this.action(label).first().click();
   }
 
-  /** Confirm the open dialog with its primary button. */
+  /** Confirm the open confirmation with its action button. */
   async confirm(label: string): Promise<void> {
-    await this.dialog.getByRole("button", { name: label, exact: true }).click();
+    await this.confirmation.getByRole("button", { name: label, exact: true }).click();
   }
 
   async cancel(): Promise<void> {
-    await this.dialog.getByRole("button", { name: UIMessages.accountStatus.cancel, exact: true }).click();
-  }
-
-  /**
-   * The toast whose message starts with the given text. The flows' email nodes are best-effort, so
-   * a deployment without an email sender toasts a warning that starts with the same words.
-   */
-  toast(startsWith: string): Locator {
-    const escaped = startsWith.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return this.page.getByRole("alert").filter({ hasText: new RegExp(`^${escaped}`) });
+    await this.confirmation.getByRole("button", { name: UIMessages.accountStatus.cancel, exact: true }).click();
   }
 }
