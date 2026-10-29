@@ -4,13 +4,14 @@
 import {fireEvent, render, screen} from '@thunderid/test-utils';
 import {useEffect} from 'react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
+import type {NotificationConfigResponse} from '../../models/connection';
 import ConnectionCreateWizardPage from '../ConnectionCreateWizardPage';
 
 const mutateMock = vi.fn();
 const resetMock = vi.fn();
 const navigateMock = vi.fn();
 const showToastMock = vi.fn();
-const mutationState = {isPending: false, isError: false};
+const mutationState = {isPending: false, isError: false, isSuccess: false};
 /** Extra form values the stubbed form enters after the defaults, e.g. authentication fields. */
 const formExtraValues: Record<string, string> = {};
 const ouSelection = {ouId: 'ou-root', setOuId: vi.fn(), needsPicker: false, isLoading: false};
@@ -72,6 +73,18 @@ vi.mock('../../api/useConnectionMeta', () => ({
 }));
 vi.mock('../../api/useCreateConnection', () => ({
   default: () => ({mutate: mutateMock, reset: resetMock, ...mutationState}),
+}));
+const emailProviders: {isSuccess: boolean; data: {id: string}[] | undefined} = {isSuccess: true, data: [{id: 'sm0'}]};
+vi.mock('../../api/useEmailProviders', () => ({default: () => emailProviders}));
+const notificationConfig: {isSuccess: boolean; data: NotificationConfigResponse | undefined} = {
+  isSuccess: true,
+  data: {readOnly: {}, writable: {}, merged: {}},
+};
+vi.mock('../../api/useGetNotificationConfig', () => ({default: () => notificationConfig}));
+const setDefaultSenderMock = vi.fn();
+const setDefaultSenderState = {isPending: false};
+vi.mock('../../api/useSetDefaultEmailSender', () => ({
+  default: () => ({mutate: setDefaultSenderMock, ...setDefaultSenderState}),
 }));
 
 vi.mock('../../components/ConnectionForm', () => ({
@@ -147,6 +160,12 @@ describe('ConnectionCreateWizardPage', () => {
     ouSelection.ouId = 'ou-root';
     ouSelection.needsPicker = false;
     ouSelection.isLoading = false;
+    mutationState.isSuccess = false;
+    setDefaultSenderState.isPending = false;
+    emailProviders.isSuccess = true;
+    emailProviders.data = [{id: 'sm0'}];
+    notificationConfig.isSuccess = true;
+    notificationConfig.data = {readOnly: {}, writable: {}, merged: {}};
   });
 
   it('shows the type heading without the redundant step label', () => {
@@ -685,5 +704,101 @@ describe('ConnectionCreateWizardPage', () => {
     expect(screen.getByTestId('connection-type-option-trusted-idp')).toBeInTheDocument();
     expect(screen.getByTestId('connection-type-option-policy-decision-point')).toBeInTheDocument();
     expect(screen.getByTestId('connection-type-option-email-smtp')).toBeInTheDocument();
+  });
+
+  describe('first email sender', () => {
+    function createSender(type = 'email-smtp'): void {
+      render(<ConnectionCreateWizardPage />);
+      selectTypeAndName(`connection-type-option-${type}`, 'Corp Sender');
+      fireEvent.click(screen.getByTestId('wizard-create'));
+      const {onSuccess} = mutateMock.mock.calls[0][1] as {onSuccess: (data: {id: string}) => void};
+      onSuccess({id: 'new-1'});
+    }
+
+    beforeEach(() => {
+      emailProviders.data = [];
+    });
+
+    it('makes the only email sender the default, then opens it', () => {
+      createSender();
+
+      expect(setDefaultSenderMock).toHaveBeenCalledWith({defaultEmailSenderId: 'new-1'}, expect.any(Object));
+      expect(navigateMock).not.toHaveBeenCalled();
+
+      const {onSuccess} = setDefaultSenderMock.mock.calls[0][1] as {onSuccess: () => void};
+      onSuccess();
+      expect(navigateMock).toHaveBeenCalledWith('/connections/email-smtp/new-1');
+    });
+
+    it('warns and still opens the sender when it cannot be made the default', () => {
+      createSender();
+
+      const {onError} = setDefaultSenderMock.mock.calls[0][1] as {onError: () => void};
+      onError();
+      expect(showToastMock).toHaveBeenCalledWith(
+        'Connection created, but it could not be made the default email sender.',
+        'warning',
+      );
+      expect(navigateMock).toHaveBeenCalledWith('/connections/email-smtp/new-1');
+    });
+
+    it('leaves the default alone when another email sender exists', () => {
+      emailProviders.data = [{id: 'sm0'}];
+      createSender();
+
+      expect(setDefaultSenderMock).not.toHaveBeenCalled();
+      expect(navigateMock).toHaveBeenCalledWith('/connections/email-smtp/new-1');
+    });
+
+    it('leaves the default alone when the deployment configuration fixes it', () => {
+      notificationConfig.data = {
+        readOnly: {defaultEmailSenderId: 'file'},
+        writable: {},
+        merged: {defaultEmailSenderId: 'file'},
+      };
+      createSender();
+
+      expect(setDefaultSenderMock).not.toHaveBeenCalled();
+    });
+
+    it('leaves the default alone when the existing senders are not known', () => {
+      emailProviders.isSuccess = false;
+      emailProviders.data = undefined;
+      createSender();
+
+      expect(setDefaultSenderMock).not.toHaveBeenCalled();
+    });
+
+    it('leaves the default alone when the notification section is not known', () => {
+      notificationConfig.isSuccess = false;
+      notificationConfig.data = undefined;
+      createSender();
+
+      expect(setDefaultSenderMock).not.toHaveBeenCalled();
+    });
+
+    // The create succeeded, so a second click would create a duplicate.
+    it('keeps create disabled after the connection is created', () => {
+      mutationState.isSuccess = true;
+      render(<ConnectionCreateWizardPage />);
+      selectTypeAndName('connection-type-option-email-smtp', 'Corp Sender');
+
+      expect(screen.getByTestId('wizard-create')).toBeDisabled();
+    });
+
+    it('keeps create disabled while the new sender is being made the default', () => {
+      setDefaultSenderState.isPending = true;
+      render(<ConnectionCreateWizardPage />);
+      selectTypeAndName('connection-type-option-email-smtp', 'Corp Sender');
+
+      expect(screen.getByTestId('wizard-create')).toBeDisabled();
+    });
+
+    it('never makes a connection that is not an email sender the default', () => {
+      createSender('http');
+
+      expect(setDefaultSenderMock).not.toHaveBeenCalled();
+      expect(navigateMock).toHaveBeenCalledWith('/connections/http/new-1');
+    });
   });
 });

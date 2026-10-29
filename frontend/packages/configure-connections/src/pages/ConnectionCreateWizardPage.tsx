@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
-import {useConfig} from '@thunderid/contexts';
+import {useConfig, useToast} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useMemo, useState} from 'react';
@@ -10,6 +10,9 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useConnectionMeta from '../api/useConnectionMeta';
 import useCreateConnection from '../api/useCreateConnection';
+import useEmailProviders from '../api/useEmailProviders';
+import useGetNotificationConfig from '../api/useGetNotificationConfig';
+import useSetDefaultEmailSender from '../api/useSetDefaultEmailSender';
 import ConnectionCreateHint from '../components/ConnectionCreateHint';
 import ConnectionForm from '../components/ConnectionForm';
 import ConnectionNameStep from '../components/create-connection/ConnectionNameStep';
@@ -54,6 +57,7 @@ type Step = (typeof Step)[keyof typeof Step];
 export default function ConnectionCreateWizardPage(): JSX.Element {
   const {t} = useTranslation('connections');
   const navigate = useNavigate();
+  const {showToast} = useToast();
   const routes = useConnectionRoutes();
   const {getGateCallbackUrl} = useConfig();
 
@@ -79,13 +83,17 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
       ? selectedType
       : ConnectionTypes.OIDC;
   const createMutation = useCreateConnection(activeType);
+  const meta = VENDOR_META_BY_TYPE[activeType];
+  const isEmailSender: boolean = meta?.categories.includes('email') ?? false;
+  const emailProvidersQuery = useEmailProviders({enabled: isEmailSender});
+  const notificationConfigQuery = useGetNotificationConfig({enabled: isEmailSender});
+  const setDefaultSender = useSetDefaultEmailSender();
   // The same query the configure step's form reads, so only the selected method's properties are sent.
   const {data: connectionMeta} = useConnectionMeta(step === Step.CONFIGURE ? activeType : undefined);
   const authenticationMethods: OutboundAuthMethod[] = useMemo(
     () => connectionMeta?.authentication.methods ?? [],
     [connectionMeta],
   );
-  const meta = VENDOR_META_BY_TYPE[activeType];
   const fields = CONNECTION_FORM_FIELDS[activeType];
   const createFields = useMemo(() => fieldsForMode(activeType, 'create'), [activeType]);
   const redirectUri = getGateCallbackUrl();
@@ -169,8 +177,35 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
       }),
       ouId,
     };
+    // The first email sender becomes the default, unless the deployment configuration fixes it.
+    const makeDefault: boolean =
+      isEmailSender &&
+      emailProvidersQuery.isSuccess &&
+      emailProvidersQuery.data.length === 0 &&
+      notificationConfigQuery.isSuccess &&
+      !notificationConfigQuery.data.readOnly?.defaultEmailSenderId;
     createMutation.mutate(payload, {
-      onSuccess: (created: ConnectionResponse) => void navigate(routes.connections.detail(activeType, created.id)),
+      onSuccess: (created: ConnectionResponse) => {
+        const goToCreated = (): void => void navigate(routes.connections.detail(activeType, created.id));
+        if (!makeDefault) {
+          goToCreated();
+          return;
+        }
+        // The connection exists by now, so a failure here must not read as a create failure.
+        setDefaultSender.mutate(
+          {defaultEmailSenderId: created.id},
+          {
+            onSuccess: goToCreated,
+            onError: () => {
+              showToast(
+                t('create.setDefaultError', 'Connection created, but it could not be made the default email sender.'),
+                'warning',
+              );
+              goToCreated();
+            },
+          },
+        );
+      },
       onError: (error: Error) => {
         if (isConflictError(error)) {
           bounceToNameStep();
@@ -267,7 +302,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
         </Button>
         <Button
           variant="contained"
-          disabled={!formValid || createMutation.isPending}
+          disabled={!formValid || createMutation.isPending || createMutation.isSuccess || setDefaultSender.isPending}
           onClick={handleCreate}
           data-testid="wizard-create"
         >

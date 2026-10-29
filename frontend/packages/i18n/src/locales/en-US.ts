@@ -2215,6 +2215,7 @@ const translations = {
     'card.configured': 'Configured',
     'card.notConfigured': 'Not configured',
     'card.comingSoon': 'Coming soon',
+    'card.default': 'Default',
     'card.addCustom.title': 'Add custom connection',
     'card.addCustom.description': "Set up a connection that isn't in the catalog.",
 
@@ -2289,6 +2290,7 @@ const translations = {
 
     // Connection detail / edit page
     'detail.backToConnections': 'Back to connections',
+    'detail.defaultBadgeManaged': 'Managed by server configuration.',
     'detail.loadError.title': 'Failed to load connection',
     'detail.notFound.title': 'Connection not found',
     'detail.notFound.description': 'This connection may have been deleted or the link is incorrect.',
@@ -2625,14 +2627,30 @@ const translations = {
     'delete.usages.loading': 'Checking affected resources…',
     'delete.usages.more': '+{{count}} more',
     'delete.blocking.title': 'This connection cannot be deleted until the following resources are updated or removed:',
+    'delete.defaultEmailSender':
+      'This is the default email sender. After you delete it, system-generated emails, such as account lock notifications, are not sent until another sender is set as the default.',
 
     // Toasts
     'create.success': 'Connection created successfully.',
     'create.error': 'Failed to create connection.',
+    'create.setDefaultError': 'Connection created, but it could not be made the default email sender.',
     'update.success': 'Connection updated successfully.',
     'update.error': 'Failed to update connection.',
     'delete.success': 'Connection deleted successfully.',
     'delete.error': 'Failed to delete connection.',
+
+    // Default email sender
+    'setDefault.action': 'Set as default',
+    'setDefault.title': 'Set default email sender',
+    'setDefault.message':
+      '<bold>{{name}}</bold> will be used as the default sender for system-generated emails, such as account lock notifications.',
+    'setDefault.replaces': 'This will replace the current default email sender.',
+    'setDefault.confirm': 'Set as default',
+    'setDefault.setting': 'Setting…',
+    'setDefault.success': '{{name}} is now the default email sender.',
+    'setDefault.error': 'Failed to set the default email sender.',
+    'setDefault.lockedReason': 'The default email sender is fixed by the deployment configuration.',
+    'defaultSender.loadError': 'Failed to load the default email sender.',
 
     // Errors / validation
     'error.duplicateName': 'A connection with this name already exists.',
