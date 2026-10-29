@@ -240,6 +240,21 @@ func SSOCookieNames(client *http.Client) ([]string, error) {
 	return names, nil
 }
 
+// SSOCookies returns the per-flow SSO cookies the session client's jar holds for the server, by name.
+func SSOCookies(client *http.Client) (map[string]string, error) {
+	serverURL, err := url.Parse(TestServerURL)
+	if err != nil {
+		return nil, err
+	}
+	cookies := map[string]string{}
+	for _, cookie := range client.Jar.Cookies(serverURL) {
+		if strings.HasPrefix(cookie.Name, SSOCookiePrefix) {
+			cookies[cookie.Name] = cookie.Value
+		}
+	}
+	return cookies, nil
+}
+
 // ExecuteAuthenticationFlow executes an authentication flow and returns the flow step.
 func ExecuteAuthenticationFlow(executionId string, inputs map[string]string, action string,
 	challengeToken ...string) (*FlowStep, error) {

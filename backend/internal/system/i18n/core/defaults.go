@@ -777,6 +777,8 @@ var defaultMessages = map[string]string{
 	"error.flowexecservice.invalid_node_response_description": "Error response received from the node",
 	"error.flowexecservice.invalid_request_payload": "Invalid request payload",
 	"error.flowexecservice.invalid_request_payload_description": "Failed to decode request payload",
+	"error.flowexecservice.invalid_session_data": "Invalid session data",
+	"error.flowexecservice.invalid_session_data_description": "Each session data entry needs a flow identifier and a session handle",
 	"error.flowexecservice.max_call_depth_exceeded": "Maximum call depth exceeded",
 	"error.flowexecservice.max_call_depth_exceeded_description": "The maximum allowed call depth has been exceeded during flow execution",
 	"error.flowexecservice.recovery_not_allowed": "Recovery not allowed",
