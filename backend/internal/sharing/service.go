@@ -963,6 +963,9 @@ func (s *sharingService) narrowOne(
 	if !ok {
 		return StoredRule{}, withDetail(ErrorUnknownFieldKey, fieldKey)
 	}
+	if decl.EditableOnly && !requested.statesEditableOnly() {
+		return StoredRule{}, withDetail(ErrorEditableOnlyRule, fieldKey)
+	}
 	if svcErr := s.validateMembers(ctx, rt, resourceID, fieldKey, initiatingOUID, requested); svcErr != nil {
 		return StoredRule{}, svcErr
 	}

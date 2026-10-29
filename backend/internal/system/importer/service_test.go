@@ -692,13 +692,14 @@ func (f *fakeOUService) UpdateOrganizationUnit(
 type fakeRoleService struct {
 	created []role.RoleCreationDetail
 	updated []role.RoleUpdateDetail
+	deleted []string
 }
 
 func (f *fakeRoleService) CreateRole(
 	_ context.Context, req role.RoleCreationDetail,
 ) (*role.RoleWithPermissionsAndAssignments, *tidcommon.ServiceError) {
 	f.created = append(f.created, req)
-	return &role.RoleWithPermissionsAndAssignments{ID: "role-1", Name: req.Name}, nil
+	return &role.RoleWithPermissionsAndAssignments{ID: "role-1", Name: req.Name, OUID: req.OUID}, nil
 }
 
 func (f *fakeRoleService) GetRoleWithPermissions(
@@ -715,7 +716,7 @@ func (f *fakeRoleService) UpdateRoleWithPermissions(
 	_ context.Context, _ string, req role.RoleUpdateDetail,
 ) (*role.RoleWithPermissions, *tidcommon.ServiceError) {
 	f.updated = append(f.updated, req)
-	return &role.RoleWithPermissions{ID: "role-1", Name: req.Name}, nil
+	return &role.RoleWithPermissions{ID: "role-1", Name: req.Name, OUID: req.OUID}, nil
 }
 
 type fakeRoleAssignmentService struct {
@@ -5335,4 +5336,133 @@ func TestImportResources_ProjectFailureIsReported(t *testing.T) {
 	require.Len(t, resp.Results, 1)
 	assert.Equal(t, statusFailed, resp.Results[0].Status)
 	assert.Equal(t, "PRJ-1012", resp.Results[0].Code)
+}
+
+type ImportRoleSharingTestSuite struct {
+	suite.Suite
+	roleSvc           *fakeRoleService
+	roleAssignmentSvc *fakeRoleAssignmentService
+	sharingSvc        *fakeSharingService
+	svc               ImportServiceInterface
+}
+
+func TestImportRoleSharingTestSuite(t *testing.T) {
+	suite.Run(t, new(ImportRoleSharingTestSuite))
+}
+
+func (s *ImportRoleSharingTestSuite) SetupTest() {
+	s.roleSvc = &fakeRoleService{}
+	s.roleAssignmentSvc = &fakeRoleAssignmentService{}
+	s.sharingSvc = &fakeSharingService{}
+	svc := newImportService(
+		nil, nil, nil, nil, nil, nil, s.roleSvc, s.roleAssignmentSvc,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc.(*importService).sharingService = s.sharingSvc
+	s.svc = svc
+}
+
+// roleDocWithPolicies is one role document carrying a sharing policy and its assignments.
+func roleDocWithPolicies(id string) string {
+	return strings.Join([]string{
+		"resource_type: role",
+		"id: " + id,
+		"name: Support Agent",
+		"ouId: ou-owner",
+		"permissions: []",
+		"sharingPolicies:",
+		"  - id: " + id + "-policy-owner",
+		"    childUnits:",
+		"      mode: all",
+		"assignments:",
+		"  - type: group",
+		"    id: group1",
+		"  - type: user",
+		"    id: user1",
+		"",
+	}, "\n")
+}
+
+// The importer replays the policies a role document carries once the role exists, against the
+// organization unit that owns it.
+func (s *ImportRoleSharingTestSuite) TestPoliciesAreReplayedOnCreate() {
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{Content: roleDocWithPolicies("role-new")})
+
+	s.Require().Nil(err)
+	s.Require().Len(resp.Results, 1)
+	s.Equal(statusSuccess, resp.Results[0].Status)
+	s.Require().Len(s.roleSvc.created, 1)
+	s.Len(s.roleSvc.created[0].Assignments, 2, "the role is created with its assignments, as before")
+
+	s.Require().Len(s.sharingSvc.calls, 1)
+	call := s.sharingSvc.calls[0]
+	s.Equal(role.RoleSharingType, call.resourceType)
+	s.Equal("role-1", call.resourceID)
+	s.Equal("ou-owner", call.owningOUID)
+	s.Require().Len(call.policies, 1)
+	s.Require().NotNil(call.policies[0].ChildUnits)
+	s.Empty(s.roleSvc.deleted)
+}
+
+// A refused policy has to undo the create: the caller is told the document failed and gets no id
+// back, so a role left behind would hold the name a retry needs.
+func (s *ImportRoleSharingTestSuite) TestRefusedPoliciesUndoTheCreate() {
+	s.sharingSvc.failure = &sharing.PolicyReplayError{
+		Index: 0, InitiatingOUID: "ou-owner", Err: &sharing.ErrorInvalidRequestFormat}
+
+	resp, _ := s.svc.ImportResources(context.Background(), &ImportRequest{Content: roleDocWithPolicies("role-new")})
+
+	s.Require().Len(resp.Results, 1)
+	s.Equal(statusFailed, resp.Results[0].Status)
+	s.Contains(resp.Results[0].Message, "sharing policy 1 (organization unit ou-owner)")
+	s.Equal([]string{"role-1"}, s.roleSvc.deleted)
+}
+
+// An update replays the document's policies against the role as stored, and adds its assignments as
+// before.
+func (s *ImportRoleSharingTestSuite) TestUpsertReplaysPolicies() {
+	upsert := true
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{
+		Content: roleDocWithPolicies("role-1"),
+		Options: &ImportOptions{Upsert: &upsert},
+	})
+
+	s.Require().Nil(err)
+	s.Require().Len(resp.Results, 1)
+	s.Equal(statusSuccess, resp.Results[0].Status)
+	s.Equal(operationUpdate, resp.Results[0].Operation)
+	s.Require().Len(s.sharingSvc.calls, 1)
+	s.Equal("role-1", s.sharingSvc.calls[0].resourceID)
+	s.Len(s.roleAssignmentSvc.assignments, 2)
+	s.Empty(s.roleSvc.deleted, "an update is not undone")
+}
+
+// A document carrying no policies asks the sharing adapter nothing.
+func (s *ImportRoleSharingTestSuite) TestDocumentWithoutPoliciesAsksTheAdapterNothing() {
+	content := strings.Join([]string{
+		"resource_type: role", "id: role-plain", "name: Plain", "ouId: ou-owner", "permissions: []", "",
+	}, "\n")
+
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	s.Require().Nil(err)
+	s.Equal(statusSuccess, resp.Results[0].Status)
+	s.Empty(s.sharingSvc.calls)
+}
+
+// A misspelled policy field fails the document rather than being dropped, which would share the
+// role with the organization unit the document meant to exclude.
+func (s *ImportRoleSharingTestSuite) TestMisspelledPolicyFieldFailsTheDocument() {
+	content := strings.Join([]string{
+		"resource_type: role", "id: role-typo", "name: Typo", "ouId: ou-owner", "permissions: []",
+		"sharingPolicies:", "  - childUnits:", "      mode: all", "      excludeOuIds: [ou-trial]", "",
+	}, "\n")
+
+	resp, err := s.svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	s.Require().Nil(err)
+	s.Require().Len(resp.Results, 1)
+	s.Equal(statusFailed, resp.Results[0].Status)
+	s.Contains(resp.Results[0].Message, `unknown sharing policy field "excludeOuIds"`)
+	s.Empty(s.roleSvc.created, "nothing is written for a document that does not decode")
+	s.Empty(s.sharingSvc.calls)
 }

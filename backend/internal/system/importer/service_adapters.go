@@ -70,13 +70,14 @@ func documentState(doc parsedDocument) (string, bool) {
 }
 
 type roleDeclarativeYAML struct {
-	ID          string                     `yaml:"id"`
-	Name        string                     `yaml:"name"`
-	Description string                     `yaml:"description,omitempty"`
-	OUID        string                     `yaml:"ouId,omitempty"`
-	OUHandle    string                     `yaml:"ouHandle,omitempty"`
-	Permissions []role.ResourcePermissions `yaml:"permissions"`
-	Assignments []role.RoleAssignment      `yaml:"assignments,omitempty"`
+	ID              string                     `yaml:"id"`
+	Name            string                     `yaml:"name"`
+	Description     string                     `yaml:"description,omitempty"`
+	OUID            string                     `yaml:"ouId,omitempty"`
+	OUHandle        string                     `yaml:"ouHandle,omitempty"`
+	Permissions     []role.ResourcePermissions `yaml:"permissions"`
+	Assignments     []role.RoleAssignment      `yaml:"assignments,omitempty"`
+	SharingPolicies []sharing.PolicyRequest    `yaml:"sharingPolicies,omitempty"`
 }
 
 type userDeclarativeYAML struct {
@@ -376,6 +377,10 @@ func (s *importService) importRole(
 			if updateErr != nil {
 				return serviceErrorOutcome(resourceTypeRole, req.ID, req.Name, operationUpdate, updateErr)
 			}
+			if outcome := s.applySharingPolicies(ctx, role.RoleSharingType, resourceTypeRole,
+				updated.ID, updated.Name, updated.OUID, req.SharingPolicies, operationUpdate); outcome != nil {
+				return *outcome
+			}
 			if len(req.Assignments) > 0 {
 				if s.roleAssignmentService == nil {
 					return serviceErrorOutcome(resourceTypeRole, updated.ID, updated.Name, operationUpdate,
@@ -398,6 +403,17 @@ func (s *importService) importRole(
 	created, svcErr := s.roleService.CreateRole(ctx, createReq)
 	if svcErr != nil {
 		return serviceErrorOutcome(resourceTypeRole, req.ID, req.Name, operationCreate, svcErr)
+	}
+
+	// A policy names the role it governs, so the policies are replayed once the role exists. A refusal
+	// therefore undoes the create, so a retry does not meet a half-imported role.
+	if outcome := s.applySharingPolicies(ctx, role.RoleSharingType, resourceTypeRole,
+		created.ID, created.Name, created.OUID, req.SharingPolicies, operationCreate); outcome != nil {
+		if delErr := s.roleService.DeleteRole(ctx, created.ID); delErr != nil {
+			log.GetLogger().Error(ctx, "Failed to remove a role whose sharing policies were refused",
+				log.String("roleID", created.ID), log.String("code", delErr.Code))
+		}
+		return *outcome
 	}
 	return successOutcome(resourceTypeRole, created.ID, created.Name, operationCreate)
 }

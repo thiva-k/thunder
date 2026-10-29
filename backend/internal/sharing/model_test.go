@@ -257,6 +257,48 @@ func (s *ModelTestSuite) TestOverlayRuleRoundTripsAbsentSeparatelyFromEmpty() {
 	}
 }
 
+// A rule that leaves editable out decodes as one that states nothing, in both encodings, so a field
+// taking editable alone can refuse it rather than read the omission as false.
+func (s *ModelTestSuite) TestOverlayRuleDecodingKeepsAnOmittedEditableApart() {
+	tests := []struct {
+		name         string
+		json         string
+		yaml         string
+		editable     bool
+		editableOnly bool
+	}{
+		{"editable left out", `{}`, `{}`, false, false},
+		{"editable false", `{"editable": false}`, `editable: false`, false, true},
+		{"editable true", `{"editable": true}`, `editable: true`, true, true},
+		{"members named", `{"editable": true, "allowedValues": ["a"]}`, "editable: true\nallowedValues: [a]",
+			true, false},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name+" (json)", func() {
+			var got OverlayRule
+			s.Require().NoError(json.Unmarshal([]byte(tt.json), &got))
+			s.Equal(tt.editable, got.Editable)
+			s.Equal(tt.editableOnly, got.statesEditableOnly())
+		})
+		s.Run(tt.name+" (yaml)", func() {
+			var got OverlayRule
+			s.Require().NoError(yaml.Unmarshal([]byte(tt.yaml), &got))
+			s.Equal(tt.editable, got.Editable)
+			s.Equal(tt.editableOnly, got.statesEditableOnly())
+		})
+	}
+}
+
+// A rule refuses a key it does not declare in both encodings, so a misspelled bound is not read as
+// no bound at all.
+func (s *ModelTestSuite) TestOverlayRuleDecodingRefusesAnUndeclaredKey() {
+	var fromJSON OverlayRule
+	s.Error(json.Unmarshal([]byte(`{"editable": true, "allowedValue": ["a"]}`), &fromJSON))
+	var fromYAML OverlayRule
+	s.Error(yaml.Unmarshal([]byte("editable: true\nallowedValue: [a]"), &fromYAML))
+}
+
 // keysOf returns a map's keys, so field naming can be asserted independently of values.
 func keysOf(m map[string]interface{}) []string {
 	out := make([]string, 0, len(m))
@@ -418,6 +460,27 @@ func (s *ModelTestSuite) TestPolicyCreateBodyBecomesTheFrameworkRequest() {
 	s.Require().NotNil(req.OtherTreeRoots)
 	s.Equal([]RootUnitRequest{{OUID: "partner-root"}}, req.OtherTreeRoots.Units)
 	s.Nil(req.AllUnits)
+}
+
+// Every section of a body carries its terms across, so an edit that restates them keeps them.
+func (s *ModelTestSuite) TestPolicyBodyCarriesTheOverlayRules() {
+	var body PolicyUpdateBody
+	s.Require().NoError(json.Unmarshal([]byte(`{
+		"allUnits": {"overlayRules": {"f": {"editable": false}}},
+		"childUnits": {"mode": "all", "overlayRules": {"f": {"editable": false}},
+			"units": [{"ouId": "child-a", "reach": "unit", "overlayRules": {"f": {"editable": false}}}]},
+		"otherTreeRoots": {"mode": "all", "overlayRules": {"f": {"editable": false}},
+			"units": [{"ouId": "partner-root", "overlayRules": {"f": {"editable": false}}}]}
+	}`), &body))
+
+	req := body.ToPolicyRequest()
+
+	pinned := map[string]OverlayRule{"f": {Editable: false}}
+	s.Equal(pinned, req.AllUnits.OverlayRules)
+	s.Equal(pinned, req.ChildUnits.OverlayRules)
+	s.Equal(pinned, req.ChildUnits.Units[0].OverlayRules)
+	s.Equal(pinned, req.OtherTreeRoots.OverlayRules)
+	s.Equal(pinned, req.OtherTreeRoots.Units[0].OverlayRules)
 }
 
 // An update body carries the version and the sections, and names no issuer.
