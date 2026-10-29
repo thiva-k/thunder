@@ -28,12 +28,13 @@ var defaultGrantTypes = []providers.GrantType{
 	providers.GrantTypeClientCredentials,
 }
 
-// delegationGrantTypes are the grant types that let an agent act for a signed-in user. A delegated
-// agent needs at least one of them.
+// delegationGrantTypes are the grant types that let an agent act for a user. A delegated agent needs
+// at least one of them.
 var delegationGrantTypes = []providers.GrantType{
 	providers.GrantTypeAuthorizationCode,
 	providers.GrantTypeCIBA,
 	providers.GrantTypeTokenExchange,
+	providers.GrantTypeJWTBearer,
 }
 
 // defaultDelegatedGrantTypes are the grant types added to a delegated agent that requests none

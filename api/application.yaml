@@ -1985,7 +1985,7 @@ components:
         userConfig:
           allOf:
             - $ref: '#/components/schemas/AccessTokenSubConfig'
-          description: Configuration applied when the access token's subject is an end user.
+          description: Configuration applied when the access token's subject is an end user. For the urn:ietf:params:oauth:grant-type:jwt-bearer grant, whose subject is a user of an external identity provider, only validityPeriod applies.
         clientConfig:
           allOf:
             - $ref: '#/components/schemas/AccessTokenSubConfig'
@@ -2281,19 +2281,15 @@ components:
           type: array
           items:
             type: string
-            enum: ["authorization_code", "client_credentials", "refresh_token", "implicit", "password", "urn:ietf:params:oauth:grant-type:token-exchange", "urn:ietf:params:oauth:grant-type:jwt-bearer"]
+            enum: ["authorization_code", "client_credentials", "refresh_token", "urn:openid:params:grant-type:ciba", "urn:ietf:params:oauth:grant-type:token-exchange", "urn:ietf:params:oauth:grant-type:jwt-bearer"]
           description: >-
-            A list of grant types supported by the OAuth application. Defaults to
-            ["authorization_code"] if not specified. The
-            urn:ietf:params:oauth:grant-type:jwt-bearer grant, used to present an ID-JAG assertion
-            issued by a trusted external IdP (draft-ietf-oauth-identity-assertion-authz-grant),
-            requires a confidential client (tokenEndpointAuthMethod other than "none").
+            A list of grant types supported by the OAuth application. Defaults to ["authorization_code"] if not specified. The urn:ietf:params:oauth:grant-type:jwt-bearer grant, used to present an ID-JAG assertion issued by a trusted external IdP (draft-ietf-oauth-identity-assertion-authz-grant), requires a confidential client (tokenEndpointAuthMethod other than "none").
           example: ["authorization_code", "refresh_token"]
         responseTypes:
           type: array
           items:
             type: string
-            enum: ["code", "token"]
+            enum: ["code"]
           description: A list of response types supported by the OAuth application. Defaults to ["code"] if not specified.
           example: ["code"]
         tokenEndpointAuthMethod:
@@ -2324,9 +2320,7 @@ components:
         includeActClaim:
           type: boolean
           description: >-
-            When true, access tokens this client obtains for a user through the authorization_code
-            or CIBA grant include an implicit on-behalf-of `act` claim identifying the application.
-            Agent clients always include the claim, regardless of this setting.
+            When true, access tokens this client obtains for a user through the authorization_code, CIBA or jwt-bearer grant, or through token exchange without an actor_token, include an implicit on-behalf-of `act` claim identifying the application. Agent clients always include the claim, regardless of this setting.
           example: false
           default: false
         clientIdMetadataDocument:
@@ -2419,19 +2413,15 @@ components:
           type: array
           items:
             type: string
-            enum: ["authorization_code", "client_credentials", "refresh_token", "implicit", "password", "urn:ietf:params:oauth:grant-type:token-exchange", "urn:ietf:params:oauth:grant-type:jwt-bearer"]
+            enum: ["authorization_code", "client_credentials", "refresh_token", "urn:openid:params:grant-type:ciba", "urn:ietf:params:oauth:grant-type:token-exchange", "urn:ietf:params:oauth:grant-type:jwt-bearer"]
           description: >-
-            A list of grant types supported by the OAuth application. Defaults to
-            ["authorization_code"] if not specified. The
-            urn:ietf:params:oauth:grant-type:jwt-bearer grant, used to present an ID-JAG assertion
-            issued by a trusted external IdP (draft-ietf-oauth-identity-assertion-authz-grant),
-            requires a confidential client (tokenEndpointAuthMethod other than "none").
+            A list of grant types supported by the OAuth application. Defaults to ["authorization_code"] if not specified. The urn:ietf:params:oauth:grant-type:jwt-bearer grant, used to present an ID-JAG assertion issued by a trusted external IdP (draft-ietf-oauth-identity-assertion-authz-grant), requires a confidential client (tokenEndpointAuthMethod other than "none").
           example: ["authorization_code", "refresh_token"]
         responseTypes:
           type: array
           items:
             type: string
-            enum: ["code", "token"]
+            enum: ["code"]
           description: A list of response types supported by the OAuth application. Defaults to ["code"] if not specified.
           example: ["code"]
         tokenEndpointAuthMethod:
@@ -2462,9 +2452,7 @@ components:
         includeActClaim:
           type: boolean
           description: >-
-            When true, access tokens this client obtains for a user through the authorization_code
-            or CIBA grant include an implicit on-behalf-of `act` claim identifying the application.
-            Agent clients always include the claim, regardless of this setting.
+            When true, access tokens this client obtains for a user through the authorization_code, CIBA or jwt-bearer grant, or through token exchange without an actor_token, include an implicit on-behalf-of `act` claim identifying the application. Agent clients always include the claim, regardless of this setting.
           example: false
           default: false
         clientIdMetadataDocument:

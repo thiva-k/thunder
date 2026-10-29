@@ -178,7 +178,7 @@ So **filter agent traffic on `act_type`, never on `sub_type`.** A query keyed on
 
 `is_delegated` is a floor, not an exact count:
 
-- An impersonation exchange that presents no actor token reports `is_delegated: false`.
+- An application's token exchange that presents no actor token reports `is_delegated: false` unless the application has `includeActClaim` on. An agent's exchange without an actor token names the agent as the actor. A request for an ID-JAG reports `is_delegated: false` for every client, because the ID-JAG carries no `act` claim.
 - On token exchange, `jwt-bearer`, and ID-JAG, `sub` and `sub_type` are omitted when the presented subject is a mapped attribute rather than a resource ID, because a mapped attribute resolves to no entity and <ProductName /> omits the field rather than publishing a value it cannot verify.
 
 Note this next to any panel that reports delegation, because a reviewer will act on the number.
@@ -442,7 +442,7 @@ Keyed on `client_id`, which is operator chosen and present on every token event.
 {span.act_type="agent" && span.component="AuthHandler" && span."event.status"="success"} | count_over_time() by (span.grant_type)
 ```
 
-`client_credentials` is the agent acting as itself. The authorization code flow with an actor claim is the on-behalf-of path.
+`client_credentials` is the agent acting as itself. The grants that add an actor claim, such as authorization code, CIBA, JWT bearer, and token exchange other than an ID-JAG request, are the on-behalf-of path.
 
 ### Delegated against direct
 

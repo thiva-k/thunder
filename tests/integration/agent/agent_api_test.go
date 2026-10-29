@@ -23,6 +23,8 @@ const (
 	// Handles of the two isolated auth flows used by the flow-handle resolution tests.
 	handleAuthFlowHandle1 = "agent-api-handle-flow-1"
 	handleAuthFlowHandle2 = "agent-api-handle-flow-2"
+
+	jwtBearerGrant = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 )
 
 var (
@@ -610,8 +612,9 @@ func (ts *AgentAPITestSuite) TestCreateAgent_PublicClientIsNotGivenClientCredent
 	ts.Assert().Equal([]string{"authorization_code"}, created.InboundAuthConfig[0].Config.GrantTypes)
 }
 
-// Any one of authorization code, CIBA and token exchange makes an agent delegated. The others are not
-// needed: CIBA signs a user in through the backchannel and issues refresh tokens itself.
+// Any one of authorization code, CIBA, token exchange and JWT bearer makes an agent delegated. The
+// others are not needed: CIBA signs a user in through the backchannel and issues refresh tokens itself,
+// and an ID-JAG redeemed with JWT bearer always names a user.
 func (ts *AgentAPITestSuite) TestCreateAgent_DelegatedWithoutTheAuthorizationCodeGrant() {
 	const (
 		cibaGrant     = "urn:openid:params:grant-type:ciba"
@@ -626,6 +629,9 @@ func (ts *AgentAPITestSuite) TestCreateAgent_DelegatedWithoutTheAuthorizationCod
 		{"CIBAWithRefreshToken", []string{cibaGrant, "refresh_token"},
 			[]string{"client_credentials", cibaGrant, "refresh_token"}},
 		{"TokenExchangeAlone", []string{exchangeGrant}, []string{"client_credentials", exchangeGrant}},
+		{"JWTBearerAlone", []string{jwtBearerGrant}, []string{"client_credentials", jwtBearerGrant}},
+		{"ClientCredentialsAndJWTBearer", []string{"client_credentials", jwtBearerGrant},
+			[]string{"client_credentials", jwtBearerGrant}},
 	}
 
 	for _, tc := range cases {
@@ -782,6 +788,41 @@ func (ts *AgentAPITestSuite) TestCreateAgent_InvalidIDJAGConfigRejected() {
 			ts.Assert().Equal(tc.wantKey, errResp.Description.Key)
 		})
 	}
+}
+
+func (ts *AgentAPITestSuite) TestCreateAgent_IDJAGConfigRoundTrips() {
+	idJag := &IDJAGConfig{
+		Enabled:          true,
+		AllowedAudiences: []string{"https://idjag-roundtrip-rs.example.com"},
+		ValidityPeriod:   450,
+	}
+	agent := Agent{
+		OUID:       testOUID,
+		Type:       "default",
+		Attributes: agentAttrs("idjag-roundtrip", nil),
+		InboundAuthConfig: []InboundAuthConfig{{
+			Type: "oauth2",
+			Config: &OAuthAgentConfig{
+				GrantTypes: []string{"client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"},
+				Token:      &OAuthTokenConfig{IDJAG: idJag},
+			},
+		}},
+	}
+	created, _ := ts.createAgentWithStatus(agent, http.StatusCreated)
+	ts.Require().NotEmpty(created.ID)
+
+	resp, err := doGet(testServerURL + agentBasePath + "/" + created.ID)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+	ts.Require().Equal(http.StatusOK, resp.StatusCode)
+	var fetched Agent
+	ts.Require().NoError(json.NewDecoder(resp.Body).Decode(&fetched))
+
+	ts.Require().Len(fetched.InboundAuthConfig, 1)
+	cfg := fetched.InboundAuthConfig[0].Config
+	ts.Require().NotNil(cfg)
+	ts.Require().NotNil(cfg.Token)
+	ts.Assert().Equal(idJag, cfg.Token.IDJAG)
 }
 
 func (ts *AgentAPITestSuite) TestCreateAgent_MissingType() {
@@ -1073,6 +1114,18 @@ func (ts *AgentAPITestSuite) TestUpdateAgent_DelegatedWithoutADelegationGrantIsR
 	var fetched Agent
 	ts.Require().NoError(json.NewDecoder(resp.Body).Decode(&fetched))
 	ts.Assert().Empty(fetched.InboundAuthConfig)
+}
+
+func (ts *AgentAPITestSuite) TestUpdateAgent_DelegatedWithJWTBearerKeepsTheGrants() {
+	agent := delegatedAgent("update-delegated-jwt-bearer", "client_credentials", jwtBearerGrant)
+	agent.InboundAuthConfig[0].Config.RedirectURIs = nil
+	created, _ := ts.createAgentWithStatus(agent, http.StatusCreated)
+	ts.Require().NotEmpty(created.ID)
+
+	updated, _ := ts.updateAgentWithStatus(created.ID, agent, http.StatusOK)
+
+	ts.Require().Len(updated.InboundAuthConfig, 1)
+	ts.Assert().Equal([]string{"client_credentials", jwtBearerGrant}, updated.InboundAuthConfig[0].Config.GrantTypes)
 }
 
 // --- transition: inbound profile → entity-only on update ---

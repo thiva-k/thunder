@@ -503,7 +503,7 @@ var (
 	}
 
 	// ErrorMissingDelegationGrantType is returned when a delegated agent is given grant types beyond
-	// client credentials but none that lets it act for a signed-in user.
+	// client credentials but none that lets it act for a user.
 	ErrorMissingDelegationGrantType = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
 		Code: "AGT-1044",

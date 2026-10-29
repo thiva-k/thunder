@@ -132,11 +132,14 @@ func (suite *DelegationTestSuite) TestDelegatedAgentKeepsGrantsThatLetItActForAU
 		{"CIBA", []providers.GrantType{ciba}, []providers.GrantType{clientCredentials, ciba}},
 		{"TokenExchange", []providers.GrantType{tokenExchange},
 			[]providers.GrantType{clientCredentials, tokenExchange}},
+		{"JWTBearer", []providers.GrantType{jwtBearer}, []providers.GrantType{clientCredentials, jwtBearer}},
+		{"ClientCredentialsAndJWTBearer", []providers.GrantType{clientCredentials, jwtBearer},
+			[]providers.GrantType{clientCredentials, jwtBearer}},
 		{"RefreshTokenAlongsideOne", []providers.GrantType{refreshToken, authCode},
 			[]providers.GrantType{clientCredentials, refreshToken, authCode}},
 		{"ClientCredentialsAlongsideOne", []providers.GrantType{clientCredentials, ciba},
 			[]providers.GrantType{clientCredentials, ciba}},
-		{"OtherGrantsAreNotChecked", []providers.GrantType{authCode, jwtBearer},
+		{"MoreThanOne", []providers.GrantType{authCode, jwtBearer},
 			[]providers.GrantType{clientCredentials, authCode, jwtBearer}},
 	}
 
@@ -162,7 +165,6 @@ func (suite *DelegationTestSuite) TestDelegatedAgentNeedsAGrantThatLetsItActForA
 	}{
 		{"RefreshTokenAlone", []providers.GrantType{refreshToken}},
 		{"RefreshTokenWithClientCredentials", []providers.GrantType{clientCredentials, refreshToken}},
-		{"AnUnrelatedGrant", []providers.GrantType{jwtBearer}},
 	}
 
 	for _, tt := range tests {
@@ -174,7 +176,8 @@ func (suite *DelegationTestSuite) TestDelegatedAgentNeedsAGrantThatLetsItActForA
 			suite.Require().NotNil(svcErr)
 			suite.Equal(ErrorMissingDelegationGrantType.Code, svcErr.Code)
 			suite.Equal("authorization_code, urn:openid:params:grant-type:ciba, "+
-				"urn:ietf:params:oauth:grant-type:token-exchange", svcErr.ErrorDescription.Params["grantTypes"])
+				"urn:ietf:params:oauth:grant-type:token-exchange, urn:ietf:params:oauth:grant-type:jwt-bearer",
+				svcErr.ErrorDescription.Params["grantTypes"])
 		})
 	}
 }
