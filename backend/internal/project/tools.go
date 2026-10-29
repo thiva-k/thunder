@@ -59,7 +59,7 @@ func registerMCPTools(server *mcp.Server, service ProjectServiceInterface) {
 	tools := &projectTools{service: service}
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "thunderid_list_projects",
+		Name:        "list_projects",
 		Description: `List all projects, oldest first. Each project has exactly one root organization unit.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Projects",
@@ -68,7 +68,7 @@ func registerMCPTools(server *mcp.Server, service ProjectServiceInterface) {
 	}, tools.listProjects)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "thunderid_get_project_by_id",
+		Name:        "get_project_by_id",
 		Description: `Retrieve a project by ID, including the ID of its root organization unit.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Project by ID",
@@ -77,7 +77,7 @@ func registerMCPTools(server *mcp.Server, service ProjectServiceInterface) {
 	}, tools.getProjectByID)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "thunderid_create_project",
+		Name: "create_project",
 		Description: `Create a project together with its root organization unit. The organization unit ` +
 			`takes the project's handle, display name and description. A handle already used by another ` +
 			`root organization unit is refused.`,
@@ -88,7 +88,7 @@ func registerMCPTools(server *mcp.Server, service ProjectServiceInterface) {
 	}, tools.createProject)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "thunderid_update_project",
+		Name: "update_project",
 		Description: `Update the display name and description of a project (full replacement of both). ` +
 			`They are the root organization unit's name and description, so the root organization unit is ` +
 			`renamed too. The handle cannot change.`,

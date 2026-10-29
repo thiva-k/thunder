@@ -24,7 +24,7 @@ func (ts *MCPTestSuite) TestAuthorizationDetailTypeTools_MaskAndRetainProcessorC
 	token := ts.mcpScopedAdminToken()
 	value := fmt.Sprintf("https://types.example.com/mcp/%d", time.Now().UnixNano())
 
-	created, raw := ts.callMCPTool(token, "thunderid_create_authorization_detail_type", map[string]any{
+	created, raw := ts.callMCPTool(token, "create_authorization_detail_type", map[string]any{
 		"type": value, "name": "MCP Flight", "consentTemplate": "Book {{route}}",
 		"schema": map[string]any{"type": "object", "required": []any{"route"},
 			"properties": map[string]any{"route": map[string]any{"type": "string", "title": "Route"}}},
@@ -38,13 +38,13 @@ func (ts *MCPTestSuite) TestAuthorizationDetailTypeTools_MaskAndRetainProcessorC
 	ts.Require().NotEmpty(id)
 	ts.T().Cleanup(func() { ts.deleteAuthorizationDetailType(id) })
 
-	got, raw := ts.callMCPTool(token, "thunderid_get_authorization_detail_type_by_id", map[string]any{"id": id})
+	got, raw := ts.callMCPTool(token, "get_authorization_detail_type_by_id", map[string]any{"id": id})
 	ts.Require().Falsef(got.Result.IsError, "get failed: %s", raw)
 	ts.NotContains(raw, credential)
 	ts.Contains(raw, `"token":"******"`)
 	ts.Equal(value, got.Result.StructuredContent["type"])
 
-	listed, raw := ts.callMCPTool(token, "thunderid_list_authorization_detail_types", map[string]any{})
+	listed, raw := ts.callMCPTool(token, "list_authorization_detail_types", map[string]any{})
 	ts.Require().Falsef(listed.Result.IsError, "list failed: %s", raw)
 	ts.Contains(raw, id)
 	ts.Contains(raw, value)
@@ -53,7 +53,7 @@ func (ts *MCPTestSuite) TestAuthorizationDetailTypeTools_MaskAndRetainProcessorC
 	// The definition the get tool returned is sent back whole, with the credential as the mask.
 	readBack := got.Result.StructuredContent
 	readBack["name"] = "MCP Flight Renamed"
-	updated, raw := ts.callMCPTool(token, "thunderid_update_authorization_detail_type", readBack)
+	updated, raw := ts.callMCPTool(token, "update_authorization_detail_type", readBack)
 	ts.Require().Falsef(updated.Result.IsError, "a masked credential at the same endpoint must be kept: %s", raw)
 	ts.Equal("MCP Flight Renamed", updated.Result.StructuredContent["name"])
 	ts.Equal(got.Result.StructuredContent["version"], updated.Result.StructuredContent["version"],
@@ -61,7 +61,7 @@ func (ts *MCPTestSuite) TestAuthorizationDetailTypeTools_MaskAndRetainProcessorC
 	ts.NotContains(raw, credential)
 	ts.Contains(ts.exportedEnvironment(id), "="+credential+"\n", "the stored credential is still the original")
 
-	moved, raw := ts.callMCPTool(token, "thunderid_update_authorization_detail_type", map[string]any{
+	moved, raw := ts.callMCPTool(token, "update_authorization_detail_type", map[string]any{
 		"id": id, "type": value, "name": "MCP Flight Renamed", "consentTemplate": "Book {{route}}",
 		"schema":    readBack["schema"],
 		"processor": map[string]any{"endpoint": "https://elsewhere.example.net/rar"},
@@ -78,14 +78,14 @@ func (ts *MCPTestSuite) TestAuthorizationDetailTypeTools_RefuseInvalidInput() {
 	schema := map[string]any{"type": "object",
 		"properties": map[string]any{"route": map[string]any{"type": "string"}}}
 
-	misspelled, raw := ts.callMCPTool(token, "thunderid_create_authorization_detail_type", map[string]any{
+	misspelled, raw := ts.callMCPTool(token, "create_authorization_detail_type", map[string]any{
 		"type": value, "name": "MCP Misspelled", "schema": schema,
 		"procesor": map[string]any{"endpoint": "https://processor.example.com/rar"},
 	})
 	ts.Truef(misspelled.Result.IsError, "a misspelled key must be refused: %s", raw)
 	ts.Contains(raw, "invalid arguments")
 
-	invalid, raw := ts.callMCPTool(token, "thunderid_create_authorization_detail_type", map[string]any{
+	invalid, raw := ts.callMCPTool(token, "create_authorization_detail_type", map[string]any{
 		"type": value, "name": "MCP Invalid",
 		"schema": map[string]any{"type": "object", "properties": map[string]any{"actions": map[string]any{
 			"type": "array"}}},
@@ -93,19 +93,19 @@ func (ts *MCPTestSuite) TestAuthorizationDetailTypeTools_RefuseInvalidInput() {
 	ts.Truef(invalid.Result.IsError, "an invalid schema must be refused: %s", raw)
 	ts.Contains(raw, "failed to create authorization details type")
 
-	badAuthentication, raw := ts.callMCPTool(token, "thunderid_create_authorization_detail_type",
+	badAuthentication, raw := ts.callMCPTool(token, "create_authorization_detail_type",
 		map[string]any{"type": value, "name": "MCP Bad Authentication", "schema": schema,
 			"processor": map[string]any{"endpoint": "https://processor.example.com/rar",
 				"authentication": map[string]any{"type": "kerberos"}}})
 	ts.Truef(badAuthentication.Result.IsError, "an unknown authentication must be refused: %s", raw)
 	ts.Contains(raw, "failed to create authorization details type")
 
-	missing, raw := ts.callMCPTool(token, "thunderid_get_authorization_detail_type_by_id",
+	missing, raw := ts.callMCPTool(token, "get_authorization_detail_type_by_id",
 		map[string]any{"id": "00000000-0000-7000-8000-00000000dead"})
 	ts.Truef(missing.Result.IsError, "an unknown id must not be found: %s", raw)
 	ts.Contains(raw, "failed to get authorization details type")
 
-	missingUpdate, raw := ts.callMCPTool(token, "thunderid_update_authorization_detail_type", map[string]any{
+	missingUpdate, raw := ts.callMCPTool(token, "update_authorization_detail_type", map[string]any{
 		"id": "00000000-0000-7000-8000-00000000dead", "type": value, "name": "MCP Missing", "schema": schema,
 		"processor": map[string]any{"endpoint": "https://processor.example.com/rar",
 			"authentication": map[string]any{"type": "kerberos"}},

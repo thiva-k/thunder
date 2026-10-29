@@ -149,16 +149,16 @@ func (s *TypeToolsTestSuite) TestToolsOverMCP() {
 	for _, t := range listed.Tools {
 		names = append(names, t.Name)
 	}
-	s.ElementsMatch([]string{"thunderid_list_authorization_detail_types",
-		"thunderid_get_authorization_detail_type_by_id", "thunderid_create_authorization_detail_type",
-		"thunderid_update_authorization_detail_type"}, names)
+	s.ElementsMatch([]string{"list_authorization_detail_types",
+		"get_authorization_detail_type_by_id", "create_authorization_detail_type",
+		"update_authorization_detail_type"}, names)
 
 	created := toolsTestType()
 	var received json.RawMessage
 	s.service.EXPECT().CreateAuthorizationDetailType(mock.Anything, mock.Anything).
 		Run(func(_ context.Context, t providers.AuthorizationDetailType) { received = t.Schema }).
 		Return(&created, nil)
-	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_create_authorization_detail_type",
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "create_authorization_detail_type",
 		Arguments: map[string]any{"type": "flight_booking", "name": toolsTestName,
 			"schema": json.RawMessage(toolsTestSchema)}})
 	s.Require().NoError(err)
@@ -173,7 +173,7 @@ func (s *TypeToolsTestSuite) TestToolsOverMCP() {
 
 	got := toolsTestType()
 	s.service.EXPECT().GetAuthorizationDetailType(mock.Anything, "type-1").Return(&got, nil)
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_get_authorization_detail_type_by_id",
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "get_authorization_detail_type_by_id",
 		Arguments: map[string]any{"id": "type-1"}})
 	s.Require().NoError(err)
 	s.Require().False(result.IsError)
@@ -182,18 +182,18 @@ func (s *TypeToolsTestSuite) TestToolsOverMCP() {
 
 	s.service.EXPECT().UpdateAuthorizationDetailType(mock.Anything, "type-1", mock.Anything).
 		Return(nil, &ErrorTypeValueImmutable)
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_update_authorization_detail_type",
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "update_authorization_detail_type",
 		Arguments: map[string]any{"id": "type-1", "type": "other", "name": toolsTestName,
 			"schema": json.RawMessage(toolsTestSchema)}})
 	s.Require().NoError(err)
 	s.True(result.IsError, "a refusal is a tool error")
 
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_create_authorization_detail_type",
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "create_authorization_detail_type",
 		Arguments: map[string]any{"type": 5}})
 	s.Require().NoError(err)
 	s.True(result.IsError, "malformed arguments are a tool error")
 
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_create_authorization_detail_type",
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "create_authorization_detail_type",
 		Arguments: map[string]any{"type": "flight_booking", "name": toolsTestName,
 			"schema": json.RawMessage(toolsTestSchema), "procesor": map[string]any{"endpoint": "https://bank"}}})
 	s.Require().NoError(err)
@@ -210,13 +210,13 @@ func (s *TypeToolsTestSuite) TestToolsOverMCP() {
 	s.Require().Contains(arguments, "isReadOnly")
 	s.service.EXPECT().UpdateAuthorizationDetailType(mock.Anything, fetched.ID, mock.Anything).
 		Return(&fetched, nil).Once()
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_update_authorization_detail_type",
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "update_authorization_detail_type",
 		Arguments: arguments})
 	s.Require().NoError(err)
 	s.False(result.IsError, "%s", result.Content[0].(*mcp.TextContent).Text)
 
 	// The create expectation set above answers this call.
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "thunderid_create_authorization_detail_type",
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "create_authorization_detail_type",
 		Arguments: arguments})
 	s.Require().NoError(err)
 	s.False(result.IsError, "a fetched definition can be created again: %v", result.Content)
