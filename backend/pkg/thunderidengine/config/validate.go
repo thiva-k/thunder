@@ -170,9 +170,10 @@ func (c *DPoPConfig) Validate() error {
 	}
 	supported := map[string]struct{}{
 		"ES256": {}, "ES384": {}, "ES512": {},
-		"PS256": {}, "PS384": {}, "PS512": {},
-		"RS256": {}, "RS384": {}, "RS512": {},
-		"EdDSA": {},
+		"PS256": {},
+		"RS256": {}, "RS512": {},
+		"EdDSA":     {},
+		"ML-DSA-44": {}, "ML-DSA-65": {}, "ML-DSA-87": {},
 	}
 	for _, alg := range c.AllowedAlgs {
 		if _, ok := supported[alg]; !ok {

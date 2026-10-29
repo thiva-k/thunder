@@ -29,7 +29,7 @@ import (
 // TestTokenBinding_Algorithms — happy path across the supported alg families.
 // Each case yields token_type=DPoP and cnf.jkt = sha256_thumbprint(jwk).
 func (ts *DPoPTestSuite) TestTokenBinding_Algorithms() {
-	for _, alg := range []string{"PS256", "EdDSA"} {
+	for _, alg := range []string{"PS256", "EdDSA", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"} {
 		ts.Run(alg, func() {
 			key, err := testutils.GenerateDPoPKey(alg)
 			ts.Require().NoError(err)

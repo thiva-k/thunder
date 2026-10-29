@@ -300,10 +300,23 @@ func (suite *ValidateTestSuite) TestDPoPConfig_Validate() {
 		assert.NoError(t, c.Validate())
 	})
 
+	suite.T().Run("ML-DSA algorithms pass", func(t *testing.T) {
+		c := &DPoPConfig{IatWindow: 60, Leeway: 5, MaxJTILength: 128,
+			AllowedAlgs: []string{"ML-DSA-44", "ML-DSA-65", "ML-DSA-87"}}
+		assert.NoError(t, c.Validate())
+	})
+
 	suite.T().Run("all supported algorithms pass", func(t *testing.T) {
-		algs := []string{"ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "RS256", "RS384", "RS512", "EdDSA"}
+		algs := []string{"ES256", "ES384", "ES512", "PS256", "RS256", "RS512", "EdDSA"}
 		c := &DPoPConfig{IatWindow: 60, MaxJTILength: 128, AllowedAlgs: algs}
 		assert.NoError(t, c.Validate())
+	})
+
+	suite.T().Run("algorithms unsupported by the runtime verifier fail", func(t *testing.T) {
+		for _, alg := range []string{"RS384", "PS384", "PS512"} {
+			c := &DPoPConfig{IatWindow: 60, Leeway: 5, MaxJTILength: 128, AllowedAlgs: []string{alg}}
+			assert.ErrorContains(t, c.Validate(), alg)
+		}
 	})
 }
 
