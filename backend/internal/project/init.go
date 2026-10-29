@@ -9,18 +9,20 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/thunder-id/thunderid/internal/ou"
+	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 )
 
 // Initialize builds the project service over the database store and registers the project
 // management routes and MCP tools. The returned service is also a resource dependency provider, so that a
-// project's root organization unit cannot be deleted outside the project API.
+// project's root organization unit cannot be deleted outside the project API. The returned exporter
+// exports projects as declarative resources.
 func Initialize(
 	mux *http.ServeMux, mcpServer *mcp.Server, ouService ou.OrganizationUnitServiceInterface,
-) (ProjectServiceInterface, error) {
+) (ProjectServiceInterface, declarativeresource.ResourceExporter, error) {
 	store, transactioner, err := newProjectStore()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	service := newProjectService(store, transactioner, ouService)
@@ -28,7 +30,7 @@ func Initialize(
 	if mcpServer != nil {
 		registerMCPTools(mcpServer, service)
 	}
-	return service, nil
+	return service, newProjectExporter(service), nil
 }
 
 // registerRoutes registers the project management routes.

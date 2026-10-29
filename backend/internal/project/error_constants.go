@@ -134,4 +134,49 @@ var (
 			DefaultValue: "The offset parameter must be a non-negative integer",
 		},
 	}
+
+	// ErrorRootOUMismatch is the error returned when an imported project names a different root
+	// organization unit from the one it already has.
+	ErrorRootOUMismatch = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "PRJ-1010",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.projectservice.root_ou_mismatch",
+			DefaultValue: "Root organization unit mismatch",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.projectservice.root_ou_mismatch_description",
+			DefaultValue: "A project's root organization unit cannot be changed",
+		},
+	}
+
+	// ErrorNotARootOU is the error returned when a project names an organization unit that has a
+	// parent as its root.
+	ErrorNotARootOU = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "PRJ-1011",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.projectservice.not_a_root_ou",
+			DefaultValue: "Not a root organization unit",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.projectservice.not_a_root_ou_description",
+			DefaultValue: "A project's root organization unit must not have a parent",
+		},
+	}
+
+	// ErrorRootOUInUse is the error returned when a project names a root organization unit that
+	// already belongs to another project.
+	ErrorRootOUInUse = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "PRJ-1012",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.projectservice.root_ou_in_use",
+			DefaultValue: "Root organization unit in use",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.projectservice.root_ou_in_use_description",
+			DefaultValue: "The root organization unit already belongs to another project",
+		},
+	}
 )

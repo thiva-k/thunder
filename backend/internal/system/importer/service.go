@@ -140,6 +140,14 @@ type ouAdapter interface {
 	DeleteOrganizationUnit(ctx context.Context, id string) *tidcommon.ServiceError
 }
 
+// ProjectAdapter imports declared projects. Only the Control Plane serves projects, so the all-in-one
+// server passes none, skips project documents and imports organization units alone.
+type ProjectAdapter interface {
+	ProjectExists(ctx context.Context, id string) (bool, *tidcommon.ServiceError)
+	ImportProject(ctx context.Context, id, rootOUID, handle, displayName, description string, upsert bool) (
+		bool, *tidcommon.ServiceError)
+}
+
 type entityTypeAdapter interface {
 	CreateEntityType(ctx context.Context, category entitytype.TypeCategory,
 		request entitytype.CreateEntityTypeRequestWithID) (*entitytype.EntityType,
@@ -310,6 +318,7 @@ type importService struct {
 	authZENPDPService              authZENPDPAdapter
 	flowService                    flowAdapter
 	ouService                      ouAdapter
+	projectService                 ProjectAdapter
 	entityTypeService              entityTypeAdapter
 	roleService                    roleAdapter
 	roleAssignmentService          roleAssignmentAdapter
@@ -597,6 +606,8 @@ func (s *importService) importDocument(
 		return s.importFlow(ctx, doc, options, dryRun)
 	case resourceTypeOrganizationUnit:
 		return s.importOrganizationUnit(ctx, doc, options, dryRun)
+	case resourceTypeProject:
+		return s.importProject(ctx, doc, options, dryRun)
 	case resourceTypeEntityType:
 		return s.importEntityType(ctx, doc, options, dryRun)
 	case resourceTypeAgentType:
@@ -1104,6 +1115,9 @@ var resourceDependencyOrder = []string{
 	resourceTypeGateway,
 	resourceTypeAuthorizationDetailType,
 	resourceTypeOrganizationUnit,
+	// After the organization units, so a project links to its root organization unit when the same
+	// import declares it, and before everything that is placed in an organization unit.
+	resourceTypeProject,
 	resourceTypeEntityType,
 	resourceTypeAgentType,
 	resourceTypeConnection,

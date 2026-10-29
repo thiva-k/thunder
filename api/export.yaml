@@ -164,6 +164,11 @@ components:
           items:
             type: string
           description: IDs of organization units to export, or ["*"] for all.
+        projects:
+          type: array
+          items:
+            type: string
+          description: IDs of projects to export, or ["*"] for all. Only a Control Plane serves projects.
         users:
           type: array
           items:

@@ -5039,3 +5039,171 @@ func (s *ImportHTTPConnectionTestSuite) TestALookupFailureIsReportedWithoutWriti
 	s.Equal(operationUpdate, outcome.Operation)
 	s.Equal(tidcommon.InternalServerError.Code, outcome.Code)
 }
+
+// fakeProjectService records the projects it is asked to import.
+type fakeProjectService struct {
+	projects  map[string]projectDocument
+	imported  []string
+	upserts   []bool
+	importErr *tidcommon.ServiceError
+}
+
+func (f *fakeProjectService) ProjectExists(_ context.Context, id string) (bool, *tidcommon.ServiceError) {
+	_, exists := f.projects[id]
+	return exists, nil
+}
+
+func (f *fakeProjectService) ImportProject(_ context.Context, id, rootOUID, handle, displayName,
+	description string, upsert bool) (bool, *tidcommon.ServiceError) {
+	if f.importErr != nil {
+		return false, f.importErr
+	}
+	_, exists := f.projects[id]
+	if f.projects == nil {
+		f.projects = map[string]projectDocument{}
+	}
+	f.projects[id] = projectDocument{
+		ID: id, RootOUID: rootOUID, Handle: handle, DisplayName: displayName, Description: description,
+	}
+	f.imported = append(f.imported, id)
+	f.upserts = append(f.upserts, upsert)
+	return !exists, nil
+}
+
+func newImportServiceWithProjects(ouSvc *fakeOUService, projectSvc *fakeProjectService) ImportServiceInterface {
+	svc := newImportService(
+		nil, nil, nil, nil, ouSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc.(*importService).projectService = projectSvc
+	return svc
+}
+
+func TestImportResources_RootOrganizationUnitIsImportedWithoutAProject(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	projectSvc := &fakeProjectService{}
+	upsert := true
+	content := strings.Join([]string{
+		"resource_type: organization_unit",
+		"id: root-ou",
+		"handle: shop",
+		"name: Shop",
+		"",
+	}, "\n")
+
+	resp, err := newImportServiceWithProjects(ouSvc, projectSvc).ImportResources(context.Background(),
+		&ImportRequest{Content: content, Options: &ImportOptions{Upsert: &upsert}})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Equal(t, operationCreate, resp.Results[0].Operation)
+	require.Len(t, ouSvc.created, 1)
+	assert.Equal(t, "root-ou", ouSvc.created[0].ID)
+	assert.Empty(t, projectSvc.imported, "only a declared project is imported")
+}
+
+const importedProjectDocuments = `resource_type: project
+id: 019a3000-0000-7000-8000-0000000000p1
+rootOuId: root-ou
+handle: shop
+displayName: Shop
+description: Online shop
+---
+resource_type: organization_unit
+id: root-ou
+handle: shop
+name: Shop
+themeId: theme-1
+`
+
+func TestImportResources_ProjectIsSkippedWhereProjectsAreNotServed(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	svc := newImportService(
+		nil, nil, nil, nil, ouSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: importedProjectDocuments})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 2)
+	assert.Equal(t, 0, resp.Summary.Failed)
+	assert.Equal(t, resourceTypeOrganizationUnit, resp.Results[0].ResourceType)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Equal(t, resourceTypeProject, resp.Results[1].ResourceType)
+	assert.Equal(t, statusSuccess, resp.Results[1].Status)
+	assert.Equal(t, operationSkip, resp.Results[1].Operation)
+	assert.Contains(t, resp.Results[1].Message, "Control Plane")
+	require.Len(t, ouSvc.created, 1, "the root organization unit is still imported")
+	assert.Equal(t, "root-ou", ouSvc.created[0].ID)
+}
+
+func TestImportResources_ProjectIsImportedAfterItsRootOrganizationUnit(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	projectSvc := &fakeProjectService{}
+
+	resp, err := newImportServiceWithProjects(ouSvc, projectSvc).ImportResources(context.Background(),
+		&ImportRequest{Content: importedProjectDocuments})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 2)
+	assert.Equal(t, 0, resp.Summary.Failed)
+	assert.Equal(t, resourceTypeOrganizationUnit, resp.Results[0].ResourceType)
+	require.Len(t, ouSvc.created, 1)
+	assert.Equal(t, resourceTypeProject, resp.Results[1].ResourceType)
+	assert.Equal(t, operationCreate, resp.Results[1].Operation)
+	assert.Equal(t, "019a3000-0000-7000-8000-0000000000p1", resp.Results[1].ResourceID)
+	assert.Equal(t, projectDocument{
+		ID: "019a3000-0000-7000-8000-0000000000p1", RootOUID: "root-ou", Handle: "shop", DisplayName: "Shop",
+		Description: "Online shop",
+	}, projectSvc.projects["019a3000-0000-7000-8000-0000000000p1"])
+	assert.Equal(t, []bool{true}, projectSvc.upserts)
+}
+
+func TestImportResources_ExistingProjectIsUpdated(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	projectSvc := &fakeProjectService{projects: map[string]projectDocument{
+		"019a3000-0000-7000-8000-0000000000p1": {ID: "019a3000-0000-7000-8000-0000000000p1"},
+	}}
+
+	resp, err := newImportServiceWithProjects(ouSvc, projectSvc).ImportResources(context.Background(),
+		&ImportRequest{Content: importedProjectDocuments})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 2)
+	assert.Equal(t, operationUpdate, resp.Results[1].Operation)
+}
+
+func TestImportResources_ProjectDryRun(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	projectSvc := &fakeProjectService{projects: map[string]projectDocument{
+		"019a3000-0000-7000-8000-0000000000p1": {ID: "019a3000-0000-7000-8000-0000000000p1"},
+	}}
+	content := "resource_type: project\nid: 019a3000-0000-7000-8000-0000000000p1\nrootOuId: root-ou\n" +
+		"handle: shop\ndisplayName: Shop\n---\nresource_type: project\nid: 019a3000-0000-7000-8000-0000000000p2\n" +
+		"handle: other\ndisplayName: Other\n"
+
+	resp, err := newImportServiceWithProjects(ouSvc, projectSvc).ImportResources(context.Background(),
+		&ImportRequest{Content: content, DryRun: true})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 2)
+	assert.Equal(t, operationUpdate, resp.Results[0].Operation)
+	assert.Equal(t, operationCreate, resp.Results[1].Operation)
+	assert.Empty(t, projectSvc.imported, "a dry run imports nothing")
+}
+
+func TestImportResources_ProjectFailureIsReported(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	projectSvc := &fakeProjectService{importErr: &tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType, Code: "PRJ-1012",
+		ErrorDescription: tidcommon.I18nMessage{DefaultValue: "in use"},
+	}}
+	content := "resource_type: project\nid: 019a3000-0000-7000-8000-0000000000p1\nrootOuId: root-ou\n" +
+		"handle: shop\ndisplayName: Shop\n"
+
+	resp, err := newImportServiceWithProjects(ouSvc, projectSvc).ImportResources(context.Background(),
+		&ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Equal(t, "PRJ-1012", resp.Results[0].Code)
+}

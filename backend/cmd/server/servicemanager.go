@@ -601,6 +601,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		sharingService,
 		authzDetailMgtService,
 		httpConnectionWriter,
+		// Only the Control Plane serves projects, so a root organization unit is imported on its own.
+		nil,
 		// References in imported configuration are replaced with what this deployment's store holds. A
 		// secret is put only where an export of the resource keeps one, which its exporter names.
 		secretresolver.New(variablestore.Lookup(references)).
