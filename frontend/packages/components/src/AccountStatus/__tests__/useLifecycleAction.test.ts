@@ -110,29 +110,16 @@ describe('useLifecycleAction', () => {
     expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({action, subject: 'u-1'}));
   });
 
-  it.each<[LifecycleAction, LifecycleCategory, string]>([
-    ['suspend', 'user', 'User suspended, but no notification email was sent. Check that the user has'],
-    ['suspend', 'agent', 'Agent suspended, but no notification email was sent. Check that the agent has'],
-    [
-      'suspend',
-      'application',
-      'Application suspended, but no notification email was sent. Check that the application has',
-    ],
-    ['unlock', 'user', 'User unlocked, but no notification email was sent. Check that the user has'],
-    ['unlock', 'agent', 'Agent unlocked, but no notification email was sent. Check that the agent has'],
-    ['unsuspend', 'user', 'User unsuspended, but no notification email was sent. Check that the user has'],
-    ['unsuspend', 'agent', 'Agent unsuspended, but no notification email was sent. Check that the agent has'],
-    [
-      'unsuspend',
-      'application',
-      'Application unsuspended, but no notification email was sent. Check that the application has',
-    ],
-  ])('toasts a warning for %s naming the %s when its email was not sent', async (action, category, message) => {
+  it.each<[LifecycleAction, string]>([
+    ['suspend', 'User suspended, but no notification email was sent. Check that the user has'],
+    ['unlock', 'User unlocked, but no notification email was sent. Check that the user has'],
+    ['unsuspend', 'User unsuspended, but no notification email was sent. Check that the user has'],
+  ])('toasts a warning for %s naming the user when its email was not sent', async (action, message) => {
     mockHttpRequest.mockResolvedValue({data: {data: {additionalData: {emailSent: 'false'}}, flowStatus: 'COMPLETE'}});
     const onSuccess = vi.fn();
     const {result} = renderHook(() => useLifecycleAction(LIST_KEY, onSuccess));
 
-    result.current.mutate({action, category, flowIds: ['flow-1'], subject: 'u-1'});
+    result.current.mutate({action, category: 'user', flowIds: ['flow-1'], subject: 'u-1'});
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -141,6 +128,26 @@ describe('useLifecycleAction', () => {
     expect(mockShowToast).toHaveBeenCalledTimes(1);
     expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining(message), 'warning');
     expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({action, subject: 'u-1'}));
+  });
+
+  it.each<[LifecycleAction, LifecycleCategory, string]>([
+    ['suspend', 'agent', 'Agent suspended'],
+    ['suspend', 'application', 'Application suspended'],
+    ['unlock', 'agent', 'Agent unlocked'],
+    ['unsuspend', 'agent', 'Agent unsuspended'],
+    ['unsuspend', 'application', 'Application unsuspended'],
+  ])('toasts success for %s naming the %s when no email was sent', async (action, category, message) => {
+    mockHttpRequest.mockResolvedValue({data: {data: {additionalData: {emailSent: 'false'}}, flowStatus: 'COMPLETE'}});
+    const {result} = renderHook(() => useLifecycleAction(LIST_KEY));
+
+    result.current.mutate({action, category, flowIds: ['flow-1'], subject: 'u-1'});
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith(message, 'success');
   });
 
   it('toasts a warning when any step of a two-step action sent no email', async () => {
