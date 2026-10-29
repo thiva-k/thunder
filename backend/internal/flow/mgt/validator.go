@@ -5,6 +5,7 @@ package flowmgt
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/graphbuilder"
 	"github.com/thunder-id/thunderid/internal/flow/interceptor"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -45,6 +47,11 @@ type httpConnectionProvider interface {
 	GetHTTPConnection(ctx context.Context, id string) (*httpconnection.HTTPConnection, *tidcommon.ServiceError)
 }
 
+// idpProvider reads the identity provider connections a connection variable names.
+type idpProvider interface {
+	GetIdentityProvider(ctx context.Context, idpID string) (*providers.IDPDTO, *tidcommon.ServiceError)
+}
+
 // flowValidator is responsible for validating flow definitions,
 // including metadata, structure, node configurations, and registry-dependent checks.
 type flowValidator struct {
@@ -52,21 +59,25 @@ type flowValidator struct {
 	interceptorRegistry    interceptor.InterceptorRegistryInterface
 	graphBuilder           graphbuilder.GraphBuilderInterface
 	httpConnectionProvider httpConnectionProvider
+	idpProvider            idpProvider
 	logger                 *log.Logger
 }
 
-// newFlowValidator creates a new instance of flowValidator with the provided dependencies.
+// newFlowValidator creates a new instance of flowValidator with the provided dependencies. The IdP provider is
+// optional: without one the default of a connection variable is not checked against a connection.
 func newFlowValidator(
 	executorRegistry core.ExecutorMetadataProvider,
 	interceptorRegistry interceptor.InterceptorRegistryInterface,
 	graphBuilder graphbuilder.GraphBuilderInterface,
 	connectionProvider httpConnectionProvider,
+	idpProvider idpProvider,
 ) *flowValidator {
 	return &flowValidator{
 		executorRegistry:       executorRegistry,
 		interceptorRegistry:    interceptorRegistry,
 		graphBuilder:           graphBuilder,
 		httpConnectionProvider: connectionProvider,
+		idpProvider:            idpProvider,
 		logger:                 log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowValidator")),
 	}
 }
@@ -121,6 +132,10 @@ func (v *flowValidator) validateFlow(ctx context.Context, flowDef *FlowDefinitio
 	}
 
 	if err := v.validateNodes(flowDef.Nodes, nodeIndex, flowDef.FlowType); err != nil {
+		return err
+	}
+
+	if err := v.validateVariables(ctx, flowDef); err != nil {
 		return err
 	}
 
@@ -1711,4 +1726,210 @@ func (v *flowValidator) validateInterceptorApplyTo(
 		}
 	}
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Scope: Variable validation
+// ---------------------------------------------------------------------------
+
+// identityProviderCategory is the category of a connection variable that takes a federated sign-in connection:
+// google, github, oidc or oauth.
+const identityProviderCategory = "IDENTITY_PROVIDER"
+
+// identityProviderVendors are the connection vendors a connection variable of the identity provider category may name.
+var identityProviderVendors = []string{"google", "github", "oidc", "oauth"}
+
+// validateVariables checks the variables a flow declares and the placeholders that use them:
+//   - a VARIABLES node goes on to a next node and does nothing else, and the VARIABLES nodes of a flow declare at
+//     least one variable between them;
+//   - each declaration is well formed with a valid default, and a variable is declared once across all the nodes;
+//   - the default of a connection variable is a connection of the kind the variable takes;
+//   - every {{var(name)}} in the properties of a step, or in the text of a prompt, names a declared variable, and
+//     sits in a step that every route from the start reaches only through the node that declares it.
+func (v *flowValidator) validateVariables(
+	ctx context.Context, flowDef *FlowDefinition,
+) *tidcommon.ServiceError {
+	nodes := flowDef.Nodes
+	declaredAt := map[string]string{}
+	var firstVariablesNodeID string
+	for i := range nodes {
+		node := &nodes[i]
+		if node.Type != string(common.NodeTypeVariables) {
+			continue
+		}
+		if firstVariablesNodeID == "" {
+			firstVariablesNodeID = node.ID
+		}
+		if err := v.validateVariablesNodeFormat(node); err != nil {
+			return v.variableError(node.ID, err.Error())
+		}
+		if err := core.ValidateDefinitions(node.Inputs); err != nil {
+			return v.variableError(node.ID, err.Error())
+		}
+		for _, def := range node.Inputs {
+			if other, seen := declaredAt[def.Identifier]; seen {
+				return v.variableError(node.ID, fmt.Sprintf(
+					"variable %q is already declared on node '%s'", def.Identifier, other))
+			}
+			declaredAt[def.Identifier] = node.ID
+			if svcErr := v.validateConnectionVariable(ctx, def); svcErr != nil {
+				return svcErr
+			}
+		}
+	}
+	if firstVariablesNodeID != "" && len(declaredAt) == 0 {
+		return v.variableError(firstVariablesNodeID,
+			"the VARIABLES nodes of a flow declare at least one variable in 'inputs'")
+	}
+	return v.validateVariableReferences(nodes, declaredAt)
+}
+
+// validateVariablesNodeFormat checks that a VARIABLES node goes on to a next node and carries nothing a node that
+// shows and asks for nothing could not use.
+func (v *flowValidator) validateVariablesNodeFormat(node *providers.NodeDefinition) error {
+	switch {
+	case node.OnSuccess == "":
+		return fmt.Errorf("a VARIABLES node must have onSuccess")
+	case node.OnFailure != "" || node.OnIncomplete != "" || node.Next != "":
+		return fmt.Errorf("a VARIABLES node goes on through onSuccess only, with no onFailure, onIncomplete or next")
+	case node.Executor != nil || len(node.Prompts) > 0 || len(node.Properties) > 0 || node.Meta != nil ||
+		node.Flow != nil || node.Condition != nil || node.Variant != "" || node.Message != "":
+		return fmt.Errorf(
+			"a VARIABLES node has no executor, prompts, properties, meta, flow, condition, variant or message")
+	}
+	return nil
+}
+
+// validateConnectionVariable checks the declaration of a connection variable: it asks for a category and kinds of
+// connection a value can be checked against, and its default is a connection of a kind it takes.
+func (v *flowValidator) validateConnectionVariable(
+	ctx context.Context, def providers.VariableDefinition,
+) *tidcommon.ServiceError {
+	if def.Type != providers.InputTypeConnectionSelect {
+		return nil
+	}
+	if def.Category != identityProviderCategory {
+		return v.variableError("", fmt.Sprintf("variable %q: the connection category %q is not supported",
+			def.Identifier, def.Category))
+	}
+	for _, t := range def.ConnectionTypes {
+		if !utils.ContainsFold(identityProviderVendors, t) {
+			return v.variableError("", fmt.Sprintf(
+				"variable %q: %q is not an identity provider connection type", def.Identifier, t))
+		}
+	}
+	if v.idpProvider == nil {
+		return nil
+	}
+	raw, err := core.DefaultRaw(def)
+	if err != nil {
+		return v.variableError("", fmt.Sprintf("variable %q: its default %s", def.Identifier, err.Error()))
+	}
+	reason, svcErr := v.checkConnection(ctx, def, raw)
+	if svcErr != nil {
+		return svcErr
+	}
+	if reason != "" {
+		return v.variableError("", fmt.Sprintf("variable %q: its default %s", def.Identifier, reason))
+	}
+	return nil
+}
+
+// checkConnection checks that a connection variable's value names an existing identity provider connection of a kind
+// the variable takes. It returns what is wrong, or nothing, and reports a failure to read the connection as the error
+// it is.
+func (v *flowValidator) checkConnection(
+	ctx context.Context, def providers.VariableDefinition, connectionID string,
+) (string, *tidcommon.ServiceError) {
+	idp, svcErr := v.idpProvider.GetIdentityProvider(security.WithRuntimeContext(ctx), connectionID)
+	if svcErr != nil {
+		if svcErr.Type == tidcommon.ClientErrorType {
+			return "is not an existing connection", nil
+		}
+		return "", svcErr
+	}
+	vendor := strings.ToLower(string(idp.Type))
+	if !utils.ContainsFold(identityProviderVendors, vendor) {
+		return "is not an identity provider connection", nil
+	}
+	if len(def.ConnectionTypes) > 0 && !utils.ContainsFold(def.ConnectionTypes, vendor) {
+		return fmt.Sprintf("is a %s connection, which the variable does not take", vendor), nil
+	}
+	return "", nil
+}
+
+// validateVariableReferences checks every {{var(name)}} of the steps: the variable is declared, and the step can only
+// be reached through the node that declares it.
+func (v *flowValidator) validateVariableReferences(
+	nodes []providers.NodeDefinition, declaredAt map[string]string,
+) *tidcommon.ServiceError {
+	var startID string
+	for i := range nodes {
+		if nodes[i].Type == string(common.NodeTypeStart) {
+			startID = nodes[i].ID
+			break
+		}
+	}
+	adjacency := buildAdjacencyList(nodes)
+	// reachableWithout holds, for a declaring node, the nodes a route from the start can reach without passing it.
+	reachableWithout := map[string]map[string]bool{}
+
+	for i := range nodes {
+		node := &nodes[i]
+		refs := core.References(node.Properties)
+		for _, id := range refs {
+			declaringNode, declared := declaredAt[id]
+			if !declared {
+				return v.variableError(node.ID, fmt.Sprintf(
+					"it refers to the variable %q, which the flow does not declare", id))
+			}
+			if _, done := reachableWithout[declaringNode]; !done {
+				reachableWithout[declaringNode] = v.reachableAvoiding(adjacency, startID, declaringNode)
+			}
+			if node.ID == declaringNode || reachableWithout[declaringNode][node.ID] {
+				return v.variableError(node.ID, fmt.Sprintf(
+					"it refers to the variable %q, which the node '%s' declares, but a route reaches it "+
+						"without passing that node", id, declaringNode))
+			}
+		}
+	}
+	return nil
+}
+
+// reachableAvoiding returns the nodes a route from start can reach without passing the avoided node.
+func (v *flowValidator) reachableAvoiding(adjacency map[string][]string, start, avoid string) map[string]bool {
+	visited := map[string]bool{}
+	if start == avoid {
+		return visited
+	}
+	visited[start] = true
+	queue := []string{start}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		for _, next := range adjacency[current] {
+			if next == avoid || visited[next] {
+				continue
+			}
+			visited[next] = true
+			queue = append(queue, next)
+		}
+	}
+	return visited
+}
+
+// variableError is the error for a flow whose variables are not valid.
+func (v *flowValidator) variableError(nodeID, reason string) *tidcommon.ServiceError {
+	if nodeID == "" {
+		return tidcommon.CustomServiceError(ErrorInvalidFlowData, tidcommon.I18nMessage{
+			Key:          "error.flowmgtservice.invalid_variable_description",
+			DefaultValue: "{{param(reason)}}",
+			Params:       map[string]string{"reason": reason},
+		})
+	}
+	return tidcommon.CustomServiceError(ErrorInvalidFlowData, tidcommon.I18nMessage{
+		Key:          "error.flowmgtservice.invalid_variables_description",
+		DefaultValue: "Node '{{param(nodeID)}}': {{param(reason)}}",
+		Params:       map[string]string{"nodeID": nodeID, "reason": reason},
+	})
 }

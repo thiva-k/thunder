@@ -45,9 +45,11 @@ func Initialize(
 	templateResolver notificationTemplateProvider,
 	connectionProvider httpConnectionProvider,
 	configHandler *FlowConfigHandler,
+	idpProvider idpProvider,
 	withSystemFlows bool,
 ) (FlowMgtServiceInterface, declarativeresource.ResourceExporter, error) {
-	flowValidator := newFlowValidator(executorRegistry, interceptorRegistry, graphBuilder, connectionProvider)
+	flowValidator := newFlowValidator(
+		executorRegistry, interceptorRegistry, graphBuilder, connectionProvider, idpProvider)
 	store, compositeStore, transactioner, err := initializeStore(cacheManager, flowValidator, ouSvc)
 	if err != nil {
 		return nil, nil, err
