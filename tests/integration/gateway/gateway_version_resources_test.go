@@ -265,7 +265,7 @@ func (ts *GatewayVersionsTestSuite) TestAnAppliedResourceServerShowsWithItsResou
 	ouID := ts.createUnit("viewed-rs-" + suffix)
 	rsID, err := testutils.CreateResourceServerWithActions(testutils.ResourceServer{
 		Name: "viewed-rs-" + suffix, Description: "Viewed", Identifier: "urn:viewed:" + suffix, OUID: ouID,
-	}, nil)
+	}, []testutils.Action{{Name: "Audit", Handle: "audit"}})
 	ts.Require().NoError(err)
 	defer func() { _ = testutils.DeleteResourceServerWithChildren(rsID) }()
 	docsID, err := testutils.CreateResource(rsID, "Documents", "docs", "")
@@ -328,7 +328,18 @@ func (ts *GatewayVersionsTestSuite) TestAnAppliedResourceServerShowsWithItsResou
 		ts.Equal(liveEdit[field], viewedEdits[0][field], field)
 	}
 
-	ts.EqualValues(0, server.Parts["actions"]["totalResults"], "an export carries no actions at the server level")
+	// The resource server's own actions show as the live API lists them.
+	serverActions := server.Parts["actions"]
+	ts.EqualValues(1, serverActions["totalResults"])
+	liveAudits := ts.list(ts.read(rsBase + "/actions")["actions"])
+	ts.Require().Len(liveAudits, 1)
+	liveAudit := liveAudits[0]
+	viewedAudits := ts.list(serverActions["actions"])
+	ts.Require().Len(viewedAudits, 1)
+	ts.Equal(rsID+delimiter+"audit", viewedAudits[0]["id"])
+	for _, field := range []string{"name", "handle", "permission"} {
+		ts.Equal(liveAudit[field], viewedAudits[0][field], field)
+	}
 }
 
 // Connections show as their vendors' reads return them, with the secrets masked as those reads mask

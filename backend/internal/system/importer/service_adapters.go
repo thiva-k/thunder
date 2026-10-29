@@ -874,13 +874,14 @@ func (s *importService) importTranslation(ctx context.Context, doc parsedDocumen
 	return successOutcome(resourceTypeTranslation, "", req.Language, operationUpdate)
 }
 
-// importResourceServerChildren creates resources and actions nested under a resource server.
-// It first computes permission strings via ProcessResourceServer, then calls the resource service
-// for each resource and action.  Existing resources/actions (on upsert paths) are silently skipped.
+// importResourceServerChildren creates the actions of a resource server and the resources and actions
+// nested under it. It first computes permission strings via ProcessResourceServer, then calls the
+// resource service for each resource and action.  Existing resources/actions (on upsert paths) are
+// silently skipped.
 func (s *importService) importResourceServerChildren(
 	ctx context.Context, serverID string, rs providers.ResourceServer,
 ) *tidcommon.ServiceError {
-	if len(rs.Resources) == 0 {
+	if len(rs.Actions) == 0 && len(rs.Resources) == 0 {
 		return nil
 	}
 
@@ -892,6 +893,12 @@ func (s *importService) importResourceServerChildren(
 			Error: tidcommon.I18nMessage{
 				DefaultValue: fmt.Sprintf("failed to process resource server children: %v", err),
 			},
+		}
+	}
+
+	for j := range rs.Actions {
+		if svcErr := s.importResourceServerAction(ctx, serverID, nil, rs.Actions[j]); svcErr != nil {
+			return svcErr
 		}
 	}
 
@@ -944,14 +951,24 @@ func (s *importService) importResourceServerChildren(
 		pathToID[res.Permission] = created.ID
 
 		for j := range res.Actions {
-			action := res.Actions[j]
-			_, actionErr := s.resourceService.CreateAction(ctx, serverID, &created.ID, action)
-			if actionErr != nil && actionErr.Code != resource.ErrorHandleConflict.Code {
-				return actionErr
+			if svcErr := s.importResourceServerAction(ctx, serverID, &created.ID, res.Actions[j]); svcErr != nil {
+				return svcErr
 			}
 		}
 	}
 
+	return nil
+}
+
+// importResourceServerAction creates an action of a resource, or of the resource server itself when
+// resourceID is nil. An action whose handle already exists there is skipped.
+func (s *importService) importResourceServerAction(
+	ctx context.Context, serverID string, resourceID *string, action providers.Action,
+) *tidcommon.ServiceError {
+	_, svcErr := s.resourceService.CreateAction(ctx, serverID, resourceID, action)
+	if svcErr != nil && svcErr.Code != resource.ErrorHandleConflict.Code {
+		return svcErr
+	}
 	return nil
 }
 
