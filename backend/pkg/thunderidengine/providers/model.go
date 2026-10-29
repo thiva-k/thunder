@@ -175,6 +175,7 @@ type ResourceServer struct {
 	Delimiter           string                    `yaml:"delimiter,omitempty"   json:"delimiter,omitempty"   yamlfmt:"quoted"`
 	AuthorizationEngine AuthorizationEngineConfig `yaml:"authorizationEngine,omitempty" json:"authorizationEngine,omitempty"`
 	IsReadOnly          bool                      `yaml:"-"                     json:"-"`
+	Actions             []Action                  `yaml:"actions,omitempty"     json:"actions,omitempty"`
 	Resources           []Resource                `yaml:"resources,omitempty"   json:"resources,omitempty"`
 }
 

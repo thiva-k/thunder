@@ -3326,6 +3326,17 @@ type fakeResourceServerService struct {
 	updated []providers.ResourceServer
 	// resources are the resources created under a server, in the order they were written.
 	resources []providers.Resource
+	// actions are the actions created under a server, in the order they were written, each with the
+	// ID of the resource it was created under, empty for an action of the server itself.
+	actions []importedAction
+	// actionErrs are the errors CreateAction returns, by action handle.
+	actionErrs map[string]*tidcommon.ServiceError
+}
+
+// importedAction is an action an import created, with the ID of the resource it was created under.
+type importedAction struct {
+	resourceID string
+	action     providers.Action
 }
 
 func (f *fakeResourceServerService) CreateResourceServer(
@@ -3366,8 +3377,16 @@ func (f *fakeResourceServerService) GetResourceList(
 }
 
 func (f *fakeResourceServerService) CreateAction(
-	_ context.Context, _ string, _ *string, _ providers.Action,
+	_ context.Context, _ string, resourceID *string, action providers.Action,
 ) (*providers.Action, *tidcommon.ServiceError) {
+	if svcErr, ok := f.actionErrs[action.Handle]; ok {
+		return nil, svcErr
+	}
+	created := importedAction{action: action}
+	if resourceID != nil {
+		created.resourceID = *resourceID
+	}
+	f.actions = append(f.actions, created)
 	return &providers.Action{}, nil
 }
 
@@ -3834,6 +3853,107 @@ func TestImportResourceServer_SameHandleUnderDifferentParents(t *testing.T) {
 		"app:team:member":      "id-app:team",
 		"app:team:member:lead": "id-app:team:member",
 	}, parents)
+}
+
+// TestImportResourceServer_ServerActions verifies that the actions declared on a resource server
+// itself are created at the server level, with or without resources, and that an action whose handle
+// already exists is skipped.
+func TestImportResourceServer_ServerActions(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources []string
+		expected  []importedAction
+	}{
+		{
+			name: "without resources",
+			expected: []importedAction{
+				{action: providers.Action{Name: "Read All", Handle: "read_all", Permission: "read_all"}},
+			},
+		},
+		{
+			name: "beside resources",
+			resources: []string{
+				"resources:",
+				"  - name: Orders",
+				"    handle: orders",
+				"    actions:",
+				"      - { name: Read, handle: read }",
+			},
+			expected: []importedAction{
+				{action: providers.Action{Name: "Read All", Handle: "read_all", Permission: "read_all"}},
+				{resourceID: "id-orders", action: providers.Action{
+					Name: "Read", Handle: "read", Permission: "orders:read",
+				}},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rsSvc := &fakeResourceServerService{actionErrs: map[string]*tidcommon.ServiceError{
+				"existing": &resource.ErrorHandleConflict,
+			}}
+			svc := newImportService(
+				nil, nil, nil, nil, nil, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+			content := strings.Join(append([]string{
+				"resource_type: resource_server",
+				"id: rs-new",
+				"name: Test RS",
+				"identifier: test-rs",
+				"ouId: ou-explicit",
+				"actions:",
+				"  - { name: Read All, handle: read_all }",
+				"  - { name: Existing, handle: existing }",
+			}, append(tc.resources, "")...), "\n")
+
+			resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+				Content: content,
+				Options: &ImportOptions{Upsert: boolPtr(false)},
+			})
+
+			require.Nil(t, err)
+			require.Len(t, resp.Results, 1)
+			assert.Equal(t, statusSuccess, resp.Results[0].Status, resp.Results[0].Message)
+			assert.Equal(t, tc.expected, rsSvc.actions)
+		})
+	}
+}
+
+// TestImportResourceServer_ServerActionError verifies that a failure to create an action of the
+// resource server itself fails the import of that resource server.
+func TestImportResourceServer_ServerActionError(t *testing.T) {
+	rsSvc := &fakeResourceServerService{actionErrs: map[string]*tidcommon.ServiceError{
+		"read_all": {
+			Type:  tidcommon.ClientErrorType,
+			Code:  resource.ErrorInvalidRequestFormat.Code,
+			Error: tidcommon.I18nMessage{DefaultValue: "invalid action"},
+		},
+	}}
+	svc := newImportService(
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"resource_type: resource_server",
+		"id: rs-new",
+		"name: Test RS",
+		"identifier: test-rs",
+		"ouId: ou-explicit",
+		"actions:",
+		"  - { name: Read All, handle: read_all }",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Equal(t, resource.ErrorInvalidRequestFormat.Code, resp.Results[0].Code)
+	assert.Empty(t, rsSvc.resources)
 }
 
 // TestImportResourceServer_OUHandleNotFound verifies that an unknown ou_handle on a resource

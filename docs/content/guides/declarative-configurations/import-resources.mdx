@@ -342,7 +342,7 @@ content:
 
 ## Resource Servers
 
-A `resource_server` document declares a resource server with its resources and actions. A resource's permission joins the handles from the top-level resource down to that resource with the resource server's `delimiter`. An action's permission appends the action handle.
+A `resource_server` document declares a resource server with its resources and actions. List the actions of the resource server itself under the top-level `actions` field, and the actions of a resource under that resource's `actions` field. A resource's permission joins the handles from the top-level resource down to that resource with the resource server's `delimiter`. A resource action's permission appends the action handle to the resource's permission. A resource server action's permission is the action handle alone, such as `audit`.
 
 ### Delimiter and Handles
 
@@ -362,6 +362,8 @@ name: Team Workspace
 identifier: "urn:example:workspace"
 ouHandle: default
 delimiter: ":"
+actions:
+  - { name: Audit, handle: audit }
 resources:
   - { name: App, handle: app }
   - { name: Project, handle: project, parent: app }
