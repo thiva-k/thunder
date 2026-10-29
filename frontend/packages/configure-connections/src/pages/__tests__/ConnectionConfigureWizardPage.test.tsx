@@ -12,9 +12,25 @@ const navigateMock = vi.fn();
 const showToastMock = vi.fn();
 const mockParams = {type: 'google'};
 const mutationState = {isPending: false, isError: false};
-const callerOu = {ouId: 'ou-root', isLoading: false};
+const ouSelection = {ouId: 'ou-root', setOuId: vi.fn(), needsPicker: false, isLoading: false};
 
-vi.mock('../../hooks/useCallerOuId', () => ({default: () => callerOu}));
+vi.mock('../../hooks/useConnectionOuSelection', () => ({default: () => ouSelection}));
+vi.mock('../../components/create-connection/ConnectionOuPickerStep', () => ({
+  default: ({
+    value,
+    onChange,
+    onContinue,
+  }: {
+    value: string;
+    onChange: (ouId: string) => void;
+    onContinue: () => void;
+  }) => (
+    <div data-testid="ou-picker-step" data-value={value}>
+      <button type="button" data-testid="ou-picker-select" onClick={() => onChange('ou-picked')} />
+      <button type="button" data-testid="ou-picker-continue" onClick={onContinue} />
+    </div>
+  ),
+}));
 
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
@@ -60,8 +76,9 @@ describe('ConnectionConfigureWizardPage', () => {
     mockParams.type = 'google';
     mutationState.isPending = false;
     mutationState.isError = false;
-    callerOu.ouId = 'ou-root';
-    callerOu.isLoading = false;
+    ouSelection.ouId = 'ou-root';
+    ouSelection.needsPicker = false;
+    ouSelection.isLoading = false;
   });
 
   it('shows a single configure step and creates with the fixed vendor name', () => {
@@ -91,41 +108,52 @@ describe('ConnectionConfigureWizardPage', () => {
     expect(payload.attributeConfiguration).toBeUndefined();
   });
 
-  it("sends the signed-in user's organization unit as ouId without asking for one", () => {
-    callerOu.ouId = 'ou-acme';
+  it('sends the selected organization unit as ouId', () => {
+    ouSelection.ouId = 'ou-acme';
     render(<ConnectionConfigureWizardPage />);
 
-    expect(screen.queryByText('Where should this connection belong?')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ou-picker-step')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('wizard-create'));
 
     expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Google Login', ouId: 'ou-acme'});
   });
 
-  it('does not create when the token names no organization unit', () => {
-    callerOu.ouId = '';
+  it('asks for an organization unit before the form when there are several', () => {
+    ouSelection.ouId = '';
+    ouSelection.needsPicker = true;
     render(<ConnectionConfigureWizardPage />);
 
-    expect(screen.getByTestId('wizard-create')).toBeDisabled();
-    expect(screen.getByTestId('wizard-ou-required')).toHaveTextContent(
-      'Your session does not name an organization unit. Sign out and sign in again.',
-    );
+    expect(screen.getByTestId('ou-picker-step')).toBeInTheDocument();
+    expect(screen.queryByTestId('stub-connection-form')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('ou-picker-select'));
+    expect(ouSelection.setOuId).toHaveBeenCalledWith('ou-picked');
+
+    ouSelection.ouId = 'ou-picked';
+    fireEvent.click(screen.getByTestId('ou-picker-continue'));
+
+    expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('wizard-create'));
+    expect(mutateMock.mock.calls[0][0]).toMatchObject({ouId: 'ou-picked'});
+  });
+
+  it('reports a missing organization unit instead of creating', () => {
+    ouSelection.ouId = '';
+    render(<ConnectionConfigureWizardPage />);
+
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(screen.getByTestId('wizard-create-error')).toHaveTextContent('Organization unit is required');
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
-  it('does not show the organization unit error while the token is being read', () => {
-    callerOu.ouId = '';
-    callerOu.isLoading = true;
+  it('shows no form while organization units load', () => {
+    ouSelection.ouId = '';
+    ouSelection.isLoading = true;
     render(<ConnectionConfigureWizardPage />);
 
-    expect(screen.getByTestId('wizard-create')).toBeDisabled();
-    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
-  });
-
-  it('does not show the organization unit error once the token names one', () => {
-    render(<ConnectionConfigureWizardPage />);
-
-    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('wizard-create')).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar', {name: 'Loading...'})).toBeInTheDocument();
   });
 
   it('shows the setup hint with the redirect URI to copy for Google', () => {

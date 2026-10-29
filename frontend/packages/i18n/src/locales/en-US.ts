@@ -2246,7 +2246,10 @@ const translations = {
     'wizard.steps.type': 'Connection type',
     'wizard.steps.name': 'Details',
     'wizard.steps.configure': 'Configure',
-    'wizard.organizationUnit.required': 'Your session does not name an organization unit. Sign out and sign in again.',
+    'wizard.organizationUnit.title': 'Where should this connection belong?',
+    'wizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this connection. You can't change this once created.",
+    'wizard.organizationUnit.required': 'Organization unit is required',
     'wizard.type.heading': 'What kind of connection do you want to add?',
     'wizard.type.subheading':
       "Custom connections aren't in the vendor catalog. Pick the type of integration you want to wire up.",

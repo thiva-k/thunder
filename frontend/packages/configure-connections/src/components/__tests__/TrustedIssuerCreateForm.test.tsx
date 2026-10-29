@@ -139,24 +139,16 @@ describe('TrustedIssuerCreateForm', () => {
     });
   });
 
-  it('should keep the submit button disabled while no organization unit is resolved', async () => {
+  it('should report a missing organization unit instead of creating', async () => {
     const user = userEvent.setup();
     render(<TrustedIssuerCreateForm name="Acme Okta" ouId="" onNameConflict={onNameConflict} onBack={onBack} />);
 
     await user.type(screen.getByLabelText(/^Issuer URI/), 'https://acme.okta.com');
     await user.type(screen.getByLabelText(/^JWKS endpoint/), 'https://acme.okta.com/keys');
+    await user.click(screen.getByTestId('trusted-issuer-create-submit'));
 
-    expect(screen.getByTestId('trusted-issuer-create-submit')).toBeDisabled();
-    expect(screen.getByTestId('trusted-issuer-ou-required')).toHaveTextContent(
-      'Your session does not name an organization unit. Sign out and sign in again.',
-    );
+    expect(screen.getByText('Organization unit is required')).toBeInTheDocument();
     expect(mockMutate).not.toHaveBeenCalled();
-  });
-
-  it('should not show the organization unit error when an organization unit is resolved', () => {
-    render(<TrustedIssuerCreateForm name="Acme Okta" ouId="ou-1" onNameConflict={onNameConflict} onBack={onBack} />);
-
-    expect(screen.queryByTestId('trusted-issuer-ou-required')).not.toBeInTheDocument();
   });
 
   it('should call onNameConflict on a 409 conflict without navigating', async () => {
