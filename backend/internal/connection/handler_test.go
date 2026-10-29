@@ -909,12 +909,16 @@ func (s *HTTPConnectionHandlerTestSuite) TestUpdateKeepsAnOmittedPassword() {
 }
 
 func (s *HTTPConnectionHandlerTestSuite) TestDelete() {
+	s.mockHTTP.On("GetHTTPConnection", mock.Anything, "http-1").
+		Return(&httpconnection.HTTPConnection{ID: "http-1"}, (*tidcommon.ServiceError)(nil))
 	s.mockHTTP.On("DeleteHTTPConnection", mock.Anything, "http-1").Return((*tidcommon.ServiceError)(nil))
 
 	s.Equal(http.StatusNoContent, s.serve(http.MethodDelete, "/connections/http/http-1", "").Code)
 }
 
 func (s *HTTPConnectionHandlerTestSuite) TestDeleteOfAConnectionInUseIsAConflict() {
+	s.mockHTTP.On("GetHTTPConnection", mock.Anything, "http-1").
+		Return(&httpconnection.HTTPConnection{ID: "http-1"}, (*tidcommon.ServiceError)(nil))
 	s.mockHTTP.On("DeleteHTTPConnection", mock.Anything, "http-1").
 		Return(&httpconnection.ErrorHasBlockingDependencies)
 

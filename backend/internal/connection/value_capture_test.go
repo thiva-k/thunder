@@ -215,7 +215,8 @@ func (s *ServiceTestSuite) TestHTTPWritesCaptureTheConnectionAsTheExportNamesIt(
 
 func (s *ServiceTestSuite) TestInitializeHandsTheHTTPConnectionWriter() {
 	_, _, synced, err := Initialize(http.NewServeMux(), nil, s.mockIDP, s.mockNotif, &testResourceServerLister{},
-		newAuthZENPDPServiceMock(s.T()), newHTTPConnectionServiceMock(s.T()), nil)
+		newAuthZENPDPServiceMock(s.T()), newHTTPConnectionServiceMock(s.T()), nil,
+		newSharingServiceMock(s.T()))
 	s.Require().NoError(err)
 	s.IsType(&httpConnectionWriter{}, synced)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/notification"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -49,6 +50,7 @@ type connectionExporter struct {
 	senderService     notification.NotificationSenderMgtSvcInterface
 	authZENPDPService authzenpdp.AuthZENPDPServiceInterface
 	httpService       httpconnection.HTTPConnectionServiceInterface
+	sharingService    sharing.SharingServiceInterface
 }
 
 // newConnectionExporter creates a new connection exporter.
@@ -154,6 +156,27 @@ func (e *connectionExporter) GetAllResourceIDs(ctx context.Context) ([]string, *
 // the document is written out.
 func (e *connectionExporter) GetResourceByID(ctx context.Context, id string) (
 	interface{}, string, *tidcommon.ServiceError) {
+	resource, name, svcErr := e.getConnectionModel(ctx, id)
+	if svcErr != nil {
+		return nil, "", svcErr
+	}
+	// A document that silently lost its sharing would re-import as a connection nobody else can use, so
+	// this fails the export rather than thinning it.
+	if e.sharingService != nil {
+		replayable, sharingErr := e.sharingService.ExportPolicies(ctx, ConnectionSharingType, id)
+		if sharingErr != nil {
+			return nil, "", translateSharingError(sharingErr)
+		}
+		for _, r := range replayable {
+			resource.SharingPolicies = append(resource.SharingPolicies, r.Request)
+		}
+	}
+	return resource, name, nil
+}
+
+// getConnectionModel reads a connection from whichever service holds it.
+func (e *connectionExporter) getConnectionModel(ctx context.Context, id string) (
+	*connectionExportModel, string, *tidcommon.ServiceError) {
 	idpDTO, svcErr := e.idpService.GetIdentityProvider(ctx, id)
 	if svcErr == nil {
 		model, err := connectionModelFromIDPDTO(*idpDTO)
@@ -815,15 +838,20 @@ func (s *connectionDeclarativeStore) Create(id string, data interface{}) error {
 	}
 }
 
+// shouldLoadDeclarativeConnections reports whether any connection kind loads from resource files.
+func shouldLoadDeclarativeConnections() bool {
+	return declarativeresource.IsDeclarativeModeEnabled() ||
+		idp.ShouldLoadDeclarativeIDPResources() ||
+		authzenpdp.ShouldLoadDeclarativeAuthZENPDPResources() ||
+		httpconnection.ShouldLoadDeclarativeHTTPConnectionResources()
+}
+
 // loadDeclarativeResources loads connection files when a connection file store is enabled.
 func loadDeclarativeResources(idpService idp.IDPServiceInterface,
 	notificationService notification.NotificationSenderMgtSvcInterface,
 	authZENPDPService authzenpdp.AuthZENPDPServiceInterface,
 	httpService httpconnection.HTTPConnectionServiceInterface) error {
-	if !declarativeresource.IsDeclarativeModeEnabled() &&
-		!idp.ShouldLoadDeclarativeIDPResources() &&
-		!authzenpdp.ShouldLoadDeclarativeAuthZENPDPResources() &&
-		!httpconnection.ShouldLoadDeclarativeHTTPConnectionResources() {
+	if !shouldLoadDeclarativeConnections() {
 		return nil
 	}
 

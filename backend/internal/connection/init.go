@@ -14,6 +14,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/notification"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/resource"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
@@ -30,15 +31,22 @@ import (
 // valueCapturer is optional. Given one, the service hands it every connection it creates or changes,
 // so the values the connection's export refers to are kept where a reference finds them. It also
 // returns the HTTP connection writer.
+//
+// Connections of every kind register with the sharing framework as one resource type, so a connection
+// can be shared with other organization units. A sharee can use the connection as it is and may not
+// override any of it.
 func Initialize(mux *http.ServeMux, mcpServer *mcp.Server, idpService idp.IDPServiceInterface,
 	notificationService notification.NotificationSenderMgtSvcInterface,
 	resourceService resource.ResourceServiceInterface,
 	authZENPDPService authzenpdp.AuthZENPDPServiceInterface,
 	httpService httpconnection.HTTPConnectionServiceInterface,
-	valueCapturer declarativeresource.ValueCapturer) (
+	valueCapturer declarativeresource.ValueCapturer,
+	sharingService sharing.SharingServiceInterface) (
 	declarativeresource.ResourceExporter, resourcedependency.Provider, HTTPConnectionWriterInterface, error) {
 	svc := newService(idpService, notificationService, resourceService, authZENPDPService, httpService)
 	svc.valueCapturer = valueCapturer
+	svc.sharingService = sharingService
+	sharingService.RegisterResourceType(newConnectionSharingDeclaration(svc))
 	h := newHandler(svc)
 	registerRoutes(mux, h)
 
@@ -49,8 +57,14 @@ func Initialize(mux *http.ServeMux, mcpServer *mcp.Server, idpService idp.IDPSer
 	if err := loadDeclarativeResources(idpService, notificationService, authZENPDPService, httpService); err != nil {
 		return nil, nil, nil, err
 	}
+	if err := loadDeclarativeSharing(sharingService, idpService, notificationService, authZENPDPService,
+		httpService); err != nil {
+		return nil, nil, nil, err
+	}
 
-	return newConnectionExporter(idpService, notificationService, authZENPDPService, httpService),
+	exporter := newConnectionExporter(idpService, notificationService, authZENPDPService, httpService)
+	exporter.sharingService = sharingService
+	return exporter,
 		newOUDependencyProvider(idpService, notificationService, authZENPDPService, httpService),
 		&httpConnectionWriter{svc: svc}, nil
 }
@@ -163,6 +177,7 @@ func registerVendorRoutes(mux *http.ServeMux, h *handler, base string, idpType p
 	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}", noContent, itemOpts))
 
 	registerUsagesRoute(mux, base, h.usagesInstance(idpType))
+	registerSharingRoutes(mux, h, base, h.svc.idpOwner(idpType))
 }
 
 // registerSenderVendorRoutes registers the collection (list/create) and item (get/update/delete)
@@ -185,6 +200,7 @@ func registerSenderVendorRoutes(mux *http.ServeMux, h *handler, base string,
 	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}", noContent, itemOpts))
 
 	registerUsagesRoute(mux, base, h.usagesSenderInstance(senderType, provider))
+	registerSharingRoutes(mux, h, base, h.svc.senderOwner(senderType, provider))
 }
 
 // registerAuthZENPDPVendorRoutes registers CRUD, CORS, and usage routes for AuthZEN PDP connections.
@@ -205,6 +221,7 @@ func registerAuthZENPDPVendorRoutes(
 	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}", noContent, itemOpts))
 
 	registerUsagesRoute(mux, base, h.usagesAuthZENPDPConnection)
+	registerSharingRoutes(mux, h, base, h.svc.authZENPDPOwner)
 }
 
 // registerHTTPConnectionRoutes registers CRUD, CORS, and usage routes for HTTP endpoint connections.
@@ -220,6 +237,7 @@ func registerHTTPConnectionRoutes(mux *http.ServeMux, h *handler, base string,
 	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}", noContent, itemOpts))
 
 	registerUsagesRoute(mux, base, h.usagesHTTPConnection)
+	registerSharingRoutes(mux, h, base, h.svc.httpOwner)
 }
 
 // registerUsagesRoute registers the GET and CORS routes that list the resources using an instance
@@ -233,4 +251,44 @@ func registerUsagesRoute(mux *http.ServeMux, base string, usages http.HandlerFun
 	}
 	mux.HandleFunc(middleware.WithCORS("GET "+base+"/{id}/usages", usages, usagesOpts))
 	mux.HandleFunc(middleware.WithCORS("OPTIONS "+base+"/{id}/usages", noContent, usagesOpts))
+}
+
+// registerSharingRoutes registers the sharing policy routes of one vendor's connections. They sit under
+// each vendor's path rather than under a common /connections/{id}, which would be ambiguous with the
+// vendor routes. Sharing policies live under the connection they govern: a policy has no life of its
+// own.
+func registerSharingRoutes(mux *http.ServeMux, h *handler, base string, owner ownerLookup) {
+	collectionOpts := middleware.CORSOptions{
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowedHeaders:   middleware.DefaultAllowedHeaders,
+		AllowCredentials: true,
+		MaxAge:           600,
+	}
+	itemOpts := middleware.CORSOptions{
+		AllowedMethods:   []string{"GET", "PUT", "DELETE"},
+		AllowedHeaders:   middleware.DefaultAllowedHeaders,
+		AllowCredentials: true,
+		MaxAge:           600,
+	}
+	overlayOpts := middleware.CORSOptions{
+		AllowedMethods:   []string{"GET"},
+		AllowedHeaders:   middleware.DefaultAllowedHeaders,
+		AllowCredentials: true,
+		MaxAge:           600,
+	}
+
+	policies := base + "/{id}/sharing-policies"
+	mux.HandleFunc(middleware.WithCORS("POST "+policies, h.handleSharingPolicyPost(owner), collectionOpts))
+	mux.HandleFunc(middleware.WithCORS("GET "+policies, h.handleSharingPolicyList(owner), collectionOpts))
+	mux.HandleFunc(middleware.WithCORS("OPTIONS "+policies, noContent, collectionOpts))
+
+	policy := policies + "/{policyId}"
+	mux.HandleFunc(middleware.WithCORS("GET "+policy, h.handleSharingPolicyGet(owner), itemOpts))
+	mux.HandleFunc(middleware.WithCORS("PUT "+policy, h.handleSharingPolicyPut(owner), itemOpts))
+	mux.HandleFunc(middleware.WithCORS("DELETE "+policy, h.handleSharingPolicyDelete(owner), itemOpts))
+	mux.HandleFunc(middleware.WithCORS("OPTIONS "+policy, noContent, itemOpts))
+
+	overlay := base + "/{id}/overlay-rules"
+	mux.HandleFunc(middleware.WithCORS("GET "+overlay, h.handleOverlayRuleGet(owner), overlayOpts))
+	mux.HandleFunc(middleware.WithCORS("OPTIONS "+overlay, noContent, overlayOpts))
 }

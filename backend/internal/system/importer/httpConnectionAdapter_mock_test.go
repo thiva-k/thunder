@@ -247,6 +247,65 @@ func (_c *httpConnectionAdapterMock_GetHTTPConnection_Call) RunAndReturn(run fun
 	return _c
 }
 
+// ResolveConnectionOU provides a mock function for the type httpConnectionAdapterMock
+func (_mock *httpConnectionAdapterMock) ResolveConnectionOU(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError {
+	ret := _mock.Called(ctx, connection)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolveConnectionOU")
+	}
+
+	var r0 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *httpconnection.HTTPConnection) *common.ServiceError); ok {
+		r0 = returnFunc(ctx, connection)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ServiceError)
+		}
+	}
+	return r0
+}
+
+// httpConnectionAdapterMock_ResolveConnectionOU_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveConnectionOU'
+type httpConnectionAdapterMock_ResolveConnectionOU_Call struct {
+	*mock.Call
+}
+
+// ResolveConnectionOU is a helper method to define mock.On call
+//   - ctx context.Context
+//   - connection *httpconnection.HTTPConnection
+func (_e *httpConnectionAdapterMock_Expecter) ResolveConnectionOU(ctx any, connection any) *httpConnectionAdapterMock_ResolveConnectionOU_Call {
+	return &httpConnectionAdapterMock_ResolveConnectionOU_Call{Call: _e.mock.On("ResolveConnectionOU", ctx, connection)}
+}
+
+func (_c *httpConnectionAdapterMock_ResolveConnectionOU_Call) Run(run func(ctx context.Context, connection *httpconnection.HTTPConnection)) *httpConnectionAdapterMock_ResolveConnectionOU_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *httpconnection.HTTPConnection
+		if args[1] != nil {
+			arg1 = args[1].(*httpconnection.HTTPConnection)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *httpConnectionAdapterMock_ResolveConnectionOU_Call) Return(serviceError *common.ServiceError) *httpConnectionAdapterMock_ResolveConnectionOU_Call {
+	_c.Call.Return(serviceError)
+	return _c
+}
+
+func (_c *httpConnectionAdapterMock_ResolveConnectionOU_Call) RunAndReturn(run func(ctx context.Context, connection *httpconnection.HTTPConnection) *common.ServiceError) *httpConnectionAdapterMock_ResolveConnectionOU_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateHTTPConnection provides a mock function for the type httpConnectionAdapterMock
 func (_mock *httpConnectionAdapterMock) UpdateHTTPConnection(ctx context.Context, existing *httpconnection.HTTPConnection, connection httpconnection.HTTPConnection) (*httpconnection.HTTPConnection, *common.ServiceError) {
 	ret := _mock.Called(ctx, existing, connection)

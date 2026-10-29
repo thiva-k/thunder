@@ -38,8 +38,8 @@ type ownedConnectionKind struct {
 	unknownCode string
 }
 
-// ownedConnectionKinds returns an identity provider, a notification sender and an AuthZEN PDP connection, one for each
-// service that holds connections and that import and export carry.
+// ownedConnectionKinds returns an identity provider, a notification sender, an AuthZEN PDP connection and an HTTP
+// connection, one for each service that holds connections and that import and export carry.
 func ownedConnectionKinds() []ownedConnectionKind {
 	return []ownedConnectionKind{
 		{
@@ -113,6 +113,24 @@ retryCount: 1
 			},
 			requiredCode: "CON-1025",
 			unknownCode:  "CON-1023",
+		},
+		{
+			vendor: "http",
+			create: func(name, ouID string) (string, error) {
+				return testutils.CreateHTTPConnection(testutils.HTTPConnection{
+					Name: name, OUID: ouID, URL: "https://ext.example.com/evaluate"})
+			},
+			delete: testutils.DeleteHTTPConnection,
+			document: func(id, name, owner string) string {
+				return fmt.Sprintf(`resource_type: connection
+id: %s
+type: http
+name: %s
+%surl: https://ext.example.com/evaluate
+`, id, name, owner)
+			},
+			requiredCode: "CON-1030",
+			unknownCode:  "CON-1028",
 		},
 	}
 }

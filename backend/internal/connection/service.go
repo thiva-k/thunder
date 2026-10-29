@@ -14,6 +14,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/notification"
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/resource"
+	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -35,6 +36,7 @@ type service struct {
 	authZENPDPService   authzenpdp.AuthZENPDPServiceInterface
 	httpService         httpconnection.HTTPConnectionServiceInterface
 	valueCapturer       declarativeresource.ValueCapturer
+	sharingService      sharing.SharingServiceInterface
 }
 
 // newService creates a connection service over the given identity-provider and
@@ -270,10 +272,20 @@ func (s *service) update(ctx context.Context, idpType providers.IDPType, id stri
 
 // deleteByType verifies the instance is of the expected type, then deletes it.
 func (s *service) deleteByType(ctx context.Context, idpType providers.IDPType, id string) *tidcommon.ServiceError {
-	if _, svcErr := s.getByType(ctx, idpType, id); svcErr != nil {
+	dto, svcErr := s.idpService.GetIdentityProvider(ctx, id)
+	if svcErr != nil {
+		if svcErr.Code == idp.ErrorIDPNotFound.Code {
+			return s.purgeOrphanedPolicies(ctx, id, svcErr)
+		}
 		return svcErr
 	}
-	return s.idpService.DeleteIdentityProvider(ctx, id)
+	if dto.Type != idpType {
+		return &idp.ErrorIDPNotFound
+	}
+	if svcErr := s.idpService.DeleteIdentityProvider(ctx, id); svcErr != nil {
+		return svcErr
+	}
+	return s.deleteSharingPolicies(ctx, id)
 }
 
 // listSendersByProvider returns the configured senders of the given type and provider.
@@ -388,14 +400,17 @@ func (s *service) deleteSenderByProvider(ctx context.Context, senderType ncommon
 	dto, svcErr := s.notificationService.GetSender(ctx, id)
 	if svcErr != nil {
 		if svcErr.Code == notification.ErrorSenderNotFound.Code {
-			return nil
+			return s.purgeOrphanedPolicies(ctx, id, nil)
 		}
 		return svcErr
 	}
 	if dto.Type != senderType || dto.Provider != provider {
 		return &notification.ErrorSenderNotFound
 	}
-	return s.notificationService.DeleteSender(ctx, id)
+	if svcErr := s.notificationService.DeleteSender(ctx, id); svcErr != nil {
+		return svcErr
+	}
+	return s.deleteSharingPolicies(ctx, id)
 }
 
 // createAuthZENPDP validates and stores an AuthZEN PDP connection.
@@ -452,6 +467,9 @@ func (s *service) updateAuthZENPDP(
 // deleteAuthZENPDP deletes an AuthZEN PDP connection when it has no blocking usages.
 func (s *service) deleteAuthZENPDP(ctx context.Context, id string) *tidcommon.ServiceError {
 	if _, svcErr := s.getAuthZENPDP(ctx, id); svcErr != nil {
+		if svcErr.Code == authzenpdp.ErrorNotFound.Code {
+			return s.purgeOrphanedPolicies(ctx, id, svcErr)
+		}
 		return svcErr
 	}
 	usages, svcErr := s.usagesAuthZENPDP(ctx, id)
@@ -461,7 +479,10 @@ func (s *service) deleteAuthZENPDP(ctx context.Context, id string) *tidcommon.Se
 	if len(resourcedependency.BlockingUsages(usages)) > 0 {
 		return &authzenpdp.ErrorHasBlockingDependencies
 	}
-	return s.authZENPDPService.DeleteAuthZENPDPConnection(ctx, id)
+	if svcErr := s.authZENPDPService.DeleteAuthZENPDPConnection(ctx, id); svcErr != nil {
+		return svcErr
+	}
+	return s.deleteSharingPolicies(ctx, id)
 }
 
 // createHTTP validates and stores an HTTP connection.
@@ -550,7 +571,18 @@ func (s *service) deleteHTTP(ctx context.Context, id string) *tidcommon.ServiceE
 	if s.httpService == nil {
 		return &tidcommon.InternalServerError
 	}
-	return s.httpService.DeleteHTTPConnection(ctx, id)
+	// The HTTP connection service treats deleting a connection it does not hold as success, so the lookup has to
+	// come first: a delete naming a connection of another kind must not reach the policy cleanup.
+	if _, svcErr := s.httpService.GetHTTPConnection(ctx, id); svcErr != nil {
+		if svcErr.Code == httpconnection.ErrorNotFound.Code {
+			return s.purgeOrphanedPolicies(ctx, id, nil)
+		}
+		return svcErr
+	}
+	if svcErr := s.httpService.DeleteHTTPConnection(ctx, id); svcErr != nil {
+		return svcErr
+	}
+	return s.deleteSharingPolicies(ctx, id)
 }
 
 // usagesHTTP returns the resources that use an HTTP connection.
@@ -571,6 +603,7 @@ type HTTPConnectionWriterInterface interface {
 	UpdateHTTPConnection(ctx context.Context, existing *httpconnection.HTTPConnection,
 		connection httpconnection.HTTPConnection) (*httpconnection.HTTPConnection, *tidcommon.ServiceError)
 	DeleteHTTPConnection(ctx context.Context, id string) *tidcommon.ServiceError
+	ResolveConnectionOU(ctx context.Context, connection *httpconnection.HTTPConnection) *tidcommon.ServiceError
 	ValidateHTTPConnectionCreate(ctx context.Context, connection *httpconnection.HTTPConnection) *tidcommon.ServiceError
 	ValidateHTTPConnectionUpdate(ctx context.Context, existing *httpconnection.HTTPConnection,
 		connection httpconnection.HTTPConnection) *tidcommon.ServiceError
@@ -604,6 +637,12 @@ func (w *httpConnectionWriter) UpdateHTTPConnection(ctx context.Context, existin
 // DeleteHTTPConnection deletes a connection as the delete route does.
 func (w *httpConnectionWriter) DeleteHTTPConnection(ctx context.Context, id string) *tidcommon.ServiceError {
 	return w.svc.deleteHTTP(ctx, id)
+}
+
+// ResolveConnectionOU sets the organization unit the connection is owned by, resolving a handle to its id.
+func (w *httpConnectionWriter) ResolveConnectionOU(ctx context.Context,
+	connection *httpconnection.HTTPConnection) *tidcommon.ServiceError {
+	return w.svc.httpService.ResolveConnectionOU(ctx, connection)
 }
 
 // ValidateHTTPConnectionCreate reports what CreateHTTPConnection would refuse, without writing.
