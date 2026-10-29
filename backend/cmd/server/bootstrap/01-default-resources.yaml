@@ -7380,6 +7380,7 @@ nodes:
       y: 200
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a0
 channel: email
 handle: user-invite
 ouHandle: default
@@ -7403,6 +7404,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a1
 channel: sms
 handle: user-invite
 ouHandle: default
@@ -7412,6 +7414,7 @@ content:
   body: "{{t(userInvite.sms.body)}}"
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a2
 channel: email
 handle: self-registration
 ouHandle: default
@@ -7435,6 +7438,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a3
 channel: sms
 handle: self-registration
 ouHandle: default
@@ -7444,6 +7448,7 @@ content:
   body: "{{t(selfRegistration.sms.body)}}"
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a4
 channel: email
 handle: magic-link
 ouHandle: default
@@ -7468,6 +7473,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a5
 channel: email
 handle: password-recovery
 ouHandle: default
@@ -7499,6 +7505,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a6
 channel: email
 handle: ciba-notification
 ouHandle: default
@@ -7525,6 +7532,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a7
 channel: sms
 handle: ciba-notification
 ouHandle: default
@@ -7534,6 +7542,7 @@ content:
   body: "{{t(cibaNotification.sms.body)}}"
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a8
 channel: email
 handle: otp
 ouHandle: default
@@ -7558,6 +7567,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a9
 channel: sms
 handle: otp
 ouHandle: default
@@ -7567,6 +7577,7 @@ content:
   body: "{{t(otp.sms.body)}}"
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000aa
 channel: email
 handle: authentication-method-locked
 ouHandle: default
@@ -7587,6 +7598,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000ab
 channel: email
 handle: authentication-method-locked-permanent
 ouHandle: default
@@ -7607,6 +7619,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000ac
 channel: email
 handle: account-locked
 ouHandle: default
@@ -7627,6 +7640,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000ad
 channel: email
 handle: account-locked-permanent
 ouHandle: default
@@ -7647,6 +7661,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000ae
 channel: email
 handle: account-suspended
 ouHandle: default
@@ -7665,6 +7680,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000af
 channel: email
 handle: account-unsuspended
 ouHandle: default
@@ -7683,6 +7699,7 @@ content:
     </html>
 ---
 resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000b0
 channel: email
 handle: account-unlocked
 ouHandle: default

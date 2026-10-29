@@ -4073,6 +4073,35 @@ func (s *ImportNotificationTemplateTestSuite) TestCreate() {
 	s.Equal(operationCreate, outcome.Operation)
 }
 
+func (s *ImportNotificationTemplateTestSuite) TestCreateKeepsTheDocumentID() {
+	doc, err := parseDocuments(`
+resource_type: notification_template
+id: 01900000-0000-7000-8000-0000000000a0
+channel: email
+handle: user-invite
+displayName: User Invitation Email
+description: Invite.
+content:
+  subject: Welcome
+  body: "<p>{{ctx(inviteLink)}}</p>"
+`)
+	s.Require().NoError(err)
+	s.expectValidateSucceeds()
+	s.mockAdapter.EXPECT().
+		GetTemplateByHandle(mock.Anything, notificationtemplate.ChannelTypeEmail, "user-invite").
+		Return(nil, &notificationtemplate.ErrorTemplateNotFound).Once()
+	s.mockAdapter.EXPECT().CreateTemplate(mock.Anything, notificationtemplate.ChannelTypeEmail,
+		mock.MatchedBy(func(req notificationtemplate.CreateTemplateRequest) bool {
+			return req.ID == "01900000-0000-7000-8000-0000000000a0"
+		})).Return(&notificationtemplate.Template{ID: "01900000-0000-7000-8000-0000000000a0",
+		Handle: "user-invite"}, nil).Once()
+
+	outcome := s.svc.importNotificationTemplate(s.ctx, doc[0], &ImportOptions{}, false)
+
+	s.Equal(statusSuccess, outcome.Status)
+	s.Equal("01900000-0000-7000-8000-0000000000a0", outcome.ResourceID)
+}
+
 func (s *ImportNotificationTemplateTestSuite) TestUpsertUpdatesExisting() {
 	s.expectValidateSucceeds()
 	s.mockAdapter.EXPECT().

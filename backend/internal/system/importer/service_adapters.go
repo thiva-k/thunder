@@ -121,6 +121,7 @@ type layoutDeclarativeYAML struct {
 // notificationTemplateDeclarativeYAML is the import shape for a notification template.
 // It mirrors the API create model with an added channel discriminator.
 type notificationTemplateDeclarativeYAML struct {
+	ID          string `yaml:"id,omitempty"`
 	Channel     string `yaml:"channel"`
 	Handle      string `yaml:"handle"`
 	OUID        string `yaml:"ouId,omitempty"`
@@ -1394,6 +1395,7 @@ func (s *importService) importNotificationTemplate(
 		design = &notificationtemplate.TemplateDesign{ColorScheme: raw.Design.ColorScheme}
 	}
 	createReq := notificationtemplate.CreateTemplateRequest{
+		ID:          raw.ID,
 		Handle:      raw.Handle,
 		OUID:        raw.OUID,
 		DisplayName: raw.DisplayName,
