@@ -714,7 +714,7 @@ func (as *authorizeService) tryCompleteWithSSOSession(
 	authID, executionID string,
 ) (string, *AuthorizationError) {
 	step, svcErr := as.flowExecService.Execute(ctx, app.ID, executionID,
-		string(providers.FlowTypeAuthentication), false, "", nil, "", "", "")
+		string(providers.FlowTypeAuthentication), false, "", nil, "", "", "", nil)
 	completed := svcErr == nil && step != nil && step.Status == providers.FlowStatusComplete &&
 		step.Assertion != ""
 	if !completed {

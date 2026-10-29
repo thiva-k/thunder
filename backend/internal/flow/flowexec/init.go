@@ -39,14 +39,14 @@ func Initialize(
 	interceptorRunner := newInterceptorRunner(interceptorRegistry)
 	flowEngine := newFlowEngine(executorRegistry, interceptorRunner, observabilitySvc,
 		flowProvider, graphBuilder)
-	flowExecService := newFlowExecService(flowProvider, flowStore, flowEngine,
-		actorProvider, observabilitySvc, transactioner, cryptoSvc, attestationVerifier,
-		graphBuilder, jwtService, serverConfigSvc, governance, cfg)
-
 	// Bound the SSO handle's lifetime to the session's configured absolute timeout (same fallback as
 	// the session executor's timeouts).
 	sessionTimeouts := session.NewTimeouts(cfg.Session.IdleTimeoutSeconds, cfg.Session.AbsoluteTimeoutSeconds,
 		cfg.Session.ActivityRefreshIntervalSeconds)
+	flowExecService := newFlowExecService(flowProvider, flowStore, flowEngine,
+		actorProvider, observabilitySvc, transactioner, cryptoSvc, attestationVerifier,
+		graphBuilder, jwtService, serverConfigSvc, governance, cfg, sessionTimeouts.Absolute)
+
 	handler := newFlowExecutionHandler(flowExecService, ssoTransport, sessionTimeouts.Absolute)
 	registerRoutes(mux, handler)
 

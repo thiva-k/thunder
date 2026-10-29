@@ -428,6 +428,22 @@ type FlowStep struct {
 	ErrorAssertion string              `json:"errorAssertion,omitempty"`
 	Error          *FlowExecutionError `json:"error,omitempty"`
 	ChallengeToken string              `json:"challengeToken,omitempty"`
+	// SessionData lists the SSO sessions a step started, returned to an app-native caller.
+	SessionData []FlowIssuedSessionData `json:"sessionData,omitempty"`
+	// ClearedSessions lists the flow identifiers whose SSO session a step ended, for an app-native caller.
+	ClearedSessions []string `json:"clearedSessions,omitempty"`
+}
+
+// FlowSessionData is one SSO session an app-native caller holds, keyed by the identifier of its flow.
+type FlowSessionData struct {
+	FlowIdentifier string `json:"flowIdentifier"`
+	SessionHandle  string `json:"sessionHandle"`
+}
+
+// FlowIssuedSessionData is the SSO session a step started, with how long its handle stays usable.
+type FlowIssuedSessionData struct {
+	FlowSessionData
+	ExpiresIn int64 `json:"expiresIn"`
 }
 
 // FlowErrorResponse is the body returned when flow execution fails at the engine level (4xx/5xx),

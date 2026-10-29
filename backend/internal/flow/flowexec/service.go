@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
@@ -51,6 +52,8 @@ type flowExecService struct {
 	serverConfigSvc     serverConfigProvider
 	governance          providers.IdentityGovernanceProvider
 	cfg                 flowconfig.Config
+	// ssoHandleTTL is how long a handle returned in the response body stays usable.
+	ssoHandleTTL time.Duration
 }
 
 // newFlowExecService creates a new instance of flowExecService with the provided dependencies.
@@ -65,7 +68,8 @@ func newFlowExecService(flowProvider providers.FlowProvider,
 	jwtService jwt.JWTServiceInterface,
 	serverConfigSvc serverConfigProvider,
 	governance providers.IdentityGovernanceProvider,
-	cfg flowconfig.Config) FlowExecServiceInterface {
+	cfg flowconfig.Config,
+	ssoHandleTTL time.Duration) FlowExecServiceInterface {
 	return &flowExecService{
 		flowProvider:        flowProvider,
 		flowStore:           flowStore,
@@ -80,27 +84,30 @@ func newFlowExecService(flowProvider providers.FlowProvider,
 		serverConfigSvc:     serverConfigSvc,
 		governance:          governance,
 		cfg:                 cfg,
+		ssoHandleTTL:        ssoHandleTTL,
 	}
 }
 
 // Execute executes a flow with the given data
 func (s *flowExecService) Execute(ctx context.Context,
 	appID, executionID, flowType string, verbose bool,
-	action string, inputs map[string]string, challengeToken, flowSecret, attestationToken string) (
-	*FlowStep, *tidcommon.ServiceError) {
+	action string, inputs map[string]string, challengeToken, flowSecret, attestationToken string,
+	sessionData []SessionData) (*FlowStep, *tidcommon.ServiceError) {
 	return s.execute(ctx, "", appID, executionID, flowType, verbose, action, inputs,
-		challengeToken, flowSecret, attestationToken)
+		challengeToken, flowSecret, attestationToken, sessionData)
 }
 
 // ExecuteByID starts or continues an administrator-selected flow by its immutable flow ID.
 func (s *flowExecService) ExecuteByID(ctx context.Context, flowID, executionID string, verbose bool,
-	action string, inputs map[string]string, challengeToken string) (*FlowStep, *tidcommon.ServiceError) {
-	return s.execute(ctx, flowID, "", executionID, "", verbose, action, inputs, challengeToken, "", "")
+	action string, inputs map[string]string, challengeToken string, sessionData []SessionData) (
+	*FlowStep, *tidcommon.ServiceError) {
+	return s.execute(ctx, flowID, "", executionID, "", verbose, action, inputs, challengeToken, "", "",
+		sessionData)
 }
 
 func (s *flowExecService) execute(ctx context.Context, flowID, appID, executionID, flowType string, verbose bool,
-	action string, inputs map[string]string, challengeToken, flowSecret, attestationToken string) (
-	*FlowStep, *tidcommon.ServiceError) {
+	action string, inputs map[string]string, challengeToken, flowSecret, attestationToken string,
+	sessionData []SessionData) (*FlowStep, *tidcommon.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowExecService"))
 
 	// Get trace ID from context
@@ -162,8 +169,9 @@ func (s *flowExecService) execute(ctx context.Context, flowID, appID, executionI
 	// Set trace ID to engine context (request context is already set during context loading)
 	engineCtx.TraceID = traceID
 
-	// Resolve the inbound SSO handle for this flow from the request-scoped transport inputs.
-	applyInboundSSO(engineCtx, ctx)
+	// Resolve the inbound SSO handle for this flow from the request body or the request-scoped
+	// transport inputs.
+	applyInboundSSO(engineCtx, ctx, sessionData)
 
 	flowStep, flowErr := s.flowEngine.Execute(engineCtx)
 
@@ -187,6 +195,9 @@ func (s *flowExecService) execute(ctx context.Context, flowID, appID, executionI
 		}
 		return nil, flowErr
 	}
+
+	// Return the SSO session this step started or ended in the response body too.
+	s.applyOutboundSSO(&flowStep)
 
 	// Surface the OAuth callback type (grant type) from runtime data onto the terminal response so the
 	// Gate/SDK routes the completion or failure to the correct callback handler (e.g. CIBA).
@@ -294,21 +305,48 @@ func validateAdministrationCaller(ctx context.Context, flowType providers.FlowTy
 	return nil
 }
 
-// applyInboundSSO selects the SSO handle carried for this flow from the request-scoped
-// transport inputs and stashes it on the engine context for the SSO-Check node to consume.
-// It is a no-op when no inbound transport is present.
-func applyInboundSSO(engineCtx *EngineContext, ctx context.Context) {
+// applyInboundSSO selects the SSO handle carried for this flow and stashes it on the engine context
+// for the SSO-Check node to consume. A handle the caller sent in the request body wins over the
+// request-scoped transport inputs. It is a no-op when neither carries one.
+func applyInboundSSO(engineCtx *EngineContext, ctx context.Context, sessionData []SessionData) {
 	if engineCtx == nil || engineCtx.Graph == nil {
 		return
+	}
+	// ssoFlowID resolves the flow whose session this execution operates on — the running flow for
+	// login/SSO, or the login flow (SessionFlowID) for a sign-out flow — so the correct per-flow handle
+	// is selected.
+	flowID := ssoFlowID(engineCtx)
+	if len(sessionData) > 0 {
+		flowIdentifier := session.FlowIdentifier(flowID)
+		for _, entry := range sessionData {
+			if entry.FlowIdentifier == flowIdentifier && entry.SessionHandle != "" {
+				engineCtx.SSOHandleIn = entry.SessionHandle
+				return
+			}
+		}
 	}
 	inbound, ok := session.InboundFrom(ctx)
 	if !ok {
 		return
 	}
-	// ssoFlowID resolves the flow whose session this execution operates on — the running flow for
-	// login/SSO, or the login flow (SessionFlowID) for a sign-out flow — so the correct per-flow cookie
-	// is selected.
-	engineCtx.SSOHandleIn = inbound.HandleFor(ssoFlowID(engineCtx))
+	engineCtx.SSOHandleIn = inbound.HandleFor(flowID)
+}
+
+// applyOutboundSSO adds the SSO session this step started or ended to the step, keyed by flow
+// identifier, for the response body to return to a caller that holds its handles itself.
+func (s *flowExecService) applyOutboundSSO(flowStep *FlowStep) {
+	if flowStep.SSOHandleOut != "" && flowStep.SSOFlowID != "" {
+		flowStep.SessionData = []IssuedSessionData{{
+			SessionData: SessionData{
+				FlowIdentifier: session.FlowIdentifier(flowStep.SSOFlowID),
+				SessionHandle:  flowStep.SSOHandleOut,
+			},
+			ExpiresIn: int64(s.ssoHandleTTL.Seconds()),
+		}}
+	}
+	if flowStep.SSOClearFlowID != "" {
+		flowStep.ClearedSessions = []string{session.FlowIdentifier(flowStep.SSOClearFlowID)}
+	}
 }
 
 // initContext initializes a new flow context with the given details.
