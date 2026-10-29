@@ -32,8 +32,9 @@ const retryDelayMax = time.Minute
 // is added here with it.
 var configurationPaths = []string{
 	"/agent-types", "/agents", "/applications", "/authorization-detail-types", "/connections", "/design",
-	"/flows", "/groups", "/i18n", "/import", "/openid4vci", "/openid4vp", "/organization-units", "/ou",
-	"/resource-servers", "/roles", "/scim", "/server-config", "/user-types", "/users",
+	"/flows", "/groups", "/i18n", "/import", "/notification-templates", "/openid4vci", "/openid4vp",
+	"/organization-units", "/ou", "/resource-servers", "/roles", "/scim", "/server-config", "/user-types",
+	"/users",
 }
 
 // ChangeCapture keeps the current version up to date as the configuration changes: a successful
