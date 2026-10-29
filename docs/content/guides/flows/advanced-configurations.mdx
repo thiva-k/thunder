@@ -1496,7 +1496,7 @@ Determines the user type and default OU for the flow. The resolved values are us
 
 Resolves or selects an organizational unit based on a configured strategy. Overwrites the default OU set by User Type Resolver when applicable.
 
-**When to use:** User onboarding flows where the target OU must be determined dynamically based on the caller, administrative selection, or system hierarchy.
+**When to use:** User onboarding and sign-in flows where the target OU must be determined dynamically based on the caller, administrative or user selection, or system hierarchy.
 
 **Prerequisites:** Depends on the resolution strategy (see table below).
 
@@ -1505,6 +1505,8 @@ Resolves or selects an organizational unit based on a configured strategy. Overw
 | Property | UI Label | Required | Default | Behavior |
 |---|---|---|---|---|
 | `resolveFrom` | Resolve From | Yes | - | Strategy for OU resolution: `caller`, `prompt`, or `promptAll` |
+| `parentOuId` | Parent OU ID | Yes, for `prompt` in sign-in flows | - | The OU under which the user selects an OU. Allowed only with `prompt` in sign-in flows, and rejected on save otherwise. In other flow types the default OU set by User Type Resolver is used |
+| `directChildrenOnly` | Limit to direct children | No | `false` | Allowed only with `prompt`, and rejected on save otherwise. Only direct children of the parent OU can be selected, not deeper descendants |
 
 **Resolution Strategies:**
 
@@ -1517,16 +1519,17 @@ Resolves or selects an organizational unit based on a configured strategy. Overw
 - **Failure conditions:** Caller's OU not found in security context
 
 **`prompt` strategy:**
-- Prompts the user to select a child OU if the default OU has children
-- **When to use:** Delegated onboarding where an admin selects which sub-organization to create the user in
-- **Prerequisites:** 
-  - **User Type Resolver must have run first**: resolves `defaultOUID`
+- Prompts the user to select a child OU if the parent OU has children. The parent OU is the node's `parentOuId` or, when the node sets none, the default OU set by User Type Resolver. In sign-in flows there is no default OU, so `parentOuId` is required
+- **When to use:** Delegated onboarding where an admin selects which sub-organization to create the user in, or sign-in flows where the user picks the sub-organization to be placed in, for example when a first-time federated sign-in provisions a new account
+- **Prerequisites:**
+  - **A parent OU**: either the `parentOuId` property, or the default OU (`defaultOUID`) that **User Type Resolver** resolves when it has run first. `parentOuId` is allowed in authentication flows only, where it is required: User Type Resolver does not set a default OU in sign-in flows, so a flow that uses `prompt` without `parentOuId` is rejected when you save it
   - **A Blank View with OU selection input must follow this executor**, to collect the user's OU selection
 - **Setup:**
-  1. Place **User Type Resolver** before this executor in registration flows
+  1. In sign-in flows, set `parentOuId`. In other flows, place **User Type Resolver** before this executor
   2. Add a **Blank View** immediately after this executor with an OU selection component
-  3. This executor will prompt only if the default OU has child OUs. Otherwise, it completes silently
-- **Failure conditions:** Default OU not found; selected OU is not a child of the default
+  3. This executor will prompt only if the parent OU has child OUs. Otherwise, it completes silently
+  4. Turn on **Limit to direct children** (`directChildrenOnly`) to accept only direct children of the parent OU. By default the user fills in `ouId`. To have the user fill in `ouHandle` instead, which is looked up among the parent's direct children, declare a single required `ouHandle` input on this executor. The prompt node in the flow must use the same input
+- **Failure conditions:** Neither `parentOuId` nor a default OU is available, or the parent OU is not found; selected OU is not a child of the parent, or, with `directChildrenOnly`, not a direct child
 
 **`promptAll` strategy:**
 - Shows the full OU tree from root, independent of User Type Resolver
@@ -1540,6 +1543,7 @@ Resolves or selects an organizational unit based on a configured strategy. Overw
 
 **Input Configuration:**
 - `ouId` (required): the user's selected organizational unit. Used for `prompt` and `promptAll` strategies. Default: `ouId`
+- `ouHandle` (optional, alternative to `ouId`): with `prompt` and `directChildrenOnly`, declare it as the single required input in place of `ouId` to have the user enter the OU handle. The handle is looked up among the parent OU's direct children. Declaring it in any other mode is rejected on save
 
 **Example:**
 

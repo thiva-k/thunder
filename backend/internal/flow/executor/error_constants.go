@@ -1686,6 +1686,21 @@ var (
 			DefaultValue: "The account could not be updated with the details from the identity provider",
 		},
 	}
+
+	// ErrOUNotDirectChild is returned when the selected OU is not a direct child of the OU being selected from.
+	ErrOUNotDirectChild = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "FET-1121",
+		Error: tidcommon.I18nMessage{
+			Key:          "flows.executor.errors.ou_not_direct_child",
+			DefaultValue: "The selected organization unit is not a direct child of the parent organization unit.",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "flows.executor.errors.ou_not_direct_child_desc",
+			DefaultValue: "Only organization units directly under the parent organization unit can be " +
+				"selected. Choose one of those.",
+		},
+	}
 )
 
 // errForEntityCategory returns a copy of err whose messages name the entity category they are

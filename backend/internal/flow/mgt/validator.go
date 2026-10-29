@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
 	"github.com/thunder-id/thunderid/internal/flow/common"
@@ -19,6 +20,15 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+)
+
+// ouResolveFromPrompt is the resolveFrom strategy that asks the user to select an OU.
+const ouResolveFromPrompt = "prompt"
+
+// Input identifiers the OU resolver reads in direct children mode.
+const (
+	ouIDInputIdentifier     = "ouId"
+	ouHandleInputIdentifier = "ouHandle"
 )
 
 // FlowValidatorInterface defines the contract for validating flow definitions.
@@ -651,7 +661,7 @@ func (v *flowValidator) validateNodes(
 			if err := v.validateExecutorGenericConstraints(node, flowType); err != nil {
 				return err
 			}
-			if err := v.validateExecutorSpecificConstraints(node, nodeIndex, nodes); err != nil {
+			if err := v.validateExecutorSpecificConstraints(node, nodeIndex, nodes, flowType); err != nil {
 				return err
 			}
 		}
@@ -1002,6 +1012,7 @@ func (v *flowValidator) validateExecutorMeta(
 func (v *flowValidator) validateExecutorSpecificConstraints(
 	node *providers.NodeDefinition,
 	nodeIndex map[string]*providers.NodeDefinition, nodes []providers.NodeDefinition,
+	flowType providers.FlowType,
 ) *tidcommon.ServiceError {
 	switch node.Executor.Name {
 	case executormeta.ExecutorNameSSOCheck:
@@ -1010,8 +1021,157 @@ func (v *flowValidator) validateExecutorSpecificConstraints(
 		return v.validateSessionExecutor(node, nodes)
 	case executormeta.ExecutorNameAccountLinking:
 		return v.validateAccountLinkingExecutor(node, nodeIndex)
+	case executormeta.ExecutorNameOUResolver:
+		return v.validateOUResolverExecutor(node, flowType)
 	}
 	return nil
+}
+
+// validateOUResolverExecutor rejects OU resolver properties and inputs that the node's strategy or flow type would
+// ignore, and requires parentOuId on a node that prompts in an authentication flow, where UserTypeResolver sets no
+// default OU.
+func (v *flowValidator) validateOUResolverExecutor(
+	node *providers.NodeDefinition, flowType providers.FlowType,
+) *tidcommon.ServiceError {
+	if err := validateOUResolverPropertyValues(node); err != nil {
+		return err
+	}
+
+	resolveFrom, _ := node.Properties[common.NodePropertyOUResolveFrom].(string)
+	parentOU, _ := node.Properties[common.NodePropertyOUParent].(string)
+	hasParentOU := strings.TrimSpace(parentOU) != ""
+	directChildrenOnly, _ := node.Properties[common.NodePropertyOUDirectChildrenOnly].(bool)
+
+	if hasParentOU && (resolveFrom != ouResolveFromPrompt || flowType != providers.FlowTypeAuthentication) {
+		return ouResolverUnsupportedProperty(node, common.NodePropertyOUParent,
+			"with the prompt strategy in authentication flows")
+	}
+	if directChildrenOnly && resolveFrom != ouResolveFromPrompt {
+		return ouResolverUnsupportedProperty(node, common.NodePropertyOUDirectChildrenOnly,
+			"with the prompt strategy")
+	}
+	if err := validateOUResolverInputs(node, resolveFrom == ouResolveFromPrompt && directChildrenOnly); err != nil {
+		return err
+	}
+
+	if resolveFrom == ouResolveFromPrompt && flowType == providers.FlowTypeAuthentication && !hasParentOU {
+		return missingRequiredPropertyError(node, common.NodePropertyOUParent)
+	}
+	return nil
+}
+
+// validateOUResolverPropertyValues rejects the OU resolver properties added with direct children selection whose
+// value the executor would not read: a non-string parentOuId or a non-boolean directChildrenOnly.
+func validateOUResolverPropertyValues(node *providers.NodeDefinition) *tidcommon.ServiceError {
+	if val, ok := node.Properties[common.NodePropertyOUParent]; ok {
+		if _, isString := val.(string); !isString {
+			return invalidPropertyValueError(node, common.NodePropertyOUParent, "a string")
+		}
+	}
+	if val, ok := node.Properties[common.NodePropertyOUDirectChildrenOnly]; ok {
+		if _, isBool := val.(bool); !isBool {
+			return invalidPropertyValueError(node, common.NodePropertyOUDirectChildrenOnly, "a boolean")
+		}
+	}
+	return nil
+}
+
+// invalidPropertyValueError reports a property whose value is not of the kind the executor reads.
+func invalidPropertyValueError(
+	node *providers.NodeDefinition, propertyKey, expected string,
+) *tidcommon.ServiceError {
+	return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+		Key: "error.flowmgtservice.invalid_ou_resolver_property_value_description",
+		DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' " +
+			"requires property '{{param(propertyKey)}}' to be {{param(expected)}}",
+		Params: map[string]string{
+			"nodeID":       node.ID,
+			"executorName": node.Executor.Name,
+			"propertyKey":  propertyKey,
+			"expected":     expected,
+		},
+	})
+}
+
+// validateOUResolverInputs checks the inputs declared on an OU resolver node. In direct children mode the node may
+// declare a single required input, ouId or ouHandle, which decides how the user names the OU. Declaring ouHandle
+// elsewhere is rejected because only direct children mode reads it.
+func validateOUResolverInputs(node *providers.NodeDefinition, directChildrenMode bool) *tidcommon.ServiceError {
+	inputs := node.Executor.Inputs
+	if !directChildrenMode {
+		for _, input := range inputs {
+			if input.Identifier == ouHandleInputIdentifier {
+				return ouResolverUnsupportedProperty(node, input.Identifier,
+					"with the prompt strategy and directChildrenOnly")
+			}
+		}
+		return nil
+	}
+	if len(inputs) == 0 {
+		return nil
+	}
+	if len(inputs) == 1 && inputs[0].Required &&
+		(inputs[0].Identifier == ouIDInputIdentifier || inputs[0].Identifier == ouHandleInputIdentifier) {
+		return nil
+	}
+
+	return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+		Key: "error.flowmgtservice.invalid_ou_resolver_inputs_description",
+		DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' must declare a single " +
+			"required input, '{{param(ouIDInput)}}' or '{{param(ouHandleInput)}}', when directChildrenOnly is set",
+		Params: map[string]string{
+			"nodeID":        node.ID,
+			"executorName":  node.Executor.Name,
+			"ouIDInput":     ouIDInputIdentifier,
+			"ouHandleInput": ouHandleInputIdentifier,
+		},
+	})
+}
+
+// ouResolverUnsupportedProperty reports an OU resolver property used outside the configuration it supports, and
+// names the configuration that does.
+func ouResolverUnsupportedProperty(
+	node *providers.NodeDefinition, propertyKey, supportedWith string,
+) *tidcommon.ServiceError {
+	return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+		Key: "error.flowmgtservice.unsupported_ou_resolver_property_description",
+		DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' supports " +
+			"'{{param(propertyKey)}}' only {{param(supportedWith)}}",
+		Params: map[string]string{
+			"nodeID":        node.ID,
+			"executorName":  node.Executor.Name,
+			"propertyKey":   propertyKey,
+			"supportedWith": supportedWith,
+		},
+	})
+}
+
+// missingRequiredPropertyError reports a property the executor requires that the node does not set.
+func missingRequiredPropertyError(node *providers.NodeDefinition, propertyKey string) *tidcommon.ServiceError {
+	return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+		Key: "error.flowmgtservice.missing_required_executor_property_description",
+		DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' " +
+			"requires property '{{param(propertyKey)}}'",
+		Params: map[string]string{
+			"nodeID":       node.ID,
+			"executorName": node.Executor.Name,
+			"propertyKey":  propertyKey,
+		},
+	})
+}
+
+// unsupportedPropertyError reports a property the executor does not support in the node's configuration.
+func unsupportedPropertyError(node *providers.NodeDefinition, propertyKey string) *tidcommon.ServiceError {
+	return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+		Key: "error.flowmgtservice.unsupported_executor_property_description",
+		DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' " +
+			"does not support property '{{param(propertyKey)}}'",
+		Params: map[string]string{
+			"nodeID":       node.ID,
+			"executorName": node.Executor.Name,
+			"propertyKey":  propertyKey,
+		},
+	})
 }
 
 // validateExecutorMode checks that the executor mode configured in the node is supported.
@@ -1101,16 +1261,7 @@ func (v *flowValidator) validateExecutorProperties(
 			}
 			val, ok := node.Properties[prop.Property]
 			if !ok || val == nil || val == "" {
-				return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
-					Key: "error.flowmgtservice.missing_required_executor_property_description",
-					DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' " +
-						"requires property '{{param(propertyKey)}}'",
-					Params: map[string]string{
-						"nodeID":       node.ID,
-						"executorName": node.Executor.Name,
-						"propertyKey":  prop.Property,
-					},
-				})
+				return missingRequiredPropertyError(node, prop.Property)
 			}
 		}
 	}
@@ -1118,16 +1269,7 @@ func (v *flowValidator) validateExecutorProperties(
 	// Check for unsupported properties
 	for key := range node.Properties {
 		if !supported[key] {
-			return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
-				Key: "error.flowmgtservice.unsupported_executor_property_description",
-				DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' " +
-					"does not support property '{{param(propertyKey)}}'",
-				Params: map[string]string{
-					"nodeID":       node.ID,
-					"executorName": node.Executor.Name,
-					"propertyKey":  key,
-				},
-			})
+			return unsupportedPropertyError(node, key)
 		}
 	}
 	return nil

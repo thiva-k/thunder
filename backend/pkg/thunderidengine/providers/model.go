@@ -40,7 +40,9 @@ type DesignResponse struct {
 // OAuth and flow layers render. The management model, with its REST, YAML and persistence
 // representations, belongs to the organization unit service.
 type OrganizationUnit struct {
-	ID              string
+	ID string
+	// Parent is the ID of the parent organization unit. It is empty only for a root organization unit.
+	Parent          string
 	Handle          string
 	Name            string
 	Description     string
