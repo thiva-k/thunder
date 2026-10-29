@@ -175,7 +175,8 @@ type roleAdapter interface {
 }
 
 type roleAssignmentAdapter interface {
-	AddAssignments(ctx context.Context, id string, assignments []role.RoleAssignment) *tidcommon.ServiceError
+	AddAssigneesToRoles(ctx context.Context, assignments []role.RoleAssignment,
+		roleIDs []string) *tidcommon.ServiceError
 }
 
 // sharingPolicyAdapter applies the sharing policies a document carries for one resource.

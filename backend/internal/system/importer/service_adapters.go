@@ -76,8 +76,8 @@ type roleDeclarativeYAML struct {
 	OUID            string                     `yaml:"ouId,omitempty"`
 	OUHandle        string                     `yaml:"ouHandle,omitempty"`
 	Permissions     []role.ResourcePermissions `yaml:"permissions"`
-	Assignments     []role.RoleAssignment      `yaml:"assignments,omitempty"`
 	SharingPolicies []sharing.PolicyRequest    `yaml:"sharingPolicies,omitempty"`
+	Assignments     []role.RoleAssignment      `yaml:"assignments,omitempty"`
 }
 
 type userDeclarativeYAML struct {
@@ -341,13 +341,14 @@ func (s *importService) importRole(
 	}
 	req.OUID = resolvedOUID
 
+	// Assignments are added once the sharing policies are in place, since one may be made in an
+	// organization unit only a policy lets the role reach.
 	createReq := role.RoleCreationDetail{
 		ID:          req.ID,
 		Name:        req.Name,
 		Description: req.Description,
 		OUID:        req.OUID,
 		Permissions: req.Permissions,
-		Assignments: req.Assignments,
 	}
 	updateReq := role.RoleUpdateDetail{
 		Name:        req.Name,
@@ -382,16 +383,8 @@ func (s *importService) importRole(
 				updated.ID, updated.Name, updated.OUID, req.SharingPolicies, operationUpdate); outcome != nil {
 				return *outcome
 			}
-			if len(req.Assignments) > 0 {
-				if s.roleAssignmentService == nil {
-					return serviceErrorOutcome(resourceTypeRole, updated.ID, updated.Name, operationUpdate,
-						tidcommon.CustomServiceError(tidcommon.InternalServerError,
-							tidcommon.I18nMessage{DefaultValue: "roleAssignmentService not configured"}))
-				}
-				assignErr := s.roleAssignmentService.AddAssignments(ctx, updated.ID, req.Assignments)
-				if assignErr != nil {
-					return serviceErrorOutcome(resourceTypeRole, updated.ID, updated.Name, operationUpdate, assignErr)
-				}
+			if assignErr := s.addRoleAssignments(ctx, updated.ID, req.Assignments); assignErr != nil {
+				return serviceErrorOutcome(resourceTypeRole, updated.ID, updated.Name, operationUpdate, assignErr)
 			}
 			return successOutcome(resourceTypeRole, updated.ID, updated.Name, operationUpdate)
 		}
@@ -406,17 +399,40 @@ func (s *importService) importRole(
 		return serviceErrorOutcome(resourceTypeRole, req.ID, req.Name, operationCreate, svcErr)
 	}
 
-	// A policy names the role it governs, so the policies are replayed once the role exists. A refusal
-	// therefore undoes the create, so a retry does not meet a half-imported role.
-	if outcome := s.applySharingPolicies(ctx, role.RoleSharingType, resourceTypeRole,
-		created.ID, created.Name, created.OUID, req.SharingPolicies, operationCreate); outcome != nil {
+	// A policy names the role it governs, so the policies are replayed once the role exists, and the
+	// assignments after them. A refusal of either undoes the create, so a retry does not meet a
+	// half-imported role.
+	outcome := s.applySharingPolicies(ctx, role.RoleSharingType, resourceTypeRole,
+		created.ID, created.Name, created.OUID, req.SharingPolicies, operationCreate)
+	if outcome == nil {
+		if assignErr := s.addRoleAssignments(ctx, created.ID, req.Assignments); assignErr != nil {
+			refused := serviceErrorOutcome(resourceTypeRole, created.ID, created.Name, operationCreate, assignErr)
+			outcome = &refused
+		}
+	}
+	if outcome != nil {
 		if delErr := s.roleService.DeleteRole(ctx, created.ID); delErr != nil {
-			log.GetLogger().Error(ctx, "Failed to remove a role whose sharing policies were refused",
+			log.GetLogger().Error(ctx, "Failed to remove a role whose sharing policies or assignments were refused",
 				log.String("roleID", created.ID), log.String("code", delErr.Code))
 		}
 		return *outcome
 	}
 	return successOutcome(resourceTypeRole, created.ID, created.Name, operationCreate)
+}
+
+// addRoleAssignments adds a role document's assignments, each in the organization unit it names or,
+// when it names none, in the one owning its assignee.
+func (s *importService) addRoleAssignments(
+	ctx context.Context, roleID string, assignments []role.RoleAssignment,
+) *tidcommon.ServiceError {
+	if len(assignments) == 0 {
+		return nil
+	}
+	if s.roleAssignmentService == nil {
+		return tidcommon.CustomServiceError(tidcommon.InternalServerError,
+			tidcommon.I18nMessage{DefaultValue: "roleAssignmentService not configured"})
+	}
+	return s.roleAssignmentService.AddAssigneesToRoles(ctx, assignments, []string{roleID})
 }
 
 func (s *importService) importGroup(

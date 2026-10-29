@@ -22,6 +22,7 @@ import (
 	syscontext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	systemutils "github.com/thunder-id/thunderid/internal/system/utils"
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -675,6 +676,23 @@ func resolveClientSystemAttributes(
 	return filtered, nil
 }
 
+// ouActorRoleProvider is implemented by an actor provider that can read the roles an actor holds
+// through the assignments made in one organization unit. The server's own provider does.
+type ouActorRoleProvider interface {
+	GetActorRolesInOU(actorID string, groupIDs []string, ouID string) ([]string, *tidcommon.ServiceError)
+}
+
+// actorRolesInOU returns the actor's roles from the assignments made in ouID. A provider that cannot
+// narrow its roles to an organization unit answers with the roles assigned anywhere, as before.
+func actorRolesInOU(
+	actorProvider providers.ActorProvider, actorID string, groupIDs []string, ouID string,
+) ([]string, *tidcommon.ServiceError) {
+	if p, ok := actorProvider.(ouActorRoleProvider); ok {
+		return p.GetActorRolesInOU(actorID, groupIDs, ouID)
+	}
+	return actorProvider.GetActorRoles(actorID, groupIDs)
+}
+
 // resolveClientGroupRoleClaims returns the client's groups and/or roles claims selected by
 // ClientConfig.Attributes. Groups come from the actor's transitive memberships; roles are resolved
 // from those groups plus direct assignments. The shared group lookup runs once for both.
@@ -693,9 +711,17 @@ func resolveClientGroupRoleClaims(
 		return nil, nil
 	}
 
-	groups, svcErr := actorProvider.GetActorGroups(oauthApp.ID)
+	allGroups, svcErr := actorProvider.GetActorGroups(oauthApp.ID)
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to fetch groups for client %s: %s", oauthApp.ID, svcErr.Error)
+	}
+	// The client's groups and roles are those of its own organization unit. Groups of an organization
+	// unit it is shared with, and roles assigned to it there, are that unit's, not the client's.
+	groups := make([]providers.EntityGroup, 0, len(allGroups))
+	for _, g := range allGroups {
+		if g.OUID == oauthApp.OUID {
+			groups = append(groups, g)
+		}
 	}
 
 	claims := make(map[string]interface{})
@@ -717,7 +743,7 @@ func resolveClientGroupRoleClaims(
 				groupIDs = append(groupIDs, g.ID)
 			}
 		}
-		roles, roleErr := actorProvider.GetActorRoles(oauthApp.ID, groupIDs)
+		roles, roleErr := actorRolesInOU(actorProvider, oauthApp.ID, groupIDs, oauthApp.OUID)
 		if roleErr != nil {
 			return nil, fmt.Errorf("failed to fetch roles for client %s: %s", oauthApp.ID, roleErr.Error)
 		}
