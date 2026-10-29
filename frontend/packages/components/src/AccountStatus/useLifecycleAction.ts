@@ -68,56 +68,31 @@ function successMessage(action: LifecycleAction, category: LifecycleCategory, t:
   }
 }
 
-function emailNotSentMessage(action: LifecycleAction, category: LifecycleCategory, t: TFunction): string {
+/**
+ * The warning toast when a user's notification email was not sent. Agents and applications usually hold
+ * no email address, so they get the success toast instead.
+ */
+function emailNotSentMessage(action: LifecycleAction, t: TFunction): string {
   switch (action) {
     case 'unlock':
-      return category === 'agent'
-        ? t(
-            'common:accountStatus.unlock.emailNotSent.agent',
-            "Agent unlocked, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
-          )
-        : t(
-            'common:accountStatus.unlock.emailNotSent.user',
-            "User unlocked, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
-          );
+      return t(
+        'common:accountStatus.unlock.emailNotSent.user',
+        'User unlocked, but no notification email was sent. Check that the user has an email address and an email provider is configured.',
+      );
     case 'unsuspend':
-      if (category === 'agent') {
-        return t(
-          'common:accountStatus.unsuspend.emailNotSent.agent',
-          "Agent unsuspended, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
-        );
-      }
-      if (category === 'application') {
-        return t(
-          'common:accountStatus.unsuspend.emailNotSent.application',
-          "Application unsuspended, but no notification email was sent. Check that the application has an email address and that the flow's Send Email node has an email provider.",
-        );
-      }
       return t(
         'common:accountStatus.unsuspend.emailNotSent.user',
-        "User unsuspended, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
+        'User unsuspended, but no notification email was sent. Check that the user has an email address and an email provider is configured.',
       );
     case 'unsuspendAndUnlock':
       return t(
         'common:accountStatus.unsuspendAndUnlock.emailNotSent',
-        "User unsuspended and unlocked, but a notification email was not sent. Check that the user has an email address and that each flow's Send Email node has an email provider.",
+        'User unsuspended and unlocked, but a notification email was not sent. Check that the user has an email address and an email provider is configured.',
       );
     default:
-      if (category === 'agent') {
-        return t(
-          'common:accountStatus.suspend.emailNotSent.agent',
-          "Agent suspended, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
-        );
-      }
-      if (category === 'application') {
-        return t(
-          'common:accountStatus.suspend.emailNotSent.application',
-          "Application suspended, but no notification email was sent. Check that the application has an email address and that the flow's Send Email node has an email provider.",
-        );
-      }
       return t(
         'common:accountStatus.suspend.emailNotSent.user',
-        "User suspended, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
+        'User suspended, but no notification email was sent. Check that the user has an email address and an email provider is configured.',
       );
   }
 }
@@ -184,8 +159,8 @@ export default function useLifecycleAction(
     },
     onSuccess: (emailNotSent: boolean, variables: LifecycleActionVariables): void => {
       invalidateList();
-      if (emailNotSent) {
-        showToast(emailNotSentMessage(variables.action, variables.category, t), 'warning');
+      if (emailNotSent && variables.category === 'user') {
+        showToast(emailNotSentMessage(variables.action, t), 'warning');
       } else {
         showToast(successMessage(variables.action, variables.category, t), 'success');
       }

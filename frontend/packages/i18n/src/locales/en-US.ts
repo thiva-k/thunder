@@ -75,20 +75,14 @@ const translations = {
     'accountStatus.suspend.success.agent': 'Agent suspended',
     'accountStatus.suspend.success.application': 'Application suspended',
     'accountStatus.suspend.emailNotSent.user':
-      "User suspended, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
-    'accountStatus.suspend.emailNotSent.agent':
-      "Agent suspended, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
-    'accountStatus.suspend.emailNotSent.application':
-      "Application suspended, but no notification email was sent. Check that the application has an email address and that the flow's Send Email node has an email provider.",
+      'User suspended, but no notification email was sent. Check that the user has an email address and an email provider is configured.',
     'accountStatus.unlock.action': 'Unlock',
     'accountStatus.unlock.hint.user': 'Remove all sign-in locks.',
     'accountStatus.unlock.hint.agent': 'Remove all authentication locks.',
     'accountStatus.unlock.success.user': 'User unlocked',
     'accountStatus.unlock.success.agent': 'Agent unlocked',
     'accountStatus.unlock.emailNotSent.user':
-      "User unlocked, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
-    'accountStatus.unlock.emailNotSent.agent':
-      "Agent unlocked, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
+      'User unlocked, but no notification email was sent. Check that the user has an email address and an email provider is configured.',
     'accountStatus.unsuspend.action': 'Unsuspend',
     'accountStatus.unsuspend.hint.user':
       'Remove the suspension. The account remains locked until the user completes account recovery or an administrator unlocks it.',
@@ -113,11 +107,7 @@ const translations = {
     'accountStatus.unsuspend.success.agent': 'Agent unsuspended',
     'accountStatus.unsuspend.success.application': 'Application unsuspended',
     'accountStatus.unsuspend.emailNotSent.user':
-      "User unsuspended, but no notification email was sent. Check that the user has an email address and that the flow's Send Email node has an email provider.",
-    'accountStatus.unsuspend.emailNotSent.agent':
-      "Agent unsuspended, but no notification email was sent. Check that the agent has an email address and that the flow's Send Email node has an email provider.",
-    'accountStatus.unsuspend.emailNotSent.application':
-      "Application unsuspended, but no notification email was sent. Check that the application has an email address and that the flow's Send Email node has an email provider.",
+      'User unsuspended, but no notification email was sent. Check that the user has an email address and an email provider is configured.',
     'accountStatus.unsuspendAndUnlock.action': 'Unsuspend and unlock',
     'accountStatus.unsuspendAndUnlock.hint.user':
       'Remove the suspension and unlock. The account can sign in right away.',
@@ -128,7 +118,7 @@ const translations = {
       'This action will remove the suspension and unlock the account, allowing the user to sign in again.',
     'accountStatus.unsuspendAndUnlock.success': 'User unsuspended and unlocked',
     'accountStatus.unsuspendAndUnlock.emailNotSent':
-      "User unsuspended and unlocked, but a notification email was not sent. Check that the user has an email address and that each flow's Send Email node has an email provider.",
+      'User unsuspended and unlocked, but a notification email was not sent. Check that the user has an email address and an email provider is configured.',
     'accountStatus.unsuspendAndUnlock.incomplete':
       'The suspension was removed, but the unlock failed. Unlock it from the Actions menu.',
 
