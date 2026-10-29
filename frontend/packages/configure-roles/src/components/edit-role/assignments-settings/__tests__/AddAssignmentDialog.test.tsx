@@ -289,6 +289,26 @@ describe('AddAssignmentDialog', () => {
     );
   });
 
+  describe('Organization Unit Scope', () => {
+    it("should list only the role's organization unit candidates when ouId is given", () => {
+      renderComponent({ouId: 'ou-1'});
+
+      expect(useGetUsers).toHaveBeenCalledWith(expect.objectContaining({filter: 'ouId eq "ou-1"'}));
+      expect(useGetGroups).toHaveBeenCalledWith(expect.objectContaining({filter: 'ouId eq "ou-1"'}));
+      expect(useGetApplications).toHaveBeenCalledWith(expect.objectContaining({filter: 'ouId eq "ou-1"'}));
+      expect(useGetAgents).toHaveBeenCalledWith(expect.objectContaining({filter: 'ouId eq "ou-1"'}));
+    });
+
+    it('should not filter the candidates when ouId is not given', () => {
+      renderComponent();
+
+      expect(useGetUsers).toHaveBeenCalledWith(expect.objectContaining({filter: undefined}));
+      expect(useGetGroups).toHaveBeenCalledWith(expect.objectContaining({filter: undefined}));
+      expect(useGetApplications).toHaveBeenCalledWith(expect.objectContaining({filter: undefined}));
+      expect(useGetAgents).toHaveBeenCalledWith(expect.objectContaining({filter: undefined}));
+    });
+  });
+
   describe('User Interactions', () => {
     it('should switch to Groups tab when clicked', async () => {
       const user = userEvent.setup();
