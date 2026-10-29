@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
@@ -30,6 +32,17 @@ type OrganizationUnitRequest struct {
 	TosURI                    string  `json:"tosUri,omitempty" native:"omitempty,url,max=2048"`
 	PolicyURI                 string  `json:"policyUri,omitempty" native:"omitempty,url,max=2048"`
 	CookiePolicyURI           string  `json:"cookiePolicyUri,omitempty" native:"omitempty,url,max=2048"`
+}
+
+// OwnerErrors are the errors a kind of resource answers with when it refuses the organization unit that owns it, so
+// each kind keeps its own error codes.
+type OwnerErrors struct {
+	// Required is returned when neither an id nor a handle is given for a new resource.
+	Required tidcommon.ServiceError
+	// NotFound is returned when the organization unit named does not exist.
+	NotFound tidcommon.ServiceError
+	// Changed is returned when the organization unit named for an existing resource is not the one it has.
+	Changed tidcommon.ServiceError
 }
 
 // OrganizationUnit is the management representation of an organization unit. It backs the REST

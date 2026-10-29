@@ -33,9 +33,9 @@ const (
 	httpConnDeclarativeDeleteCode = "DCR-1003"
 
 	// The organization unit refusals: none named, one that does not exist, and a change on update.
-	httpConnOURequiredCode = "CON-1025"
-	httpConnOUUnknownCode  = "CON-1023"
-	httpConnOUChangedCode  = "CON-1024"
+	httpConnOURequiredCode = "CON-1030"
+	httpConnOUUnknownCode  = "CON-1028"
+	httpConnOUChangedCode  = "CON-1029"
 
 	httpConnImportOperationCreate = "create"
 	httpConnImportOperationUpdate = "update"

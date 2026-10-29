@@ -1501,9 +1501,10 @@ components:
               summary: No organization unit given on create
               description: >-
                 Every connection is created in an organization unit. The code depends on the kind of connection:
-                `IDP-1016` for an identity provider, `MNS-1020` for an SMS or email connection and `CON-1025` for an
-                AuthZEN PDP or HTTP connection. An organization unit that does not exist is `IDP-1014`, `MNS-1018`
-                or `CON-1023`, and an attempt to change it on update is `IDP-1015`, `MNS-1019` or `CON-1024`.
+                `IDP-1016` for an identity provider, `MNS-1020` for an SMS or email connection, `CON-1025` for an
+                AuthZEN PDP connection and `CON-1030` for an HTTP connection. An organization unit that does not
+                exist is `IDP-1014`, `MNS-1018`, `CON-1023` or `CON-1028`, and an attempt to change it on update is
+                `IDP-1015`, `MNS-1019`, `CON-1024` or `CON-1029`.
               value:
                 code: "CON-1025"
                 message:

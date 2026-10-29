@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/net/http/httpguts"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
+	"github.com/thunder-id/thunderid/internal/ou"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/outboundauth"
@@ -57,20 +57,27 @@ type HTTPConnectionServiceInterface interface {
 // httpConnectionService validates and manages HTTP connections.
 type httpConnectionService struct {
 	store              httpConnectionStoreInterface
-	ouResolver         connectionou.ResolverInterface
+	ouService          ou.OrganizationUnitServiceInterface
 	dependencyRegistry resourcedependency.Registry
 	logger             *log.Logger
+}
+
+// ownerErrors are the errors given when the organization unit of an HTTP connection is refused.
+var ownerErrors = ou.OwnerErrors{
+	Required: ErrorOURequired,
+	NotFound: ErrorInvalidOU,
+	Changed:  ErrorOUUpdateNotAllowed,
 }
 
 var _ HTTPConnectionServiceInterface = (*httpConnectionService)(nil)
 
 // newHTTPConnectionService creates an HTTP connection service.
 func newHTTPConnectionService(store httpConnectionStoreInterface,
-	ouResolver connectionou.ResolverInterface) *httpConnectionService {
+	ouService ou.OrganizationUnitServiceInterface) *httpConnectionService {
 	return &httpConnectionService{
-		store:      store,
-		ouResolver: ouResolver,
-		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
+		store:     store,
+		ouService: ouService,
+		logger:    log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
 }
 
@@ -450,7 +457,7 @@ func (s *httpConnectionService) validateAuthentication(ctx context.Context, conn
 func (s *httpConnectionService) ResolveConnectionOU(
 	ctx context.Context, connection *HTTPConnection,
 ) *tidcommon.ServiceError {
-	ouID, svcErr := s.ouResolver.Resolve(ctx, connection.OUID, connection.OUHandle)
+	ouID, svcErr := s.ouService.ResolveOwner(ctx, connection.OUID, connection.OUHandle, ownerErrors)
 	if svcErr != nil {
 		return svcErr
 	}
@@ -462,7 +469,8 @@ func (s *httpConnectionService) ResolveConnectionOU(
 // one the connection has.
 func (s *httpConnectionService) checkOwnerUnchanged(ctx context.Context, connection *HTTPConnection,
 	currentOUID string) *tidcommon.ServiceError {
-	ouID, svcErr := s.ouResolver.ResolveForUpdate(ctx, connection.OUID, connection.OUHandle, currentOUID)
+	ouID, svcErr := s.ouService.ResolveOwnerForUpdate(
+		ctx, connection.OUID, connection.OUHandle, currentOUID, ownerErrors)
 	if svcErr != nil {
 		return svcErr
 	}

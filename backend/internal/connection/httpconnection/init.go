@@ -6,7 +6,6 @@
 package httpconnection
 
 import (
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
@@ -19,12 +18,7 @@ func Initialize(cfg config.HTTPConnectionConfig,
 	if err != nil {
 		return nil, err
 	}
-	ouResolver := connectionou.Initialize(ouService, connectionou.Errors{
-		Required: connectionou.ErrorOURequired,
-		NotFound: connectionou.ErrorInvalidOU,
-		Changed:  connectionou.ErrorOUUpdateNotAllowed,
-	})
-	return newHTTPConnectionService(initializeStore(mode), ouResolver), nil
+	return newHTTPConnectionService(initializeStore(mode), ouService), nil
 }
 
 // initializeStore selects the mutable, declarative, or composite connection store.

@@ -14,14 +14,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/declarative_resource/entity"
 	"github.com/thunder-id/thunderid/internal/system/outboundauth"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
-	"github.com/thunder-id/thunderid/internal/system/security"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 	"github.com/thunder-id/thunderid/tests/mocks/resourcedependencymock"
@@ -45,17 +43,15 @@ func (s *HTTPConnectionServiceTestSuite) SetupTest() {
 	s.mockStore = newHttpConnectionStoreInterfaceMock(s.T())
 	s.mockOU = oumock.NewOrganizationUnitServiceInterfaceMock(s.T())
 	// Every connection names the organization unit it belongs to; unless a test is about the owner, "ou-1" exists.
-	s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "ou-1").Return(true, nil).Maybe()
-	s.service = newHTTPConnectionService(s.mockStore, s.ouResolver())
-}
-
-// ouResolver resolves owners against the suite's organization unit service mock.
-func (s *HTTPConnectionServiceTestSuite) ouResolver() connectionou.ResolverInterface {
-	return connectionou.Initialize(s.mockOU, connectionou.Errors{
-		Required: connectionou.ErrorOURequired,
-		NotFound: connectionou.ErrorInvalidOU,
-		Changed:  connectionou.ErrorOUUpdateNotAllowed,
-	})
+	s.mockOU.On("ResolveOwner", mock.Anything, "ou-1", "", mock.Anything).Return("ou-1", nil).Maybe()
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "", mock.Anything, mock.Anything).
+		RunAndReturn(func(
+			_ context.Context, _, _, currentID string, _ ou.OwnerErrors,
+		) (string, *tidcommon.ServiceError) {
+			return currentID, nil
+		}).Maybe()
+	s.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-1", "", "ou-1", mock.Anything).Return("ou-1", nil).Maybe()
+	s.service = newHTTPConnectionService(s.mockStore, s.mockOU)
 }
 
 func (s *HTTPConnectionServiceTestSuite) noneAuth() []cmodels.Property {
@@ -597,7 +593,10 @@ func (s *HTTPConnectionServiceTestSuite) TestWritesAreRejectedInDeclarativeMode(
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestCreateResolvesOU() {
-	s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "missing").Return(false, nil).Once()
+	s.mockOU.On("ResolveOwner", mock.Anything, "missing", "", mock.Anything).
+		Return("", &ErrorInvalidOU).Once()
+	s.mockOU.On("ResolveOwner", mock.Anything, "", "", mock.Anything).
+		Return("", &ErrorOURequired).Once()
 	stored := s.expectCreate()
 
 	byID := s.connection("https://risk.example.com", s.noneAuth())
@@ -608,106 +607,37 @@ func (s *HTTPConnectionServiceTestSuite) TestCreateResolvesOU() {
 
 	noOU := s.connection("https://risk.example.com", s.noneAuth())
 	noOU.OUID = ""
-	s.assertCreateRejected(noOU, connectionou.ErrorOURequired)
+	s.assertCreateRejected(noOU, ErrorOURequired)
 
 	unknown := s.connection("https://risk.example.com", s.noneAuth())
 	unknown.OUID = "missing"
-	s.assertCreateRejected(unknown, connectionou.ErrorInvalidOU)
+	s.assertCreateRejected(unknown, ErrorInvalidOU)
 }
 
-// An import or a declarative file names the owner by handle, which resolves to the unit's id; on update it
-// has to name the owner the connection has.
-func (s *HTTPConnectionServiceTestSuite) TestAnOwnerNamedByHandle() {
-	s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-		Return(ou.OrganizationUnit{ID: "ou-1"}, nil)
-	s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "other").
-		Return(ou.OrganizationUnit{ID: "ou-2"}, nil)
+// An import or a declarative file names the owner by handle; the service passes it on to be resolved, on create and
+// on update.
+func (s *HTTPConnectionServiceTestSuite) TestAnOwnerNamedByHandleIsPassedOn() {
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "", "acme", mock.Anything).Return("ou-1", nil).Once()
 	stored := s.expectCreate()
 
-	byHandle := HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL}
-	created, svcErr := s.service.CreateHTTPConnection(s.ctx, byHandle)
+	created, svcErr := s.service.CreateHTTPConnection(s.ctx,
+		HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL})
 	s.Require().Nil(svcErr)
 	s.Equal("ou-1", created.OUID)
 	s.Equal("ou-1", stored.OUID)
 
 	current := &HTTPConnection{ID: "http-1", OUID: "ou-1", Name: "Risk", URL: testURL}
 	s.mockStore.On("GetHTTPConnectionByName", mock.Anything, "Risk").Return(current, nil)
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "acme", "ou-1", mock.Anything).
+		Return("ou-1", nil).Once()
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "other", "ou-1", mock.Anything).
+		Return("", &ErrorOUUpdateNotAllowed).Once()
 	s.Nil(s.service.ValidateHTTPConnectionUpdate(s.ctx, current,
 		&HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL}))
 	svcErr = s.service.ValidateHTTPConnectionUpdate(s.ctx, current,
 		&HTTPConnection{OUHandle: "other", Name: "Risk", URL: testURL})
 	s.Require().NotNil(svcErr)
-	s.Equal(connectionou.ErrorOUUpdateNotAllowed.Code, svcErr.Code)
-}
-
-// A handle is looked up for the deployment, not for whoever runs the import.
-func (s *HTTPConnectionServiceTestSuite) TestAHandleIsResolvedWithTheRuntimeContext() {
-	s.mockOU.On("GetOrganizationUnitByPath", mock.MatchedBy(security.IsRuntimeContext), "acme").
-		Return(ou.OrganizationUnit{ID: "ou-1"}, nil).Once()
-
-	connection := HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL}
-	s.Require().Nil(s.service.ResolveConnectionOU(s.ctx, &connection))
-	s.Equal("ou-1", connection.OUID)
-}
-
-func (s *HTTPConnectionServiceTestSuite) TestAnIDWinsOverAHandle() {
-	stored := s.expectCreate()
-
-	created, svcErr := s.service.CreateHTTPConnection(s.ctx,
-		HTTPConnection{OUID: "ou-1", OUHandle: "acme", Name: "Risk", URL: testURL})
-
-	s.Require().Nil(svcErr)
-	s.Equal("ou-1", created.OUID)
-	s.Equal("ou-1", stored.OUID)
-	s.mockOU.AssertNotCalled(s.T(), "GetOrganizationUnitByPath", mock.Anything, mock.Anything)
-}
-
-// Only a lookup that finds no unit is reported as an unknown owner; a failed lookup is a server error, so the
-// connection is not created.
-func (s *HTTPConnectionServiceTestSuite) TestAnUnresolvableHandleIsRefused() {
-	for name, tc := range map[string]struct {
-		lookupErr tidcommon.ServiceError
-		want      tidcommon.ServiceError
-	}{
-		"unknown handle": {ou.ErrorOrganizationUnitNotFound, connectionou.ErrorInvalidOU},
-		"lookup failure": {tidcommon.InternalServerError, tidcommon.InternalServerError},
-	} {
-		s.Run(name, func() {
-			s.SetupTest()
-			s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-				Return(ou.OrganizationUnit{}, &tc.lookupErr).Twice()
-
-			s.assertCreateRejected(HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL}, tc.want)
-
-			svcErr := s.service.ValidateHTTPConnectionCreate(s.ctx,
-				&HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL})
-			s.Require().NotNil(svcErr)
-			s.Equal(tc.want.Code, svcErr.Code)
-		})
-	}
-}
-
-func (s *HTTPConnectionServiceTestSuite) TestUpdateNamesTheOwnerByHandle() {
-	s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "acme").
-		Return(ou.OrganizationUnit{ID: "ou-1"}, nil)
-	s.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "other").
-		Return(ou.OrganizationUnit{ID: "ou-2"}, nil)
-	current := HTTPConnection{ID: "http-1", OUID: "ou-1", Name: "Risk", URL: testURL}
-	s.mockStore.On("GetHTTPConnection", mock.Anything, "http-1").Return(&current, nil)
-	s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.MatchedBy(func(c HTTPConnection) bool {
-		return c.OUID == "ou-1"
-	})).Return(nil).Once()
-
-	updated, svcErr := s.service.UpdateHTTPConnection(s.ctx, "http-1",
-		HTTPConnection{OUHandle: "acme", Name: "Risk", URL: testURL})
-	s.Require().Nil(svcErr)
-	s.Equal("ou-1", updated.OUID)
-
-	updated, svcErr = s.service.UpdateHTTPConnection(s.ctx, "http-1",
-		HTTPConnection{OUHandle: "other", Name: "Risk", URL: testURL})
-	s.Nil(updated)
-	s.Require().NotNil(svcErr)
-	s.Equal(connectionou.ErrorOUUpdateNotAllowed.Code, svcErr.Code)
+	s.Equal(ErrorOUUpdateNotAllowed.Code, svcErr.Code)
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestUpdateKeepsOU() {
@@ -718,14 +648,17 @@ func (s *HTTPConnectionServiceTestSuite) TestUpdateKeepsOU() {
 	}{
 		{name: "omitted", requested: ""},
 		{name: "same", requested: "ou-1"},
-		{name: "changed", requested: "ou-2", wantErr: &connectionou.ErrorOUUpdateNotAllowed},
+		{name: "changed", requested: "ou-2", wantErr: &ErrorOUUpdateNotAllowed},
 	} {
 		s.Run(test.name, func() {
 			s.SetupTest()
 			current := s.connection("https://risk.example.com", s.noneAuth())
 			current.ID = "http-1"
 			s.mockStore.On("GetHTTPConnection", mock.Anything, "http-1").Return(&current, nil).Once()
-			if test.wantErr == nil {
+			if test.wantErr != nil {
+				s.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-2", "", "ou-1", mock.Anything).
+					Return("", test.wantErr).Once()
+			} else {
 				s.mockStore.On("UpdateHTTPConnection", mock.Anything, mock.MatchedBy(func(c HTTPConnection) bool {
 					return c.OUID == "ou-1"
 				})).Return(nil).Once()
@@ -748,7 +681,7 @@ func (s *HTTPConnectionServiceTestSuite) TestUpdateKeepsOU() {
 }
 
 func (s *HTTPConnectionServiceTestSuite) TestCreateIsRefusedWhenOnlyTheConnectionStoreIsDeclarative() {
-	s.service = newHTTPConnectionService(newFileBasedStore(), s.ouResolver())
+	s.service = newHTTPConnectionService(newFileBasedStore(), s.mockOU)
 
 	s.assertCreateRejected(HTTPConnection{OUID: "ou-1", Name: "Risk", URL: testURL},
 		declarativeresource.ErrorDeclarativeResourceCreateOperation)
@@ -854,7 +787,7 @@ func (s *HTTPConnectionServiceTestSuite) withDeclared() *httpConnectionStoreInte
 	s.Require().NoError(fileStore.Create("file-1", &HTTPConnection{ID: "file-1", Name: "Declared", OUID: "ou-1",
 		URL: testURL}))
 	dbStore := newHttpConnectionStoreInterfaceMock(s.T())
-	s.service = newHTTPConnectionService(newCompositeStore(fileStore, dbStore), s.ouResolver())
+	s.service = newHTTPConnectionService(newCompositeStore(fileStore, dbStore), s.mockOU)
 	return dbStore
 }
 
@@ -874,9 +807,9 @@ func (s *HTTPConnectionServiceTestSuite) TestValidateHTTPConnectionCreateRefuses
 			ErrorAlreadyExists},
 		"an invalid connection": {HTTPConnection{ID: "new-1", OUID: "ou-1", URL: testURL}, ErrorInvalidName},
 		"no owner": {HTTPConnection{ID: "new-1", Name: "Risk", URL: testURL},
-			connectionou.ErrorOURequired},
+			ErrorOURequired},
 		"an unknown owner": {HTTPConnection{ID: "new-1", OUID: "ou-missing", Name: "Risk", URL: testURL},
-			connectionou.ErrorInvalidOU},
+			ErrorInvalidOU},
 	} {
 		s.Run(name, func() {
 			dbStore := s.withDeclared()
@@ -885,7 +818,9 @@ func (s *HTTPConnectionServiceTestSuite) TestValidateHTTPConnectionCreateRefuses
 			dbStore.On("GetHTTPConnection", mock.Anything, "new-1").Return(nil, nil).Maybe()
 			dbStore.On("GetHTTPConnectionByName", mock.Anything, "Declared").Return(nil, nil).Maybe()
 			dbStore.On("GetHTTPConnectionByName", mock.Anything, "Stored").Return(stored, nil).Maybe()
-			s.mockOU.On("IsOrganizationUnitExists", mock.Anything, "ou-missing").Return(false, nil).Maybe()
+			s.mockOU.On("ResolveOwner", mock.Anything, "", "", mock.Anything).Return("", &ErrorOURequired).Maybe()
+			s.mockOU.On("ResolveOwner", mock.Anything, "ou-missing", "", mock.Anything).
+				Return("", &ErrorInvalidOU).Maybe()
 
 			svcErr := s.service.ValidateHTTPConnectionCreate(s.ctx, &tc.connection)
 
@@ -905,8 +840,8 @@ func (s *HTTPConnectionServiceTestSuite) TestValidateHTTPConnectionUpdateRefuses
 		"a declared connection": {"file-1", "Declared", "",
 			&declarativeresource.ErrorDeclarativeResourceUpdateOperation},
 		"another owner of a declared connection": {"file-1", "Declared", "ou-2",
-			&connectionou.ErrorOUUpdateNotAllowed},
-		"another owner":                         {"db-1", "Risk", "ou-2", &connectionou.ErrorOUUpdateNotAllowed},
+			&ErrorOUUpdateNotAllowed},
+		"another owner":                         {"db-1", "Risk", "ou-2", &ErrorOUUpdateNotAllowed},
 		"the name of another stored connection": {"db-1", "Other", "", &ErrorAlreadyExists},
 		"the name of a declared connection":     {"db-1", "Declared", "", &ErrorAlreadyExists},
 		"an invalid connection":                 {"db-1", "", "", &ErrorInvalidName},
@@ -920,6 +855,8 @@ func (s *HTTPConnectionServiceTestSuite) TestValidateHTTPConnectionUpdateRefuses
 			dbStore.On("GetHTTPConnectionByName", mock.Anything, "Risk").Return(stored, nil).Maybe()
 			dbStore.On("GetHTTPConnectionByName", mock.Anything, "Other").Return(other, nil).Maybe()
 			dbStore.On("GetHTTPConnectionByName", mock.Anything, "Declared").Return(nil, nil).Maybe()
+			s.mockOU.On("ResolveOwnerForUpdate", mock.Anything, "ou-2", "", "ou-1", mock.Anything).
+				Return("", &ErrorOUUpdateNotAllowed).Maybe()
 
 			existing, svcErr := s.service.GetHTTPConnection(s.ctx, tc.id)
 			s.Require().Nil(svcErr)

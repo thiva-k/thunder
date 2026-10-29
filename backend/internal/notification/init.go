@@ -6,7 +6,6 @@ package notification
 import (
 	"context"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/notification/client"
 	notificationconfig "github.com/thunder-id/thunderid/internal/notification/config"
 	"github.com/thunder-id/thunderid/internal/ou"
@@ -42,12 +41,7 @@ func Initialize(jwtService jwt.JWTServiceInterface, cfg notificationconfig.Confi
 		}
 	}
 
-	ouResolver := connectionou.Initialize(ouService, connectionou.Errors{
-		Required: ErrorSenderOURequired,
-		NotFound: ErrorInvalidSenderOU,
-		Changed:  ErrorSenderOUUpdateNotAllowed,
-	})
-	mgtService := newNotificationSenderMgtService(notificationStore, tx, ouResolver)
+	mgtService := newNotificationSenderMgtService(notificationStore, tx, ouService)
 
 	clientFactory := client.Initialize()
 	otpService := newOTPService(jwtService, cfg)

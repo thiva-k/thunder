@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package flowmgt
@@ -6,6 +6,7 @@ package flowmgt
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
@@ -23,6 +24,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/executormock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/interceptormock"
@@ -40,6 +42,7 @@ type FlowMgtServiceTestSuite struct {
 	mockInterceptorRegistry *interceptormock.InterceptorRegistryInterfaceMock
 	mockValidator           *FlowValidatorInterfaceMock
 	mockResolver            *notificationTemplateProviderMock
+	mockOU                  *ouProviderMock
 }
 
 func TestFlowMgtServiceTestSuite(t *testing.T) {
@@ -86,8 +89,12 @@ func (s *FlowMgtServiceTestSuite) SetupTest() {
 	s.mockInterceptorRegistry = interceptormock.NewInterceptorRegistryInterfaceMock(s.T())
 	s.mockValidator = NewFlowValidatorInterfaceMock(s.T())
 	s.mockResolver = newNotificationTemplateProviderMock(s.T())
+	s.mockOU = newOuProviderMock(s.T())
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "ou-1", "", mock.Anything).Return("ou-1", nil).Maybe()
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "ou-1", "", "ou-1", mock.Anything).
+		Return("ou-1", nil).Maybe()
 	s.service = newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder,
-		s.mockExecutorRegistry, s.mockInterceptorRegistry, s.mockValidator, nil, &stubTransactioner{}, nil, nil,
+		s.mockExecutorRegistry, s.mockInterceptorRegistry, s.mockValidator, nil, &stubTransactioner{}, nil, s.mockOU,
 		s.mockResolver, nil)
 
 	// UpdateFlow / DeleteFlow / RestoreFlowVersion invalidate the store cache post-transaction.
@@ -235,6 +242,7 @@ func (s *FlowMgtServiceTestSuite) TestListFlows_PaginationLinksLastPage() {
 
 func (s *FlowMgtServiceTestSuite) TestCreateFlow_Success() {
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: providers.FlowTypeAuthentication,
@@ -294,6 +302,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_InvalidProvidedFlowID() {
 func (s *FlowMgtServiceTestSuite) TestCreateFlow_DuplicateProvidedFlowID() {
 	flowID := "550e8400-e29b-41d4-a716-446655440000"
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		ID:       flowID,
 		Handle:   "test-handle",
 		Name:     "Test Flow",
@@ -408,6 +417,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_ValidHandleFormats() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			flowDef := &FlowDefinition{
+				OUID:     "ou-1",
 				Handle:   tc.handle,
 				Name:     "Test",
 				FlowType: providers.FlowTypeAuthentication,
@@ -494,6 +504,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_OnlyStartAndEnd() {
 
 func (s *FlowMgtServiceTestSuite) TestCreateFlow_StoreError() {
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "test-handle",
 		Name:     "Test",
 		FlowType: providers.FlowTypeAuthentication,
@@ -514,6 +525,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_StoreError() {
 
 func (s *FlowMgtServiceTestSuite) TestCreateFlow_WithInterceptors_Success() {
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "test-handle",
 		Name:     "Test",
 		FlowType: providers.FlowTypeAuthentication,
@@ -713,11 +725,13 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_WithInterceptors_Success() {
 		Handle:        "test-handle",
 		FlowType:      providers.FlowTypeAuthentication,
 		ActiveVersion: 1,
+		OUID:          "ou-1",
 	}
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
 		Name:     "Updated Flow",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 		Interceptors: []providers.InterceptorDefinition{
 			{
@@ -753,6 +767,7 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_RemoveInterceptors() {
 		ID:       testFlowIDService,
 		Handle:   "test-handle",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Interceptors: []providers.InterceptorDefinition{
 			{Name: "OldInterceptor", Mode: providers.InterceptorModePreRequest},
 		},
@@ -761,6 +776,7 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_RemoveInterceptors() {
 		Handle:       "test-handle",
 		Name:         "Updated Flow",
 		FlowType:     providers.FlowTypeAuthentication,
+		OUID:         "ou-1",
 		Nodes:        validFlowNodes(),
 		Interceptors: nil,
 	}
@@ -817,6 +833,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_WithAutoInference() {
 
 	authNodes := authCapableNodes()
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "test-handle",
 		Name:     "Auth Flow",
 		FlowType: providers.FlowTypeAuthentication,
@@ -861,6 +878,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_AutoInferenceFailure() {
 
 	authNodes := authCapableNodes()
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "test-handle",
 		Name:     "Auth Flow",
 		FlowType: providers.FlowTypeAuthentication,
@@ -888,6 +906,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_AutoInferenceFailure() {
 
 func (s *FlowMgtServiceTestSuite) TestCreateFlow_DuplicateHandle() {
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "existing-handle",
 		Name:     "Test Flow",
 		FlowType: providers.FlowTypeAuthentication,
@@ -907,6 +926,7 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_DuplicateHandle() {
 
 func (s *FlowMgtServiceTestSuite) TestCreateFlow_DuplicateHandleCheckError() {
 	flowDef := &FlowDefinition{
+		OUID:     "ou-1",
 		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: providers.FlowTypeAuthentication,
@@ -1123,11 +1143,13 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_Success() {
 		ID:       testFlowIDService,
 		Handle:   "test-handle",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 	}
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
 		Name:     "Updated",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 	updatedFlow := &providers.CompleteFlowDefinition{
@@ -1151,11 +1173,13 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_DependencyRegistryRejectsUpdate
 		ID:       testFlowIDService,
 		Handle:   "test-handle",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 	}
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
 		Name:     "Updated",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 	updatedFlow := &providers.CompleteFlowDefinition{Handle: "test-handle", Name: "Updated"}
@@ -1182,11 +1206,13 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_DependencyRegistryServerErrorMa
 		ID:       testFlowIDService,
 		Handle:   "test-handle",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 	}
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
 		Name:     "Updated",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 	updatedFlow := &providers.CompleteFlowDefinition{Handle: "test-handle", Name: "Updated"}
@@ -1210,11 +1236,13 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_DependencyRegistryPasses() {
 		ID:       testFlowIDService,
 		Handle:   "test-handle",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 	}
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
 		Name:     "Updated",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 	updatedFlow := &providers.CompleteFlowDefinition{Handle: "test-handle", Name: "Updated"}
@@ -1314,11 +1342,13 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_StoreError() {
 		ID:       testFlowIDService,
 		Handle:   "test-handle",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 	}
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
 		Name:     "Test",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
@@ -1647,6 +1677,7 @@ func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_Success() {
 		Handle:   "auth-flow",
 		Name:     "Auth Flow",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes: []providers.NodeDefinition{
 			{ID: "start", Type: "START", OnSuccess: "end"},
 			{ID: "end", Type: "END"},
@@ -1687,6 +1718,7 @@ func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_Success() {
 	s.mockInference.AssertExpectations(s.T())
 	s.mockStore.AssertExpectations(s.T())
 	mockExecutorRegistry.AssertNotCalled(s.T(), "GetExecutor")
+	s.Equal("ou-1", inferredRegFlow.OUID, "the inferred flow belongs to the OU of its authentication flow")
 }
 
 func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_SkipsNonAuthFlow() {
@@ -1895,6 +1927,7 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_CompositeDisabled_AllowsUpdate(
 		Handle:   "test-flow",
 		Name:     "Test Flow",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 
@@ -1904,6 +1937,7 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_CompositeDisabled_AllowsUpdate(
 		Name:          "Test Flow",
 		FlowType:      providers.FlowTypeAuthentication,
 		ActiveVersion: 1,
+		OUID:          "ou-1",
 		Nodes:         flowDef.Nodes,
 	}
 
@@ -1958,6 +1992,7 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_MutableFlowAllowed() {
 		Handle:   "test-flow",
 		Name:     "Updated Flow",
 		FlowType: providers.FlowTypeAuthentication,
+		OUID:     "ou-1",
 		Nodes:    validFlowNodes(),
 	}
 
@@ -1967,6 +2002,7 @@ func (s *FlowMgtServiceTestSuite) TestUpdateFlow_MutableFlowAllowed() {
 		Name:          "Test Flow",
 		FlowType:      providers.FlowTypeAuthentication,
 		ActiveVersion: 1,
+		OUID:          "ou-1",
 		Nodes:         flowDef.Nodes,
 	}
 
@@ -2529,4 +2565,256 @@ func (s *FlowMgtServiceTestSuite) TestResolveDefaultFlowHandle_AllFlowTypes() {
 		handle := svc.(*flowMgtService).resolveDefaultFlowHandle(context.Background(), tc.flowType)
 		s.Equal(tc.expected, handle)
 	}
+}
+
+// Flow organization unit tests
+
+const testOUHandle = "default"
+
+func (s *FlowMgtServiceTestSuite) newFlowDef(ouID string) *FlowDefinition {
+	return &FlowDefinition{
+		Handle: "test-handle", Name: "Test Flow", FlowType: providers.FlowTypeAuthentication,
+		Nodes: validFlowNodes(), OUID: ouID,
+	}
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_OwnedByTheOUItNames() {
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "ou-named", "", mock.Anything).Return("ou-named", nil)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().IsFlowExistsByHandle(mock.Anything, "test-handle", providers.FlowTypeAuthentication).
+		Return(false, nil)
+	s.mockStore.EXPECT().CreateFlow(mock.Anything, mock.Anything, mock.MatchedBy(func(def *FlowDefinition) bool {
+		return def.OUID == "ou-named"
+	})).Return(&providers.CompleteFlowDefinition{OUID: "ou-named"}, nil)
+
+	result, err := s.service.CreateFlow(context.Background(), s.newFlowDef("ou-named"))
+
+	s.Nil(err)
+	s.Equal("ou-named", result.OUID)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_ResolvesTheOUHandleToItsID() {
+	flowDef := s.newFlowDef("")
+	flowDef.OUHandle = testOUHandle
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "", testOUHandle, mock.Anything).Return("ou-default", nil)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().IsFlowExistsByHandle(mock.Anything, "test-handle", providers.FlowTypeAuthentication).
+		Return(false, nil)
+	s.mockStore.EXPECT().CreateFlow(mock.Anything, mock.Anything, mock.MatchedBy(func(def *FlowDefinition) bool {
+		return def.OUID == "ou-default" && def.OUHandle == ""
+	})).Return(&providers.CompleteFlowDefinition{OUID: "ou-default"}, nil)
+
+	result, err := s.service.CreateFlow(context.Background(), flowDef)
+
+	s.Nil(err)
+	s.Equal("ou-default", result.OUID)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_TheIDWinsOverTheHandle() {
+	flowDef := s.newFlowDef("ou-named")
+	flowDef.OUHandle = testOUHandle
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "ou-named", testOUHandle, mock.Anything).Return("ou-named", nil)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().IsFlowExistsByHandle(mock.Anything, "test-handle", providers.FlowTypeAuthentication).
+		Return(false, nil)
+	s.mockStore.EXPECT().CreateFlow(mock.Anything, mock.Anything, mock.MatchedBy(func(def *FlowDefinition) bool {
+		return def.OUID == "ou-named"
+	})).Return(&providers.CompleteFlowDefinition{OUID: "ou-named"}, nil)
+
+	result, err := s.service.CreateFlow(context.Background(), flowDef)
+
+	s.Nil(err)
+	s.Equal("ou-named", result.OUID)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_RequiresAnOU() {
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "", "", mock.Anything).Return("", &ErrorFlowOURequired)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+
+	result, err := s.service.CreateFlow(context.Background(), s.newFlowDef(""))
+
+	s.Nil(result)
+	s.Equal(&ErrorFlowOURequired, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_DoesNotDefaultToTheCallersOU() {
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "", "", mock.Anything).Return("", &ErrorFlowOURequired)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	ctx := security.WithSecurityContextTest(context.Background(),
+		security.NewSecurityContextForTest("user-1", "ou-caller", "", nil, nil))
+
+	result, err := s.service.CreateFlow(ctx, s.newFlowDef(""))
+
+	s.Nil(result)
+	s.Equal(&ErrorFlowOURequired, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_RejectsAnOUThatDoesNotExist() {
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "ou-missing", "", mock.Anything).Return("", &ErrorInvalidFlowOU)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+
+	result, err := s.service.CreateFlow(context.Background(), s.newFlowDef("ou-missing"))
+
+	s.Nil(result)
+	s.Equal(&ErrorInvalidFlowOU, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_RejectsAnOUHandleThatDoesNotExist() {
+	flowDef := s.newFlowDef("")
+	flowDef.OUHandle = "nowhere"
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "", "nowhere", mock.Anything).Return("", &ErrorInvalidFlowOU)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+
+	result, err := s.service.CreateFlow(context.Background(), flowDef)
+
+	s.Nil(result)
+	s.Equal(&ErrorInvalidFlowOU, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestCreateFlow_FailsWhenTheOUCannotBeLookedUp() {
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "ou-broken", "", mock.Anything).
+		Return("", &tidcommon.InternalServerError)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+
+	result, err := s.service.CreateFlow(context.Background(), s.newFlowDef("ou-broken"))
+
+	s.Nil(result)
+	s.Equal(&tidcommon.InternalServerError, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestUpdateFlow_RefusesToChangeTheOU() {
+	existingFlow := &providers.CompleteFlowDefinition{
+		ID: testFlowIDService, Handle: "test-handle", FlowType: providers.FlowTypeAuthentication, OUID: "ou-1",
+	}
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "ou-2", "", "ou-1", mock.Anything).
+		Return("", &ErrorOUUpdateNotAllowed)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().GetFlowByID(mock.Anything, testFlowIDService).Return(existingFlow, nil)
+
+	result, err := s.service.UpdateFlow(context.Background(), testFlowIDService, s.newFlowDef("ou-2"))
+
+	s.Nil(result)
+	s.Equal(&ErrorOUUpdateNotAllowed, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestUpdateFlow_RefusesToChangeTheOUByHandle() {
+	existingFlow := &providers.CompleteFlowDefinition{
+		ID: testFlowIDService, Handle: "test-handle", FlowType: providers.FlowTypeAuthentication, OUID: "ou-1",
+	}
+	flowDef := s.newFlowDef("")
+	flowDef.OUHandle = "other"
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "other", "ou-1", mock.Anything).
+		Return("", &ErrorOUUpdateNotAllowed)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().GetFlowByID(mock.Anything, testFlowIDService).Return(existingFlow, nil)
+
+	result, err := s.service.UpdateFlow(context.Background(), testFlowIDService, flowDef)
+
+	s.Nil(result)
+	s.Equal(&ErrorOUUpdateNotAllowed, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestUpdateFlow_FailsWhenTheOUHandleCannotBeLookedUp() {
+	existingFlow := &providers.CompleteFlowDefinition{
+		ID: testFlowIDService, Handle: "test-handle", FlowType: providers.FlowTypeAuthentication, OUID: "ou-1",
+	}
+	flowDef := s.newFlowDef("")
+	flowDef.OUHandle = "other"
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "other", "ou-1", mock.Anything).
+		Return("", &tidcommon.InternalServerError)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().GetFlowByID(mock.Anything, testFlowIDService).Return(existingFlow, nil)
+
+	result, err := s.service.UpdateFlow(context.Background(), testFlowIDService, flowDef)
+
+	s.Nil(result)
+	s.Equal(&tidcommon.InternalServerError, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestUpdateFlow_KeepsTheOUWhenOmitted() {
+	existingFlow := &providers.CompleteFlowDefinition{
+		ID: testFlowIDService, Handle: "test-handle", FlowType: providers.FlowTypeAuthentication, OUID: "ou-1",
+	}
+	flowDef := s.newFlowDef("")
+	updated := &providers.CompleteFlowDefinition{Handle: "test-handle", OUID: "ou-1"}
+	s.mockOU.EXPECT().ResolveOwnerForUpdate(mock.Anything, "", "", "ou-1", mock.Anything).Return("ou-1", nil)
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().GetFlowByID(mock.Anything, testFlowIDService).Return(existingFlow, nil)
+	s.mockStore.EXPECT().UpdateFlow(mock.Anything, testFlowIDService, flowDef).Return(updated, nil)
+	s.mockGraphBuilder.EXPECT().InvalidateCache(mock.Anything, testFlowIDService)
+
+	result, err := s.service.UpdateFlow(context.Background(), testFlowIDService, flowDef)
+
+	s.Nil(err)
+	s.Equal("ou-1", result.OUID)
+}
+
+func (s *FlowMgtServiceTestSuite) TestUpdateFlow_KeepsTheOUWhenRepeated() {
+	existingFlow := &providers.CompleteFlowDefinition{
+		ID: testFlowIDService, Handle: "test-handle", FlowType: providers.FlowTypeAuthentication, OUID: "ou-1",
+	}
+	flowDef := s.newFlowDef("ou-1")
+	updated := &providers.CompleteFlowDefinition{Handle: "test-handle", OUID: "ou-1"}
+	s.mockValidator.EXPECT().ValidateFlowDefinition(mock.Anything, mock.Anything).Return(nil)
+	s.mockStore.EXPECT().GetFlowByID(mock.Anything, testFlowIDService).Return(existingFlow, nil)
+	s.mockStore.EXPECT().UpdateFlow(mock.Anything, testFlowIDService, flowDef).Return(updated, nil)
+	s.mockGraphBuilder.EXPECT().InvalidateCache(mock.Anything, testFlowIDService)
+
+	result, err := s.service.UpdateFlow(context.Background(), testFlowIDService, flowDef)
+
+	s.Nil(err)
+	s.Equal("ou-1", result.OUID)
+	s.Equal("ou-1", flowDef.OUID)
+}
+
+func (s *FlowMgtServiceTestSuite) TestResolveFlowOU_ReplacesTheHandleWithTheID() {
+	flowDef := s.newFlowDef("")
+	flowDef.OUHandle = testOUHandle
+	s.mockOU.EXPECT().ResolveOwner(mock.Anything, "", testOUHandle, mock.Anything).Return("ou-default", nil)
+
+	err := s.service.ResolveFlowOU(context.Background(), flowDef)
+
+	s.Nil(err)
+	s.Equal("ou-default", flowDef.OUID)
+	s.Empty(flowDef.OUHandle)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_ListsTheFlowsAnOUOwns() {
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return([]BasicFlowDefinition{
+		{ID: "flow-1", Name: "Owned", OUID: "ou-1"},
+		{ID: "flow-2", Name: "Other", OUID: "ou-2"},
+	}, 2, nil)
+
+	deps, err := s.service.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeOU, "ou-1")
+
+	s.NoError(err)
+	s.Equal([]resourcedependency.ResourceDependency{{
+		ResourceType: resourcedependency.ResourceTypeFlow, ID: "flow-1", DisplayName: "Owned",
+		BehaviorOnDelete: resourcedependency.BehaviorRestrict,
+	}}, deps)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_PagesThroughEveryFlowOfAnOU() {
+	first := make([]BasicFlowDefinition, maxPageSize)
+	for i := range first {
+		first[i] = BasicFlowDefinition{ID: fmt.Sprintf("flow-%d", i), OUID: "ou-2"}
+	}
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return(first, maxPageSize+1, nil)
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, maxPageSize, "").
+		Return([]BasicFlowDefinition{{ID: "flow-last", Name: "Last", OUID: "ou-1"}}, maxPageSize+1, nil)
+
+	deps, err := s.service.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeOU, "ou-1")
+
+	s.NoError(err)
+	s.Len(deps, 1)
+	s.Equal("flow-last", deps[0].ID)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetResourceDependencies_ReportsAFailureToListFlowsOfAnOU() {
+	s.mockStore.EXPECT().ListFlows(mock.Anything, maxPageSize, 0, "").Return(nil, 0, errors.New("db down"))
+
+	deps, err := s.service.GetResourceDependencies(context.Background(), resourcedependency.ResourceTypeOU, "ou-1")
+
+	s.Nil(deps)
+	s.Error(err)
 }

@@ -7,7 +7,6 @@ package idp
 import (
 	"strings"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/group"
 	"github.com/thunder-id/thunderid/internal/ou"
@@ -36,13 +35,8 @@ func Initialize(
 		return nil, err
 	}
 
-	ouResolver := connectionou.Initialize(ouService, connectionou.Errors{
-		Required: ErrorIDPOURequired,
-		NotFound: ErrorInvalidIDPOU,
-		Changed:  ErrorIDPOUUpdateNotAllowed,
-	})
 	idpService := newIDPService(idpStore, entityTypeService, roleService, groupService, resourceService, transactioner,
-		ouResolver)
+		ouService)
 	return idpService, nil
 }
 

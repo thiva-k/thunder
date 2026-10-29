@@ -90,11 +90,11 @@ curl -k -X POST https://localhost:8090/connections/google \
 
 The REST API accepts only `ouId`. A request that fails the owner check returns a `400` error:
 
-| Case | Identity providers | SMS and email providers | AuthZEN PDP and HTTP connections |
-|------|--------------------|-------------------------|----------------------------------|
-| `ouId` missing on create | `IDP-1016` | `MNS-1020` | `CON-1025` |
-| Organization unit does not exist | `IDP-1014` | `MNS-1018` | `CON-1023` |
-| `ouId` differs from the current owner on update | `IDP-1015` | `MNS-1019` | `CON-1024` |
+| Case | Identity providers | SMS and email providers | AuthZEN PDP connections | HTTP connections |
+|------|--------------------|-------------------------|-------------------------|------------------|
+| `ouId` missing on create | `IDP-1016` | `MNS-1020` | `CON-1025` | `CON-1030` |
+| Organization unit does not exist | `IDP-1014` | `MNS-1018` | `CON-1023` | `CON-1028` |
+| `ouId` differs from the current owner on update | `IDP-1015` | `MNS-1019` | `CON-1024` | `CON-1029` |
 
 ### Declare the Owner in a Resource File
 

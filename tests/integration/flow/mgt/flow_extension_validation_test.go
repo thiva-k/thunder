@@ -100,6 +100,9 @@ func (s *FlowExtensionValidationTestSuite) request(method, path string, body int
 // body and the flow's ID.
 func (s *FlowExtensionValidationTestSuite) createFlow(flow testutils.Flow) (int, []byte, string) {
 	s.T().Helper()
+	if flow.OUID == "" {
+		flow.OUID = s.ouID
+	}
 	status, body := s.request(http.MethodPost, flowsEndpoint, flow)
 	var created struct {
 		ID string `json:"id"`

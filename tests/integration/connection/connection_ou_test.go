@@ -147,7 +147,7 @@ func ownedNonIDPVendors() []ownedVendor {
 			body: func(name, ouID string) interface{} {
 				return httpConnRequest{Name: name, OUID: ouID, URL: "https://ext.example.com/evaluate"}
 			},
-			requiredCode: "CON-1025", unknownCode: "CON-1023", changedCode: "CON-1024",
+			requiredCode: "CON-1030", unknownCode: "CON-1028", changedCode: "CON-1029",
 		},
 		{
 			vendor: "authzen-pdp", category: "authorization-pdp",

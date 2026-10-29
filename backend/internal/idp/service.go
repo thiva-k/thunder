@@ -13,9 +13,9 @@ import (
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
-	"github.com/thunder-id/thunderid/internal/connection/connectionou"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/group"
+	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/role"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -49,6 +49,13 @@ type IDPServiceInterface interface {
 	) ([]providers.AuthorizationTarget, *tidcommon.ServiceError)
 }
 
+// ownerErrors are the errors given when the organization unit of an identity provider is refused.
+var ownerErrors = ou.OwnerErrors{
+	Required: ErrorIDPOURequired,
+	NotFound: ErrorInvalidIDPOU,
+	Changed:  ErrorIDPOUUpdateNotAllowed,
+}
+
 // idpService is the default implementation of the IdPServiceInterface.
 type idpService struct {
 	idpStore           idpStoreInterface
@@ -57,7 +64,7 @@ type idpService struct {
 	groupService       group.GroupServiceInterface
 	resourceService    providers.ResourceServerProvider
 	transactioner      providers.Transactioner
-	ouResolver         connectionou.ResolverInterface
+	ouService          ou.OrganizationUnitServiceInterface
 	dependencyRegistry resourcedependency.Registry
 	logger             *log.Logger
 	uuidGenerator      func() (string, error)
@@ -87,7 +94,7 @@ func (u userTypeAttributes) isRequired(attr string) bool {
 func newIDPService(idpStore idpStoreInterface, entityTypeService entitytype.EntityTypeServiceInterface,
 	roleService role.RoleServiceInterface, groupService group.GroupServiceInterface,
 	resourceService providers.ResourceServerProvider, transactioner providers.Transactioner,
-	ouResolver connectionou.ResolverInterface) IDPServiceInterface {
+	ouService ou.OrganizationUnitServiceInterface) IDPServiceInterface {
 	return &idpService{
 		idpStore:          idpStore,
 		entityTypeService: entityTypeService,
@@ -95,7 +102,7 @@ func newIDPService(idpStore idpStoreInterface, entityTypeService entitytype.Enti
 		groupService:      groupService,
 		resourceService:   resourceService,
 		transactioner:     transactioner,
-		ouResolver:        ouResolver,
+		ouService:         ouService,
 		logger:            log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IdPService")),
 		uuidGenerator:     utils.GenerateUUIDv7,
 	}
@@ -173,7 +180,7 @@ func (is *idpService) CreateIdentityProvider(
 func (is *idpService) ResolveIdentityProviderOU(
 	ctx context.Context, idp *providers.IDPDTO,
 ) *tidcommon.ServiceError {
-	ouID, svcErr := is.ouResolver.Resolve(ctx, idp.OUID, idp.OUHandle)
+	ouID, svcErr := is.ouService.ResolveOwner(ctx, idp.OUID, idp.OUHandle, ownerErrors)
 	if svcErr != nil {
 		return svcErr
 	}
@@ -302,7 +309,8 @@ func (is *idpService) UpdateIdentityProvider(
 		}
 
 		// Prevent changing the organization unit. Leaving it out keeps the one the identity provider has.
-		ouID, ouErr := is.ouResolver.ResolveForUpdate(txCtx, idp.OUID, idp.OUHandle, existingIDP.OUID)
+		ouID, ouErr := is.ouService.ResolveOwnerForUpdate(
+			txCtx, idp.OUID, idp.OUHandle, existingIDP.OUID, ownerErrors)
 		if ouErr != nil {
 			svcErr = ouErr
 			return errors.New("organization unit of an identity provider cannot be resolved")

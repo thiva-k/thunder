@@ -1803,7 +1803,7 @@ const translations = {
     'errors.OU-1004': 'An organization unit with the same name already exists under the same parent.',
     'errors.OU-1005': 'The selected parent organization unit could not be found.',
     'errors.OU-1006':
-      'This organization unit has child units, users, groups, or connections and cannot be deleted while they exist.',
+      'This organization unit has child units, users, groups, connections, or flows and cannot be deleted while they exist.',
     'errors.OU-1007': 'This parent selection would create a circular dependency in the organization hierarchy.',
     'errors.OU-1008': 'An organization unit with the same handle already exists under the same parent.',
     'errors.OU-1012': 'This organization unit is managed by configuration and cannot be modified or deleted.',
@@ -2683,6 +2683,9 @@ const translations = {
     'errors.CON-1026':
       'This connection is used by one or more resources. Remove it from those resources before deleting it.',
     'errors.CON-1027': 'The number of service endpoint connections exceeds the maximum allowed in composite mode.',
+    'errors.CON-1028': 'The selected organization unit no longer exists. Choose another one and try again.',
+    'errors.CON-1029': "A connection's organization unit can't be changed once it is created.",
+    'errors.CON-1030': 'Choose an organization unit for this connection.',
     'errors.IDP-1001': 'This identity provider no longer exists. It may have already been deleted.',
     'errors.IDP-1002': 'The identity provider ID is invalid or missing.',
     'errors.IDP-1003': 'The identity provider name is invalid or missing.',
@@ -4291,9 +4294,14 @@ const translations = {
     'delete.usages.more': '+{{count}} more',
 
     // Create flow wizard
+    'create.steps.organizationUnit': 'Organization unit',
     'create.steps.type': 'Flow type',
     'create.steps.template': 'Template',
     'create.steps.configure': 'Details',
+    'create.organizationUnit.title': 'Where should this flow belong?',
+    'create.organizationUnit.subtitle':
+      "Choose the organization unit that will own this flow. You can't change this once created.",
+    'create.organizationUnit.required': 'Organization unit is required',
     'create.configure.title': "Let's collect some details about your flow",
     'create.configure.name.label': 'Flow name',
     'create.configure.name.placeholder': 'e.g. Customer sign-in',
@@ -5114,6 +5122,9 @@ const translations = {
     'errors.FLM-1025': 'A CALL node references a flow that does not exist.',
     'errors.FLM-1026':
       'This update was rejected because a resource that references this flow would be left in an inconsistent state.',
+    'errors.FLM-1027': 'The organization unit for this flow does not exist.',
+    'errors.FLM-1028': 'The organization unit of a flow cannot be changed once the flow is created.',
+    'errors.FLM-1029': 'A flow needs an organization unit.',
   },
 
   // ============================================================================

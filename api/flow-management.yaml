@@ -136,7 +136,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FlowDefinitionRequest'
+              $ref: '#/components/schemas/FlowDefinitionCreateRequest'
       responses:
         '201':
           description: Flow created successfully
@@ -219,7 +219,8 @@ paths:
       tags:
         - Flow Management
       summary: Update flow
-      description: Updates an existing flow definition by its unique identifier
+      description: |
+        Updates an existing flow definition by its unique identifier
       operationId: updateFlow
       parameters:
         - name: flowId
@@ -233,7 +234,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FlowDefinitionRequest'
+              $ref: '#/components/schemas/FlowDefinitionUpdateRequest'
       responses:
         '200':
           description: Flow updated successfully
@@ -720,6 +721,7 @@ components:
             handle: "default-flow"
             activeVersion: 2
             isReadOnly: true
+            ouId: "01900000-0000-7000-8000-000000000001"
             createdAt: "2024-01-15T10:20:30Z"
             updatedAt: "2024-02-20T14:25:35Z"
           - id: "2sd4f6g7-h8i9-0j1k-2l3m-4n5o6p7q8r9s"
@@ -728,6 +730,7 @@ components:
             handle: "basic-registration-flow"
             activeVersion: 7
             isReadOnly: false
+            ouId: "01900000-0000-7000-8000-000000000001"
             createdAt: "2024-03-10T09:15:25Z"
             updatedAt: "2024-04-12T11:30:40Z"
           - id: "b12c3d45-6789-4e0f-9abc-def123456789"
@@ -736,6 +739,7 @@ components:
             handle: "google-registration-flow"
             activeVersion: 1
             isReadOnly: false
+            ouId: "01900000-0000-7000-8000-000000000001"
             createdAt: "2024-05-05T08:10:20Z"
             updatedAt: "2024-06-01T12:00:00Z"
         links:
@@ -824,6 +828,7 @@ components:
         - handle
         - activeVersion
         - isReadOnly
+        - ouId
         - createdAt
         - updatedAt
       properties:
@@ -854,6 +859,11 @@ components:
           type: boolean
           description: Whether this flow is immutable (declarative resource — cannot be modified or deleted)
           example: false
+        ouId:
+          type: string
+          description: |
+            ID of the organization unit that owns the flow.
+          example: "01900000-0000-7000-8000-000000000001"
         createdAt:
           type: string
           format: date-time
@@ -863,7 +873,7 @@ components:
           format: date-time
           description: Timestamp when the flow was last modified
 
-    FlowDefinitionRequest:
+    FlowDefinitionUpdateRequest:
       type: object
       required:
         - name
@@ -896,10 +906,18 @@ components:
           items:
             $ref: '#/components/schemas/Node'
           description: List of nodes that define the flow graph
+        ouId:
+          type: string
+          description: |
+            ID of the organization unit that owns the flow. Required on create, and the organization unit has to
+            exist. It cannot change afterwards: an update can leave it out to keep the current owner, or send the id
+            the flow already has.
+          example: "01900000-0000-7000-8000-000000000001"
       example:
         name: Basic Authentication Flow
         handle: default-flow
         flowType: AUTHENTICATION
+        ouId: "01900000-0000-7000-8000-000000000001"
         nodes: &authFlowNodes
           - id: node_000
             type: START
@@ -1094,6 +1112,19 @@ components:
                 x: 1400
                 y: 200
 
+    FlowDefinitionCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/FlowDefinitionUpdateRequest'
+        - type: object
+          required:
+            - ouId
+      example:
+        name: Basic Authentication Flow
+        handle: default-flow
+        flowType: AUTHENTICATION
+        ouId: "01900000-0000-7000-8000-000000000001"
+        nodes: *authFlowNodes
+
     FlowDefinitionResponse:
       type: object
       required:
@@ -1103,6 +1134,7 @@ components:
         - handle
         - activeVersion
         - isReadOnly
+        - ouId
         - nodes
         - createdAt
         - updatedAt
@@ -1138,6 +1170,11 @@ components:
           type: boolean
           description: Whether this flow is immutable (declarative resource — cannot be modified or deleted)
           example: false
+        ouId:
+          type: string
+          description: |
+            ID of the organization unit that owns the flow.
+          example: "01900000-0000-7000-8000-000000000001"
         nodes:
           type: array
           minItems: 2
@@ -1159,6 +1196,7 @@ components:
         handle: default-flow
         activeVersion: 5
         isReadOnly: false
+        ouId: "01900000-0000-7000-8000-000000000001"
         nodes: *authFlowNodes
         createdAt: "2024-06-15T10:20:30Z"
         updatedAt: "2024-06-20T14:25:35Z"
