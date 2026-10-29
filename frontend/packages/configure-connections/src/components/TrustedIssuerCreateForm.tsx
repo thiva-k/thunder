@@ -110,6 +110,11 @@ export default function TrustedIssuerCreateForm({
   const handleCreate = (): void => {
     if (!formValid) return;
 
+    if (!ouId) {
+      setGeneralError(t('connections:wizard.organizationUnit.required', 'Organization unit is required'));
+      return;
+    }
+
     setGeneralError(null);
     createTrustedIssuer.mutate(
       {
@@ -284,15 +289,6 @@ export default function TrustedIssuerCreateForm({
         </Stack>
       </Paper>
 
-      {!ouId && (
-        <Alert severity="error" data-testid="trusted-issuer-ou-required">
-          {t(
-            'connections:wizard.organizationUnit.required',
-            'Your session does not name an organization unit. Sign out and sign in again.',
-          )}
-        </Alert>
-      )}
-
       {generalError && (
         <Alert severity="error" onClose={clearCreateError}>
           {generalError}
@@ -305,7 +301,7 @@ export default function TrustedIssuerCreateForm({
         </Button>
         <Button
           variant="contained"
-          disabled={!formValid || !ouId || createTrustedIssuer.isPending}
+          disabled={!formValid || createTrustedIssuer.isPending}
           onClick={handleCreate}
           data-testid="trusted-issuer-create-submit"
         >

@@ -13,9 +13,25 @@ const showToastMock = vi.fn();
 const mutationState = {isPending: false, isError: false};
 /** Extra form values the stubbed form enters after the defaults, e.g. authentication fields. */
 const formExtraValues: Record<string, string> = {};
-const callerOu = {ouId: 'ou-root', isLoading: false};
+const ouSelection = {ouId: 'ou-root', setOuId: vi.fn(), needsPicker: false, isLoading: false};
 
-vi.mock('../../hooks/useCallerOuId', () => ({default: () => callerOu}));
+vi.mock('../../hooks/useConnectionOuSelection', () => ({default: () => ouSelection}));
+vi.mock('../../components/create-connection/ConnectionOuPickerStep', () => ({
+  default: ({
+    value,
+    onChange,
+    onContinue,
+  }: {
+    value: string;
+    onChange: (ouId: string) => void;
+    onContinue: () => void;
+  }) => (
+    <div data-testid="ou-picker-step" data-value={value}>
+      <button type="button" data-testid="ou-picker-select" onClick={() => onChange('ou-picked')} />
+      <button type="button" data-testid="ou-picker-continue" onClick={onContinue} />
+    </div>
+  ),
+}));
 
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
@@ -128,8 +144,9 @@ describe('ConnectionCreateWizardPage', () => {
     }
     mutationState.isPending = false;
     mutationState.isError = false;
-    callerOu.ouId = 'ou-root';
-    callerOu.isLoading = false;
+    ouSelection.ouId = 'ou-root';
+    ouSelection.needsPicker = false;
+    ouSelection.isLoading = false;
   });
 
   it('shows the type heading without the redundant step label', () => {
@@ -568,7 +585,7 @@ describe('ConnectionCreateWizardPage', () => {
     expect(screen.queryByTestId('custom-step')).not.toBeInTheDocument();
   });
 
-  it('creates an OAuth 2 connection owned by the organization unit from the token', () => {
+  it('creates an OAuth 2 connection owned by the selected organization unit', () => {
     render(<ConnectionCreateWizardPage />);
 
     selectTypeAndName('connection-type-option-oauth', 'Acme OAuth');
@@ -577,7 +594,7 @@ describe('ConnectionCreateWizardPage', () => {
     expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Acme OAuth', ouId: 'ou-root'});
   });
 
-  it('creates an AuthZEN PDP connection owned by the organization unit from the token', () => {
+  it('creates an AuthZEN PDP connection owned by the selected organization unit', () => {
     Object.assign(formExtraValues, {endpoint: 'https://pdp.example.com/access/v1/evaluation'});
     render(<ConnectionCreateWizardPage />);
 
@@ -591,7 +608,7 @@ describe('ConnectionCreateWizardPage', () => {
     expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Booking PDP', ouId: 'ou-root'});
   });
 
-  it('passes the organization unit from the token to the trusted issuer step', () => {
+  it('passes the default organization unit to the trusted issuer step', () => {
     render(<ConnectionCreateWizardPage />);
 
     selectTypeAndName('connection-type-option-trusted-idp');
@@ -599,11 +616,11 @@ describe('ConnectionCreateWizardPage', () => {
     expect(screen.getByTestId('custom-step')).toHaveAttribute('data-ou-id', 'ou-root');
   });
 
-  it("sends the signed-in user's organization unit as ouId without asking for one", () => {
-    callerOu.ouId = 'ou-acme';
+  it('sends the selected organization unit as ouId', () => {
+    ouSelection.ouId = 'ou-acme';
     render(<ConnectionCreateWizardPage />);
 
-    expect(screen.queryByText('Where should this connection belong?')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ou-picker-step')).not.toBeInTheDocument();
     expect(screen.getByText('What kind of connection do you want to add?')).toBeInTheDocument();
     selectTypeAndName('connection-type-option-http', 'Risk Engine');
     fireEvent.click(screen.getByTestId('wizard-create'));
@@ -611,8 +628,28 @@ describe('ConnectionCreateWizardPage', () => {
     expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Risk Engine', ouId: 'ou-acme'});
   });
 
-  it("passes the signed-in user's organization unit to the trusted issuer step", () => {
-    callerOu.ouId = 'ou-acme';
+  it('asks for an organization unit before the wizard when there are several', () => {
+    ouSelection.ouId = '';
+    ouSelection.needsPicker = true;
+    render(<ConnectionCreateWizardPage />);
+
+    expect(screen.getByTestId('ou-picker-step')).toBeInTheDocument();
+    expect(screen.queryByText('What kind of connection do you want to add?')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('ou-picker-select'));
+    expect(ouSelection.setOuId).toHaveBeenCalledWith('ou-picked');
+
+    ouSelection.ouId = 'ou-picked';
+    fireEvent.click(screen.getByTestId('ou-picker-continue'));
+
+    expect(screen.getByText('What kind of connection do you want to add?')).toBeInTheDocument();
+    selectTypeAndName('connection-type-option-http', 'Risk Engine');
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    expect(mutateMock.mock.calls[0][0]).toMatchObject({name: 'Risk Engine', ouId: 'ou-picked'});
+  });
+
+  it('passes the selected organization unit to the trusted issuer step', () => {
+    ouSelection.ouId = 'ou-acme';
     render(<ConnectionCreateWizardPage />);
 
     selectTypeAndName('connection-type-option-trusted-idp');
@@ -620,37 +657,24 @@ describe('ConnectionCreateWizardPage', () => {
     expect(screen.getByTestId('custom-step')).toHaveAttribute('data-ou-id', 'ou-acme');
   });
 
-  it('does not create when the token names no organization unit', () => {
-    callerOu.ouId = '';
+  it('reports a missing organization unit instead of creating', () => {
+    ouSelection.ouId = '';
     render(<ConnectionCreateWizardPage />);
 
     selectTypeAndName('connection-type-option-http', 'Risk Engine');
-
-    expect(screen.getByTestId('wizard-create')).toBeDisabled();
-    expect(screen.getByTestId('wizard-ou-required')).toHaveTextContent(
-      'Your session does not name an organization unit. Sign out and sign in again.',
-    );
     fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(screen.getByText('Organization unit is required')).toBeInTheDocument();
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
-  it('does not show the organization unit error while the token is being read', () => {
-    callerOu.ouId = '';
-    callerOu.isLoading = true;
+  it('shows no wizard while organization units load', () => {
+    ouSelection.ouId = '';
+    ouSelection.isLoading = true;
     render(<ConnectionCreateWizardPage />);
 
-    selectTypeAndName('connection-type-option-http', 'Risk Engine');
-
-    expect(screen.getByTestId('wizard-create')).toBeDisabled();
-    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
-  });
-
-  it('does not show the organization unit error once the token names one', () => {
-    render(<ConnectionCreateWizardPage />);
-
-    selectTypeAndName('connection-type-option-http', 'Risk Engine');
-
-    expect(screen.queryByTestId('wizard-ou-required')).not.toBeInTheDocument();
+    expect(screen.queryByText('What kind of connection do you want to add?')).not.toBeInTheDocument();
+    expect(screen.getByRole('progressbar', {name: 'Loading...'})).toBeInTheDocument();
   });
 
   it('shows seven type cards including trusted-idp, policy decision point, email-smtp and http', () => {

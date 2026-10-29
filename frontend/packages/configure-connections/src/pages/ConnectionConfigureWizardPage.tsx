@@ -4,16 +4,17 @@
 import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
-import {Alert, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
+import {Alert, Box, Button, CircularProgress, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router';
 import useCreateConnection from '../api/useCreateConnection';
 import ConnectionCreateHint from '../components/ConnectionCreateHint';
 import ConnectionForm from '../components/ConnectionForm';
+import ConnectionOuPickerStep from '../components/create-connection/ConnectionOuPickerStep';
 import {CONNECTION_FORM_FIELDS, fieldsForMode} from '../config/connectionFormFields';
 import {VENDOR_META_BY_TYPE} from '../config/connectionVendorMeta';
-import useCallerOuId from '../hooks/useCallerOuId';
+import useConnectionOuSelection from '../hooks/useConnectionOuSelection';
 import useConnectionRoutes from '../hooks/useConnectionRoutes';
 import type {ConnectionResponse, ConnectionType, CreateConnectionRequest} from '../models/connection';
 import {
@@ -42,8 +43,8 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
   const [editedValues, setEditedValues] = useState<ConnectionFormValues>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
 
-  // A new connection is owned by the organization unit of the signed-in user, read from their token.
-  const {ouId, isLoading: isOuLoading} = useCallerOuId();
+  const {ouId, setOuId, needsPicker, isLoading: isOuLoading} = useConnectionOuSelection();
+  const [isOuConfirmed, setIsOuConfirmed] = useState(false);
 
   useEffect(() => {
     if (!meta) {
@@ -68,6 +69,26 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
     void navigate(routes.connections.list());
   };
 
+  if (isOuLoading) {
+    return (
+      <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <CircularProgress aria-label={t('common:status.loading', 'Loading...')} />
+      </Box>
+    );
+  }
+
+  if (needsPicker && !isOuConfirmed) {
+    return (
+      <ConnectionOuPickerStep
+        title={t('configure.heading', {vendor: meta.displayName, defaultValue: 'Configure your {{vendor}} connection'})}
+        value={ouId}
+        onChange={setOuId}
+        onBack={close}
+        onContinue={() => setIsOuConfirmed(true)}
+      />
+    );
+  }
+
   // A create failure is stale once the user edits any field. Only reset the mutation once it has
   // actually failed: resetting while it's still pending would flip isPending back to false and
   // re-enable the create button before the in-flight request settles.
@@ -80,6 +101,10 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
 
   const handleCreate = (): void => {
     if (!formValid) {
+      return;
+    }
+    if (!ouId) {
+      setGeneralError(t('wizard.organizationUnit.required', 'Organization unit is required'));
       return;
     }
     setGeneralError(null);
@@ -114,7 +139,7 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
         <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
           <Button
             variant="contained"
-            disabled={!formValid || !ouId || createMutation.isPending}
+            disabled={!formValid || createMutation.isPending}
             onClick={handleCreate}
             data-testid="wizard-create"
           >
@@ -163,15 +188,6 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
             onSecretReplacingChange={() => undefined}
           />
         </Paper>
-
-        {!isOuLoading && !ouId && (
-          <Alert severity="error" data-testid="wizard-ou-required">
-            {t(
-              'wizard.organizationUnit.required',
-              'Your session does not name an organization unit. Sign out and sign in again.',
-            )}
-          </Alert>
-        )}
 
         {generalError && (
           <Alert severity="error" onClose={clearCreateError} data-testid="wizard-create-error">

@@ -4,7 +4,7 @@
 import {DocumentTitle, FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
-import {Alert, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
+import {Alert, Box, Button, CircularProgress, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -13,6 +13,7 @@ import useCreateConnection from '../api/useCreateConnection';
 import ConnectionCreateHint from '../components/ConnectionCreateHint';
 import ConnectionForm from '../components/ConnectionForm';
 import ConnectionNameStep from '../components/create-connection/ConnectionNameStep';
+import ConnectionOuPickerStep from '../components/create-connection/ConnectionOuPickerStep';
 import SelectConnectionType, {
   type SelectableConnectionType,
 } from '../components/create-connection/SelectConnectionType';
@@ -21,7 +22,7 @@ import TrustedIssuerCreateForm from '../components/TrustedIssuerCreateForm';
 import {CONNECTION_FORM_FIELDS, fieldsForMode} from '../config/connectionFormFields';
 import {VENDOR_META_BY_TYPE} from '../config/connectionVendorMeta';
 import {POLICY_DECISION_POINT_TYPE} from '../constants/connection-wizard';
-import useCallerOuId from '../hooks/useCallerOuId';
+import useConnectionOuSelection from '../hooks/useConnectionOuSelection';
 import useConnectionRoutes from '../hooks/useConnectionRoutes';
 import {
   type ConnectionResponse,
@@ -63,8 +64,8 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const [nameError, setNameError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
-  // A new connection is owned by the organization unit of the signed-in user, read from their token.
-  const {ouId, isLoading: isOuLoading} = useCallerOuId();
+  const {ouId, setOuId, needsPicker, isLoading: isOuLoading} = useConnectionOuSelection();
+  const [isOuConfirmed, setIsOuConfirmed] = useState(false);
 
   const isTrustedIdp: boolean = selectedType === 'trusted-idp';
   const isAuthZENPDP: boolean = selectedType === ConnectionTypes.AUTHZEN_PDP;
@@ -155,6 +156,10 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
       return;
     }
     setNameError(null);
+    if (!ouId) {
+      setGeneralError(t('wizard.organizationUnit.required', 'Organization unit is required'));
+      return;
+    }
     setGeneralError(null);
     const payload: CreateConnectionRequest = {
       ...formValuesToRequest(values, fields, {
@@ -262,7 +267,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
         </Button>
         <Button
           variant="contained"
-          disabled={!formValid || !ouId || createMutation.isPending}
+          disabled={!formValid || createMutation.isPending}
           onClick={handleCreate}
           data-testid="wizard-create"
         >
@@ -271,6 +276,26 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
       </Box>
     );
   })();
+
+  if (isOuLoading) {
+    return (
+      <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <CircularProgress aria-label={t('common:status.loading', 'Loading...')} />
+      </Box>
+    );
+  }
+
+  if (needsPicker && !isOuConfirmed) {
+    return (
+      <ConnectionOuPickerStep
+        title={t('wizard.title', 'Add custom connection')}
+        value={ouId}
+        onChange={setOuId}
+        onBack={close}
+        onContinue={() => setIsOuConfirmed(true)}
+      />
+    );
+  }
 
   return (
     <FullScreenCreationWizardLayout onClose={close} progress={progress} breadcrumbItems={crumbs} footer={footer}>
@@ -358,15 +383,6 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
               onSecretReplacingChange={() => undefined}
             />
           </Paper>
-
-          {!isOuLoading && !ouId && (
-            <Alert severity="error" data-testid="wizard-ou-required">
-              {t(
-                'wizard.organizationUnit.required',
-                'Your session does not name an organization unit. Sign out and sign in again.',
-              )}
-            </Alert>
-          )}
 
           {generalError && (
             <Alert severity="error" onClose={clearCreateError}>
