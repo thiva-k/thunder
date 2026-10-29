@@ -10,6 +10,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/idp"
+	"github.com/thunder-id/thunderid/internal/notificationtemplate"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 )
@@ -202,6 +203,24 @@ func (s *importService) deleterFor(resourceType string) deleteFunc {
 		}
 	case resourceTypePresentationDefinition, resourceTypeCredentialConfiguration:
 		return s.verifiableCredentialDeleterFor(resourceType)
+	case resourceTypeNotificationTemplate:
+		if s.notifTemplateService != nil {
+			return s.deleteNotificationTemplate
+		}
+	}
+	return nil
+}
+
+// deleteNotificationTemplate deletes a template by id on every channel. A template id is unique across
+// channels and the delete treats an absent template as already deleted, so only its own channel
+// removes anything.
+func (s *importService) deleteNotificationTemplate(ctx context.Context, id string) *tidcommon.ServiceError {
+	for _, channel := range []notificationtemplate.ChannelType{
+		notificationtemplate.ChannelTypeEmail, notificationtemplate.ChannelTypeSMS,
+	} {
+		if svcErr := s.notifTemplateService.DeleteTemplate(ctx, channel, id); svcErr != nil {
+			return svcErr
+		}
 	}
 	return nil
 }

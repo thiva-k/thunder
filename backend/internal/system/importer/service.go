@@ -284,7 +284,6 @@ type credentialConfigurationAdapter interface {
 }
 
 // notificationTemplateAdapter exposes the service methods needed by the importer.
-// Delete is omitted because templates require both channel and ID, which shared import-delete cannot provide.
 type notificationTemplateAdapter interface {
 	GetTemplateByHandle(ctx context.Context, channel notificationtemplate.ChannelType, handle string) (
 		*notificationtemplate.Template, *tidcommon.ServiceError)
@@ -294,6 +293,7 @@ type notificationTemplateAdapter interface {
 		request notificationtemplate.CreateTemplateRequest) (*notificationtemplate.Template, *tidcommon.ServiceError)
 	UpdateTemplate(ctx context.Context, channel notificationtemplate.ChannelType, id string,
 		request notificationtemplate.UpdateTemplateRequest) (*notificationtemplate.Template, *tidcommon.ServiceError)
+	DeleteTemplate(ctx context.Context, channel notificationtemplate.ChannelType, id string) *tidcommon.ServiceError
 }
 
 // ImportServiceInterface defines runtime resource import and declarative resource deletion operations.

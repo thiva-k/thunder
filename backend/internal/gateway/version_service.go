@@ -101,7 +101,7 @@ func configurationExport() *export.ExportRequest {
 		Users: all, Groups: all,
 		OrganizationUnits: all, ResourceServers: all, Roles: all, Flows: all, Translations: all,
 		Layouts: all, Themes: all, ServerConfigs: all, CredentialConfigurations: all,
-		PresentationDefinitions: all, AuthorizationDetailTypes: all,
+		PresentationDefinitions: all, AuthorizationDetailTypes: all, NotificationTemplates: all,
 		Options: &export.ExportOptions{IncludeDependencies: true, Format: "yaml"},
 	}
 }
