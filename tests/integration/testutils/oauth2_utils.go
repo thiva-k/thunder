@@ -1301,7 +1301,8 @@ type DPoPKey struct {
 }
 
 // GenerateDPoPKey generates a fresh key pair for the supplied DPoP signing
-// algorithm. Supported values: ES256, ES384, ES512, PS256, RS256, EdDSA.
+// algorithm. Supported values: ES256, ES384, ES512, PS256, RS256, EdDSA, ML-DSA-44,
+// ML-DSA-65, ML-DSA-87.
 func GenerateDPoPKey(alg string) (*DPoPKey, error) {
 	switch alg {
 	case "ES256":
@@ -1316,6 +1317,12 @@ func GenerateDPoPKey(alg string) (*DPoPKey, error) {
 		return generateRSAKey("RS256")
 	case "EdDSA":
 		return generateEdKey()
+	case "ML-DSA-44":
+		return generateMLDSAKey(mldsa.MLDSA44(), alg)
+	case "ML-DSA-65":
+		return generateMLDSAKey(mldsa.MLDSA65(), alg)
+	case "ML-DSA-87":
+		return generateMLDSAKey(mldsa.MLDSA87(), alg)
 	default:
 		return nil, fmt.Errorf("unsupported DPoP alg: %s", alg)
 	}
@@ -1378,6 +1385,23 @@ func generateEdKey() (*DPoPKey, error) {
 	return &DPoPKey{Alg: "EdDSA", Private: priv, JWK: jwk, JKT: jkt}, nil
 }
 
+func generateMLDSAKey(params mldsa.Parameters, alg string) (*DPoPKey, error) {
+	priv, err := mldsa.GenerateKey(params)
+	if err != nil {
+		return nil, err
+	}
+	jwk := map[string]any{
+		"kty": "AKP",
+		"alg": alg,
+		"pub": base64.RawURLEncoding.EncodeToString(priv.PublicKey().Bytes()),
+	}
+	jkt, err := computeJKT(jwk)
+	if err != nil {
+		return nil, err
+	}
+	return &DPoPKey{Alg: alg, Private: priv, JWK: jwk, JKT: jkt}, nil
+}
+
 // computeJKT computes the SHA-256 thumbprint of a JWK using only the
 // required public-key members in lexicographic order.
 func computeJKT(jwk map[string]any) (string, error) {
@@ -1397,6 +1421,10 @@ func computeJKT(jwk map[string]any) (string, error) {
 		crv, _ := jwk["crv"].(string)
 		x, _ := jwk["x"].(string)
 		canonical = fmt.Sprintf(`{"crv":%q,"kty":"OKP","x":%q}`, crv, x)
+	case "AKP":
+		alg, _ := jwk["alg"].(string)
+		pub, _ := jwk["pub"].(string)
+		canonical = fmt.Sprintf(`{"alg":%q,"kty":"AKP","pub":%q}`, alg, pub)
 	default:
 		return "", fmt.Errorf("unsupported kty for JKT: %s", kty)
 	}

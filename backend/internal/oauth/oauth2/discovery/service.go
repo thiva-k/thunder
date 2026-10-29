@@ -254,7 +254,13 @@ func (ds *discoveryService) isGlobalPARRequired() bool {
 }
 
 func (ds *discoveryService) getSupportedDPoPSigningAlgs() []string {
-	return ds.cryptoProvider.GetSupportedSigningAlgorithms()
+	algs := ds.cfg.OAuth.DPoP.AllowedAlgs
+	if len(algs) == 0 {
+		return nil
+	}
+	out := make([]string, len(algs))
+	copy(out, algs)
+	return out
 }
 
 func (ds *discoveryService) getSupportedTokenEndpointAuthSigningAlgs() []string {

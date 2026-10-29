@@ -199,16 +199,24 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery() {
 	assert.Contains(suite.T(), metadata.AcrValuesSupported, "urn:thunder:acr:generated-code")
 }
 
+// TestDPoPSigningAlgValuesAdvertised verifies dpop_signing_alg_values_supported reflects the
+// configured DPoP allow-list, not every algorithm the server can sign with.
 func (suite *DiscoveryTestSuite) TestDPoPSigningAlgValuesAdvertised() {
 	expected := []string{"ES256", "PS256", "ES384", "ES512", "EdDSA", "RS256"}
 
-	oauth2Meta := suite.discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background())
+	cryptoMock := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
+	cryptoMock.EXPECT().GetSupportedSigningAlgorithms().
+		Return([]string{"RS256", "RS512", "ES256", "ML-DSA-65"}).Maybe()
+	cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().
+		Return([]string{string(cryptolib.AlgorithmRSAOAEP256)}).Maybe()
+	cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
+	svc := newDiscoveryService(cryptoMock, newTestJWEService(cryptoMock), nil, suite.oauthCfg)
+
+	oauth2Meta := svc.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Equal(suite.T(), expected, oauth2Meta.DPoPSigningAlgValuesSupported)
 
-	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
-		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
-
-	oidcMeta, err := suite.discoveryService.GetOIDCMetadata(context.Background())
+	oidcMeta, err := svc.GetOIDCMetadata(context.Background())
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expected, oidcMeta.DPoPSigningAlgValuesSupported)
 }
