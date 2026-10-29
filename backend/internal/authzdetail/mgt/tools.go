@@ -48,7 +48,7 @@ func registerMCPTools(server *mcp.Server, service AuthorizationDetailMgtServiceI
 	tools := &typeTools{service: service}
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "thunderid_list_authorization_detail_types",
+		Name:        "list_authorization_detail_types",
 		Description: `List the registered RFC 9396 authorization details types.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Authorization Detail Types",
@@ -57,7 +57,7 @@ func registerMCPTools(server *mcp.Server, service AuthorizationDetailMgtServiceI
 	}, tools.listTypes)
 
 	server.AddTool(&mcp.Tool{
-		Name: "thunderid_get_authorization_detail_type_by_id",
+		Name: "get_authorization_detail_type_by_id",
 		Description: `Retrieve the complete definition of an authorization details type by its unique ID, ` +
 			`including its schema with field policies, consent template, processor and reuse setting.`,
 		InputSchema: tool.GenerateSchema[tool.IDInput](tool.WithRequired("", "id")),
@@ -71,7 +71,7 @@ func registerMCPTools(server *mcp.Server, service AuthorizationDetailMgtServiceI
 	}, rawTool(tools.getType))
 
 	server.AddTool(&mcp.Tool{
-		Name: "thunderid_create_authorization_detail_type",
+		Name: "create_authorization_detail_type",
 		Description: `Register an RFC 9396 authorization details type that clients can request in ` +
 			`authorization_details.
 
@@ -85,7 +85,7 @@ Key Requirements:
 - processor: Required when any field is supplied or changed by the processor.
 - reuse: Whether an approval may stand in for later prompts and be renewed by refresh (default false).
 
-Use thunderid_get_authorization_detail_type_by_id on an existing type to see a complete example.`,
+Use get_authorization_detail_type_by_id on an existing type to see a complete example.`,
 		InputSchema: tool.GenerateSchema[AuthorizationDetailTypeRequest](
 			withSchemaObject("The JSON Schema 2020-12 object schema of the type, with field "+
 				"policies."),
@@ -99,11 +99,11 @@ Use thunderid_get_authorization_detail_type_by_id on an existing type to see a c
 	}, rawTool(tools.createType, readOnlyFields...))
 
 	server.AddTool(&mcp.Tool{
-		Name: "thunderid_update_authorization_detail_type",
+		Name: "update_authorization_detail_type",
 		Description: `Update an authorization details type (full replacement of its definition). The type ` +
 			`value cannot change.
 
-Use thunderid_get_authorization_detail_type_by_id first to get the current definition, change it, and send ` +
+Use get_authorization_detail_type_by_id first to get the current definition, change it, and send ` +
 			`the complete definition back. The version increments when the schema or consent template changes, ` +
 			`or the processor is added or removed, and earlier approvals then no longer cover new requests.`,
 		InputSchema: tool.GenerateSchema[updateTypeInput](

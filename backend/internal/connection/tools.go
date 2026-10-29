@@ -86,7 +86,7 @@ func registerMCPTools(server *mcp.Server, svc *service) {
 	tools := &httpConnectionTools{svc: svc}
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "thunderid_list_http_connections",
+		Name: "list_http_connections",
 		Description: `List HTTP connections (Service Endpoint connections in the console). A Service Endpoint ` +
 			`connection holds the URL, timeout, headers and credential an extension step in a flow uses to ` +
 			`call an HTTP service.`,
@@ -97,7 +97,7 @@ func registerMCPTools(server *mcp.Server, svc *service) {
 	}, tools.listHTTPConnections)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "thunderid_get_http_connection_by_id",
+		Name: "get_http_connection_by_id",
 		Description: `Retrieve a Service Endpoint connection by ID: its URL, timeout, headers and ` +
 			`authentication. Every secret (password, token, api_key header value) is returned masked as ******.`,
 		Annotations: &mcp.ToolAnnotations{
@@ -107,7 +107,7 @@ func registerMCPTools(server *mcp.Server, svc *service) {
 	}, tools.getHTTPConnectionByID)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "thunderid_create_http_connection",
+		Name: "create_http_connection",
 		Description: `Create a Service Endpoint connection: the URL, timeout, headers and credential an ` +
 			`extension step in a flow uses to call an HTTP service.
 
@@ -124,11 +124,11 @@ Rules:
 	}, tools.createHTTPConnection)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "thunderid_update_http_connection",
+		Name: "update_http_connection",
 		Description: `Update a Service Endpoint connection (full replacement).
 
 Workflow:
-1. Use thunderid_get_http_connection_by_id to get the current state.
+1. Use get_http_connection_by_id to get the current state.
 2. Change the fields you need and send the complete object back without its type field. Any field not provided is reset.
 
 Secrets:

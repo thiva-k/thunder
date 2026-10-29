@@ -129,26 +129,26 @@ func (s *HTTPConnectionToolsTestSuite) TestRegisterMCPTools() {
 		tools[tool.Name] = tool
 	}
 	s.Len(tools, 4)
-	for _, name := range []string{"thunderid_list_http_connections", "thunderid_get_http_connection_by_id"} {
+	for _, name := range []string{"list_http_connections", "get_http_connection_by_id"} {
 		s.Require().Contains(tools, name)
 		s.True(tools[name].Annotations.ReadOnlyHint, name)
 	}
-	s.Require().Contains(tools, "thunderid_create_http_connection")
-	s.False(tools["thunderid_create_http_connection"].Annotations.ReadOnlyHint)
-	s.False(tools["thunderid_create_http_connection"].Annotations.IdempotentHint)
-	s.Require().Contains(tools, "thunderid_update_http_connection")
-	s.False(tools["thunderid_update_http_connection"].Annotations.ReadOnlyHint)
-	s.True(tools["thunderid_update_http_connection"].Annotations.IdempotentHint)
+	s.Require().Contains(tools, "create_http_connection")
+	s.False(tools["create_http_connection"].Annotations.ReadOnlyHint)
+	s.False(tools["create_http_connection"].Annotations.IdempotentHint)
+	s.Require().Contains(tools, "update_http_connection")
+	s.False(tools["update_http_connection"].Annotations.ReadOnlyHint)
+	s.True(tools["update_http_connection"].Annotations.IdempotentHint)
 
 	var createSchema, updateSchema struct {
 		Required   []string                   `json:"required"`
 		Properties map[string]json.RawMessage `json:"properties"`
 	}
-	s.decodeSchema(tools["thunderid_create_http_connection"].InputSchema, &createSchema)
-	s.decodeSchema(tools["thunderid_update_http_connection"].InputSchema, &updateSchema)
+	s.decodeSchema(tools["create_http_connection"].InputSchema, &createSchema)
+	s.decodeSchema(tools["update_http_connection"].InputSchema, &updateSchema)
 	s.NotContains(createSchema.Properties, "id")
 	s.Contains(updateSchema.Required, "id")
-	for _, schema := range []string{"thunderid_create_http_connection", "thunderid_update_http_connection"} {
+	for _, schema := range []string{"create_http_connection", "update_http_connection"} {
 		var decoded struct {
 			Properties map[string]struct {
 				Properties map[string]struct {
@@ -162,7 +162,7 @@ func (s *HTTPConnectionToolsTestSuite) TestRegisterMCPTools() {
 	}
 
 	// An agent learns the retention rule and the mask refusal from the description alone.
-	update := tools["thunderid_update_http_connection"].Description
+	update := tools["update_http_connection"].Description
 	s.Contains(update, "Omit the password, token or API key value to keep the stored one")
 	s.Contains(update, "Sending ****** as the password or token is refused")
 	for _, tool := range tools {
@@ -181,7 +181,7 @@ func (s *HTTPConnectionToolsTestSuite) TestListReturnsSummariesWithoutSecrets() 
 	s.mockHTTP.On("ListHTTPConnections", mock.Anything).
 		Return([]httpconnection.HTTPConnection{*s.storedConnection(toolsStoredURL)}, (*tidcommon.ServiceError)(nil))
 
-	result, raw := s.call("thunderid_list_http_connections", nil)
+	result, raw := s.call("list_http_connections", nil)
 
 	var out httpConnectionListMCPResponse
 	s.structured(result, &out)
@@ -195,7 +195,7 @@ func (s *HTTPConnectionToolsTestSuite) TestListError() {
 	s.mockHTTP.On("ListHTTPConnections", mock.Anything).
 		Return([]httpconnection.HTTPConnection(nil), &tidcommon.InternalServerError)
 
-	result, _ := s.call("thunderid_list_http_connections", nil)
+	result, _ := s.call("list_http_connections", nil)
 
 	s.Contains(s.errorText(result), "failed to list HTTP connections")
 }
@@ -204,7 +204,7 @@ func (s *HTTPConnectionToolsTestSuite) TestGetMasksThePassword() {
 	s.mockHTTP.On("GetHTTPConnection", mock.Anything, "http-1").
 		Return(s.storedConnection(toolsStoredURL), (*tidcommon.ServiceError)(nil))
 
-	result, raw := s.call("thunderid_get_http_connection_by_id", map[string]any{"id": "http-1"})
+	result, raw := s.call("get_http_connection_by_id", map[string]any{"id": "http-1"})
 
 	var out httpConnectionMCPOutput
 	s.structured(result, &out)
@@ -222,7 +222,7 @@ func (s *HTTPConnectionToolsTestSuite) TestGetNotFound() {
 	s.mockHTTP.On("GetHTTPConnection", mock.Anything, "missing").
 		Return((*httpconnection.HTTPConnection)(nil), &httpconnection.ErrorNotFound)
 
-	result, _ := s.call("thunderid_get_http_connection_by_id", map[string]any{"id": "missing"})
+	result, _ := s.call("get_http_connection_by_id", map[string]any{"id": "missing"})
 
 	text := s.errorText(result)
 	s.Contains(text, "failed to get HTTP connection")
@@ -235,7 +235,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreatePassesThePasswordAndMasksTheOut
 		Run(func(args mock.Arguments) { received = args.Get(1).(httpconnection.HTTPConnection) }).
 		Return(s.storedConnection(toolsStoredURL), (*tidcommon.ServiceError)(nil))
 
-	result, raw := s.call("thunderid_create_http_connection", map[string]any{
+	result, raw := s.call("create_http_connection", map[string]any{
 		"name": "Risk", "description": "Risk engine", "ouId": "ou-1", "url": toolsStoredURL, "timeoutMs": 5000,
 		"headers": []any{map[string]any{"name": "X-Tenant", "value": "acme"}},
 		"authentication": map[string]any{"type": "basic", "properties": map[string]any{
@@ -254,7 +254,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreatePassesThePasswordAndMasksTheOut
 }
 
 func (s *HTTPConnectionToolsTestSuite) TestCreateRejectsAnUnsupportedAuthenticationType() {
-	result, _ := s.call("thunderid_create_http_connection", map[string]any{
+	result, _ := s.call("create_http_connection", map[string]any{
 		"name": "Risk", "ouId": "ou-1", "url": toolsStoredURL, "authentication": map[string]any{"type": "digest"},
 	})
 
@@ -276,7 +276,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreateMasksBearerAndAPIKeySecrets() {
 					return &connection, nil
 				})
 
-			result, raw := s.call("thunderid_create_http_connection", map[string]any{
+			result, raw := s.call("create_http_connection", map[string]any{
 				"name": "Risk", "ouId": "ou-1", "url": toolsStoredURL, "authentication": auth})
 
 			var out httpConnectionMCPOutput
@@ -294,7 +294,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreateReturnsTheValidationError() {
 	s.mockHTTP.On("CreateHTTPConnection", mock.Anything, mock.Anything).
 		Return((*httpconnection.HTTPConnection)(nil), &httpconnection.ErrorInvalidURL)
 
-	result, _ := s.call("thunderid_create_http_connection",
+	result, _ := s.call("create_http_connection",
 		map[string]any{"name": "Risk", "ouId": "ou-1", "url": "ftp://x"})
 
 	text := s.errorText(result)
@@ -315,7 +315,7 @@ func (s *HTTPConnectionToolsTestSuite) TestCreateMapsAnUnsupportedTypeToTheAPIEr
 func (s *HTTPConnectionToolsTestSuite) TestUpdateMasksTheOutput() {
 	received := s.captureUpdate(toolsStoredURL)
 
-	result, raw := s.call("thunderid_update_http_connection", basicUpdateArgs(toolsStoredURL,
+	result, raw := s.call("update_http_connection", basicUpdateArgs(toolsStoredURL,
 		map[string]any{"username": "svc-user", "password": "new-password"}))
 
 	var out httpConnectionMCPOutput
@@ -329,7 +329,7 @@ func (s *HTTPConnectionToolsTestSuite) TestUpdateMasksTheOutput() {
 func (s *HTTPConnectionToolsTestSuite) TestUpdateKeepsTheStoredPasswordForTheSameOrigin() {
 	received := s.captureUpdate(toolsStoredURL)
 
-	result, _ := s.call("thunderid_update_http_connection", basicUpdateArgs(
+	result, _ := s.call("update_http_connection", basicUpdateArgs(
 		"https://risk.example.com/v2/evaluate", map[string]any{"username": "svc-user"}))
 
 	s.False(result.IsError)
@@ -340,7 +340,7 @@ func (s *HTTPConnectionToolsTestSuite) TestUpdateRefusesAnOmittedPasswordForAnot
 	s.mockHTTP.On("GetHTTPConnection", mock.Anything, "http-1").
 		Return(s.storedConnection(toolsStoredURL), (*tidcommon.ServiceError)(nil))
 
-	result, _ := s.call("thunderid_update_http_connection", basicUpdateArgs(
+	result, _ := s.call("update_http_connection", basicUpdateArgs(
 		"https://attacker.example.net/evaluate", map[string]any{"username": "svc-user"}))
 
 	s.Contains(s.errorText(result), httpconnection.ErrorInvalidAuthentication.ErrorDescription.DefaultValue)
@@ -353,12 +353,12 @@ func (s *HTTPConnectionToolsTestSuite) TestUpdateRefusesAnOmittedPasswordForAnot
 func (s *HTTPConnectionToolsTestSuite) TestUpdateRefusesTheMaskedPasswordReadBack() {
 	s.mockHTTP.On("GetHTTPConnection", mock.Anything, "http-1").
 		Return(s.storedConnection(toolsStoredURL), (*tidcommon.ServiceError)(nil))
-	got, _ := s.call("thunderid_get_http_connection_by_id", map[string]any{"id": "http-1"})
+	got, _ := s.call("get_http_connection_by_id", map[string]any{"id": "http-1"})
 	var read map[string]any
 	s.structured(got, &read)
 	delete(read, "type")
 
-	result, raw := s.call("thunderid_update_http_connection", read)
+	result, raw := s.call("update_http_connection", read)
 
 	s.Contains(s.errorText(result), httpconnection.ErrorInvalidAuthentication.ErrorDescription.DefaultValue)
 	s.NotContains(raw, testHTTPConnectionPassword)
@@ -371,7 +371,7 @@ func (s *HTTPConnectionToolsTestSuite) TestUpdateNotFound() {
 
 	args := basicUpdateArgs(toolsStoredURL, map[string]any{"username": "svc-user"})
 	args["id"] = "missing"
-	result, _ := s.call("thunderid_update_http_connection", args)
+	result, _ := s.call("update_http_connection", args)
 
 	text := s.errorText(result)
 	s.Contains(text, "failed to update HTTP connection")

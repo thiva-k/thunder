@@ -25,7 +25,7 @@ type mcpToolResult struct {
 // The project tools run the project service end to end: a project created through MCP gets its root
 // organization unit, is listed and read back, and an update renames it.
 func (ts *ProjectAPITestSuite) TestProjectMCPTools() {
-	created, raw := ts.callMCPTool("thunderid_create_project", map[string]any{
+	created, raw := ts.callMCPTool("create_project", map[string]any{
 		"handle": ts.handle("mcp"), "displayName": "MCP Project", "description": "Created through MCP",
 	})
 	ts.Require().Falsef(created.Result.IsError, "create failed: %s", raw)
@@ -35,22 +35,22 @@ func (ts *ProjectAPITestSuite) TestProjectMCPTools() {
 	ts.Equal(ts.handle("mcp"), created.Result.StructuredContent["handle"])
 	ts.NotEmpty(created.Result.StructuredContent["rootOuId"])
 
-	got, raw := ts.callMCPTool("thunderid_get_project_by_id", map[string]any{"id": id})
+	got, raw := ts.callMCPTool("get_project_by_id", map[string]any{"id": id})
 	ts.Require().Falsef(got.Result.IsError, "get failed: %s", raw)
 	ts.Equal("MCP Project", got.Result.StructuredContent["displayName"])
 
-	listed, raw := ts.callMCPTool("thunderid_list_projects", map[string]any{})
+	listed, raw := ts.callMCPTool("list_projects", map[string]any{})
 	ts.Require().Falsef(listed.Result.IsError, "list failed: %s", raw)
 	ts.Contains(raw, id)
 
-	updated, raw := ts.callMCPTool("thunderid_update_project", map[string]any{
+	updated, raw := ts.callMCPTool("update_project", map[string]any{
 		"id": id, "displayName": "MCP Project Renamed",
 	})
 	ts.Require().Falsef(updated.Result.IsError, "update failed: %s", raw)
 	ts.Equal("MCP Project Renamed", updated.Result.StructuredContent["displayName"])
 	ts.Equal(ts.handle("mcp"), updated.Result.StructuredContent["handle"])
 
-	duplicate, raw := ts.callMCPTool("thunderid_create_project", map[string]any{
+	duplicate, raw := ts.callMCPTool("create_project", map[string]any{
 		"handle": ts.handle("mcp"), "displayName": "Duplicate",
 	})
 	ts.Truef(duplicate.Result.IsError, "a duplicate handle must be refused: %s", raw)

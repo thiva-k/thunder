@@ -82,16 +82,16 @@ func (s *ProjectToolsTestSuite) TestRegisterMCPTools() {
 		tools[tool.Name] = tool
 	}
 	s.Len(tools, 4)
-	for _, name := range []string{"thunderid_list_projects", "thunderid_get_project_by_id"} {
+	for _, name := range []string{"list_projects", "get_project_by_id"} {
 		s.Require().Contains(tools, name)
 		s.True(tools[name].Annotations.ReadOnlyHint, name)
 	}
-	s.Require().Contains(tools, "thunderid_create_project")
-	s.False(tools["thunderid_create_project"].Annotations.ReadOnlyHint)
-	s.False(tools["thunderid_create_project"].Annotations.IdempotentHint)
-	s.Require().Contains(tools, "thunderid_update_project")
-	s.False(tools["thunderid_update_project"].Annotations.ReadOnlyHint)
-	s.True(tools["thunderid_update_project"].Annotations.IdempotentHint)
+	s.Require().Contains(tools, "create_project")
+	s.False(tools["create_project"].Annotations.ReadOnlyHint)
+	s.False(tools["create_project"].Annotations.IdempotentHint)
+	s.Require().Contains(tools, "update_project")
+	s.False(tools["update_project"].Annotations.ReadOnlyHint)
+	s.True(tools["update_project"].Annotations.IdempotentHint)
 }
 
 func (s *ProjectToolsTestSuite) TestListProjects() {
@@ -101,7 +101,7 @@ func (s *ProjectToolsTestSuite) TestListProjects() {
 			Return(&ProjectListResponse{TotalResults: 1, Projects: []Project{*s.project(testProjectID)}}, nil)
 
 		var out projectListMCPResponse
-		s.structured(s.call("thunderid_list_projects", map[string]any{}), &out)
+		s.structured(s.call("list_projects", map[string]any{}), &out)
 
 		s.Equal(1, out.TotalResults)
 		s.Equal([]projectMCPItem{{
@@ -117,7 +117,7 @@ func (s *ProjectToolsTestSuite) TestListProjects() {
 			Return(&ProjectListResponse{TotalResults: 2, Projects: []Project{*s.project("p2")}}, nil)
 
 		var out projectListMCPResponse
-		s.structured(s.call("thunderid_list_projects", map[string]any{}), &out)
+		s.structured(s.call("list_projects", map[string]any{}), &out)
 
 		s.Equal(2, out.TotalResults)
 		s.Require().Len(out.Projects, 2)
@@ -129,7 +129,7 @@ func (s *ProjectToolsTestSuite) TestListProjects() {
 			Return(&ProjectListResponse{Projects: []Project{}}, nil)
 
 		var out projectListMCPResponse
-		s.structured(s.call("thunderid_list_projects", map[string]any{}), &out)
+		s.structured(s.call("list_projects", map[string]any{}), &out)
 
 		s.Equal(0, out.TotalResults)
 		s.Empty(out.Projects)
@@ -139,7 +139,7 @@ func (s *ProjectToolsTestSuite) TestListProjects() {
 		s.mockService.On("GetProjectList", mock.Anything, serverconst.MaxPageSize, 0).
 			Return(nil, &tidcommon.InternalServerError)
 
-		s.Contains(s.errorText(s.call("thunderid_list_projects", map[string]any{})), "failed to list projects")
+		s.Contains(s.errorText(s.call("list_projects", map[string]any{})), "failed to list projects")
 	})
 }
 
@@ -149,7 +149,7 @@ func (s *ProjectToolsTestSuite) TestGetProjectByID() {
 		s.mockService.On("GetProject", mock.Anything, testProjectID).Return(s.project(testProjectID), nil)
 
 		var out projectMCPItem
-		s.structured(s.call("thunderid_get_project_by_id", map[string]any{"id": testProjectID}), &out)
+		s.structured(s.call("get_project_by_id", map[string]any{"id": testProjectID}), &out)
 
 		s.Equal(testProjectID, out.ID)
 		s.Equal(testRootOUID, out.RootOUID)
@@ -158,7 +158,7 @@ func (s *ProjectToolsTestSuite) TestGetProjectByID() {
 		s.SetupTest()
 		s.mockService.On("GetProject", mock.Anything, testProjectID).Return(nil, &ErrorProjectNotFound)
 
-		text := s.errorText(s.call("thunderid_get_project_by_id", map[string]any{"id": testProjectID}))
+		text := s.errorText(s.call("get_project_by_id", map[string]any{"id": testProjectID}))
 		s.Contains(text, "failed to get project")
 		s.Contains(text, ErrorProjectNotFound.ErrorDescription.DefaultValue)
 	})
@@ -172,7 +172,7 @@ func (s *ProjectToolsTestSuite) TestCreateProject() {
 		}).Return(s.project(testProjectID), nil)
 
 		var out projectMCPItem
-		s.structured(s.call("thunderid_create_project", map[string]any{
+		s.structured(s.call("create_project", map[string]any{
 			"id": testProjectID, "handle": "shop", "displayName": "Shop", "description": "Online shop",
 		}), &out)
 
@@ -182,7 +182,7 @@ func (s *ProjectToolsTestSuite) TestCreateProject() {
 	s.Run("handle and display name are required", func() {
 		s.SetupTest()
 
-		text := s.errorText(s.call("thunderid_create_project", map[string]any{"displayName": "Shop"}))
+		text := s.errorText(s.call("create_project", map[string]any{"displayName": "Shop"}))
 
 		s.Contains(text, "handle")
 		s.mockService.AssertNotCalled(s.T(), "CreateProject", mock.Anything, mock.Anything)
@@ -191,7 +191,7 @@ func (s *ProjectToolsTestSuite) TestCreateProject() {
 		s.SetupTest()
 		s.mockService.On("CreateProject", mock.Anything, mock.Anything).Return(nil, &ErrorInvalidDisplayName)
 
-		text := s.errorText(s.call("thunderid_create_project", map[string]any{"handle": "shop", "displayName": " "}))
+		text := s.errorText(s.call("create_project", map[string]any{"handle": "shop", "displayName": " "}))
 		s.Contains(text, "failed to create project")
 	})
 }
@@ -204,7 +204,7 @@ func (s *ProjectToolsTestSuite) TestUpdateProject() {
 		}).Return(s.project(testProjectID), nil)
 
 		var out projectMCPItem
-		s.structured(s.call("thunderid_update_project", map[string]any{
+		s.structured(s.call("update_project", map[string]any{
 			"id": testProjectID, "displayName": "Shop (EU)", "description": "EU shop",
 		}), &out)
 
@@ -215,7 +215,7 @@ func (s *ProjectToolsTestSuite) TestUpdateProject() {
 		s.mockService.On("UpdateProject", mock.Anything, testProjectID, mock.Anything).
 			Return(nil, &ErrorProjectNotFound)
 
-		text := s.errorText(s.call("thunderid_update_project", map[string]any{
+		text := s.errorText(s.call("update_project", map[string]any{
 			"id": testProjectID, "displayName": "Shop",
 		}))
 		s.Contains(text, "failed to update project")
