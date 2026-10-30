@@ -190,7 +190,7 @@ func (ts *tokenService) ProcessTokenRequest(
 	}
 
 	// Issue refresh token if applicable.
-	if grantType.IssuesRefreshToken() &&
+	if (grantType.IssuesRefreshToken() || tokenRespDTO.IssuesRefreshToken) &&
 		oauthApp.IsAllowedGrantType(providers.GrantTypeRefreshToken) {
 		logger.Debug(ctx, "Issuing refresh token for the token request",
 			log.String("client_id", clientID), log.String("grant_type", grantTypeStr))
@@ -250,6 +250,7 @@ func (ts *tokenService) ProcessTokenRequest(
 		Scope:                scopes,
 		IDToken:              tokenRespDTO.IDToken.Token,
 		AuthorizationDetails: tokenRespDTO.AccessToken.AuthorizationDetails,
+		DeviceSecret:         tokenRespDTO.DeviceSecret.Token,
 	}
 
 	// For token exchange, determine the issued_token_type from the request.

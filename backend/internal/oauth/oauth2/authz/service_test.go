@@ -739,7 +739,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_InvalidA
 	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, "invalid-key").Return(false, authRequestContext{}, nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "invalid-key", svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "invalid-key", svcJWTWithIat, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -752,7 +752,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_StoreErr
 		Return(false, authRequestContext{}, errors.New("db connection error"))
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "db-fail-key", svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), "db-fail-key", svcJWTWithIat, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -763,7 +763,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_StoreErr
 // the authorization request is touched, so a caller holding only an authID cannot destroy it.
 func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_MissingAssertion() {
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "")
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "", nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	suite.Require().NotNil(authErr)
@@ -782,7 +782,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_InvalidA
 		VerifyJWT(mock.Anything, "invalid-assertion", "", "").Return(&jwt.ErrorInvalidTokenSignature)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "invalid-assertion")
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "invalid-assertion", nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	suite.Require().NotNil(authErr)
@@ -801,7 +801,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_FailedTo
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, "not.valid.jwt", "", "").Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "not.valid.jwt")
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "not.valid.jwt", nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	suite.Require().NotNil(authErr)
@@ -826,7 +826,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_UnboundA
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTUnbound, "", "").Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTUnbound)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTUnbound, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -851,7 +851,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Mismatch
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTMismatched, "", "").Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTMismatched)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTMismatched, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -866,7 +866,8 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_NonStrin
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTNonStringAuthReqID, "", "").Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTNonStringAuthReqID)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID,
+		svcJWTNonStringAuthReqID, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	suite.Require().NotNil(authErr)
@@ -892,7 +893,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_PersistA
 		Return(errors.New("db error"))
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -915,13 +916,30 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Success(
 	suite.mockAuthzCodeStore.EXPECT().InsertAuthorizationCode(mock.Anything, mock.Anything).Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 	assert.Nil(suite.T(), authErr)
 	assert.Contains(suite.T(), redirectURI, "https://client.example.com/callback")
 	assert.Contains(suite.T(), redirectURI, "code=")
 	assert.Contains(suite.T(), redirectURI, "iss=https%3A%2F%2Flocalhost%3A8090")
 	assert.NotContains(suite.T(), redirectURI, "state=")
+}
+
+// A code the callback delivers by redirect needs the request's redirect URI; without one nothing is
+// persisted and the callback fails.
+func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_MissingRedirectURI() {
+	authCtx := authRequestContext{OAuthParameters: oauth2model.OAuthParameters{ClientID: "test-client"}}
+	suite.mockAuthReqStore.EXPECT().GetRequest(mock.Anything, testAuthID).Return(true, authCtx, nil)
+	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
+	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTWithIat, "", "").Return(nil)
+
+	svc := suite.newService()
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
+
+	assert.Empty(suite.T(), redirectURI)
+	suite.Require().NotNil(authErr)
+	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
+	suite.mockAuthzCodeStore.AssertNotCalled(suite.T(), "InsertAuthorizationCode", mock.Anything, mock.Anything)
 }
 
 // An assertion redeemed here is spent, under the same replay namespace the token endpoint uses, so it
@@ -944,7 +962,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Consumes
 	suite.mockJTIStore.On("RecordJTI", mock.Anything, oauth2utils.NamespaceAuthAssertion, svcAssertionJTI,
 		mock.AnythingOfType("time.Time")).Return(true, nil).Once()
 
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 	assert.Nil(suite.T(), authErr)
 	assert.Contains(suite.T(), redirectURI, "code=")
@@ -969,7 +987,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Replayed
 	suite.mockJTIStore.On("RecordJTI", mock.Anything, oauth2utils.NamespaceAuthAssertion, svcAssertionJTI,
 		mock.AnythingOfType("time.Time")).Return(false, nil).Once()
 
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 	assert.NotNil(suite.T(), authErr)
 	assert.Empty(suite.T(), redirectURI)
@@ -991,7 +1009,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_WithStat
 	suite.mockAuthzCodeStore.EXPECT().InsertAuthorizationCode(mock.Anything, mock.Anything).Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 	assert.Nil(suite.T(), authErr)
 	assert.Contains(suite.T(), redirectURI, "code=")
@@ -1015,7 +1033,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_EmptyAut
 	suite.mockAuthzCodeStore.EXPECT().InsertAuthorizationCode(mock.Anything, mock.Anything).Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 	assert.Nil(suite.T(), authErr)
 	assert.NotEmpty(suite.T(), redirectURI)
@@ -1034,7 +1052,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_CreateAu
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, svcJWTMinimal, "", "").Return(nil)
 
 	svc := suite.newService()
-	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTMinimal)
+	redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTMinimal, nil)
 
 	assert.Empty(suite.T(), redirectURI)
 	assert.NotNil(suite.T(), authErr)
@@ -2456,7 +2474,8 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Classifi
 		suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
 
 		svc := suite.newService()
-		redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+		redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID,
+			errAssertionEndUser, nil)
 
 		// The failure branch never mints a code; it only produces an error for the client.
 		assert.Empty(suite.T(), redirectURI)
@@ -2476,7 +2495,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleAuthorizationCallback_Classifi
 		suite.mockAuthzCodeStore.EXPECT().InsertAuthorizationCode(mock.Anything, mock.Anything).Return(nil)
 
 		svc := suite.newService()
-		redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat)
+		redirectURI, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, svcJWTWithIat, nil)
 
 		assert.Nil(suite.T(), authErr)
 		assert.Contains(suite.T(), redirectURI, "code=")
@@ -2542,7 +2561,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_MapsErrorTypeAn
 
 			svc := suite.newService()
 			svc.cfg.OAuth.SendServerErrorsToClient = new(true)
-			_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, tt.assertion)
+			_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, tt.assertion, nil)
 
 			assert.NotNil(suite.T(), authErr)
 			assert.Equal(suite.T(), tt.expectedCode, authErr.Code)
@@ -2561,7 +2580,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_SanitizesDescri
 	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil)
 
 	svc := suite.newService()
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionDirtyDescription)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionDirtyDescription, nil)
 
 	assert.Equal(suite.T(), oauth2const.ErrorAccessDenied, authErr.Code)
 	// The quote, newline, non-ASCII rune and backslash are all dropped.
@@ -2584,7 +2603,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_InvalidSignatur
 		VerifyJWT(mock.Anything, "tampered-assertion", "", "").Return(&jwt.ErrorInvalidTokenSignature)
 
 	svc := suite.newService()
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "tampered-assertion")
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, "tampered-assertion", nil)
 
 	assert.NotNil(suite.T(), authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
@@ -2597,7 +2616,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_BindingMismatch
 	suite.mockJWTService.EXPECT().VerifyJWT(mock.Anything, errAssertionMismatched, "", "").Return(nil)
 
 	svc := suite.newService()
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionMismatched)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionMismatched, nil)
 
 	assert.NotNil(suite.T(), authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
@@ -2612,7 +2631,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_UnknownAuthID_N
 		GetRequest(mock.Anything, testAuthID).Return(false, authRequestContext{}, nil)
 
 	svc := suite.newService()
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser, nil)
 
 	assert.NotNil(suite.T(), authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
@@ -2625,7 +2644,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_StoreError_Retu
 		GetRequest(mock.Anything, testAuthID).Return(false, authRequestContext{}, errors.New("db down"))
 
 	svc := suite.newService()
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser, nil)
 
 	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
 	assert.False(suite.T(), authErr.SendErrorToClient)
@@ -2639,12 +2658,12 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_ConsumesRequest
 	suite.mockAuthReqStore.EXPECT().ClearRequest(mock.Anything, testAuthID).Return(nil).Once()
 
 	svc := suite.newService()
-	_, first := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+	_, first := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser, nil)
 	assert.True(suite.T(), first.SendErrorToClient)
 
 	suite.mockAuthReqStore.EXPECT().
 		GetRequest(mock.Anything, testAuthID).Return(false, authRequestContext{}, nil).Once()
-	_, replay := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser)
+	_, replay := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionEndUser, nil)
 
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, replay.Code)
 	assert.False(suite.T(), replay.SendErrorToClient)
@@ -2683,7 +2702,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_SendServerError
 
 				svc := suite.newService()
 				svc.cfg.OAuth.SendServerErrorsToClient = new(enabled)
-				_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, tt.assertion)
+				_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, tt.assertion, nil)
 
 				suite.Require().NotNil(authErr)
 				assert.Equal(suite.T(), tt.code, authErr.Code)
@@ -2704,7 +2723,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_SuppressedServe
 
 	svc := suite.newService()
 	svc.cfg.OAuth.SendServerErrorsToClient = new(false)
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionServerError)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionServerError, nil)
 
 	assert.False(suite.T(), authErr.SendErrorToClient)
 	suite.mockAuthReqStore.AssertExpectations(suite.T())
@@ -2720,7 +2739,7 @@ func (suite *AuthorizeServiceTestSuite) TestHandleFailedCallback_UnsetToggleSupp
 
 	svc := suite.newService()
 	svc.cfg.OAuth.SendServerErrorsToClient = nil
-	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionServerError)
+	_, authErr := svc.HandleAuthorizationCallback(context.Background(), testAuthID, errAssertionServerError, nil)
 
 	assert.Equal(suite.T(), oauth2const.ErrorServerError, authErr.Code)
 	assert.False(suite.T(), authErr.SendErrorToClient)
@@ -2816,4 +2835,46 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Un
 	assert.NotNil(suite.T(), authErr)
 	assert.Equal(suite.T(), oauth2const.ErrorInvalidRequest, authErr.Code)
 	assert.False(suite.T(), authErr.SendErrorToClient)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestBindDeviceSession() {
+	first := oauth2model.SessionData{FlowIdentifier: "77e0937879f72858", SessionHandle: "handle-1"}
+	second := oauth2model.SessionData{FlowIdentifier: "f51bdb0f22d906bb", SessionHandle: "handle-2"}
+	longest := oauth2model.SessionData{FlowIdentifier: "77e0937879f72858",
+		SessionHandle: strings.Repeat("h", maxDeviceSessionFieldLength)}
+	overLong := strings.Repeat("x", maxDeviceSessionFieldLength+1)
+	tooMany := make([]oauth2model.SessionData, 0, maxDeviceSessions+1)
+	for i := range maxDeviceSessions + 1 {
+		tooMany = append(tooMany, oauth2model.SessionData{FlowIdentifier: fmt.Sprintf("identifier-%d", i),
+			SessionHandle: "handle"})
+	}
+	cases := []struct {
+		name        string
+		scopes      string
+		sessionData []oauth2model.SessionData
+		want        []oauth2model.SessionData
+	}{
+		{"every posted session is kept", "openid device_sso", []oauth2model.SessionData{first, second},
+			[]oauth2model.SessionData{first, second}},
+		{"device_sso was not requested", "openid", []oauth2model.SessionData{first}, nil},
+		{"nothing was posted", "device_sso", nil, nil},
+		{"an entry missing a field is dropped", "device_sso",
+			[]oauth2model.SessionData{{FlowIdentifier: "identifier"}, {SessionHandle: "handle"}, first},
+			[]oauth2model.SessionData{first}},
+		{"an entry with an over-long field is dropped", "device_sso",
+			[]oauth2model.SessionData{{FlowIdentifier: overLong, SessionHandle: "handle"},
+				{FlowIdentifier: "identifier", SessionHandle: overLong}, longest},
+			[]oauth2model.SessionData{longest}},
+		{"no more than maxDeviceSessions are kept", "device_sso", tooMany, tooMany[:maxDeviceSessions]},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			code := AuthorizationCode{Scopes: tc.scopes}
+
+			bindDeviceSession(&code, tc.sessionData)
+
+			suite.Equal(tc.want, code.SessionData)
+		})
+	}
 }

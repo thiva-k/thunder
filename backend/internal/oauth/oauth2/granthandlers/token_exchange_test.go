@@ -22,14 +22,17 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/authz"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	"github.com/thunder-id/thunderid/internal/system/config"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/tests/mocks/authzmock"
 	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
+	oauthauthzmock "github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/authzmock"
 	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/tokenservicemock"
 	"github.com/thunder-id/thunderid/tests/mocks/resourcemock"
 )
@@ -233,7 +236,7 @@ func (suite *TokenExchangeGrantHandlerTestSuite) setupSuccessfulJWTMockWithScope
 // TestNewTokenExchangeGrantHandler tests the constructor
 func (suite *TokenExchangeGrantHandlerTestSuite) TestNewTokenExchangeGrantHandler() {
 	handler := newTokenExchangeGrantHandler(suite.mockTokenBuilder, suite.mockTokenValidator,
-		suite.mockResourceService, nil, nil, oauthconfig.Config{})
+		suite.mockResourceService, nil, nil, nil, nil, oauthconfig.Config{})
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*GrantHandlerInterface)(nil), handler)
 }
@@ -3957,4 +3960,234 @@ func (suite *TokenExchangeGrantHandlerTestSuite) TestGetScopes_MappedAuthorizati
 	scopes, errResp = suite.handler.getScopes(unscopedRequest, nil, true)
 	assert.Nil(suite.T(), errResp)
 	assert.Empty(suite.T(), scopes)
+}
+
+// deviceSecretSessions is the SSO sessions the device secret in the token exchange tests carries.
+var deviceSecretSessions = []model.SessionData{{FlowIdentifier: "77e0937879f72858", SessionHandle: "handle-abc"}}
+
+// deviceSecretGrant wires the handler for device secrets, with the real code grant issuing the tokens,
+// and returns the silent authorizer mock and a request carrying a device secret.
+func (suite *TokenExchangeGrantHandlerTestSuite) deviceSecretGrant() (
+	*oauthauthzmock.AuthorizeServiceInterfaceMock, *model.TokenRequest) {
+	authorizer := oauthauthzmock.NewAuthorizeServiceInterfaceMock(suite.T())
+	suite.handler.authorizeService = authorizer
+	suite.handler.codeGrant = &authorizationCodeGrantHandler{
+		tokenBuilder:    suite.mockTokenBuilder,
+		resourceService: suite.mockResourceService,
+	}
+	req := suite.createBasicTokenRequest(suite.createTestJWTWithTyp(jwt.TokenTypeDeviceSecret,
+		map[string]interface{}{"sub": testUserID, "session_data": []map[string]string{
+			{"flow_identifier": "77e0937879f72858", "session_handle": "handle-abc"}}}))
+	req.SubjectTokenType = string(constants.TokenTypeIdentifierJWT)
+	req.Scope = "openid"
+	return authorizer, req
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretIssuesTokensLikeTheCodeGrant() {
+	authorizer, req := suite.deviceSecretGrant()
+	suite.mockTokenValidator.EXPECT().ValidateDeviceSecret(mock.Anything, req.SubjectToken).
+		Return(&tokenservice.DeviceSecretClaims{Subject: testUserID, SessionData: deviceSecretSessions}, nil)
+	authorizer.EXPECT().AuthorizeWithSSOSession(mock.Anything, suite.oauthApp, authz.SSOSessionAuthorization{
+		SessionData: deviceSecretSessions, Scope: "openid",
+	}).Return(&authz.AuthorizationCode{
+		ClientID: testClientID, AuthorizedUserID: testUserID, SubjectID: testUserID, Scopes: "openid",
+		TokenFamilyID: "tfid-1", SessionID: testSessionID, TimeCreated: time.Now(),
+	}, nil)
+	suite.mockTokenBuilder.EXPECT().BuildAccessToken(mock.Anything,
+		mock.MatchedBy(func(c *tokenservice.AccessTokenBuildContext) bool {
+			return c.Subject == testUserID && c.TokenFamilyID == "tfid-1" &&
+				c.GrantType == string(providers.GrantTypeTokenExchange)
+		})).Return(&model.TokenDTO{Token: "access-token"}, nil)
+	suite.mockTokenBuilder.EXPECT().BuildIDToken(mock.Anything,
+		mock.MatchedBy(func(c *tokenservice.IDTokenBuildContext) bool { return c.SessionID == testSessionID })).
+		Return(&model.TokenDTO{Token: "id-token"}, nil)
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+	suite.Require().Nil(errResp)
+	suite.Equal("access-token", result.AccessToken.Token)
+	suite.Equal("id-token", result.IDToken.Token)
+	suite.Equal(testSessionID, result.SessionID)
+	suite.True(result.IssuesRefreshToken, "a refresh token follows when the client allows that grant")
+	suite.Empty(result.DeviceSecret.Token, "session data is returned on a code exchange only")
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretWithoutOpenIDIssuesNoIDToken() {
+	authorizer, req := suite.deviceSecretGrant()
+	req.Scope = ""
+	suite.mockTokenValidator.EXPECT().ValidateDeviceSecret(mock.Anything, req.SubjectToken).
+		Return(&tokenservice.DeviceSecretClaims{Subject: testUserID, SessionData: deviceSecretSessions}, nil)
+	authorizer.EXPECT().AuthorizeWithSSOSession(mock.Anything, suite.oauthApp, authz.SSOSessionAuthorization{
+		SessionData: deviceSecretSessions,
+	}).Return(&authz.AuthorizationCode{
+		ClientID: testClientID, AuthorizedUserID: testUserID, SubjectID: testUserID, SessionID: testSessionID,
+		TimeCreated: time.Now(),
+	}, nil)
+	suite.mockTokenBuilder.EXPECT().BuildAccessToken(mock.Anything, mock.Anything).
+		Return(&model.TokenDTO{Token: "access-token"}, nil)
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+	suite.Require().Nil(errResp)
+	suite.Equal("access-token", result.AccessToken.Token)
+	suite.Empty(result.IDToken.Token)
+	suite.mockTokenBuilder.AssertNotCalled(suite.T(), "BuildIDToken", mock.Anything, mock.Anything)
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretAuthorizationErrors() {
+	cases := []struct {
+		name     string
+		authCode string
+		wantCode string
+	}{
+		{"a flow that needs the user", constants.ErrorLoginRequired, constants.ErrorInteractionRequired},
+		{"a server failure", constants.ErrorServerError, constants.ErrorServerError},
+		{"a request error passes through", constants.ErrorInvalidTarget, constants.ErrorInvalidTarget},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			authorizer, req := suite.deviceSecretGrant()
+			suite.mockTokenValidator.EXPECT().ValidateDeviceSecret(mock.Anything, req.SubjectToken).
+				Return(&tokenservice.DeviceSecretClaims{Subject: testUserID, SessionData: deviceSecretSessions}, nil).
+				Once()
+			authorizer.EXPECT().AuthorizeWithSSOSession(mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, &authz.AuthorizationError{Code: tc.authCode, Message: "failed"})
+
+			result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+			suite.Nil(result)
+			suite.Require().NotNil(errResp)
+			suite.Equal(tc.wantCode, errResp.Error)
+		})
+	}
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretOfAnotherSubjectRefused() {
+	cases := []struct {
+		name      string
+		subjectID string
+	}{
+		// The session the flow ran on is another user's, posted in place of the subject's own.
+		{"the session is another user's", "another-user"},
+		{"the code names no user", ""},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			authorizer, req := suite.deviceSecretGrant()
+			suite.mockTokenValidator.EXPECT().ValidateDeviceSecret(mock.Anything, req.SubjectToken).
+				Return(&tokenservice.DeviceSecretClaims{Subject: testUserID, SessionData: deviceSecretSessions}, nil).
+				Once()
+			authorizer.EXPECT().AuthorizeWithSSOSession(mock.Anything, mock.Anything, mock.Anything).
+				Return(&authz.AuthorizationCode{
+					ClientID: testClientID, AuthorizedUserID: testUserID, SubjectID: tc.subjectID,
+				}, nil)
+
+			result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+			suite.Nil(result)
+			suite.Require().NotNil(errResp)
+			suite.Equal(constants.ErrorInvalidGrant, errResp.Error)
+			suite.mockTokenBuilder.AssertNotCalled(suite.T(), "BuildAccessToken", mock.Anything, mock.Anything)
+		})
+	}
+}
+
+// The exchanging application may map the token subject to another attribute, so the user is matched by
+// resource ID.
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretMatchesTheUserNotTheTokenSubject() {
+	authorizer, req := suite.deviceSecretGrant()
+	req.Scope = ""
+	suite.mockTokenValidator.EXPECT().ValidateDeviceSecret(mock.Anything, req.SubjectToken).
+		Return(&tokenservice.DeviceSecretClaims{Subject: testUserID, SessionData: deviceSecretSessions}, nil)
+	authorizer.EXPECT().AuthorizeWithSSOSession(mock.Anything, suite.oauthApp, mock.Anything).
+		Return(&authz.AuthorizationCode{
+			ClientID: testClientID, AuthorizedUserID: testUserEmail, SubjectID: testUserID,
+			TimeCreated: time.Now(),
+		}, nil)
+	suite.mockTokenBuilder.EXPECT().BuildAccessToken(mock.Anything,
+		mock.MatchedBy(func(c *tokenservice.AccessTokenBuildContext) bool { return c.Subject == testUserEmail })).
+		Return(&model.TokenDTO{Token: "access-token"}, nil)
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+	suite.Require().Nil(errResp)
+	suite.Equal("access-token", result.AccessToken.Token)
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretRequestRefused() {
+	cases := []struct {
+		name   string
+		adjust func(req *model.TokenRequest)
+	}{
+		{"with an actor token", func(req *model.TokenRequest) {
+			req.ActorToken = "actor"
+			req.ActorTokenType = string(constants.TokenTypeIdentifierAccessToken)
+		}},
+		{"for an ID-JAG", func(req *model.TokenRequest) {
+			req.RequestedTokenType = string(constants.TokenTypeIdentifierIDJAG)
+		}},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			_, req := suite.deviceSecretGrant()
+			tc.adjust(req)
+
+			result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+			suite.Nil(result)
+			suite.Require().NotNil(errResp)
+			suite.Equal(constants.ErrorInvalidRequest, errResp.Error)
+		})
+	}
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretInvalidToken() {
+	_, req := suite.deviceSecretGrant()
+	suite.mockTokenValidator.EXPECT().ValidateDeviceSecret(mock.Anything, req.SubjectToken).
+		Return(nil, errors.New("bad signature"))
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+	suite.Nil(result)
+	suite.Require().NotNil(errResp)
+	suite.Equal(constants.ErrorInvalidRequest, errResp.Error)
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_DeviceSecretNotAccepted() {
+	_, req := suite.deviceSecretGrant()
+	suite.handler.codeGrant = nil
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), req, suite.oauthApp)
+
+	suite.Nil(result)
+	suite.Require().NotNil(errResp)
+	suite.Equal(constants.ErrorInvalidRequest, errResp.Error)
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) TestIsDeviceSecretSubjectToken() {
+	sessionToken := suite.createTestJWTWithTyp(jwt.TokenTypeDeviceSecret, map[string]interface{}{})
+	cases := []struct {
+		name      string
+		tokenType constants.TokenTypeIdentifier
+		token     string
+		want      bool
+	}{
+		{"a JWT typed sso-session+jwt", constants.TokenTypeIdentifierJWT, sessionToken, true},
+		{"declared as an access token", constants.TokenTypeIdentifierAccessToken, sessionToken, false},
+		{"a JWT of another type", constants.TokenTypeIdentifierJWT,
+			suite.createTestJWTWithTyp(jwt.TokenTypeJWT, map[string]interface{}{}), false},
+		{"not a JWT", constants.TokenTypeIdentifierJWT, "not-a-jwt", false},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			got := isDeviceSecretSubjectToken(&model.TokenRequest{
+				SubjectTokenType: string(tc.tokenType), SubjectToken: tc.token})
+
+			suite.Equal(tc.want, got)
+		})
+	}
 }
