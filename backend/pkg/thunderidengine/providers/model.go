@@ -1574,6 +1574,9 @@ type AccessEvaluationRequest struct {
 	ResourceServer AccessEvaluationResourceServer `json:"resourceServer"`
 	Permission     Permission                     `json:"permission"`
 	Context        map[string]interface{}         `json:"context,omitempty"`
+	// OUID, when set, evaluates the subject's role assignments, direct and through its groups, in
+	// this organization unit only. Without it, assignments made in any organization unit count.
+	OUID string `json:"ouId,omitempty"`
 }
 
 // AccessEvaluationResponse represents a single fine-grained access evaluation response.

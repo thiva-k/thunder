@@ -1061,6 +1061,33 @@ func (suite *UtilsTestSuite) TestBuildClientAttributes_GroupsAndRoles_Resolved()
 	actors.AssertNotCalled(suite.T(), "GetActor")
 }
 
+// A client's groups and roles are those of its own organization unit. A group of an organization
+// unit it is shared with is left out, and its roles are read from assignments made in its own.
+func (suite *UtilsTestSuite) TestBuildClientAttributes_GroupsAndRoles_OwnOUOnly() {
+	base := actorprovidermock.NewActorProviderMock(suite.T())
+	base.On("GetActorGroups", testBCCAppID).Return([]providers.EntityGroup{
+		{ID: "g-own", Name: "owners", OUID: "ou-owner"},
+		{ID: "g-sharee", Name: "sharee-team", OUID: "ou-child"},
+	}, (*tidcommon.ServiceError)(nil))
+	inOU := newOuActorRoleProviderMock(suite.T())
+	inOU.On("GetActorRolesInOU", testBCCAppID, []string{"g-own"}, "ou-owner").
+		Return([]string{"owner-role"}, (*tidcommon.ServiceError)(nil))
+	// The server's own provider reads roles in an organization unit as well.
+	actors := struct {
+		*actorprovidermock.ActorProviderMock
+		*ouActorRoleProviderMock
+	}{base, inOU}
+
+	app := newOAuthAppForOwnAttributes([]string{"groups", "roles"})
+	app.OUID = "ou-owner"
+	claims, err := BuildClientAttributes(app, actors)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), []string{"owners"}, claims["groups"])
+	assert.Equal(suite.T(), []string{"owner-role"}, claims["roles"])
+	base.AssertNotCalled(suite.T(), "GetActorRoles")
+}
+
 func (suite *UtilsTestSuite) TestBuildClientAttributes_GroupsOnly_DoesNotResolveRoles() {
 	actors := actorprovidermock.NewActorProviderMock(suite.T())
 	actors.On("GetActorGroups", testBCCAppID).Return([]providers.EntityGroup{

@@ -725,8 +725,8 @@ type fakeRoleAssignmentService struct {
 	assignmentErr *tidcommon.ServiceError
 }
 
-func (f *fakeRoleAssignmentService) AddAssignments(
-	_ context.Context, _ string, assignments []role.RoleAssignment,
+func (f *fakeRoleAssignmentService) AddAssigneesToRoles(
+	_ context.Context, assignments []role.RoleAssignment, _ []string,
 ) *tidcommon.ServiceError {
 	if f.assignmentErr != nil {
 		return f.assignmentErr
@@ -5604,6 +5604,7 @@ func roleDocWithPolicies(id string) string {
 		"    id: group1",
 		"  - type: user",
 		"    id: user1",
+		"    ouId: ou-child",
 		"",
 	}, "\n")
 }
@@ -5634,7 +5635,11 @@ func (s *ImportRoleSharingTestSuite) TestPoliciesAreReplayedOnCreate() {
 	s.Require().Len(resp.Results, 1)
 	s.Equal(statusSuccess, resp.Results[0].Status)
 	s.Require().Len(s.roleSvc.created, 1)
-	s.Len(s.roleSvc.created[0].Assignments, 2, "the role is created with its assignments, as before")
+	s.Empty(s.roleSvc.created[0].Assignments, "assignments wait for the policies that let the role reach them")
+	s.Equal([]role.RoleAssignment{
+		{ID: "group1", Type: role.AssigneeTypeGroup},
+		{ID: "user1", Type: role.AssigneeTypeUser, OUID: "ou-child"},
+	}, s.roleAssignmentSvc.assignments, "each assignment keeps the organization unit it names")
 
 	s.Require().Len(s.sharingSvc.calls, 1)
 	call := s.sharingSvc.calls[0]
@@ -5657,6 +5662,20 @@ func (s *ImportRoleSharingTestSuite) TestRefusedPoliciesUndoTheCreate() {
 	s.Require().Len(resp.Results, 1)
 	s.Equal(statusFailed, resp.Results[0].Status)
 	s.Contains(resp.Results[0].Message, "sharing policy 1 (organization unit ou-owner)")
+	s.Equal([]string{"role-1"}, s.roleSvc.deleted)
+}
+
+// A refused assignment undoes the create too, for the same reason a refused policy does.
+func (s *ImportRoleSharingTestSuite) TestRefusedAssignmentsUndoTheCreate() {
+	s.roleAssignmentSvc.assignmentErr = &tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType, Code: "ROL-1026",
+		Error: tidcommon.I18nMessage{DefaultValue: "Role not shared with the organization unit"},
+	}
+
+	resp, _ := s.svc.ImportResources(context.Background(), &ImportRequest{Content: roleDocWithPolicies("role-new")})
+
+	s.Require().Len(resp.Results, 1)
+	s.Equal(statusFailed, resp.Results[0].Status)
 	s.Equal([]string{"role-1"}, s.roleSvc.deleted)
 }
 

@@ -789,7 +789,7 @@ func (a *authAssertExecutor) appendRolesToClaims(
 		groupIDs = append(groupIDs, g.ID)
 	}
 
-	roles, svcErr := a.roleService.GetUserRoles(ctx.Context, userID, groupIDs)
+	roles, svcErr := a.roleService.GetUserRoles(ctx.Context, userID, groupIDs, "")
 	if svcErr != nil {
 		logger.Error(ctx.Context, "Failed to fetch user roles",
 			log.MaskedString(log.LoggerKeyUserID, userID),

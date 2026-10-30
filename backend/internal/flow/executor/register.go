@@ -565,9 +565,9 @@ type roleAdminProvider interface {
 
 // roleAssignmentAdminProvider is the assignment seam the access change validator and role executor consume.
 type roleAssignmentAdminProvider interface {
-	ValidateRemoveAssignment(ctx context.Context, id, assigneeID string) (
+	ValidateRemoveAssignment(ctx context.Context, id, ouID, assigneeID string) (
 		*revocation.AccessRevocationTarget, *tidcommon.ServiceError)
-	RemoveAssignments(ctx context.Context, id string, assignments []role.RoleAssignment) *tidcommon.ServiceError
+	RemoveAssignments(ctx context.Context, id, ouID string, assignments []role.RoleAssignment) *tidcommon.ServiceError
 }
 
 // groupAdminProvider is the group seam the group executor consumes.

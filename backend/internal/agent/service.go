@@ -750,7 +750,7 @@ func (s *agentService) GetAgentRoles(ctx context.Context, agentID string, limit,
 		}
 	}
 
-	roles, svcErr := s.roleService.GetUserRoles(ctx, agentID, groupIDs)
+	roles, svcErr := s.roleService.GetUserRoles(ctx, agentID, groupIDs, "")
 	if svcErr != nil {
 		s.logger.Error(ctx, "Failed to get agent roles", log.String("agentID", agentID))
 		return nil, svcErr

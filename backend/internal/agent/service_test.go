@@ -1048,7 +1048,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentRoles_DirectAndGroupInherited() 
 	mockEntity.On("GetEntityGroups", mock.Anything, testAgentID, 1, 0).
 		Return([]providers.EntityGroup{{ID: "g1", Name: "group-one", OUID: testOUID}}, nil)
 
-	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{"g1"}).
+	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{"g1"}, "").
 		Return([]string{"order-service-reader", "platform-agent"}, nil)
 
 	resp, svcErr := svc.GetAgentRoles(context.Background(), testAgentID, 10, 0)
@@ -1068,7 +1068,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentRoles_NoGroups() {
 	clearMockCalls(mockEntity, "GetGroupCountForEntity")
 	mockEntity.On("GetGroupCountForEntity", mock.Anything, testAgentID).Return(0, nil)
 
-	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}).
+	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}, "").
 		Return([]string{"order-service-reader"}, nil)
 
 	resp, svcErr := svc.GetAgentRoles(context.Background(), testAgentID, 10, 0)
@@ -1088,7 +1088,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentRoles_Pagination() {
 	clearMockCalls(mockEntity, "GetGroupCountForEntity")
 	mockEntity.On("GetGroupCountForEntity", mock.Anything, testAgentID).Return(0, nil)
 
-	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}).
+	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}, "").
 		Return([]string{"role-a", "role-b", "role-c"}, nil)
 
 	resp, svcErr := svc.GetAgentRoles(context.Background(), testAgentID, 1, 1)
@@ -1116,7 +1116,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentRoles_DefaultLimit() {
 	clearMockCalls(mockEntity, "GetGroupCountForEntity")
 	mockEntity.On("GetGroupCountForEntity", mock.Anything, testAgentID).Return(0, nil)
 
-	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}).
+	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}, "").
 		Return([]string{}, nil)
 
 	resp, svcErr := svc.GetAgentRoles(context.Background(), testAgentID, 0, 0)
@@ -1197,7 +1197,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentRoles_RoleServiceError() {
 	clearMockCalls(mockEntity, "GetGroupCountForEntity")
 	mockEntity.On("GetGroupCountForEntity", mock.Anything, testAgentID).Return(0, nil)
 
-	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}).
+	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}, "").
 		Return(nil, &tidcommon.InternalServerError)
 
 	resp, svcErr := svc.GetAgentRoles(context.Background(), testAgentID, 10, 0)
@@ -1216,7 +1216,7 @@ func (suite *AgentServiceTestSuite) TestGetAgentRoles_OffsetBeyondTotal() {
 	clearMockCalls(mockEntity, "GetGroupCountForEntity")
 	mockEntity.On("GetGroupCountForEntity", mock.Anything, testAgentID).Return(0, nil)
 
-	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}).
+	mockRole.On("GetUserRoles", mock.Anything, testAgentID, []string{}, "").
 		Return([]string{"role-a"}, nil)
 
 	resp, svcErr := svc.GetAgentRoles(context.Background(), testAgentID, 10, 50)

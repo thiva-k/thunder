@@ -129,6 +129,7 @@ const (
 
 	revocationInputRole           = "targetRoleId"
 	revocationInputAssignee       = "targetAssigneeId"
+	revocationInputAssignmentOU   = "targetAssignmentOuId"
 	revocationInputGroup          = "targetGroupId"
 	revocationInputMember         = "targetMemberId"
 	revocationInputPermissions    = "targetPermissions"
