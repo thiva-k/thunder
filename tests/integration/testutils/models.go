@@ -317,6 +317,8 @@ type TokenResponse struct {
 	RefreshToken string    `json:"refresh_token,omitempty"`
 	IDToken      string    `json:"id_token,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at,omitempty"` // Absolute expiry time
+	// DeviceSecret is the signed token carrying the code's SSO sessions, returned for the device_sso scope.
+	DeviceSecret string `json:"device_secret,omitempty"`
 }
 
 // TokenHTTPResult captures raw HTTP response details from the token endpoint.

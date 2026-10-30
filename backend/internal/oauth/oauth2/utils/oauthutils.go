@@ -208,11 +208,11 @@ func ResolveScopeClaims(scope string, scopeClaimsMapping map[string][]string) []
 }
 
 // DefaultScopeClaims returns the standard OIDC scope-to-claims mapping a client starts with when
-// created without one. openid is left out: it is always granted and carries no user attributes.
+// created without one. openid and device_sso are left out: neither releases user attributes.
 func DefaultScopeClaims() map[string][]string {
 	defaults := make(map[string][]string, len(constants.StandardOIDCScopes))
 	for scope, def := range constants.StandardOIDCScopes {
-		if scope == constants.ScopeOpenID {
+		if scope == constants.ScopeOpenID || scope == constants.ScopeDeviceSSO {
 			continue
 		}
 		claims := make([]string, len(def.Claims))

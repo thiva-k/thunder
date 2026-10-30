@@ -5,6 +5,7 @@ package granthandlers
 
 import (
 	"slices"
+	"time"
 
 	"github.com/thunder-id/thunderid/internal/attributecache"
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
@@ -49,6 +50,7 @@ func newGrantHandlerProvider(
 	enforcementService revocation.EnforcementServiceInterface,
 	governance providers.IdentityGovernanceProvider,
 	authzDetails providers.AuthorizationDetailProvider,
+	deviceSecretValidity time.Duration,
 	cfg oauthconfig.Config,
 ) GrantHandlerProviderInterface {
 	allowedGrantTypes := cfg.OAuth.AllowedGrantTypes
@@ -57,9 +59,11 @@ func newGrantHandlerProvider(
 		grantProvider.clientCredentialsGrantHandler = newClientCredentialsGrantHandler(
 			tokenBuilder, ouService, rbacAuthzService, actorProvider, resourceService, governance, authzDetails)
 	}
+	var codeGrant *authorizationCodeGrantHandler
 	if isGrantTypeAllowed(allowedGrantTypes, providers.GrantTypeAuthorizationCode) {
-		grantProvider.authorizationCodeGrantHandler = newAuthorizationCodeGrantHandler(
-			authzService, tokenBuilder, attrCacheService, resourceService, enforcementService)
+		codeGrant = newAuthorizationCodeGrantHandler(
+			authzService, tokenBuilder, attrCacheService, resourceService, enforcementService, deviceSecretValidity)
+		grantProvider.authorizationCodeGrantHandler = codeGrant
 	}
 	if isGrantTypeAllowed(allowedGrantTypes, providers.GrantTypeRefreshToken) {
 		grantProvider.refreshTokenGrantHandler = newRefreshTokenGrantHandler(
@@ -68,7 +72,8 @@ func newGrantHandlerProvider(
 	}
 	if isGrantTypeAllowed(allowedGrantTypes, providers.GrantTypeTokenExchange) {
 		grantProvider.tokenExchangeGrantHandler = newTokenExchangeGrantHandler(
-			tokenBuilder, tokenValidator, resourceService, rbacAuthzService, actorProvider, cfg)
+			tokenBuilder, tokenValidator, resourceService, rbacAuthzService, actorProvider, authzService, codeGrant,
+			cfg)
 	}
 	if isGrantTypeAllowed(allowedGrantTypes, providers.GrantTypeCIBA) {
 		grantProvider.cibaGrantHandler = newCIBAGrantHandler(cibaService, tokenBuilder, attrCacheService,

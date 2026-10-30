@@ -1834,9 +1834,10 @@ func (suite *OAuth2UtilsTestSuite) TestDecodeFlowAssertionClaims_MissingOptional
 func (suite *OAuth2UtilsTestSuite) TestDefaultScopeClaims_ReturnsStandardDefaultsWithoutOpenID() {
 	defaults := DefaultScopeClaims()
 
-	suite.Len(defaults, len(constants.StandardOIDCScopes)-1)
+	suite.Len(defaults, len(constants.StandardOIDCScopes)-2)
 	suite.NotContains(defaults, "openid",
 		"openid is always granted and carries no user attributes, so it must not be seeded")
+	suite.NotContains(defaults, "device_sso", "device_sso releases no user attributes, so it must not be seeded")
 	suite.Equal([]string{"email", "email_verified"}, defaults["email"])
 	suite.Contains(defaults["profile"], "name")
 	suite.Contains(defaults["profile"], "family_name")

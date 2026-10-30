@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/authz"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
@@ -30,7 +31,12 @@ type tokenExchangeGrantHandler struct {
 	resourceService providers.ResourceServerProvider
 	authzService    providers.AuthorizationProvider
 	actorProvider   providers.ActorProvider
-	cfg             oauthconfig.Config
+	// authorizeService authorizes a client silently with an SSO session it presents.
+	authorizeService authz.AuthorizeServiceInterface
+	// codeGrant issues the tokens of the authorization code that silent authorization yields, exactly as
+	// the code grant does. It is nil when the authorization code grant is not enabled.
+	codeGrant *authorizationCodeGrantHandler
+	cfg       oauthconfig.Config
 }
 
 // newTokenExchangeGrantHandler creates a new instance of tokenExchangeGrantHandler.
@@ -40,15 +46,19 @@ func newTokenExchangeGrantHandler(
 	resourceService providers.ResourceServerProvider,
 	authzService providers.AuthorizationProvider,
 	actorProvider providers.ActorProvider,
+	authorizeService authz.AuthorizeServiceInterface,
+	codeGrant *authorizationCodeGrantHandler,
 	cfg oauthconfig.Config,
 ) GrantHandlerInterface {
 	return &tokenExchangeGrantHandler{
-		tokenBuilder:    tokenBuilder,
-		tokenValidator:  tokenValidator,
-		resourceService: resourceService,
-		authzService:    authzService,
-		actorProvider:   actorProvider,
-		cfg:             cfg,
+		tokenBuilder:     tokenBuilder,
+		tokenValidator:   tokenValidator,
+		resourceService:  resourceService,
+		authzService:     authzService,
+		actorProvider:    actorProvider,
+		authorizeService: authorizeService,
+		codeGrant:        codeGrant,
+		cfg:              cfg,
 	}
 }
 
@@ -159,6 +169,12 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 	oauthApp *providers.OAuthClient) (
 	*model.TokenResponseDTO, *model.ErrorResponse) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "TokenExchangeGrantHandler"))
+
+	// A device secret follows its own path: the client's flow runs silently on the session the token
+	// names, and the client gets the tokens a login would give it.
+	if isDeviceSecretSubjectToken(tokenRequest) {
+		return h.handleDeviceSecretGrant(ctx, tokenRequest, oauthApp, logger)
+	}
 
 	// An ID-JAG request (draft-ietf-oauth-identity-assertion-authz-grant) follows a distinct path:
 	// it exchanges a self-issued ID token for a JWT authorization grant targeted at an external
@@ -371,6 +387,96 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 	return &model.TokenResponseDTO{
 		AccessToken: *accessToken,
 	}, nil
+}
+
+// handleDeviceSecretGrant exchanges a device secret: it runs the client's authentication flow silently
+// on the session the token names, as prompt=none does, and issues the tokens the authorization code
+// grant would, with a refresh token when the client allows that grant. A flow that cannot complete
+// without the user is answered with interaction_required.
+func (h *tokenExchangeGrantHandler) handleDeviceSecretGrant(ctx context.Context, tokenRequest *model.TokenRequest,
+	oauthApp *providers.OAuthClient, logger *log.Logger) (*model.TokenResponseDTO, *model.ErrorResponse) {
+	if tokenRequest.ActorToken != "" {
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorInvalidRequest,
+			ErrorDescription: "A device secret cannot be exchanged with an actor_token",
+		}
+	}
+	if requested := constants.TokenTypeIdentifier(tokenRequest.RequestedTokenType); requested != "" &&
+		requested != constants.TokenTypeIdentifierAccessToken {
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorInvalidRequest,
+			ErrorDescription: "Only an access token can be requested with a device secret",
+		}
+	}
+	if h.authorizeService == nil || h.codeGrant == nil {
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorInvalidRequest,
+			ErrorDescription: "device secrets are not accepted",
+		}
+	}
+
+	claims, err := h.tokenValidator.ValidateDeviceSecret(ctx, tokenRequest.SubjectToken)
+	if err != nil {
+		logger.Debug(ctx, "Failed to validate device secret", log.Error(err))
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorInvalidRequest,
+			ErrorDescription: "Invalid subject_token",
+		}
+	}
+
+	authCode, authErr := h.authorizeService.AuthorizeWithSSOSession(ctx, oauthApp, authz.SSOSessionAuthorization{
+		SessionData: claims.SessionData,
+		Scope:       tokenRequest.Scope,
+		Resources:   tokenRequest.Resources,
+	})
+	if authErr != nil {
+		switch authErr.Code {
+		case constants.ErrorServerError:
+			return nil, &model.ErrorResponse{
+				Error:            constants.ErrorServerError,
+				ErrorDescription: "Failed to process token request",
+			}
+		case constants.ErrorLoginRequired:
+			return nil, &model.ErrorResponse{
+				Error:            constants.ErrorInteractionRequired,
+				ErrorDescription: "The SSO session cannot be used without user interaction",
+			}
+		default:
+			return nil, &model.ErrorResponse{Error: authErr.Code, ErrorDescription: authErr.Message}
+		}
+	}
+	// The sessions are kept as the caller posted them, so the session the flow ran on must be the
+	// device secret subject's; another user's session posted in its place is refused here. The entity
+	// ID is compared, not the token subject, which each application may map to its own attribute.
+	if authCode.SubjectID == "" || authCode.SubjectID != claims.Subject {
+		logger.Debug(ctx, "Device secret session belongs to another subject")
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorInvalidGrant,
+			ErrorDescription: "The device secret's session does not belong to its subject",
+		}
+	}
+
+	tokenResponse, errResp := h.codeGrant.issueTokens(ctx, tokenRequest, oauthApp, authCode,
+		providers.GrantTypeTokenExchange, logger)
+	if errResp != nil {
+		return nil, errResp
+	}
+	tokenResponse.IssuesRefreshToken = true
+	return tokenResponse, nil
+}
+
+// isDeviceSecretSubjectToken reports whether the subject token is a device secret: a JWT, as its
+// subject_token_type says, whose typ header names it one.
+func isDeviceSecretSubjectToken(tokenRequest *model.TokenRequest) bool {
+	if constants.TokenTypeIdentifier(tokenRequest.SubjectTokenType) != constants.TokenTypeIdentifierJWT {
+		return false
+	}
+	header, err := jwt.DecodeJWTHeader(tokenRequest.SubjectToken)
+	if err != nil {
+		return false
+	}
+	typ, _ := header["typ"].(string)
+	return typ == jwt.TokenTypeDeviceSecret
 }
 
 // handleIDJAGGrant issues an ID-JAG (Identity Assertion Authorization Grant) in response to a

@@ -27,6 +27,7 @@ type TokenBuilderInterface interface {
 	BuildIDToken(ctx context.Context, tokenCtx *IDTokenBuildContext) (*oauth2model.TokenDTO, error)
 	BuildIDJAG(ctx context.Context, tokenCtx *IDJAGBuildContext) (*oauth2model.TokenDTO, error)
 	BuildLogoutToken(ctx context.Context, tokenCtx *LogoutTokenBuildContext) (*oauth2model.TokenDTO, error)
+	BuildDeviceSecret(ctx context.Context, tokenCtx *DeviceSecretBuildContext) (*oauth2model.TokenDTO, error)
 }
 
 // TokenBuilder implements TokenBuilderInterface.
@@ -579,6 +580,50 @@ func (tb *tokenBuilder) BuildLogoutToken(
 		ClientID:  client.ClientID,
 		Subject:   tokenCtx.SubjectID,
 		Audiences: []string{client.ClientID},
+	}, nil
+}
+
+// BuildDeviceSecret builds the token that carries the SSO sessions of a sign-in to the client on a code
+// exchange: each session's flow identifier and handle, for the subject who signed in. It is signed with
+// the client's ID token signing algorithm and addressed to this server, which accepts it back as a token
+// exchange subject token.
+func (tb *tokenBuilder) BuildDeviceSecret(
+	ctx context.Context,
+	tokenCtx *DeviceSecretBuildContext,
+) (*oauth2model.TokenDTO, error) {
+	if tokenCtx == nil || tokenCtx.OAuthApp == nil || tokenCtx.OAuthApp.ClientID == "" {
+		return nil, fmt.Errorf("device secret needs a client with a client id")
+	}
+	if tokenCtx.SubjectID == "" || len(tokenCtx.SessionData) == 0 || tokenCtx.ValidityPeriod <= 0 {
+		return nil, fmt.Errorf("device secret needs a subject, a session and a validity period")
+	}
+	client := tokenCtx.OAuthApp
+	tokenConfig := ResolveTokenConfig(tb.cfg, client, TokenTypeID, 0)
+
+	sessionData := make([]map[string]string, 0, len(tokenCtx.SessionData))
+	for _, entry := range tokenCtx.SessionData {
+		sessionData = append(sessionData, map[string]string{
+			claimFlowIdentifier: entry.FlowIdentifier,
+			claimSessionHandle:  entry.SessionHandle,
+		})
+	}
+	// iss, iat, exp, nbf and jti come from the JWT service.
+	claims := map[string]interface{}{
+		constants.ClaimAud: tokenConfig.Issuer,
+		claimSessionData:   sessionData,
+	}
+	token, iat, svcErr := tb.jwtService.GenerateJWT(ctx, tokenCtx.SubjectID, tokenConfig.Issuer,
+		tokenCtx.ValidityPeriod, claims, jwt.TokenTypeDeviceSecret, tokenConfig.SigningAlg)
+	if svcErr != nil {
+		return nil, fmt.Errorf("failed to generate device secret: %v", svcErr.Error)
+	}
+	return &oauth2model.TokenDTO{
+		Token:     token,
+		IssuedAt:  iat,
+		ExpiresIn: tokenCtx.ValidityPeriod,
+		ClientID:  client.ClientID,
+		Subject:   tokenCtx.SubjectID,
+		Audiences: []string{tokenConfig.Issuer},
 	}, nil
 }
 
