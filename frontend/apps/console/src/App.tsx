@@ -67,6 +67,19 @@ const ResourceServerEditPage = lazy(() =>
 const CreateResourceServerPage = lazy(() =>
   import('@thunderid/configure-resource-servers').then((m) => ({default: m.CreateResourceServerPage})),
 );
+const AuthorizationDetailTypesListPage = lazy(() =>
+  import('@thunderid/configure-resource-servers').then((m) => ({default: m.AuthorizationDetailTypesListPage})),
+);
+const AuthorizationDetailTypeEditPage = lazy(() =>
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-resource-servers').then((m) => ({default: m.AuthorizationDetailTypeEditPage})),
+  ),
+);
+const CreateAuthorizationDetailTypePage = lazy(() =>
+  import('./lib/monaco-setup').then(() =>
+    import('@thunderid/configure-resource-servers').then((m) => ({default: m.CreateAuthorizationDetailTypePage})),
+  ),
+);
 
 const AgentOnboardPage = lazy(() => import('@thunderid/configure-agents').then((m) => ({default: m.AgentOnboardPage})));
 const AgentEditPage = lazy(() =>
@@ -240,6 +253,14 @@ export default function App(): JSX.Element {
                     path={`${ROUTE_SEGMENTS.resourceServers}/:resourceServerId`}
                     element={<ResourceServerEditPage />}
                   />
+                  <Route
+                    path={ROUTE_SEGMENTS.authorizationDetailTypes}
+                    element={<AuthorizationDetailTypesListPage />}
+                  />
+                  <Route
+                    path={`${ROUTE_SEGMENTS.authorizationDetailTypes}/:id`}
+                    element={<AuthorizationDetailTypeEditPage />}
+                  />
                   <Route path={ROUTE_SEGMENTS.settings} element={<SettingsPage />} />
                 </Route>
                 {/* Organization Units - wrapped in OrganizationUnitProvider to preserve tree state across navigation */}
@@ -367,6 +388,16 @@ export default function App(): JSX.Element {
                   }
                 >
                   <Route index element={<CreateResourceServerPage />} />
+                </Route>
+                <Route
+                  path={RouteConfig.authorizationDetailTypes.create()}
+                  element={
+                    <ProtectedRoute>
+                      <FullScreenLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<CreateAuthorizationDetailTypePage />} />
                 </Route>
                 <Route
                   path={RouteConfig.flows.create()}
