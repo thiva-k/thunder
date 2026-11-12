@@ -48,7 +48,6 @@ const (
 	ExecutorNameCriteriaRevocation           = "CriteriaRevocationExecutor"
 	ExecutorNameSessionRevocation            = "SessionRevocationExecutor"
 	ExecutorNameApplicationActionValidator   = "ApplicationActionValidator"
-	ExecutorNameClientSecret                 = "ClientSecretExecutor"
 	ExecutorNameAccessChangeValidator        = "AccessChangeValidator"
 	ExecutorNameRole                         = "RoleExecutor"
 	ExecutorNameIdentityGovernance           = "IdentityGovernanceExecutor"

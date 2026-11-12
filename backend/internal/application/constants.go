@@ -43,6 +43,10 @@ const (
 	systemFlowInputApplication = "targetApplicationId"
 )
 
+// clientSecretNotice is what the regenerate_application_secret tool says about the secret it returns.
+const clientSecretNotice = "This is the only time this client secret is shown, and no tool can return it again. " +
+	"Hand it to the administrator to keep in a secret manager, and don't repeat it in the conversation."
+
 // clientSecretDisposition is what an update does with the application's client secret.
 type clientSecretDisposition int
 

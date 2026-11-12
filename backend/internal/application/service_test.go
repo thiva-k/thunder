@@ -5541,8 +5541,8 @@ func (suite *ServiceTestSuite) TestValidateRegenerateClientSecret_AllowsUnspecif
 func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusedBeforePersist() {
 	service, _ := suite.newFlowTargetTestService(&providers.Entity{Category: providers.EntityCategoryApp})
 
-	secret, svcErr := service.ApplyCredentialAction(
-		context.Background(), testServiceAppID, model.CredentialActionRegenerate)
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(
+		context.Background(), testServiceAppID))
 
 	assert.Empty(suite.T(), secret)
 	assert.Equal(suite.T(), ErrorApplicationHasNoClientSecret.Code, svcErr.Code)
@@ -5570,8 +5570,8 @@ func (suite *ServiceTestSuite) TestRegenerateClientSecret_PersistsAndReturnsNewS
 		bus:                  discardingBus{},
 	}
 
-	secret, svcErr := service.ApplyCredentialAction(
-		context.Background(), testServiceAppID, model.CredentialActionRegenerate)
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(
+		context.Background(), testServiceAppID))
 
 	assert.Nil(suite.T(), svcErr)
 	assert.NotEmpty(suite.T(), secret)

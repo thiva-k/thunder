@@ -2344,8 +2344,6 @@ var defaultMessages = map[string]string{
 	"flows.executor.errors.role_not_assignable_desc": "A selected role cannot be assigned in this organization unit",
 	"flows.executor.errors.role_permission_removal_not_allowed": "Role permission change not allowed",
 	"flows.executor.errors.role_permission_removal_not_allowed_desc": "The role is declarative or no longer exists, or the caller may not grant the new permissions",
-	"flows.executor.errors.secret_regeneration_failed": "Client secret regeneration failed",
-	"flows.executor.errors.secret_regeneration_failed_desc": "The client secret could not be regenerated",
 	"flows.executor.errors.secret_regeneration_not_allowed": "Client secret regeneration not allowed",
 	"flows.executor.errors.secret_regeneration_not_allowed_desc": "The application has no client secret that can be regenerated",
 	"flows.executor.errors.self_reg_disabled_for_user_type": "Self-registration is disabled for the user type",

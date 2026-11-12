@@ -38,9 +38,6 @@ var catalog = map[string]providers.ExecutorMeta{
 	ExecutorNameAuthorizationDetail: {
 		SupportedFlowTypes: []providers.FlowType{"AUTHENTICATION"},
 	},
-	ExecutorNameClientSecret: {
-		SupportedFlowTypes: []providers.FlowType{"ADMINISTRATION"},
-	},
 	ExecutorNameConsent: {
 		SupportedProperties: []providers.ExecutorSupportedProperties{
 			{Property: "timeout"},

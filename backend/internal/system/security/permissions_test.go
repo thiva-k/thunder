@@ -793,6 +793,10 @@ func TestGetRequiredPermissionForAPI(t *testing.T) {
 			method: http.MethodGet, path: "/applications/app-1/overlay-rules", wantPerm: p.AppView,
 		},
 		{
+			name:   "POST application client secret regeneration updates the application",
+			method: http.MethodPost, path: "/applications/app-1/client-secret/regenerate", wantPerm: p.AppUpdate,
+		},
+		{
 			name:   "POST CIMD preview needs app create",
 			method: http.MethodPost, path: "/cimd/preview", wantPerm: p.AppCreate,
 		},

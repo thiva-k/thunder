@@ -64,8 +64,7 @@ type ApplicationServiceInterface interface {
 		*model.ApplicationArtifactProfile, *tidcommon.ServiceError)
 	ValidateCredentialAction(ctx context.Context, appID string, action model.CredentialAction) (
 		*model.ApplicationArtifactProfile, *tidcommon.ServiceError)
-	ApplyCredentialAction(ctx context.Context, appID string, action model.CredentialAction) (
-		string, *tidcommon.ServiceError)
+	RegenerateClientSecret(ctx context.Context, appID string) (*model.ClientSecretResponse, *tidcommon.ServiceError)
 	GetResourceDependencies(
 		ctx context.Context, resourceType, id string) ([]resourcedependency.ResourceDependency, error)
 	SetDependencyRegistry(r resourcedependency.Registry)
@@ -759,15 +758,6 @@ func (as *applicationService) updateApplication(ctx context.Context, appID strin
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	// A rotation revokes what the old secret issued before it is replaced, and again once it is.
-	inputs := map[string]string{systemFlowInputApplication: appID}
-	var shared map[string]string
-	if secretChange == clientSecretRotated {
-		if shared, svcErr = as.runSystemFlow(ctx, systemFlowApplicationSecretRotatePre, inputs, nil); svcErr != nil {
-			return nil, svcErr
-		}
-	}
-
 	processedDTO := as.buildProcessedDTOForUpdate(appID, app, inboundAuthConfig)
 
 	inboundClient := toInboundClient(processedDTO)
@@ -784,27 +774,32 @@ func (as *applicationService) updateApplication(ctx context.Context, appID strin
 		inboundAuthConfig.OAuthConfig != nil &&
 		inboundAuthConfig.OAuthConfig.ClientSecret != ""
 
-	// Update config first, while entity attributes still hold the previous client_id so the
-	// inbound client service can clean up the old OAuth-app cert.
-	if err := as.inboundClientService.UpdateInboundClient(
-		ctx, &inboundClient, oauthProfile, oauthSecretSupplied, newOAuthClientID,
-	); err != nil {
-		if svcErr := as.translateInboundClientError(ctx, err); svcErr != nil {
-			return nil, svcErr
+	write := func() *tidcommon.ServiceError {
+		// Update config first, while entity attributes still hold the previous client_id so the
+		// inbound client service can clean up the old OAuth-app cert.
+		if err := as.inboundClientService.UpdateInboundClient(
+			ctx, &inboundClient, oauthProfile, oauthSecretSupplied, newOAuthClientID,
+		); err != nil {
+			if svcErr := as.translateInboundClientError(ctx, err); svcErr != nil {
+				return svcErr
+			}
+			as.logger.Error(ctx, "Failed to update application", log.Error(err), log.String("appID", appID))
+			return &tidcommon.InternalServerError
 		}
-		as.logger.Error(ctx, "Failed to update application", log.Error(err), log.String("appID", appID))
-		return nil, &tidcommon.InternalServerError
-	}
-
-	if svcErr := as.updateEntityDataForApplicationUpdate(ctx, appID, app, inboundAuthConfig,
-		secretChange != clientSecretUnchanged); svcErr != nil {
-		return nil, svcErr
+		return as.updateEntityDataForApplicationUpdate(ctx, appID, app, inboundAuthConfig,
+			secretChange != clientSecretUnchanged)
 	}
 	if secretChange == clientSecretRotated {
-		if _, svcErr := as.runSystemFlow(ctx, systemFlowRevocationPost, inputs,
-			shared); svcErr != nil {
-			return nil, svcErr
+		// The caller chose the secret, so a failed post flow is reported as the update's failure.
+		var postErr *tidcommon.ServiceError
+		if svcErr, postErr = as.rotateClientSecret(ctx, appID, write); svcErr == nil {
+			svcErr = postErr
 		}
+	} else {
+		svcErr = write()
+	}
+	if svcErr != nil {
+		return nil, svcErr
 	}
 
 	if svcErr := as.cleanupStaleI18nKeys(ctx, appID, existingApp, app); svcErr != nil {
@@ -1218,43 +1213,107 @@ func (as *applicationService) ValidateCredentialAction(
 	return as.artifactProfileForClient(clientID, client), nil
 }
 
-// ApplyCredentialAction performs the action and returns the new credential value. The secret is
-// generated server-side, and this return is the only time it is readable: it is hashed on write and no
-// read path returns it.
-func (as *applicationService) ApplyCredentialAction(
-	ctx context.Context, appID string, action model.CredentialAction) (
-	string, *tidcommon.ServiceError) {
-	secret, svcErr := as.applyCredentialAction(ctx, appID, action)
-	as.publishApplicationEvent(ctx, audit.EventApplicationUpdate, audit.ActionUpdate, appID, svcErr)
-	return secret, svcErr
+// RegenerateClientSecret replaces the application's client secret with one generated server-side and
+// returns it. This return is the only time it is readable: it is hashed on write and no read path
+// returns it. The tokens the old secret issued are revoked as for an update that rotates the secret.
+func (as *applicationService) RegenerateClientSecret(ctx context.Context, appID string) (
+	*model.ClientSecretResponse, *tidcommon.ServiceError) {
+	secret, svcErr, postErr := as.regenerateClientSecret(ctx, appID)
+	// A failed post flow is audited as the failure it is, but the secret is still returned: it is already
+	// stored, and nobody could read it again, so withholding it would leave the application with a secret
+	// no one holds. The response says the revocation is incomplete, so the caller can regenerate again.
+	audited := svcErr
+	if audited == nil {
+		audited = postErr
+	}
+	as.publishApplicationEvent(ctx, audit.EventApplicationUpdate, audit.ActionUpdate, appID, audited)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	return &model.ClientSecretResponse{ClientSecret: secret, RevocationIncomplete: postErr != nil}, nil
 }
 
-// applyCredentialAction performs the action without publishing its audit event.
-func (as *applicationService) applyCredentialAction(
-	ctx context.Context, appID string, action model.CredentialAction) (
-	string, *tidcommon.ServiceError) {
-	if _, svcErr := as.ValidateCredentialAction(ctx, appID, action); svcErr != nil {
-		return "", svcErr
+// regenerateClientSecret regenerates the client secret without publishing its audit event. postErr is a
+// failure of the post flow, which runs once the secret is stored: the secret is returned with it.
+func (as *applicationService) regenerateClientSecret(ctx context.Context, appID string) (
+	secret string, svcErr, postErr *tidcommon.ServiceError) {
+	if _, svcErr := as.ValidateCredentialAction(ctx, appID, model.CredentialActionRegenerate); svcErr != nil {
+		return "", svcErr, nil
 	}
 
 	secret, err := oauthutils.GenerateOAuth2ClientSecret()
 	if err != nil {
 		as.logger.Error(ctx, "Failed to generate OAuth client secret", log.Error(err),
 			log.String("appID", appID))
-		return "", &tidcommon.InternalServerError
+		return "", &tidcommon.InternalServerError, nil
 	}
 	credentials, marshalErr := buildSystemCredentials(secret, "")
 	if marshalErr != nil {
 		as.logger.Error(ctx, "Failed to build system credentials", log.Error(marshalErr),
 			log.String("appID", appID))
-		return "", &tidcommon.InternalServerError
+		return "", &tidcommon.InternalServerError, nil
 	}
-	if entErr := as.entityService.UpdateSystemCredentials(ctx, appID, credentials); entErr != nil {
-		as.logger.Error(ctx, "Failed to persist regenerated client secret", log.Error(entErr),
+	svcErr, postErr = as.rotateClientSecret(ctx, appID, func() *tidcommon.ServiceError {
+		if entErr := as.entityService.UpdateSystemCredentials(ctx, appID, credentials); entErr != nil {
+			as.logger.Error(ctx, "Failed to persist regenerated client secret", log.Error(entErr),
+				log.String("appID", appID))
+			return &tidcommon.InternalServerError
+		}
+		as.captureRegeneratedSecret(ctx, appID, secret)
+		return nil
+	})
+	if svcErr != nil {
+		return "", svcErr, nil
+	}
+	if postErr != nil {
+		as.logger.Error(ctx, "The secret was regenerated, but revoking the tokens issued while it was replaced "+
+			"failed; it is returned, and a token issued in that window can stay valid until it expires",
+			log.String("appID", appID), log.String("code", postErr.Code))
+	}
+	return secret, nil, postErr
+}
+
+// captureRegeneratedSecret hands the application, with the secret just written, to the value capturer, as
+// an update that sets the secret does. Only the regeneration still holds the secret, since it is hashed on
+// write. A failure to read the application back is logged and leaves the capture out, as any failure to
+// capture does: the apply that later needs the value reports it missing.
+func (as *applicationService) captureRegeneratedSecret(ctx context.Context, appID, secret string) {
+	if as.valueCapturer == nil {
+		return
+	}
+	fullApp, svcErr := as.getApplication(ctx, appID)
+	if svcErr != nil {
+		as.logger.Warn(ctx, "Failed to read the application back, so its regenerated secret was not captured",
 			log.String("appID", appID))
-		return "", &tidcommon.InternalServerError
+		return
 	}
-	return secret, nil
+	app := buildApplicationResponse(fullApp)
+	for i := range app.InboundAuthConfig {
+		if app.InboundAuthConfig[i].OAuthConfig != nil {
+			app.InboundAuthConfig[i].OAuthConfig.ClientSecret = secret
+		}
+	}
+	as.valueCapturer.CaptureValues(ctx, resourceTypeApplication, app)
+}
+
+// rotateClientSecret writes a client secret that replaces the application's current one, with the
+// system flows around the write: the pre flow revokes what the old secret issued before it is replaced,
+// and the post flow moves the cutoff past the write, so a token issued while it ran is revoked too. An
+// update that rotates the secret and a regeneration both come through here, so they revoke the same.
+// A refusal of the pre flow writes nothing. A failure of the post flow is returned as postErr, after the
+// write, so the caller decides what it means: the new secret is stored by then.
+func (as *applicationService) rotateClientSecret(ctx context.Context, appID string,
+	write func() *tidcommon.ServiceError) (svcErr, postErr *tidcommon.ServiceError) {
+	inputs := map[string]string{systemFlowInputApplication: appID}
+	shared, svcErr := as.runSystemFlow(ctx, systemFlowApplicationSecretRotatePre, inputs, nil)
+	if svcErr != nil {
+		return svcErr, nil
+	}
+	if svcErr := write(); svcErr != nil {
+		return svcErr, nil
+	}
+	_, postErr = as.runSystemFlow(ctx, systemFlowRevocationPost, inputs, shared)
+	return nil, postErr
 }
 
 // resolveClientSecretDisposition tells what an update does with the supplied client secret. The stored

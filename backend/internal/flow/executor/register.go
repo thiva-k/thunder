@@ -451,10 +451,6 @@ func newBuiltInExecutorRegistrars() map[string]builtInExecutorRegistrar {
 			reg.RegisterExecutor(ExecutorNameApplicationActionValidator,
 				newApplicationActionValidator(deps.FlowFactory))
 		},
-		ExecutorNameClientSecret: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
-			reg.RegisterExecutor(ExecutorNameClientSecret,
-				newClientSecretExecutor(deps.FlowFactory))
-		},
 		ExecutorNameExtension: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
 			reg.RegisterExecutor(ExecutorNameExtension,
 				newExtensionExecutor(deps.FlowFactory, deps.HTTPConnectionProvider, deps.ExtensionHTTPClient,
@@ -555,8 +551,6 @@ type applicationAdminProvider interface {
 		*appmodel.ApplicationArtifactProfile, *tidcommon.ServiceError)
 	ValidateCredentialAction(ctx context.Context, appID string, action appmodel.CredentialAction) (
 		*appmodel.ApplicationArtifactProfile, *tidcommon.ServiceError)
-	ApplyCredentialAction(ctx context.Context, appID string, action appmodel.CredentialAction) (
-		string, *tidcommon.ServiceError)
 }
 
 // roleAdminProvider is the role seam the access change validator and the role executor consume.

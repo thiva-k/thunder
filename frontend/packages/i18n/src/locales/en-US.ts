@@ -3904,6 +3904,8 @@ const translations = {
     'delete.success': 'Application deleted successfully.',
     'delete.error': 'Failed to delete application. Please try again.',
     'regenerateSecret.snackbar.success': 'Client secret regenerated successfully.',
+    'regenerateSecret.snackbar.revocationIncomplete':
+      'Client secret regenerated, but tokens issued while it was replaced may still be valid. Regenerate it again to revoke them.',
     'errors.APP-1001': 'This application no longer exists. It may have been deleted elsewhere.',
     'errors.APP-1002': 'The application identifier is not valid.',
     'errors.APP-1012': 'One or more redirect URIs are not valid.',

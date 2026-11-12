@@ -16,11 +16,14 @@ import (
 	flowcommon "github.com/thunder-id/thunderid/internal/flow/common"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	"github.com/thunder-id/thunderid/internal/system/config"
+	"github.com/thunder-id/thunderid/internal/system/eventbus/audit"
+	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/entitymock"
 	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
+	"github.com/thunder-id/thunderid/tests/mocks/sysauthzmock"
 )
 
 // secretUpdateFixture is an application with a confidential OAuth client, about to be updated with a
@@ -195,4 +198,154 @@ func (suite *ServiceTestSuite) TestUpdateApplication_AClientThatHadNoSecretIsGiv
 	assert.Empty(suite.T(), *f.runs)
 	assert.Equal(suite.T(), []string{"inbound", "secret"}, f.order)
 	f.entities.AssertNotCalled(suite.T(), "AuthenticateEntityByID", mock.Anything, testServiceAppID, mock.Anything)
+}
+
+// newRegenerationFixture returns a service whose application has an OAuth client authenticating as
+// method, with the system flows and the secret write recorded in order.
+func (suite *ServiceTestSuite) newRegenerationFixture(method providers.TokenEndpointAuthMethod) (
+	*applicationService, *[]*flowcommon.SystemFlowContext, *[]string) {
+	service := suite.regeneratingService(appEntityWithClientID("secret-client"), nil, method, nil,
+		regenerationNotStored)
+	order := &[]string{}
+	service.entityService.(*entitymock.EntityServiceInterfaceMock).
+		On("UpdateSystemCredentials", mock.Anything, testServiceAppID, mock.Anything).
+		Run(func(mock.Arguments) { *order = append(*order, "secret") }).Return(nil).Maybe()
+	runs := suite.recordSystemFlows(service, nil, order)
+	return service, runs, order
+}
+
+// A regeneration runs the same system flows as an update that rotates the secret: the pre flow before
+// the new secret is written, and the post flow after it, with what the pre flow shared.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_RevokesAroundTheWrite() {
+	service, runs, order := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretBasic)
+
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+	assert.Nil(suite.T(), svcErr)
+	assert.NotEmpty(suite.T(), secret)
+	assert.Equal(suite.T(), []*flowcommon.SystemFlowContext{
+		{Handle: systemFlowApplicationSecretRotatePre, Inputs: applicationInput},
+		{Handle: systemFlowRevocationPost, Inputs: applicationInput,
+			RuntimeData: map[string]string{"plan": systemFlowApplicationSecretRotatePre}},
+	}, *runs)
+	assert.Equal(suite.T(), []string{systemFlowApplicationSecretRotatePre, "secret", systemFlowRevocationPost},
+		*order, "the secret was written before the revocation")
+}
+
+// A regeneration the pre flow refuses writes nothing and returns no secret.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusedWhenThePreFlowRefuses() {
+	service, _, order := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretPost)
+	*order = nil
+	suite.recordSystemFlows(service, &ErrorApplicationHasNoClientSecret, order)
+
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+	assert.Equal(suite.T(), &ErrorApplicationHasNoClientSecret, svcErr)
+	assert.Empty(suite.T(), secret)
+	assert.Equal(suite.T(), []string{systemFlowApplicationSecretRotatePre}, *order,
+		"something was written after the refusal")
+}
+
+// A post flow that fails once the new secret is written still returns the secret: it is stored by then and
+// can never be read again, so withholding it would leave the application with a secret no one holds. The
+// failure is audited instead.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_FailedPostFlowStillReturnsTheSecret() {
+	service, _, order := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretBasic)
+	flows := newSystemFlowProviderMock(suite.T())
+	flows.EXPECT().ExecuteSystemFlow(mock.Anything, mock.MatchedBy(func(c *flowcommon.SystemFlowContext) bool {
+		return c.Handle == systemFlowApplicationSecretRotatePre
+	})).Return(&flowcommon.SystemFlowResult{}, nil).Once()
+	flows.EXPECT().ExecuteSystemFlow(mock.Anything, mock.MatchedBy(func(c *flowcommon.SystemFlowContext) bool {
+		return c.Handle == systemFlowRevocationPost
+	})).Return(nil, &tidcommon.InternalServerError).Once()
+	service.systemFlows = flows
+	bus, published := newRecordingBus(suite.T())
+	service.bus = bus
+
+	regenerated, svcErr := service.RegenerateClientSecret(adminContext(), testServiceAppID)
+
+	assert.Nil(suite.T(), svcErr)
+	suite.Require().NotNil(regenerated)
+	assert.NotEmpty(suite.T(), regenerated.ClientSecret)
+	assert.True(suite.T(), regenerated.RevocationIncomplete, "the caller is not told the revocation is incomplete")
+	assert.Equal(suite.T(), []string{"secret"}, *order)
+	suite.requireOnlyEvent(published(), audit.EventApplicationUpdate, audit.ActionUpdate, testServiceAppID,
+		audit.OutcomeFailed("sse_5000"))
+}
+
+// A client that authenticates without a secret has none to regenerate: it is refused before any system
+// flow runs.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusedForAClientWithoutASecret() {
+	for _, method := range []providers.TokenEndpointAuthMethod{
+		providers.TokenEndpointAuthMethodPrivateKeyJWT, providers.TokenEndpointAuthMethodNone,
+	} {
+		suite.Run(string(method), func() {
+			service, runs, order := suite.newRegenerationFixture(method)
+
+			secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+			assert.Equal(suite.T(), &ErrorApplicationHasNoClientSecret, svcErr)
+			assert.Empty(suite.T(), secret)
+			assert.Empty(suite.T(), *runs)
+			assert.Empty(suite.T(), *order)
+		})
+	}
+}
+
+// An application with no OAuth client has no secret to regenerate.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusedForAnApplicationWithoutAnOAuthClient() {
+	service, _ := suite.newFlowTargetTestService(&providers.Entity{Category: providers.EntityCategoryApp})
+	runs := suite.recordSystemFlows(service, nil, nil)
+
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+	assert.Equal(suite.T(), &ErrorApplicationHasNoClientSecret, svcErr)
+	assert.Empty(suite.T(), secret)
+	assert.Empty(suite.T(), *runs)
+}
+
+// An application declared in a file is read only, so its secret is not regenerated and nothing runs.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusedForADeclarativeApplication() {
+	service := suite.regeneratingService(appEntityWithClientID("secret-client"), nil,
+		providers.TokenEndpointAuthMethodClientSecretBasic, nil, regenerationNotLoaded)
+	service.entityService.(*entitymock.EntityServiceInterfaceMock).
+		On("IsEntityDeclarative", mock.Anything, testServiceAppID).Return(true, nil).Once()
+	runs := suite.recordSystemFlows(service, nil, nil)
+
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+	assert.Equal(suite.T(), &ErrorCannotModifyDeclarativeResource, svcErr)
+	assert.Empty(suite.T(), secret)
+	assert.Empty(suite.T(), *runs)
+}
+
+// A caller without control over the application is refused, as for an update, before any system flow runs.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusedWithoutControlOverTheApplication() {
+	service := suite.regeneratingService(appEntityWithClientID("secret-client"), nil,
+		providers.TokenEndpointAuthMethodClientSecretBasic, nil, regenerationNotLoaded)
+	service.entityService.(*entitymock.EntityServiceInterfaceMock).
+		On("IsEntityDeclarative", mock.Anything, testServiceAppID).Return(false, nil).Once()
+	authz := sysauthzmock.NewSystemAuthorizationServiceInterfaceMock(suite.T())
+	authz.On("IsActionAllowed", mock.Anything, mock.Anything, mock.Anything).Return(true, nil).Maybe()
+	authz.On("CanControlEntity", mock.Anything, testServiceAppID).Return(&sysauthz.ErrorGrantNotPermitted).Once()
+	service.authzService = authz
+	runs := suite.recordSystemFlows(service, nil, nil)
+
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+	assert.Equal(suite.T(), &sysauthz.ErrorGrantNotPermitted, svcErr)
+	assert.Empty(suite.T(), secret)
+	assert.Empty(suite.T(), *runs)
+}
+
+// With system flows off, as on a control plane, the secret is still regenerated.
+func (suite *ServiceTestSuite) TestRegenerateClientSecret_WithSystemFlowsOff() {
+	service, _, order := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretBasic)
+	service.systemFlows = nil
+
+	secret, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
+
+	assert.Nil(suite.T(), svcErr)
+	assert.NotEmpty(suite.T(), secret)
+	assert.Equal(suite.T(), []string{"secret"}, *order)
 }

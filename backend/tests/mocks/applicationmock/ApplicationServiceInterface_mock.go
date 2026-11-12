@@ -51,80 +51,6 @@ func (_m *ApplicationServiceInterfaceMock) EXPECT() *ApplicationServiceInterface
 	return &ApplicationServiceInterfaceMock_Expecter{mock: &_m.Mock}
 }
 
-// ApplyCredentialAction provides a mock function for the type ApplicationServiceInterfaceMock
-func (_mock *ApplicationServiceInterfaceMock) ApplyCredentialAction(ctx context.Context, appID string, action model.CredentialAction) (string, *common.ServiceError) {
-	ret := _mock.Called(ctx, appID, action)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ApplyCredentialAction")
-	}
-
-	var r0 string
-	var r1 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, model.CredentialAction) (string, *common.ServiceError)); ok {
-		return returnFunc(ctx, appID, action)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, model.CredentialAction) string); ok {
-		r0 = returnFunc(ctx, appID, action)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, model.CredentialAction) *common.ServiceError); ok {
-		r1 = returnFunc(ctx, appID, action)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*common.ServiceError)
-		}
-	}
-	return r0, r1
-}
-
-// ApplicationServiceInterfaceMock_ApplyCredentialAction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyCredentialAction'
-type ApplicationServiceInterfaceMock_ApplyCredentialAction_Call struct {
-	*mock.Call
-}
-
-// ApplyCredentialAction is a helper method to define mock.On call
-//   - ctx context.Context
-//   - appID string
-//   - action model.CredentialAction
-func (_e *ApplicationServiceInterfaceMock_Expecter) ApplyCredentialAction(ctx any, appID any, action any) *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call {
-	return &ApplicationServiceInterfaceMock_ApplyCredentialAction_Call{Call: _e.mock.On("ApplyCredentialAction", ctx, appID, action)}
-}
-
-func (_c *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call) Run(run func(ctx context.Context, appID string, action model.CredentialAction)) *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 model.CredentialAction
-		if args[2] != nil {
-			arg2 = args[2].(model.CredentialAction)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call) Return(s string, serviceError *common.ServiceError) *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call {
-	_c.Call.Return(s, serviceError)
-	return _c
-}
-
-func (_c *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call) RunAndReturn(run func(ctx context.Context, appID string, action model.CredentialAction) (string, *common.ServiceError)) *ApplicationServiceInterfaceMock_ApplyCredentialAction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CreateApplication provides a mock function for the type ApplicationServiceInterfaceMock
 func (_mock *ApplicationServiceInterfaceMock) CreateApplication(ctx context.Context, app *model.ApplicationDTO) (*model.ApplicationDTO, *common.ServiceError) {
 	ret := _mock.Called(ctx, app)
@@ -903,6 +829,76 @@ func (_c *ApplicationServiceInterfaceMock_ListSharingPolicies_Call) Return(polic
 }
 
 func (_c *ApplicationServiceInterfaceMock_ListSharingPolicies_Call) RunAndReturn(run func(ctx context.Context, appID string, limit int, offset int) (sharing.PolicyList, *common.ServiceError)) *ApplicationServiceInterfaceMock_ListSharingPolicies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RegenerateClientSecret provides a mock function for the type ApplicationServiceInterfaceMock
+func (_mock *ApplicationServiceInterfaceMock) RegenerateClientSecret(ctx context.Context, appID string) (*model.ClientSecretResponse, *common.ServiceError) {
+	ret := _mock.Called(ctx, appID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RegenerateClientSecret")
+	}
+
+	var r0 *model.ClientSecretResponse
+	var r1 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*model.ClientSecretResponse, *common.ServiceError)); ok {
+		return returnFunc(ctx, appID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *model.ClientSecretResponse); ok {
+		r0 = returnFunc(ctx, appID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.ClientSecretResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, appID)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*common.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// ApplicationServiceInterfaceMock_RegenerateClientSecret_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegenerateClientSecret'
+type ApplicationServiceInterfaceMock_RegenerateClientSecret_Call struct {
+	*mock.Call
+}
+
+// RegenerateClientSecret is a helper method to define mock.On call
+//   - ctx context.Context
+//   - appID string
+func (_e *ApplicationServiceInterfaceMock_Expecter) RegenerateClientSecret(ctx any, appID any) *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call {
+	return &ApplicationServiceInterfaceMock_RegenerateClientSecret_Call{Call: _e.mock.On("RegenerateClientSecret", ctx, appID)}
+}
+
+func (_c *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call) Run(run func(ctx context.Context, appID string)) *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call) Return(clientSecretResponse *model.ClientSecretResponse, serviceError *common.ServiceError) *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call {
+	_c.Call.Return(clientSecretResponse, serviceError)
+	return _c
+}
+
+func (_c *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call) RunAndReturn(run func(ctx context.Context, appID string) (*model.ClientSecretResponse, *common.ServiceError)) *ApplicationServiceInterfaceMock_RegenerateClientSecret_Call {
 	_c.Call.Return(run)
 	return _c
 }

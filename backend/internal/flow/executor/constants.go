@@ -60,7 +60,6 @@ const (
 	ExecutorNameCriteriaRevocation           = executormeta.ExecutorNameCriteriaRevocation
 	ExecutorNameSessionRevocation            = executormeta.ExecutorNameSessionRevocation
 	ExecutorNameApplicationActionValidator   = executormeta.ExecutorNameApplicationActionValidator
-	ExecutorNameClientSecret                 = executormeta.ExecutorNameClientSecret
 	ExecutorNameAccessChangeValidator        = executormeta.ExecutorNameAccessChangeValidator
 	ExecutorNameRole                         = executormeta.ExecutorNameRole
 	ExecutorNameOwnerResolver                = executormeta.ExecutorNameOwnerResolver
