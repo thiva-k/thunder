@@ -234,6 +234,13 @@
   "direct_api": {
     "enabled": true
   },
+  "aauth": {
+    "enabled": false,
+    "signing_key_id": "",
+    "interaction_client_id": "",
+    "allow_private_network": false,
+    "trusted_ca_file": ""
+  },
   "notification": {
     "otp": {
       "length": 6,

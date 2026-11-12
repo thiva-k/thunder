@@ -748,6 +748,7 @@ const (
 	NamespacePAR            RuntimeStoreNamespace = "par:req"
 	NamespaceCIBA           RuntimeStoreNamespace = "ciba:req"
 	NamespaceDeviceAuth     RuntimeStoreNamespace = "device:req"
+	NamespaceAAuth          RuntimeStoreNamespace = "aauth:ps"
 	NamespaceJTI            RuntimeStoreNamespace = "jti:token"
 	NamespaceVCINonce       RuntimeStoreNamespace = "vci:nonce"
 	NamespaceVCIOffer       RuntimeStoreNamespace = "vci:offer"

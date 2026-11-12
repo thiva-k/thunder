@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ThunderID: agent request</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
+.card{border:1px solid #ddd;border-radius:8px;padding:1rem 1.25rem;margin:1rem 0}
+.agent{background:#fff8e6;border-color:#f0d58c}
+.label{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:#666}
+.err{color:#b00020}.mono{font-family:ui-monospace,monospace}
+button{font-size:1rem;padding:.5rem 1.25rem;margin-right:.5rem;border-radius:6px;border:1px solid #888;cursor:pointer}
+button.primary{background:#1a56db;color:#fff;border-color:#1a56db}
+pre{white-space:pre-wrap;margin:0}
+</style></head><body>
+<h1>ThunderID</h1>
+{{if .Error}}<p class="err">{{.Error}}</p>
+{{else if .Message}}<p>{{.Message}}</p>
+{{else if .DecisionToken}}
+  {{if eq .Kind "person_token"}}<h2>Let an agent act as you at {{if .ResourceName}}{{.ResourceName}}{{else}}{{.Resource}}{{end}}?</h2>
+  {{else if eq .Kind "auth_token"}}<h2>Grant an agent access to {{if .ResourceName}}{{.ResourceName}}{{else}}{{.Resource}}{{end}}?</h2>
+  {{else if eq .Kind "mission"}}<h2>Approve a mission for an agent?</h2>
+  {{else}}<h2>Accept that the agent's mission is complete?</h2>{{end}}
+  <div class="card">
+    <div class="label">Agent</div>
+    <p><strong>{{if .AgentName}}{{.AgentName}}{{else}}{{.AgentID}}{{end}}</strong> <span class="mono">{{.AgentID}}</span><br>
+    Issued by <span class="mono">{{.AgentProvider}}</span></p>
+    {{if .NewAgent}}<p><strong>This is a new agent.</strong> Approving binds it to you; it can then act only for you.</p>{{end}}
+  </div>
+  {{if .Resource}}<div class="card">
+    <div class="label">Resource</div>
+    <p><span class="mono">{{.Resource}}</span>{{if .ResourceName}}: {{.ResourceName}}{{end}}</p>
+    {{if .ResourceDesc}}<pre>{{.ResourceDesc}}</pre>{{end}}
+    {{if .AccessMode}}<p>Access mode: {{.AccessMode}}</p>{{end}}
+    {{if .Scopes}}<p>Requested access: {{range .Scopes}}<span class="mono">{{.}}</span> {{end}}</p>{{end}}
+  </div>{{end}}
+  {{if .MissionDesc}}<div class="card"><div class="label">Mission</div><pre>{{.MissionDesc}}</pre></div>{{end}}
+  {{if or .Justification .Platform .Device .Mission .Summary}}<div class="card agent">
+    <div class="label">Stated by the agent, not verified</div>
+    {{if .Mission}}<pre>{{.Mission.Description}}</pre>
+      {{if .Mission.Tools}}<p>Tools: {{range .Mission.Tools}}<span class="mono">{{.Name}}</span> {{end}}</p>{{end}}
+      {{if .Mission.Resources}}<p>Resources: {{range .Mission.Resources}}<span class="mono">{{.}}</span> {{end}}</p>{{end}}{{end}}
+    {{if .Summary}}<pre>{{.Summary}}</pre>{{end}}
+    {{if .Justification}}<pre>{{.Justification}}</pre>{{end}}
+    {{if or .Platform .Device}}<p>Running on {{.Platform}} {{.Device}}</p>{{end}}
+  </div>{{end}}
+  <form method="post" action="/aauth/interaction/decision">
+    <input type="hidden" name="pending_id" value="{{.PendingID}}">
+    <input type="hidden" name="decision_token" value="{{.DecisionToken}}">
+    <button class="primary" name="decision" value="approve">Approve</button>
+    <button name="decision" value="deny">Deny</button>
+  </form>
+{{else}}
+  <h2>Connect an agent</h2>
+  <form method="get" action="/aauth/interaction">
+    <p><label>Code from your agent<br><input name="code" autocomplete="off" class="mono"></label></p>
+    <button class="primary">Continue</button>
+  </form>
+{{end}}
+</body></html>

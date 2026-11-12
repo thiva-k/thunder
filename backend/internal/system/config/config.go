@@ -256,6 +256,34 @@ func (c DirectAPIConfig) IsEnabled() bool {
 	return derefBool(c.Enabled)
 }
 
+// AAuthConfig holds the configuration for the AAuth person server.
+type AAuthConfig struct {
+	// Enabled turns the person server endpoints on.
+	Enabled *bool `yaml:"enabled" json:"enabled"`
+	// SigningKeyID is the id of the configured crypto key that signs person and auth tokens. An
+	// Ed25519 or P-256 key is required.
+	SigningKeyID string `yaml:"signing_key_id" json:"signing_key_id"`
+	// InteractionClientID is the client id of the OAuth application the person signs in with at the
+	// interaction endpoint. Its redirect URI must be the person server's interaction callback.
+	InteractionClientID string `yaml:"interaction_client_id" json:"interaction_client_id"`
+	// AllowPrivateNetwork lets the person server fetch agent and resource metadata from loopback and
+	// private addresses. For local development only.
+	AllowPrivateNetwork *bool `yaml:"allow_private_network" json:"allow_private_network"`
+	// TrustedCAFile is an optional PEM bundle trusted, in addition to the system roots, when fetching
+	// agent and resource metadata.
+	TrustedCAFile string `yaml:"trusted_ca_file" json:"trusted_ca_file"`
+}
+
+// IsEnabled reports whether the AAuth person server is enabled, defaulting to false when unset.
+func (c AAuthConfig) IsEnabled() bool {
+	return derefBool(c.Enabled)
+}
+
+// IsPrivateNetworkAllowed reports whether metadata may be fetched from private addresses.
+func (c AAuthConfig) IsPrivateNetworkAllowed() bool {
+	return derefBool(c.AllowPrivateNetwork)
+}
+
 // AttestationConfig holds engine-level platform attestation configuration shared across
 // applications.
 type AttestationConfig struct {
@@ -904,6 +932,7 @@ type Config struct {
 	Observability              engineconfig.ObservabilityConfig  `yaml:"observability"         json:"observability"`
 	Passkey                    PasskeyConfig                     `yaml:"passkey"               json:"passkey"`
 	DirectAPI                  DirectAPIConfig                   `yaml:"direct_api"            json:"direct_api"`
+	AAuth                      AAuthConfig                       `yaml:"aauth"                 json:"aauth"`
 	Attestation                AttestationConfig                 `yaml:"attestation"           json:"attestation"`
 	OpenID4VP                  OpenID4VPConfig                   `yaml:"openid4vp"             json:"openid4vp"`
 	OpenID4VCI                 OpenID4VCIConfig                  `yaml:"openid4vci"            json:"openid4vci"`

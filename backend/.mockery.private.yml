@@ -442,6 +442,15 @@ packages:
       pkgname: cert
       filename: "{{.InterfaceName}}_mock_test.go"
 
+  github.com/thunder-id/thunderid/internal/aauth:
+    interfaces:
+      authorizationCodeRedeemer:
+        config:
+          dir: internal/aauth
+          structname: '{{.InterfaceName}}Mock'
+          pkgname: aauth
+          filename: "{{.InterfaceName}}_mock_test.go"
+
   github.com/thunder-id/thunderid/internal/cimd:
     config:
       all: true

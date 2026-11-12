@@ -42,6 +42,10 @@ var publicPaths = []string{
 	"/.well-known/openid-credential-issuer",
 	"/.well-known/oauth-authorization-server/**",
 	"/.well-known/oauth-protected-resource",
+	// AAuth person server endpoints authenticate agents by HTTP Message Signatures, and the
+	// interaction pages sign the person in through the OAuth authorization endpoint.
+	"/.well-known/aauth-person.json",
+	"/aauth/**",
 	"/gate/**",
 	"/console/**",
 	"/error/**",

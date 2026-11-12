@@ -26,12 +26,13 @@ func TestInitTestSuite(t *testing.T) {
 func (s *InitTestSuite) TestInitialize_RefusesANilEventBus() {
 	mux := http.NewServeMux()
 
-	validator, dispatcher, err := Initialize(mux, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, oauthconfig.Config{}, nil)
+	validator, dispatcher, authzService, err := Initialize(mux, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, oauthconfig.Config{}, nil)
 
 	s.ErrorIs(err, errNilEventBus)
 	s.Nil(validator)
 	s.Nil(dispatcher)
+	s.Nil(authzService)
 	_, pattern := mux.Handler(httptest.NewRequest(http.MethodPost, "/oauth2/token", nil))
 	s.Empty(pattern)
 }

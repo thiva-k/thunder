@@ -13,6 +13,7 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/thunder-id/thunderid/internal/aauth"
 	"github.com/thunder-id/thunderid/internal/actorprovider"
 	"github.com/thunder-id/thunderid/internal/agent"
 	"github.com/thunder-id/thunderid/internal/agentmgtprovider"
@@ -680,9 +681,9 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to inject the system flow provider into the resource service")
 
 	// Initialize OAuth services.
-	tokenValidator, dispatcher, err := oauth.Initialize(mux, actorProvider, authnProvider, jwtService, jweService,
-		flowExecService, observabilitySvc, runtimeCryptoSvc, ouProvider, attributeCacheService, authZService,
-		resourceServerProvider, i18nService, idpService, dpopVerifier,
+	tokenValidator, dispatcher, oauthAuthzService, err := oauth.Initialize(mux, actorProvider, authnProvider,
+		jwtService, jweService, flowExecService, observabilitySvc, runtimeCryptoSvc, ouProvider, attributeCacheService,
+		authZService, resourceServerProvider, i18nService, idpService, dpopVerifier,
 		runtimeStoreProvider, transactioner, revocationEnforcer, revocationSvc,
 		sessionService, ssoTransport, flowMgtService, governanceProvider, authzDetailService, authzDetailMgtService,
 		oauthCfg, auditBus)
@@ -697,6 +698,10 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	_, err = openid4vci.Initialize(mux, runtimeCryptoSvc, tokenValidator, userService, dpopVerifier,
 		openid4vciCredSvc, actorProvider, runtimeStoreProvider)
 	fatalOnError(ctx, logger, err, "Failed to initialize OpenID4VCI issuer service")
+
+	err = aauth.Initialize(ctx, mux, config.GetServerRuntime().Config.AAuth, oauthCfg.BaseURL, runtimeCryptoSvc,
+		runtimeStoreProvider, oauthAuthzService, actorProvider)
+	fatalOnError(ctx, logger, err, "Failed to initialize the AAuth person server")
 
 	if oauthCfg.OAuth.DCR.IsEnabled() {
 		// Register OAuth2 DCR service.

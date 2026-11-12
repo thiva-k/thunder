@@ -69,9 +69,10 @@ func Initialize(
 	authzDetailTypes providers.AuthorizationDetailTypeProvider,
 	cfg oauthconfig.Config,
 	bus eventbus.EventBusInterface,
-) (tokenservice.TokenValidatorInterface, backchannel.DispatcherInterface, error) {
+) (tokenservice.TokenValidatorInterface, backchannel.DispatcherInterface, oauth2authz.AuthorizeServiceInterface,
+	error) {
 	if bus == nil {
-		return nil, nil, errNilEventBus
+		return nil, nil, nil, errNilEventBus
 	}
 	jwks.Initialize(mux, runtimeCrypto)
 	httpClient := syshttp.NewHTTPClientWithCheckRedirect(func(req *http.Request, _ []*http.Request) error {
@@ -100,7 +101,7 @@ func Initialize(
 		jwtService, flowExecService, parService, revocationSvc, ssoSession, ssoTransport, flowProvider,
 		governance, cfg, runtimeStore, transactioner, jtiStore, authzDetails)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var cibaService ciba.CIBAServiceInterface
@@ -143,5 +144,5 @@ func Initialize(
 	// Sessions also end without the logout endpoint, such as on user deletion, so delivery follows
 	// only its own flag.
 	dispatcher := backchannel.Initialize(tokenBuilder, actorProvider, observabilitySvc, cfg)
-	return tokenValidator, dispatcher, nil
+	return tokenValidator, dispatcher, oauth2AuthzService, nil
 }
