@@ -1376,7 +1376,7 @@ func (s *agentService) RegenerateAgentSecret(ctx context.Context, agentID string
 	}
 	s.captureRegeneratedSecret(ctx, agentID, regenerated.ClientSecret)
 	return &model.ClientSecretResponse{ClientSecret: regenerated.ClientSecret,
-		RevocationIncomplete: regenerated.RevocationError != nil}, nil
+		RevocationIncomplete: regenerated.RevocationError != nil, Revoked: regenerated.Revoked}, nil
 }
 
 // ValidateClientSecretRegeneration reports whether the caller may regenerate the agent's client secret and

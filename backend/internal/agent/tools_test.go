@@ -656,7 +656,7 @@ func (s *AgentToolsTestSuite) TestRotateAgentCredentials_Secret() {
 	s.agents.On("GetAgent", mock.Anything, toolAgentID, false).
 		Return(toolAgent(secretConfig()), (*tidcommon.ServiceError)(nil))
 	s.agents.On("RegenerateAgentSecret", mock.Anything, toolAgentID).
-		Return(&model.ClientSecretResponse{ClientSecret: "fresh"}, (*tidcommon.ServiceError)(nil)).Once()
+		Return(&model.ClientSecretResponse{ClientSecret: "fresh", Revoked: true}, (*tidcommon.ServiceError)(nil)).Once()
 
 	var out rotateAgentCredentialsMCPResponse
 	s.structured(s.call("rotate_agent_credentials", map[string]any{"agentId": toolAgentID}), &out)
@@ -672,6 +672,15 @@ func (s *AgentToolsTestSuite) TestRotateAgentCredentials_Secret() {
 	s.structured(s.call("rotate_agent_credentials", map[string]any{"agentId": toolAgentID}), &out)
 	s.Equal("fresher", out.ClientSecret)
 	s.Contains(out.Notice, "revoking the tokens it issued failed")
+
+	// Where nothing is revoked, as on a control plane, the notice does not claim that anything was.
+	s.agents.On("RegenerateAgentSecret", mock.Anything, toolAgentID).
+		Return(&model.ClientSecretResponse{ClientSecret: "freshest"}, (*tidcommon.ServiceError)(nil)).Once()
+	out = rotateAgentCredentialsMCPResponse{}
+	s.structured(s.call("rotate_agent_credentials", map[string]any{"agentId": toolAgentID}), &out)
+	s.Equal("freshest", out.ClientSecret)
+	s.Contains(out.Notice, "were not revoked")
+	s.NotContains(out.Notice, "are revoked")
 
 	text := s.errorText(s.call("rotate_agent_credentials", map[string]any{"agentId": toolAgentID,
 		"removeKeyId": "k1"}))

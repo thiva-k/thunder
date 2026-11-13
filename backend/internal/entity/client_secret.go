@@ -43,6 +43,10 @@ type ClientSecretProfile struct {
 // can be read, since it is hashed on write.
 type ClientSecretRegeneration struct {
 	ClientSecret string
+	// Revoked reports that the system flows ran around the write and revoked what the old secret issued,
+	// up to the write. It is false where system flows are off, as on a control plane, and when the
+	// revocation after the write failed.
+	Revoked bool
 	// RevocationError is set when the secret is stored but revoking the tokens issued while it was written
 	// failed. Regenerating again revokes them.
 	RevocationError *tidcommon.ServiceError
@@ -132,7 +136,8 @@ func (s *entityService) RegenerateClientSecret(ctx context.Context, category pro
 			"replaced failed; it is returned, and a token issued in that window can stay valid until it expires",
 			log.MaskedString("entityID", entityID), log.String("code", postErr.Code))
 	}
-	return &ClientSecretRegeneration{ClientSecret: secret, RevocationError: postErr}, nil
+	return &ClientSecretRegeneration{ClientSecret: secret, Revoked: s.systemFlows != nil && postErr == nil,
+		RevocationError: postErr}, nil
 }
 
 // runSystemFlow runs a system flow with the given inputs, starting from what an earlier run shared, and

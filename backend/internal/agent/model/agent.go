@@ -200,6 +200,9 @@ type ClientSecretResponse struct {
 	// RevocationIncomplete is set when the secret is stored but revoking the tokens issued while it was
 	// being written failed. Regenerating again revokes them.
 	RevocationIncomplete bool `json:"revocationIncomplete,omitempty"`
+	// Revoked reports that the tokens the old secret issued were revoked. It is false where tokens are
+	// not revoked, as on a control plane, which issues none.
+	Revoked bool `json:"-"`
 }
 
 // SuspendOwnedAgentsResponse reports how many of the owner's agents a suspend-all suspended.

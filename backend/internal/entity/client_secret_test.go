@@ -86,6 +86,7 @@ func (s *ServiceTestSuite) TestRegenerateClientSecret_RevokesAroundTheWrite() {
 	s.Nil(svcErr)
 	s.Require().NotNil(regenerated)
 	s.NotEmpty(regenerated.ClientSecret)
+	s.True(regenerated.Revoked)
 	s.Nil(regenerated.RevocationError)
 	s.Equal([]*flowcommon.SystemFlowContext{
 		{Handle: SystemFlowSecretRotatePre, Inputs: secretRotationInputs},
@@ -137,6 +138,7 @@ func (s *ServiceTestSuite) TestRegenerateClientSecret_FailedPostFlowStillReturns
 	s.Require().NotNil(regenerated)
 	s.NotEmpty(regenerated.ClientSecret)
 	s.Equal(&tidcommon.InternalServerError, regenerated.RevocationError)
+	s.False(regenerated.Revoked)
 	s.Equal([]string{SystemFlowSecretRotatePre, "secret", systemFlowRevocationPost}, f.order)
 }
 
@@ -151,6 +153,7 @@ func (s *ServiceTestSuite) TestRegenerateClientSecret_WithSystemFlowsOff() {
 	s.Nil(svcErr)
 	s.Require().NotNil(regenerated)
 	s.NotEmpty(regenerated.ClientSecret)
+	s.False(regenerated.Revoked, "nothing was revoked with system flows off")
 	s.Equal([]string{"secret"}, f.order)
 }
 

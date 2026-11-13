@@ -65,7 +65,7 @@ describe('useRegenerateAgentSecret', () => {
       }),
     );
     expect(result.current.data).toEqual({clientSecret: 'server-generated'});
-    expect(mockShowToast).toHaveBeenCalledWith('regenerateSecret.snackbar.success', 'success');
+    expect(mockShowToast).toHaveBeenCalledWith('Client secret regenerated successfully', 'success');
   });
 
   it('warns when the tokens issued under the old secret may not be revoked', async () => {
@@ -79,7 +79,7 @@ describe('useRegenerateAgentSecret', () => {
     });
 
     expect(result.current.data?.revocationIncomplete).toBe(true);
-    expect(mockShowToast).toHaveBeenCalledWith('regenerateSecret.snackbar.revocationIncomplete', 'warning');
+    expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('Regenerate it again'), 'warning');
   });
 
   it('propagates a refusal', async () => {

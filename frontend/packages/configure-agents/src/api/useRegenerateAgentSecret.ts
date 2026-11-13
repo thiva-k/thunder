@@ -51,9 +51,15 @@ export default function useRegenerateAgentSecret(): UseMutationResult<
       queryClient.invalidateQueries({queryKey: [AgentQueryKeys.AGENT, variables.agentId]}).catch(() => undefined);
       queryClient.invalidateQueries({queryKey: [AgentQueryKeys.AGENTS]}).catch(() => undefined);
       if (data.revocationIncomplete) {
-        showToast(t('regenerateSecret.snackbar.revocationIncomplete'), 'warning');
+        showToast(
+          t(
+            'regenerateSecret.snackbar.revocationIncomplete',
+            'Client secret regenerated, but tokens issued while it was replaced may still be valid. Regenerate it again to revoke them.',
+          ),
+          'warning',
+        );
       } else {
-        showToast(t('regenerateSecret.snackbar.success'), 'success');
+        showToast(t('regenerateSecret.snackbar.success', 'Client secret regenerated successfully'), 'success');
       }
     },
   });
