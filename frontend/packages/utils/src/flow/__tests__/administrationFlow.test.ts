@@ -48,17 +48,17 @@ describe('resolveAdministrationFlowHandle', () => {
       },
     });
 
-    await expect(
-      resolveAdministrationFlowHandle(http, SERVER, AdministrationFlowConfigKey.USER_SUSPEND),
-    ).resolves.toBe('effective');
+    await expect(resolveAdministrationFlowHandle(http, SERVER, AdministrationFlowConfigKey.USER_SUSPEND)).resolves.toBe(
+      'effective',
+    );
   });
 
   it('returns an empty handle when the action has no flow configured', async () => {
     const http = httpFor({[`${SERVER}/server-config/flow`]: {merged: {}}});
 
-    await expect(
-      resolveAdministrationFlowHandle(http, SERVER, AdministrationFlowConfigKey.USER_SUSPEND),
-    ).resolves.toBe('');
+    await expect(resolveAdministrationFlowHandle(http, SERVER, AdministrationFlowConfigKey.USER_SUSPEND)).resolves.toBe(
+      '',
+    );
   });
 
   it('propagates a read failure instead of reporting no flow', async () => {
@@ -73,9 +73,9 @@ describe('resolveAdministrationFlowHandle', () => {
     const denied = Object.assign(new Error('Forbidden'), {response: {status: 403}});
     const http = {request: vi.fn(() => Promise.reject(denied))};
 
-    await expect(
-      resolveAdministrationFlowHandle(http, SERVER, AdministrationFlowConfigKey.USER_SUSPEND),
-    ).rejects.toBe(denied);
+    await expect(resolveAdministrationFlowHandle(http, SERVER, AdministrationFlowConfigKey.USER_SUSPEND)).rejects.toBe(
+      denied,
+    );
   });
 
   it('does not run the native fallback when the flow configuration read is denied', async () => {
