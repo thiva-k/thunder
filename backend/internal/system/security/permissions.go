@@ -661,6 +661,7 @@ func activatePermissions(p *SystemPermissions) {
 		// Agent APIs.
 		{"GET /agents", p.AgentView},
 		{"POST /agents", p.AgentCreate},
+		{"POST /agents/*/client-secret/regenerate", p.AgentUpdate},
 		{"GET /agents/**", p.AgentView},
 		{"PUT /agents/**", p.AgentUpdate},
 		{"DELETE /agents/**", p.AgentDelete},

@@ -62,8 +62,8 @@ type ApplicationServiceInterface interface {
 	DeleteApplication(ctx context.Context, appID string) *tidcommon.ServiceError
 	ValidateDeleteApplication(ctx context.Context, appID string) (
 		*model.ApplicationArtifactProfile, *tidcommon.ServiceError)
-	ValidateCredentialAction(ctx context.Context, appID string, action model.CredentialAction) (
-		*model.ApplicationArtifactProfile, *tidcommon.ServiceError)
+	ValidateClientSecretRegeneration(ctx context.Context, appID string) (
+		*entity.ClientSecretProfile, *tidcommon.ServiceError)
 	RegenerateClientSecret(ctx context.Context, appID string) (*model.ClientSecretResponse, *tidcommon.ServiceError)
 	GetResourceDependencies(
 		ctx context.Context, resourceType, id string) ([]resourcedependency.ResourceDependency, error)
@@ -1169,15 +1169,12 @@ func (as *applicationService) ensureNoBlockingDependencies(
 	})
 }
 
-// ValidateCredentialAction reports whether the action may be performed on the application's credential
-// and returns the profile of the artifacts it has issued, without changing state. A client that
-// authenticates without a secret has nothing to rotate.
-func (as *applicationService) ValidateCredentialAction(
-	ctx context.Context, appID string, action model.CredentialAction) (
-	*model.ApplicationArtifactProfile, *tidcommon.ServiceError) {
-	if action != model.CredentialActionRegenerate {
-		return nil, &ErrorUnsupportedCredentialAction
-	}
+// ValidateClientSecretRegeneration reports whether the caller may regenerate the application's client
+// secret and returns the profile of the artifacts its client has issued, without changing state. A client
+// that authenticates without a secret has nothing to rotate. The entity service asks it before a
+// regeneration, and the flow run before the secret is replaced asks it again.
+func (as *applicationService) ValidateClientSecretRegeneration(ctx context.Context, appID string) (
+	*entity.ClientSecretProfile, *tidcommon.ServiceError) {
 	existing, svcErr := as.loadApplicationEntity(ctx, appID)
 	if svcErr != nil {
 		return nil, svcErr
@@ -1210,67 +1207,31 @@ func (as *applicationService) ValidateCredentialAction(
 	if !inboundclient.AuthMethodUsesClientSecret(client.PublicClient, client.TokenEndpointAuthMethod) {
 		return nil, &ErrorApplicationHasNoClientSecret
 	}
-	return as.artifactProfileForClient(clientID, client), nil
+	profile := as.artifactProfileForClient(clientID, client)
+	return &entity.ClientSecretProfile{ClientID: profile.ClientKey, MaxLifetimeSeconds: profile.MaxLifetimeSeconds}, nil
 }
 
 // RegenerateClientSecret replaces the application's client secret with one generated server-side and
 // returns it. This return is the only time it is readable: it is hashed on write and no read path
-// returns it. The tokens the old secret issued are revoked as for an update that rotates the secret.
+// returns it. The entity service generates and stores it, revoking what the old secret issued.
 func (as *applicationService) RegenerateClientSecret(ctx context.Context, appID string) (
 	*model.ClientSecretResponse, *tidcommon.ServiceError) {
-	secret, svcErr, postErr := as.regenerateClientSecret(ctx, appID)
-	// A failed post flow is audited as the failure it is, but the secret is still returned: it is already
-	// stored, and nobody could read it again, so withholding it would leave the application with a secret
-	// no one holds. The response says the revocation is incomplete, so the caller can regenerate again.
+	regenerated, svcErr := as.entityService.RegenerateClientSecret(ctx, providers.EntityCategoryApp, appID)
+	// A failed revocation after the write is audited as the failure it is, but the secret is still
+	// returned: it is already stored, and nobody could read it again, so withholding it would leave the
+	// application with a secret no one holds. The response says the revocation is incomplete, so the
+	// caller can regenerate again.
 	audited := svcErr
 	if audited == nil {
-		audited = postErr
+		audited = regenerated.RevocationError
 	}
 	as.publishApplicationEvent(ctx, audit.EventApplicationUpdate, audit.ActionUpdate, appID, audited)
 	if svcErr != nil {
 		return nil, svcErr
 	}
-	return &model.ClientSecretResponse{ClientSecret: secret, RevocationIncomplete: postErr != nil}, nil
-}
-
-// regenerateClientSecret regenerates the client secret without publishing its audit event. postErr is a
-// failure of the post flow, which runs once the secret is stored: the secret is returned with it.
-func (as *applicationService) regenerateClientSecret(ctx context.Context, appID string) (
-	secret string, svcErr, postErr *tidcommon.ServiceError) {
-	if _, svcErr := as.ValidateCredentialAction(ctx, appID, model.CredentialActionRegenerate); svcErr != nil {
-		return "", svcErr, nil
-	}
-
-	secret, err := oauthutils.GenerateOAuth2ClientSecret()
-	if err != nil {
-		as.logger.Error(ctx, "Failed to generate OAuth client secret", log.Error(err),
-			log.String("appID", appID))
-		return "", &tidcommon.InternalServerError, nil
-	}
-	credentials, marshalErr := buildSystemCredentials(secret, "")
-	if marshalErr != nil {
-		as.logger.Error(ctx, "Failed to build system credentials", log.Error(marshalErr),
-			log.String("appID", appID))
-		return "", &tidcommon.InternalServerError, nil
-	}
-	svcErr, postErr = as.rotateClientSecret(ctx, appID, func() *tidcommon.ServiceError {
-		if entErr := as.entityService.UpdateSystemCredentials(ctx, appID, credentials); entErr != nil {
-			as.logger.Error(ctx, "Failed to persist regenerated client secret", log.Error(entErr),
-				log.String("appID", appID))
-			return &tidcommon.InternalServerError
-		}
-		as.captureRegeneratedSecret(ctx, appID, secret)
-		return nil
-	})
-	if svcErr != nil {
-		return "", svcErr, nil
-	}
-	if postErr != nil {
-		as.logger.Error(ctx, "The secret was regenerated, but revoking the tokens issued while it was replaced "+
-			"failed; it is returned, and a token issued in that window can stay valid until it expires",
-			log.String("appID", appID), log.String("code", postErr.Code))
-	}
-	return secret, nil, postErr
+	as.captureRegeneratedSecret(ctx, appID, regenerated.ClientSecret)
+	return &model.ClientSecretResponse{ClientSecret: regenerated.ClientSecret,
+		RevocationIncomplete: regenerated.RevocationError != nil}, nil
 }
 
 // captureRegeneratedSecret hands the application, with the secret just written, to the value capturer, as
@@ -1296,16 +1257,18 @@ func (as *applicationService) captureRegeneratedSecret(ctx context.Context, appI
 	as.valueCapturer.CaptureValues(ctx, resourceTypeApplication, app)
 }
 
-// rotateClientSecret writes a client secret that replaces the application's current one, with the
-// system flows around the write: the pre flow revokes what the old secret issued before it is replaced,
-// and the post flow moves the cutoff past the write, so a token issued while it ran is revoked too. An
-// update that rotates the secret and a regeneration both come through here, so they revoke the same.
-// A refusal of the pre flow writes nothing. A failure of the post flow is returned as postErr, after the
-// write, so the caller decides what it means: the new secret is stored by then.
+// rotateClientSecret writes a client secret the caller chose to replace the application's current one,
+// with the system flows a regeneration runs around its write: the pre flow revokes what the old secret
+// issued before it is replaced, and the post flow moves the cutoff past the write, so a token issued
+// while it ran is revoked too. A refusal of the pre flow writes nothing. A failure of the post flow is
+// returned as postErr, after the write, so the caller decides what it means.
 func (as *applicationService) rotateClientSecret(ctx context.Context, appID string,
 	write func() *tidcommon.ServiceError) (svcErr, postErr *tidcommon.ServiceError) {
-	inputs := map[string]string{systemFlowInputApplication: appID}
-	shared, svcErr := as.runSystemFlow(ctx, systemFlowApplicationSecretRotatePre, inputs, nil)
+	inputs := map[string]string{
+		entity.SystemFlowInputEntity:         appID,
+		entity.SystemFlowInputEntityCategory: string(providers.EntityCategoryApp),
+	}
+	shared, svcErr := as.runSystemFlow(ctx, entity.SystemFlowSecretRotatePre, inputs, nil)
 	if svcErr != nil {
 		return svcErr, nil
 	}

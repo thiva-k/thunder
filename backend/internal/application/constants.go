@@ -35,8 +35,7 @@ const projectIDQueryParam = "projectId"
 // The system flows this service runs, by handle, before a change is written and after, and the input
 // naming the application they act on.
 const (
-	systemFlowApplicationDeletePre       = "system-application-delete-pre"
-	systemFlowApplicationSecretRotatePre = "system-application-secret-rotate-pre"
+	systemFlowApplicationDeletePre = "system-application-delete-pre"
 	// systemFlowRevocationPost follows every change whose pre flow revokes up to a cutoff, moving the
 	// cutoff past the write.
 	systemFlowRevocationPost   = "system-revocation-post"

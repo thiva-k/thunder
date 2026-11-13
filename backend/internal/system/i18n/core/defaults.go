@@ -351,8 +351,6 @@ var defaultMessages = map[string]string{
 	"error.applicationservice.sharing_policy_version_mismatch_description": "The sharing policy changed since it was read; read it again and retry the edit",
 	"error.applicationservice.theme_not_found": "Theme not found",
 	"error.applicationservice.theme_not_found_description": "The specified theme configuration does not exist",
-	"error.applicationservice.unsupported_credential_action": "Unsupported credential action",
-	"error.applicationservice.unsupported_credential_action_description": "The requested action is not supported for this application's credential",
 	"error.applicationservice.userinfo_alg_requires_response_type_description": "userinfo responseType is required when signingAlg or encryptionAlg is set",
 	"error.applicationservice.userinfo_encryption_alg_requires_enc_description": "userinfo encryptionEnc is required when encryptionAlg is set",
 	"error.applicationservice.userinfo_encryption_enc_requires_alg_description": "userinfo encryptionAlg is required when encryptionEnc is set",

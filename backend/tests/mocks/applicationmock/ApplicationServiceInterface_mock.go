@@ -9,6 +9,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 	"github.com/thunder-id/thunderid/internal/application/model"
+	"github.com/thunder-id/thunderid/internal/entity"
 	"github.com/thunder-id/thunderid/internal/sharing"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -1251,28 +1252,28 @@ func (_c *ApplicationServiceInterfaceMock_ValidateApplication_Call) RunAndReturn
 	return _c
 }
 
-// ValidateCredentialAction provides a mock function for the type ApplicationServiceInterfaceMock
-func (_mock *ApplicationServiceInterfaceMock) ValidateCredentialAction(ctx context.Context, appID string, action model.CredentialAction) (*model.ApplicationArtifactProfile, *common.ServiceError) {
-	ret := _mock.Called(ctx, appID, action)
+// ValidateClientSecretRegeneration provides a mock function for the type ApplicationServiceInterfaceMock
+func (_mock *ApplicationServiceInterfaceMock) ValidateClientSecretRegeneration(ctx context.Context, appID string) (*entity.ClientSecretProfile, *common.ServiceError) {
+	ret := _mock.Called(ctx, appID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ValidateCredentialAction")
+		panic("no return value specified for ValidateClientSecretRegeneration")
 	}
 
-	var r0 *model.ApplicationArtifactProfile
+	var r0 *entity.ClientSecretProfile
 	var r1 *common.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, model.CredentialAction) (*model.ApplicationArtifactProfile, *common.ServiceError)); ok {
-		return returnFunc(ctx, appID, action)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*entity.ClientSecretProfile, *common.ServiceError)); ok {
+		return returnFunc(ctx, appID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, model.CredentialAction) *model.ApplicationArtifactProfile); ok {
-		r0 = returnFunc(ctx, appID, action)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *entity.ClientSecretProfile); ok {
+		r0 = returnFunc(ctx, appID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.ApplicationArtifactProfile)
+			r0 = ret.Get(0).(*entity.ClientSecretProfile)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, model.CredentialAction) *common.ServiceError); ok {
-		r1 = returnFunc(ctx, appID, action)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, appID)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*common.ServiceError)
@@ -1281,20 +1282,19 @@ func (_mock *ApplicationServiceInterfaceMock) ValidateCredentialAction(ctx conte
 	return r0, r1
 }
 
-// ApplicationServiceInterfaceMock_ValidateCredentialAction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateCredentialAction'
-type ApplicationServiceInterfaceMock_ValidateCredentialAction_Call struct {
+// ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateClientSecretRegeneration'
+type ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call struct {
 	*mock.Call
 }
 
-// ValidateCredentialAction is a helper method to define mock.On call
+// ValidateClientSecretRegeneration is a helper method to define mock.On call
 //   - ctx context.Context
 //   - appID string
-//   - action model.CredentialAction
-func (_e *ApplicationServiceInterfaceMock_Expecter) ValidateCredentialAction(ctx any, appID any, action any) *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call {
-	return &ApplicationServiceInterfaceMock_ValidateCredentialAction_Call{Call: _e.mock.On("ValidateCredentialAction", ctx, appID, action)}
+func (_e *ApplicationServiceInterfaceMock_Expecter) ValidateClientSecretRegeneration(ctx any, appID any) *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call {
+	return &ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call{Call: _e.mock.On("ValidateClientSecretRegeneration", ctx, appID)}
 }
 
-func (_c *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call) Run(run func(ctx context.Context, appID string, action model.CredentialAction)) *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call {
+func (_c *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call) Run(run func(ctx context.Context, appID string)) *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1304,25 +1304,20 @@ func (_c *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call) Run(run
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 model.CredentialAction
-		if args[2] != nil {
-			arg2 = args[2].(model.CredentialAction)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call) Return(applicationArtifactProfile *model.ApplicationArtifactProfile, serviceError *common.ServiceError) *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call {
-	_c.Call.Return(applicationArtifactProfile, serviceError)
+func (_c *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call) Return(clientSecretProfile *entity.ClientSecretProfile, serviceError *common.ServiceError) *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call {
+	_c.Call.Return(clientSecretProfile, serviceError)
 	return _c
 }
 
-func (_c *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call) RunAndReturn(run func(ctx context.Context, appID string, action model.CredentialAction) (*model.ApplicationArtifactProfile, *common.ServiceError)) *ApplicationServiceInterfaceMock_ValidateCredentialAction_Call {
+func (_c *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call) RunAndReturn(run func(ctx context.Context, appID string) (*entity.ClientSecretProfile, *common.ServiceError)) *ApplicationServiceInterfaceMock_ValidateClientSecretRegeneration_Call {
 	_c.Call.Return(run)
 	return _c
 }

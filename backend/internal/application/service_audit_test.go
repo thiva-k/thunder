@@ -377,7 +377,7 @@ func (suite *ServiceTestSuite) regeneratingService(existing *providers.Entity, e
 		mockEntityService.On("UpdateSystemCredentials", mock.Anything, testServiceAppID, mock.Anything).
 			Return(persistErr).Once()
 	}
-	return &applicationService{
+	service := &applicationService{
 		logger:               log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService")),
 		inboundClientService: mockStore,
 		entityService:        mockEntityService,
@@ -385,6 +385,29 @@ func (suite *ServiceTestSuite) regeneratingService(existing *providers.Entity, e
 		authzService:         allowAllAuthz(suite.T()),
 		bus:                  discardingBus{},
 	}
+	regeneratesThroughTheHolder(service, mockEntityService)
+	return service
+}
+
+// testRegeneratedSecret is the secret the mocked entity layer generates.
+const testRegeneratedSecret = "regenerated-client-secret-0123456789"
+
+// regeneratesThroughTheHolder has the mocked entity layer regenerate a secret as the entity service does: it
+// asks the application service, the holder of applications, whether the secret may be regenerated, then
+// stores a new one. The system flows the entity service runs around the write are tested with it.
+func regeneratesThroughTheHolder(service *applicationService, entities *entitymock.EntityServiceInterfaceMock) {
+	entities.EXPECT().RegenerateClientSecret(mock.Anything, providers.EntityCategoryApp, mock.Anything).
+		RunAndReturn(func(ctx context.Context, _ providers.EntityCategory, appID string) (
+			*entity.ClientSecretRegeneration, *tidcommon.ServiceError) {
+			if _, svcErr := service.ValidateClientSecretRegeneration(ctx, appID); svcErr != nil {
+				return nil, svcErr
+			}
+			if err := entities.UpdateSystemCredentials(ctx, appID,
+				[]byte(`{"clientSecret":"`+testRegeneratedSecret+`"}`)); err != nil {
+				return nil, &tidcommon.InternalServerError
+			}
+			return &entity.ClientSecretRegeneration{ClientSecret: testRegeneratedSecret}, nil
+		}).Maybe()
 }
 
 // Regenerating a client secret records an update of the application, never the secret it generated.

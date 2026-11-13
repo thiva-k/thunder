@@ -1279,6 +1279,9 @@ const translations = {
     'regenerateSecret.dialog.confirmButton': 'Regenerate',
     'regenerateSecret.dialog.regenerating': 'Regenerating…',
     'regenerateSecret.dialog.error': 'Failed to regenerate client secret',
+    'regenerateSecret.snackbar.success': 'Client secret regenerated successfully',
+    'regenerateSecret.snackbar.revocationIncomplete':
+      'Client secret regenerated, but tokens issued while it was replaced may still be valid. Regenerate it again to revoke them.',
     'regenerateSecret.success.title': 'Client secret regenerated',
     'regenerateSecret.success.subtitle':
       "Copy your new client secret and store it somewhere safe. It won't be shown again.",

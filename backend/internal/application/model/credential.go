@@ -15,17 +15,6 @@ type ApplicationArtifactProfile struct {
 	MaxLifetimeSeconds int64
 }
 
-// CredentialAction names what is done to an application's credential. Regeneration
-// is the only action today; rotation with an overlap window and additional secrets are the shapes this
-// is expected to grow, and they arrive as further actions rather than further methods.
-type CredentialAction string
-
-const (
-	// CredentialActionRegenerate replaces the application's credential with a newly generated value,
-	// leaving no window in which the previous one still authenticates.
-	CredentialActionRegenerate CredentialAction = "regenerate"
-)
-
 // ClientSecretResponse carries a newly generated client secret. It is returned once, when the secret is
 // generated, and no read returns it again.
 type ClientSecretResponse struct {

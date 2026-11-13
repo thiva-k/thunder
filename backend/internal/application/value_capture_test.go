@@ -143,7 +143,7 @@ func (suite *ServiceTestSuite) TestCaptureWithoutACapturerDoesNothing() {
 // A regenerated secret is captured with the application, as an update that sets one is, so a
 // configuration version carries the new secret: only the regeneration still holds it.
 func (suite *ServiceTestSuite) TestRegenerateClientSecret_CapturesTheNewSecret() {
-	service, _, _ := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretBasic)
+	service, _ := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretBasic)
 	capturer := &recordingCapturer{}
 	service.valueCapturer = capturer
 	governance := identitygovernancemock.NewIdentityGovernanceServiceInterfaceMock(suite.T())
@@ -176,12 +176,11 @@ func (suite *ServiceTestSuite) TestRegenerateClientSecret_CapturesTheNewSecret()
 	assert.Equal(suite.T(), secret, app.InboundAuthConfig[0].OAuthConfig.ClientSecret)
 }
 
-// A regeneration the pre flow refuses writes no secret, so it captures none.
+// A refused regeneration writes no secret, so it captures none.
 func (suite *ServiceTestSuite) TestRegenerateClientSecret_RefusalCapturesNothing() {
-	service, _, order := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodClientSecretBasic)
+	service, _ := suite.newRegenerationFixture(providers.TokenEndpointAuthMethodPrivateKeyJWT)
 	capturer := &recordingCapturer{}
 	service.valueCapturer = capturer
-	suite.recordSystemFlows(service, &ErrorApplicationHasNoClientSecret, order)
 
 	_, svcErr := regeneratedSecret(service.RegenerateClientSecret(context.Background(), testServiceAppID))
 

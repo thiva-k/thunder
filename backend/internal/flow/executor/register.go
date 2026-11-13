@@ -22,6 +22,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/authn/openid4vp"
 	"github.com/thunder-id/thunderid/internal/authn/otp"
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
+	"github.com/thunder-id/thunderid/internal/entity"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/flow/core"
@@ -220,22 +221,25 @@ type artifactLifetimeResolver func(client *providers.OAuthClient) time.Duration
 
 // ExecutorDependencies holds service dependencies required to construct built-in executors.
 type ExecutorDependencies struct {
-	FlowFactory            core.FlowFactoryInterface
-	OUService              providers.OrganizationUnitProvider
-	IDPService             providers.IDPProvider
-	NotifSenderSvc         notification.NotificationSenderServiceInterface
-	JWTService             jwt.JWTServiceInterface
-	AuthAssertGen          assert.AuthAssertGeneratorInterface
-	ConsentEnforcer        providers.ConsentProvider
-	AuthnProvider          providers.AuthnProviderManager
-	OTPService             otp.OTPAuthnServiceInterface
-	MagicLinkService       magiclink.MagicLinkAuthnServiceInterface
-	AuthZService           providers.AuthorizationProvider
-	EntityTypeService      entitytype.EntityTypeServiceInterface
-	GroupService           group.GroupServiceInterface
-	RoleService            role.RoleServiceInterface
-	RoleAssignmentService  role.RoleAssignmentServiceInterface
-	EntityProvider         entityprovider.EntityProviderInterface
+	FlowFactory           core.FlowFactoryInterface
+	OUService             providers.OrganizationUnitProvider
+	IDPService            providers.IDPProvider
+	NotifSenderSvc        notification.NotificationSenderServiceInterface
+	JWTService            jwt.JWTServiceInterface
+	AuthAssertGen         assert.AuthAssertGeneratorInterface
+	ConsentEnforcer       providers.ConsentProvider
+	AuthnProvider         providers.AuthnProviderManager
+	OTPService            otp.OTPAuthnServiceInterface
+	MagicLinkService      magiclink.MagicLinkAuthnServiceInterface
+	AuthZService          providers.AuthorizationProvider
+	EntityTypeService     entitytype.EntityTypeServiceInterface
+	GroupService          group.GroupServiceInterface
+	RoleService           role.RoleServiceInterface
+	RoleAssignmentService role.RoleAssignmentServiceInterface
+	EntityProvider        entityprovider.EntityProviderInterface
+	// EntityService decides, through the service owning an entity, whether its client secret may be
+	// regenerated.
+	EntityService          entity.EntityServiceInterface
 	UserMgtProvider        providers.UserMgtProvider
 	AgentMgtProvider       providers.AgentMgtProvider
 	AttributeCacheSvc      attributecache.AttributeCacheServiceInterface
@@ -451,6 +455,10 @@ func newBuiltInExecutorRegistrars() map[string]builtInExecutorRegistrar {
 			reg.RegisterExecutor(ExecutorNameApplicationActionValidator,
 				newApplicationActionValidator(deps.FlowFactory))
 		},
+		ExecutorNameEntitySecretRotationValidator: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
+			reg.RegisterExecutor(ExecutorNameEntitySecretRotationValidator,
+				newEntitySecretRotationValidator(deps.FlowFactory, deps.EntityService))
+		},
 		ExecutorNameExtension: func(reg ExecutorRegistryInterface, deps ExecutorDependencies) {
 			reg.RegisterExecutor(ExecutorNameExtension,
 				newExtensionExecutor(deps.FlowFactory, deps.HTTPConnectionProvider, deps.ExtensionHTTPClient,
@@ -548,8 +556,6 @@ func registerBuiltInExecutor(
 // here rather than in pkg so it stays internal: the application service satisfies it structurally.
 type applicationAdminProvider interface {
 	ValidateDeleteApplication(ctx context.Context, appID string) (
-		*appmodel.ApplicationArtifactProfile, *tidcommon.ServiceError)
-	ValidateCredentialAction(ctx context.Context, appID string, action appmodel.CredentialAction) (
 		*appmodel.ApplicationArtifactProfile, *tidcommon.ServiceError)
 }
 
