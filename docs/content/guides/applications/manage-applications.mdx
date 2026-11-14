@@ -137,7 +137,7 @@ To delete an application:
 2. Click **Delete application** and confirm.
 
 :::warning
-Deleting an application is permanent. Any client using the application's Client ID will immediately lose the ability to authenticate. Issued tokens remain valid until they expire.
+Deleting an application is permanent. Any client using the application's Client ID will immediately lose the ability to authenticate, and the tokens already issued to the application or through its Client ID are revoked. See [Token Revocation](../../protocols/oauth-oidc/token-revocation#deletion).
 :::
 
 ## Scope Applications to a Project
