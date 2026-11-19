@@ -78,7 +78,8 @@ func (s *attributeVerificationService) PrepareAttributeVerification(ctx context.
 	if actor == "" {
 		actor = contact.pin.Subject
 	}
-	s.publishEvent(ctx, event.EventTypeAttributeVerificationRequested, contact.pin, actor, providers.StatusSuccess)
+	s.publishEvent(ctx, event.EventTypeAttributeVerificationRequested, contact, contact.pin, actor,
+		providers.StatusSuccess)
 	return &contact.pin, nil
 }
 
@@ -93,7 +94,8 @@ func (s *attributeVerificationService) RecordAttributeVerification(ctx context.C
 
 	if svcErr != nil {
 		if svcErr.Type == tidcommon.ClientErrorType {
-			s.publishEvent(ctx, event.EventTypeAttributeVerificationRefused, pin, pin.Subject, providers.StatusFailure)
+			s.publishEvent(ctx, event.EventTypeAttributeVerificationRefused, contact, pin, pin.Subject,
+				providers.StatusFailure)
 		}
 
 		return svcErr
@@ -108,11 +110,13 @@ func (s *attributeVerificationService) RecordAttributeVerification(ctx context.C
 	}
 
 	if !applied {
-		s.publishEvent(ctx, event.EventTypeAttributeVerificationRefused, pin, pin.Subject, providers.StatusFailure)
+		s.publishEvent(ctx, event.EventTypeAttributeVerificationRefused, contact, pin, pin.Subject,
+			providers.StatusFailure)
 		return &ErrorAttributeNotVerifiable
 	}
 
-	s.publishEvent(ctx, event.EventTypeAttributeVerificationVerified, pin, pin.Subject, providers.StatusSuccess)
+	s.publishEvent(ctx, event.EventTypeAttributeVerificationVerified, contact, pin, pin.Subject,
+		providers.StatusSuccess)
 	return nil
 }
 
@@ -135,9 +139,10 @@ func (s *attributeVerificationService) GetVerifiedAttributes(ctx context.Context
 	return entries
 }
 
-// readStoredContact reads the stored contact of a user and pins its canonical value. An unknown entity,
-// an entity that is not a user, a declarative user, a user the caller may not update and an attribute that
-// is not a non-empty email or mobile contact of the user's type are refused.
+// readStoredContact reads the stored contact of a user, or the owner of an agent, and pins its canonical
+// value. An unknown entity, a declarative entity, an entity the caller may not update, an agent attribute
+// other than the owner and a user attribute that is not a non-empty email or mobile contact of the user's
+// type are refused.
 func (s *attributeVerificationService) readStoredContact(ctx context.Context, entityID, attribute string) (
 	*storedContact, *tidcommon.ServiceError) {
 	profile, err := s.entityService.GetEntityProfile(ctx, entityID)
@@ -149,12 +154,22 @@ func (s *attributeVerificationService) readStoredContact(ctx context.Context, en
 		return nil, s.serverError(ctx, "Failed to read the contact for attribute verification", entityID, err)
 	}
 
-	if profile.Category != providers.EntityCategoryUser || profile.IsReadOnly {
+	if profile.IsReadOnly {
+		return nil, &ErrorAttributeNotVerifiable
+	}
+
+	isAgentOwner := profile.Category == providers.EntityCategoryAgent &&
+		attribute == entity.AgentOwnerVerificationAttribute
+	if profile.Category != providers.EntityCategoryUser && !isAgentOwner {
 		return nil, &ErrorAttributeNotVerifiable
 	}
 
 	if svcErr := s.authorize(ctx, profile); svcErr != nil {
 		return nil, svcErr
+	}
+
+	if isAgentOwner {
+		return agentOwnerContact(profile)
 	}
 
 	var values map[string]json.RawMessage
@@ -178,12 +193,18 @@ func (s *attributeVerificationService) readStoredContact(ctx context.Context, en
 	return &storedContact{pin: *pin, category: profile.Category, entityType: profile.Type}, nil
 }
 
-// authorize requires the caller to be allowed to update the user in the user's organization unit. A runtime
-// caller, such as a flow acting for whoever drives it, is allowed by the authorizer.
+// authorize requires the caller to be allowed to update the user, or the agent whose owner is verified, in
+// its organization unit. A runtime caller, such as a flow acting for whoever drives it, is allowed by the
+// authorizer.
 func (s *attributeVerificationService) authorize(ctx context.Context,
 	profile *providers.Entity) *tidcommon.ServiceError {
-	allowed, svcErr := s.authorizer.IsActionAllowed(ctx, security.ActionUpdateUser, &sysauthz.ActionContext{
-		ResourceType: security.ResourceTypeUser, OUID: profile.OUID, ResourceID: profile.ID,
+	action, resourceType := security.ActionUpdateUser, security.ResourceTypeUser
+	if profile.Category == providers.EntityCategoryAgent {
+		action, resourceType = security.ActionUpdateAgent, security.ResourceTypeAgent
+	}
+
+	allowed, svcErr := s.authorizer.IsActionAllowed(ctx, action, &sysauthz.ActionContext{
+		ResourceType: resourceType, OUID: profile.OUID, ResourceID: profile.ID,
 	})
 	if svcErr != nil {
 		s.logger.Error(ctx, "Failed to authorize attribute verification",
@@ -196,6 +217,20 @@ func (s *attributeVerificationService) authorize(ctx context.Context,
 	}
 
 	return nil
+}
+
+// agentOwnerContact pins an agent's owner when the owner is managed in another identity system and named by
+// an email address or a mobile number. Any other owner, or no owner, is refused.
+func agentOwnerContact(profile *providers.Entity) (*storedContact, *tidcommon.ServiceError) {
+	value, contactType := entity.AgentOwnerContact(profile.SystemAttributes)
+	if value == "" {
+		return nil, &ErrorAttributeNotVerifiable
+	}
+
+	return &storedContact{pin: providers.AttributeVerificationPin{Subject: profile.ID,
+		Attribute: entity.AgentOwnerVerificationAttribute, Value: value,
+		Channel: entitytypemodel.ContactChannel(contactType)},
+		category: profile.Category, entityType: profile.Type}, nil
 }
 
 // prepareContact checks the entity type's schema and pins a canonical contact value without writing.
@@ -235,17 +270,22 @@ func (s *attributeVerificationService) prepareContact(ctx context.Context, categ
 }
 
 // publishEvent publishes an attribute verification event about the pinned contact, naming the actor.
-// It names the attribute, never its value.
+// It names the attribute, never its value. The subject is an agent when the contact read is an agent
+// owner's, and a user otherwise, including when no contact could be read.
 func (s *attributeVerificationService) publishEvent(ctx context.Context, eventType providers.EventType,
-	pin providers.AttributeVerificationPin, actor, status string) {
+	contact *storedContact, pin providers.AttributeVerificationPin, actor, status string) {
 	if s.observability == nil || !s.observability.IsEnabled() {
 		return
 	}
 
+	subjectType := event.PrincipalTypeUser
+	if contact != nil && contact.category == providers.EntityCategoryAgent {
+		subjectType = event.PrincipalTypeAgent
+	}
 	evt := event.NewEvent(syscontext.GetTraceID(ctx), string(eventType), event.ComponentAttributeVerification).
 		WithStatus(status).
 		WithData(event.DataKey.Subject, pin.Subject).
-		WithData(event.DataKey.SubjectType, event.PrincipalTypeUser).
+		WithData(event.DataKey.SubjectType, subjectType).
 		WithData(event.DataKey.Attribute, pin.Attribute).
 		WithData(event.DataKey.ActorSub, actor)
 	s.observability.PublishEvent(ctx, evt)

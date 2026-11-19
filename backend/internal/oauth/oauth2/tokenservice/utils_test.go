@@ -1063,6 +1063,66 @@ func (suite *UtilsTestSuite) TestBuildClientAttributes_AgentSystemAttributes_Hap
 	assert.NotContains(suite.T(), claims, "description")
 }
 
+// owner_verified states whether an owner that can be verified is, and is left out for any other owner.
+func (suite *UtilsTestSuite) TestBuildClientAttributes_OwnerVerifiedClaim() {
+	const verification = `,"attributeVerification":{"owner":{"verifiedAt":"2026-11-17T06:19:41Z"}}}`
+	tests := []struct {
+		name      string
+		sysAttrs  string
+		wantClaim interface{}
+	}{
+		{"verified email owner", `{"owner":{"id":"a@example.com","idType":"email","isLocal":false}` + verification,
+			true},
+		{"verified mobile owner", `{"owner":{"id":"+94771234567","idType":"mobile","isLocal":false}` + verification,
+			true},
+		{"unverified external owner", `{"owner":{"id":"a@example.com","idType":"email","isLocal":false}}`, false},
+		{"unreadable verification",
+			`{"owner":{"id":"a@example.com","idType":"email","isLocal":false},"attributeVerification":[]}`, false},
+		{"local owner", `{"owner":{"id":"user-123","idType":"uuid","isLocal":true}` + verification, nil},
+		{"external subject", `{"owner":{"id":"sub-1","idType":"uuid","isLocal":false}` + verification, nil},
+		{"referenced owner", `{"owner":{"id":"var:OWNER_ID","idType":"email","isLocal":false}` + verification,
+			nil},
+		{"no owner", `{"clientId":"cid"}`, nil},
+	}
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			actors := actorprovidermock.NewActorProviderMock(suite.T())
+			actors.On("GetActor", mock.Anything, testBCCAppID).Return(&providers.Entity{
+				ID:               testBCCAppID,
+				Category:         providers.EntityCategoryAgent,
+				SystemAttributes: []byte(tc.sysAttrs),
+			}, (*tidcommon.ServiceError)(nil))
+
+			claims, err := BuildClientAttributes(
+				context.Background(), newOAuthAppForOwnAttributes([]string{"owner_verified"}), actors)
+
+			assert.NoError(suite.T(), err)
+			if tc.wantClaim == nil {
+				assert.NotContains(suite.T(), claims, "owner_verified")
+				return
+			}
+			assert.Equal(suite.T(), tc.wantClaim, claims["owner_verified"])
+		})
+	}
+}
+
+// owner_verified is surfaced only when the client's attributes select it.
+func (suite *UtilsTestSuite) TestBuildClientAttributes_OwnerVerifiedClaimNotSelected() {
+	actors := actorprovidermock.NewActorProviderMock(suite.T())
+	actors.On("GetActor", mock.Anything, testBCCAppID).Return(&providers.Entity{
+		ID:       testBCCAppID,
+		Category: providers.EntityCategoryAgent,
+		SystemAttributes: []byte(`{"owner":{"id":"a@example.com","idType":"email","isLocal":false},` +
+			`"attributeVerification":{"owner":{"verifiedAt":"2026-11-17T06:19:41Z"}}}`),
+	}, (*tidcommon.ServiceError)(nil))
+
+	claims, err := BuildClientAttributes(context.Background(), newOAuthAppForOwnAttributes([]string{"owner"}), actors)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "a@example.com", claims["owner"])
+	assert.NotContains(suite.T(), claims, "owner_verified")
+}
+
 // The owner is stored as an object; the claim carries only its ID, and nothing when there is none.
 func (suite *UtilsTestSuite) TestBuildClientAttributes_OwnerClaimCarriesID() {
 	tests := []struct {

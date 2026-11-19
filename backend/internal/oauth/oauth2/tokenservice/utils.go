@@ -15,6 +15,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/attributecache"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+	entitypkg "github.com/thunder-id/thunderid/internal/entity"
 	"github.com/thunder-id/thunderid/internal/idp"
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -687,8 +688,8 @@ func resolveClientEntityAttributes(
 	return filtered, nil
 }
 
-// resolveClientSystemAttributes returns the agent system attributes (owner, sub_valid_until) selected by
-// ClientConfig.Attributes, read from Entity.SystemAttributes. Restricted to agent entities so an
+// resolveClientSystemAttributes returns the agent system attributes (owner, owner_verified, sub_valid_until)
+// selected by ClientConfig.Attributes, read from Entity.SystemAttributes. Restricted to agent entities so an
 // application client can never surface these claims regardless of its stored allow-list.
 // sub_valid_until is the stored validUntil, kept in RFC 3339 and surfaced in Unix seconds, as the other
 // time claims are, and is left out when the lifespan does not end.
@@ -717,6 +718,12 @@ func resolveClientSystemAttributes(
 			}
 			continue
 		}
+		if name == constants.ClaimOwnerVerified {
+			if verified, stated := ownerVerified(entity.SystemAttributes); stated {
+				filtered[name] = verified
+			}
+			continue
+		}
 		if name == constants.ClaimOwner {
 			// The owner is stored as an object; the claim carries its ID.
 			owner, _ := sysAttrs[name].(map[string]interface{})
@@ -730,6 +737,20 @@ func resolveClientSystemAttributes(
 		}
 	}
 	return filtered, nil
+}
+
+// ownerVerified reports whether the agent's owner is verified, and whether that is stated at all: only for an
+// owner that can be verified, as the agent's own reads state it. A recorded verification that does not read is
+// not one.
+func ownerVerified(systemAttributes json.RawMessage) (verified, stated bool) {
+	if value, _ := entitypkg.AgentOwnerContact(systemAttributes); value == "" {
+		return false, false
+	}
+	entries, err := entitypkg.ReadRecordedAttributeVerifications(systemAttributes)
+	if err != nil {
+		return false, true
+	}
+	return entries[entitypkg.AgentOwnerVerificationAttribute].VerifiedAt != "", true
 }
 
 // ouActorRoleProvider is implemented by an actor provider that can read the roles an actor holds

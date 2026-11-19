@@ -24,6 +24,7 @@ import {useMemo, type JSX, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
 import {PERSONAL_AGENT_KIND, type Agent, type OAuthAgentConfig} from '../../../models/agent';
 import {hasDelegationGrant} from '../../../utils/isDelegatedAgent';
+import OwnerVerificationStatus from '../../OwnerVerificationStatus';
 import AttributesSummarySection from '../attributes/AttributesSummarySection';
 
 const formatUserLabel = (user: {id: string; display?: string; attributes?: Record<string, unknown>}): string => {
@@ -50,6 +51,8 @@ interface AgentOverviewProps {
    * Navigates to the agent's Advanced tab, where Delegated mode and allowed user types live.
    */
   onGoToAdvanced?: () => void;
+  /** Whether this deployment can verify an external owner, which a control plane cannot. */
+  ownerVerification?: boolean;
 }
 
 /** A small rounded, tinted square behind a card's leading icon. */
@@ -144,6 +147,7 @@ export default function AgentOverview({
   agent,
   oauth2Config = undefined,
   onGoToAdvanced = undefined,
+  ownerVerification = true,
 }: AgentOverviewProps): JSX.Element {
   const {t} = useTranslation();
   const {getDocumentationLink} = useConfig();
@@ -285,6 +289,11 @@ export default function AgentOverview({
             }
             value={ownerLabel}
           />
+        )}
+        {ownerVerification && (
+          <Box sx={{mb: 2}}>
+            <OwnerVerificationStatus owner={agent.owner} />
+          </Box>
         )}
         <CopyableField
           label={t('agents:edit.overview.agentDetails.organizationUnitId', 'Organization unit ID')}

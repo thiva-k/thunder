@@ -89,7 +89,15 @@ function TabPanel({children = null, value, index, ...other}: TabPanelProps) {
   );
 }
 
-export default function AgentEditPage(): JSX.Element {
+interface AgentEditPageProps {
+  /**
+   * Whether this deployment can verify an agent's external owner. A control plane runs no flows, so its
+   * console turns this off.
+   */
+  ownerVerification?: boolean;
+}
+
+export default function AgentEditPage({ownerVerification = true}: AgentEditPageProps = {}): JSX.Element {
   const routes = useAgentRoutes();
   const {t} = useTranslation();
   const {can} = useCapabilitiesContext();
@@ -449,6 +457,7 @@ export default function AgentEditPage(): JSX.Element {
           agent={agent}
           oauth2Config={oauth2Config}
           onGoToAdvanced={() => handleNavigateToTab('advanced')}
+          ownerVerification={ownerVerification}
         />
       ),
     },
@@ -536,6 +545,7 @@ export default function AgentEditPage(): JSX.Element {
         onFieldChange={handleFieldChange}
         onBackchannelLogoutUriValidationChange={setBackchannelLogoutUriInvalid}
         onIdentityAssertionsValidationChange={setIdentityAssertionsInvalid}
+        ownerVerification={ownerVerification}
         onDeleteSuccess={() => {
           void handleBack();
         }}

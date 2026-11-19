@@ -2452,7 +2452,7 @@ Pins the email address or mobile number to verify, so that every later node acts
 
 **When to use:** Before Generate OTP or Generate Invite, in one of these flow types:
 - **Self:** at the start of the flow. The user is the signed-in user whose access token, issued by this deployment, started the flow.
-- **Administrator-initiated:** at the start of the flow, after Validate Permission. The user is the one the administrator names in the `subject` input of the request that starts the flow. The flow keeps that user to the end, so a later request cannot change it. The node refuses a user the administrator may not update, such as a user outside an organization unit administrator's units.
+- **Administrator-initiated:** at the start of the flow, after Validate Permission. The user is the one the administrator names in the `subject` input of the request that starts the flow. The flow keeps that user to the end, so a later request cannot change it. The node refuses a user the administrator may not update, such as a user outside an organization unit administrator's units. When `subject` names an agent and the attribute is `owner`, the node pins the agent's external owner instead, and refuses an agent the administrator may not update. `default-agent-owner-verification-flow` does this.
 - **Recovery:** after Identify User. The user is the one the flow identified.
 - **Registration** and **User Onboarding:** the user is the one the flow established. Before Provisioning creates the user, the node pins the value the flow collected for the attribute, such as the address entered on the sign-up form or the invited address, and **Record Verification** after Provisioning records it for the new user.
 

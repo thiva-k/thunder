@@ -113,6 +113,8 @@ type entityRuntimeData struct {
 type clearedVerification struct {
 	attribute string
 	reason    verificationInvalidationReason
+	// agent is set when the verification was an agent owner's rather than a user's.
+	agent bool
 }
 
 // AttributeVerificationRecord is a verification to record: the attribute of an entity of the given category and type,

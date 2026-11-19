@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,13 +23,16 @@ const (
 	adminVerificationFlowHandle = "default-admin-attribute-verification-flow"
 	adminLinkSendNode           = "send_link"
 	adminLinkTemplateHandle     = "admin-attribute-verification-email-link-flow"
+	agentOwnerFlowHandle        = "default-agent-owner-verification-flow"
+	agentOwnerSMSSendNode       = "send_sms_link"
 )
 
 // AdminVerificationFlowTestSuite drives the shipped administrator attribute verification flow.
 type AdminVerificationFlowTestSuite struct {
 	suite.Suite
-	fixture    *verificationFixture
-	flowHandle string
+	fixture         *verificationFixture
+	flowHandle      string
+	ownerFlowHandle string
 }
 
 func TestAdminVerificationFlowTestSuite(t *testing.T) {
@@ -37,6 +42,7 @@ func TestAdminVerificationFlowTestSuite(t *testing.T) {
 func (ts *AdminVerificationFlowTestSuite) SetupSuite() {
 	ts.fixture = newVerificationFixture(ts.T(), "admin")
 	ts.flowHandle = copyAdminFlow(ts.T(), "admin-"+ts.fixture.suffix, ts.fixture.senderID)
+	ts.ownerFlowHandle = copyAgentOwnerFlow(ts.T(), "agent-owner-"+ts.fixture.suffix, ts.fixture.senderID)
 }
 
 func (ts *AdminVerificationFlowTestSuite) SetupTest() {
@@ -554,4 +560,206 @@ func (ts *AdminVerificationFlowTestSuite) TestServerConfigAcceptsOnlyAdminInitia
 	status, body, err = testutils.PutWritableServerConfigWithStatus("flow", withHandle(userSuspendFlowHandle))
 	ts.Require().NoError(err)
 	ts.Equal(http.StatusBadRequest, status, string(body))
+}
+
+// copyAgentOwnerFlow copies the shipped agent owner verification flow with senderID wired in and returns
+// the copy's handle.
+func copyAgentOwnerFlow(t *testing.T, name, senderID string) string {
+	t.Helper()
+
+	handle := "verification-" + name
+	flowID, err := testutils.CopyFlowWithSenders(agentOwnerFlowHandle, adminInitiatedFlowType, handle,
+		map[string]string{adminLinkSendNode: senderID}, nil)
+	require.NoError(t, err, "failed to copy the shipped agent owner verification flow")
+	t.Cleanup(func() {
+		if err := testutils.DeleteFlow(flowID); err != nil {
+			t.Errorf("cleanup: failed to delete flow %s: %v", flowID, err)
+		}
+	})
+	return handle
+}
+
+// defaultAgentType returns the handle and organization unit of the shipped default agent type.
+func defaultAgentType(t *testing.T) (string, string) {
+	t.Helper()
+
+	status, body := sendJSON(t, testutils.GetHTTPClient(), http.MethodGet, "/agent-types?limit=100", nil)
+	require.Equal(t, http.StatusOK, status, "the agent types must be listed: %s", body)
+	var list struct {
+		Types []struct {
+			Handle string `json:"handle"`
+			OUID   string `json:"ouId"`
+		} `json:"types"`
+	}
+	require.NoError(t, json.Unmarshal(body, &list))
+	for _, agentType := range list.Types {
+		if agentType.Handle == "default" {
+			return agentType.Handle, agentType.OUID
+		}
+	}
+	require.FailNow(t, "the default agent type must ship")
+	return "", ""
+}
+
+// agentBody is a create or update of an agent of the default type with the given name and owner.
+func agentBody(t *testing.T, name string, owner *testutils.AgentOwner) map[string]interface{} {
+	t.Helper()
+
+	agentType, ouID := defaultAgentType(t)
+	return map[string]interface{}{"ouId": ouID, "type": agentType, "attributes": map[string]string{"name": name},
+		"owner": owner}
+}
+
+// newOwnedAgent creates an agent with the given owner and returns its ID. The agent is deleted when the
+// test ends.
+func (ts *AdminVerificationFlowTestSuite) newOwnedAgent(name string, owner *testutils.AgentOwner) string {
+	ts.T().Helper()
+
+	status, body := sendJSON(ts.T(), testutils.GetHTTPClient(), http.MethodPost, "/agents",
+		agentBody(ts.T(), name+"-"+ts.fixture.suffix, owner))
+	ts.Require().Equal(http.StatusCreated, status, "the agent must be created: %s", body)
+	var created struct {
+		ID string `json:"id"`
+	}
+	ts.Require().NoError(json.Unmarshal(body, &created))
+	ts.T().Cleanup(func() {
+		if status, body := sendJSON(ts.T(), testutils.GetHTTPClient(), http.MethodDelete, "/agents/"+created.ID,
+			nil); status != http.StatusNoContent {
+			ts.T().Logf("cleanup: failed to delete agent %s: %d %s", created.ID, status, body)
+		}
+	})
+	return created.ID
+}
+
+// ownerVerifiedAt returns when the agent's owner was verified, as the agent API reports it, or "".
+func ownerVerifiedAt(t *testing.T, agentID string) string {
+	t.Helper()
+
+	status, body := sendJSON(t, testutils.GetHTTPClient(), http.MethodGet, "/agents/"+agentID, nil)
+	require.Equal(t, http.StatusOK, status, "the agent must be read: %s", body)
+	var agent struct {
+		Owner *struct {
+			VerifiedAt string `json:"verifiedAt"`
+		} `json:"owner"`
+	}
+	require.NoError(t, json.Unmarshal(body, &agent))
+	require.NotNil(t, agent.Owner, "the agent must have an owner: %s", body)
+	return agent.Owner.VerifiedAt
+}
+
+// startOwnerVerification has the administrator start the agent owner flow for the agent.
+func (ts *AdminVerificationFlowTestSuite) startOwnerVerification(agentID string) *common.FlowExecutionResult {
+	ts.T().Helper()
+
+	return execute(ts.T(), adminToken(ts.T()), adminFlowStart(ts.ownerFlowHandle,
+		map[string]string{"subject": agentID}))
+}
+
+// verifyOwner sends the agent owner flow's link to the owner and confirms it.
+func (ts *AdminVerificationFlowTestSuite) verifyOwner(agentID, ownerEmail string) {
+	ts.T().Helper()
+
+	result := ts.startOwnerVerification(agentID)
+	ts.Require().Equal(http.StatusOK, result.StatusCode, "the administrator's start must be accepted: %s",
+		result.Body)
+	link := ts.fixture.awaitEmailTo(ts.T(), ownerEmail).ExtractRecoveryLink()
+	ts.Require().NotEmpty(link, "the email must carry the link")
+	ts.Require().Equal(flowStatusComplete, confirmLink(ts.T(), link).FlowStatus, "confirming must verify the owner")
+}
+
+// An agent's owner managed in another identity system, with no account here, verifies its email address from
+// the link the administrator had sent, and the agent reports its owner verified.
+func (ts *AdminVerificationFlowTestSuite) TestTheAgentsExternalOwnerVerifiesFromTheLink() {
+	ownerEmail := "agent-owner-" + ts.fixture.suffix + "@example.com"
+	agentID := ts.newOwnedAgent("owner-link", testutils.ExternalAgentOwner(ownerEmail, "email"))
+	started := time.Now()
+
+	result := ts.startOwnerVerification(agentID)
+	ts.Require().Equal(http.StatusOK, result.StatusCode, "the administrator's start must be accepted: %s",
+		result.Body)
+	ts.Require().Equal(flowStatusIncomplete, result.Step.FlowStatus, "the flow must wait once the link is sent: %s",
+		result.Body)
+	ts.Equal(maskedEmail(ownerEmail), result.Step.Data.AdditionalData["maskedDestination"])
+	ts.NotContains(result.Step.Data.AdditionalData, "inviteLink", "the administrator must not get the link")
+	email := ts.fixture.awaitEmailTo(ts.T(), ownerEmail)
+	ts.Contains(email.Body, "An administrator named this email address as the owner of an agent",
+		"the link must be sent with the agent-owner-verification template")
+	link := email.ExtractRecoveryLink()
+	ts.Require().NotEmpty(link, "the email must carry the link")
+	requireNothingDisclosed(ts.T(), "start", result, []string{ownerEmail,
+		testutils.ExtractQueryParam(link, "inviteToken")}, nil)
+	ts.Empty(ownerVerifiedAt(ts.T(), agentID), "sending a link verifies nothing")
+
+	done := confirmLink(ts.T(), link)
+	ts.Require().Equal(flowStatusComplete, done.FlowStatus, "confirming must verify the owner")
+	verified, err := time.Parse(time.RFC3339Nano, ownerVerifiedAt(ts.T(), agentID))
+	ts.Require().NoError(err, "the agent must report when its owner was verified")
+	ts.False(verified.Before(started.Add(-time.Second)), "the verification must be the one just made")
+}
+
+// An update that keeps the owner keeps its verification; one that changes the owner removes it.
+func (ts *AdminVerificationFlowTestSuite) TestChangingTheAgentsOwnerRemovesItsVerification() {
+	ownerEmail := "agent-owner-change-" + ts.fixture.suffix + "@example.com"
+	owner := testutils.ExternalAgentOwner(ownerEmail, "email")
+	agentID := ts.newOwnedAgent("owner-change", owner)
+	ts.verifyOwner(agentID, ownerEmail)
+	ts.Require().NotEmpty(ownerVerifiedAt(ts.T(), agentID))
+
+	status, body := sendJSON(ts.T(), testutils.GetHTTPClient(), http.MethodPut, "/agents/"+agentID,
+		agentBody(ts.T(), "owner-change-renamed-"+ts.fixture.suffix, owner))
+	ts.Require().Equal(http.StatusOK, status, "the agent must be updated: %s", body)
+	ts.NotEmpty(ownerVerifiedAt(ts.T(), agentID), "an update that keeps the owner must keep its verification")
+
+	status, body = sendJSON(ts.T(), testutils.GetHTTPClient(), http.MethodPut, "/agents/"+agentID,
+		agentBody(ts.T(), "owner-change-renamed-"+ts.fixture.suffix,
+			testutils.ExternalAgentOwner("other-"+ownerEmail, "email")))
+	ts.Require().Equal(http.StatusOK, status, "the agent must be updated: %s", body)
+	ts.Empty(ownerVerifiedAt(ts.T(), agentID), "a new owner must not inherit the old owner's verification")
+}
+
+// Only an owner managed in another identity system and named by an email address or mobile number can be
+// verified by link.
+func (ts *AdminVerificationFlowTestSuite) TestAnAgentOwnerThatCannotBeVerifiedIsRefused() {
+	localOwner := ts.fixture.newUser(ts.T(), "agent_local_owner")
+	for name, owner := range map[string]*testutils.AgentOwner{
+		"local owner":      testutils.LocalAgentOwner(localOwner.id),
+		"external subject": testutils.ExternalAgentOwner("subject-"+ts.fixture.suffix, "uuid"),
+	} {
+		ts.Run(name, func() {
+			agentID := ts.newOwnedAgent("owner-refused-"+strings.ReplaceAll(name, " ", "-"), owner)
+
+			requireRefused(ts.T(), ts.startOwnerVerification(agentID), errCodeVerificationRefused,
+				"preparation must refuse an owner that cannot be verified")
+			ts.fixture.requireNoEmail(ts.T(), "nothing may be sent for an owner that cannot be verified")
+			ts.Empty(ownerVerifiedAt(ts.T(), agentID), "nothing may be recorded")
+		})
+	}
+}
+
+// smsLinkPattern finds the link an SMS carries.
+var smsLinkPattern = regexp.MustCompile(`https?://\S+`)
+
+// An agent's owner named by a mobile number gets the link by SMS, and verifies from it.
+func (ts *AdminVerificationFlowTestSuite) TestTheAgentsMobileOwnerVerifiesFromTheSMSLink() {
+	sms := newSMSProvider(ts.T(), "agent-owner-"+ts.fixture.suffix)
+	handle := "verification-agent-owner-sms-" + ts.fixture.suffix
+	flowID, err := testutils.CopyFlowWithSenders(agentOwnerFlowHandle, adminInitiatedFlowType, handle,
+		map[string]string{adminLinkSendNode: ts.fixture.senderID, agentOwnerSMSSendNode: sms.senderID}, nil)
+	ts.Require().NoError(err, "failed to copy the shipped agent owner verification flow")
+	ts.T().Cleanup(func() { _ = testutils.DeleteFlow(flowID) })
+	agentID := ts.newOwnedAgent("owner-sms", testutils.ExternalAgentOwner("+94771234567", "mobile"))
+
+	result := execute(ts.T(), adminToken(ts.T()), adminFlowStart(handle, map[string]string{"subject": agentID}))
+	ts.Require().Equal(http.StatusOK, result.StatusCode, "the administrator's start must be accepted: %s",
+		result.Body)
+	ts.Require().Equal(flowStatusIncomplete, result.Step.FlowStatus, "the flow must wait once the link is sent: %s",
+		result.Body)
+	ts.NotContains(result.Step.Data.AdditionalData, "inviteLink", "the administrator must not get the link")
+	ts.fixture.requireNoEmail(ts.T(), "a mobile owner must not be emailed")
+	link := smsLinkPattern.FindString(sms.awaitMessage(ts.T()).Message)
+	ts.Require().NotEmpty(link, "the SMS must carry the link")
+	ts.Empty(ownerVerifiedAt(ts.T(), agentID), "sending a link verifies nothing")
+
+	ts.Require().Equal(flowStatusComplete, confirmLink(ts.T(), link).FlowStatus, "confirming must verify the owner")
+	ts.NotEmpty(ownerVerifiedAt(ts.T(), agentID), "the agent must report its owner verified")
 }
