@@ -244,6 +244,26 @@ An owner managed in another identity system is set with `"isLocal": false`. <Pro
 
 When no owner is given, the caller becomes the owner. The caller is a local owner when it is a user, application, or agent of this deployment, and an external owner otherwise, for example when it signed in through the [trusted issuer](../../trusted-issuer). An agent created with the management API key and no owner, such as one imported into a data plane, has no owner.
 
+#### Verify an external owner
+
+An external owner named by an email address or a mobile number can prove that the address or number is theirs, without an account in <ProductName />. The agent's `owner` then reports `verified: true` and `verifiedAt`, the time the owner confirmed. Until then it reports `verified: false`.
+
+- **Console:** on the agent's **Advanced** tab, click **Send verification link** under **Owner**. The owner receives the link by email or text message, opens it, and selects **Confirm ownership**. The **Overview** and **Advanced** tabs then show the owner as verified. Save a new owner before you send the link. The Console starts the flow named by `agentOwnerVerificationFlow` in the `flow` server configuration section, the shipped `default-agent-owner-verification-flow` by default; with no flow set, it offers no link and says which setting to set. See [Flow Defaults](../../../deployment/configuration#flow-defaults). The link is offered to administrators who can update agents, as a user's verification link is offered to those who can update users. The tab also says when the agent's access token does not carry `owner_verified`. A Control Plane console does not offer it, because a Control Plane runs no flows: send it from the deployment the agent is applied to. An agent the Control Plane deployed is read only there, and its owner can still be verified.
+- **API:** start the shipped `default-agent-owner-verification-flow` with the agent's ID and an access token carrying the `system` scope:
+
+  ```bash
+  curl -kL -X POST https://localhost:8090/flow/execute \
+    -H "Authorization: Bearer $ADMIN_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{ "flowType": "ADMIN_INITIATED", "handle": "default-agent-owner-verification-flow", "inputs": { "subject": "<agent-id>" }, "verbose": true }'
+  ```
+
+Start the flow with `"verbose": true`: the owner finishes it on the sign-in pages, which draw each step from the details a verbose flow returns, and a flow keeps the verbosity it starts with. The flow sends nothing until you select your providers on its nodes: an email provider on **Send Email** (`send_link`) and an SMS provider on **Send SMS** (`send_sms_link`), the same way as for the user verification flow. See [Build an administrator attribute verification flow](../../flows/build-a-flow). Both messages use the `agent-owner-verification` template.
+
+To let the APIs an agent calls see it, select `owner_verified` on the agent's **Tokens** tab: its own tokens then carry `owner_verified: true` or `false`. See [Agent Token](./authentication/agent-own-token).
+
+Changing the owner removes the verification, and an update that keeps the owner keeps it, including a redeploy from the Control Plane. `verified` and `verifiedAt` are set only by the flow: they are ignored in requests and left out of exports. A local owner and an external owner named by a user ID cannot be verified this way, and neither can an owner that still holds a variable reference.
+
 ### Attribute values
 
 The agent schema decides which attributes an agent carries, and each agent holds its own values for them.

@@ -6,6 +6,7 @@ const AgentQueryKeys = {
   AGENT: 'agent',
   AGENT_GROUPS: 'agentGroups',
   AGENT_ROLES: 'agentRoles',
+  OWNER_VERIFICATION_FLOW: 'agentOwnerVerificationFlow',
 } as const;
 
 export default AgentQueryKeys;

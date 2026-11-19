@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/thunder-id/thunderid/internal/connection/httpconnection"
+	"github.com/thunder-id/thunderid/internal/entity"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/flow/executormeta"
@@ -36,6 +37,9 @@ const (
 	ouIDInputIdentifier     = "ouId"
 	ouHandleInputIdentifier = "ouHandle"
 )
+
+// attributeVerificationInputIdentifier is the input naming the attribute AttributeVerificationExecutor verifies.
+const attributeVerificationInputIdentifier = "attribute"
 
 // FlowValidatorInterface defines the contract for validating flow definitions.
 type FlowValidatorInterface interface {
@@ -1448,6 +1452,35 @@ func (v *flowValidator) validateExecutorSpecificConstraints(
 		return validateAgentTypeResolverExecutor(node)
 	case executormeta.ExecutorNameRole:
 		return validateRoleExecutor(node, flowType)
+	case executormeta.ExecutorNameAttributeVerification:
+		return validateAttributeVerificationExecutor(node, flowType)
+	}
+	return nil
+}
+
+// validateAttributeVerificationExecutor refuses a prepare node that verifies an agent's owner outside an
+// administrator-initiated flow. Only that flow type binds the subject its caller names, so only it can bind an
+// agent: a self flow binds the user who calls it, and recovery, registration and onboarding the user they establish.
+func validateAttributeVerificationExecutor(
+	node *providers.NodeDefinition, flowType providers.FlowType,
+) *tidcommon.ServiceError {
+	if node.Executor.Mode != executormeta.ExecutorModePrepare || flowType == providers.FlowTypeAdminInitiated {
+		return nil
+	}
+	for _, input := range node.Executor.Inputs {
+		if input.Identifier != attributeVerificationInputIdentifier ||
+			input.DefaultValue != entity.AgentOwnerVerificationAttribute {
+			continue
+		}
+		return tidcommon.CustomServiceError(ErrorInvalidExecutorConfig, tidcommon.I18nMessage{
+			Key: "error.flowmgtservice.agent_owner_verification_flow_type_description",
+			DefaultValue: "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' verifies an agent's owner " +
+				"only in an ADMIN_INITIATED flow",
+			Params: map[string]string{
+				"nodeID":       node.ID,
+				"executorName": node.Executor.Name,
+			},
+		})
 	}
 	return nil
 }

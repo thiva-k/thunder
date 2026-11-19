@@ -20,6 +20,7 @@ import {useTranslation} from 'react-i18next';
 import ConnectAgentGuide from './ConnectAgentGuide';
 import {PERSONAL_AGENT_KIND, type Agent, type OAuthAgentConfig} from '../../../models/agent';
 import {hasDelegationGrant} from '../../../utils/isDelegatedAgent';
+import OwnerVerificationStatus from '../../OwnerVerificationStatus';
 import AttributesSummarySection from '../attributes/AttributesSummarySection';
 
 const formatUserLabel = (user: {id: string; display?: string; attributes?: Record<string, unknown>}): string => {
@@ -54,6 +55,8 @@ interface AgentOverviewProps {
    * Navigates to the agent's Flows tab, where its sign-in flow is chosen.
    */
   onGoToFlows?: () => void;
+  /** Whether this deployment can verify an external owner, which a control plane cannot. */
+  ownerVerification?: boolean;
 }
 
 /** A bordered card with a title/description header and arbitrary content below. */
@@ -101,6 +104,7 @@ export default function AgentOverview({
   onGoToAdvanced = undefined,
   onGoToAccess = undefined,
   onGoToFlows = undefined,
+  ownerVerification = true,
 }: AgentOverviewProps): JSX.Element {
   const {t} = useTranslation();
   const {getDocumentationLink} = useConfig();
@@ -249,6 +253,11 @@ export default function AgentOverview({
             }
             value={ownerLabel}
           />
+        )}
+        {ownerVerification && (
+          <Box sx={{mb: 2}}>
+            <OwnerVerificationStatus owner={agent.owner} />
+          </Box>
         )}
         <CopyableField
           label={t('agents:edit.overview.agentDetails.organizationUnitId', 'Organization unit ID')}

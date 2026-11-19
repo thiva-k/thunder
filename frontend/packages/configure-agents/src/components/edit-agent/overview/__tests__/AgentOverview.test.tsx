@@ -479,4 +479,24 @@ describe('AgentOverview', () => {
       expect(await screen.findByText('No client ID is set in Development yet.')).toBeInTheDocument();
     });
   });
+
+  describe('owner verification', () => {
+    const emailOwner = {id: 'jane@example.com', idType: 'email', isLocal: false} as const;
+
+    it('shows whether an external owner is verified', () => {
+      const {rerender} = render(<AgentOverview agent={{...baseAgent, owner: emailOwner}} />);
+      expect(screen.getByTestId('agent-owner-not-verified')).toHaveTextContent('Not verified');
+
+      rerender(<AgentOverview agent={{...baseAgent, owner: {...emailOwner, verifiedAt: '2026-11-09T10:12:00Z'}}} />);
+      expect(screen.getByTestId('agent-owner-verified')).toHaveTextContent('Verified on');
+    });
+
+    it('shows no verification for a local owner or where the deployment cannot verify one', () => {
+      const {rerender} = render(<AgentOverview agent={baseAgent} />);
+      expect(screen.queryByTestId('agent-owner-not-verified')).not.toBeInTheDocument();
+
+      rerender(<AgentOverview agent={{...baseAgent, owner: emailOwner}} ownerVerification={false} />);
+      expect(screen.queryByTestId('agent-owner-not-verified')).not.toBeInTheDocument();
+    });
+  });
 });

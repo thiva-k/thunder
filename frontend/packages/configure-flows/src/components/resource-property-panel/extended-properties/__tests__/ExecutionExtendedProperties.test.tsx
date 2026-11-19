@@ -2016,11 +2016,12 @@ describe('ExecutionExtendedProperties', () => {
         data: {action: {executor: {name: ExecutionTypes.AttributeVerification, mode}}},
       }) as unknown as Resource;
 
-    it('should render the inputs editor for prepare, so the attribute can be set as a constant input', () => {
+    it('should route prepare to its own properties, which set the attribute, without the inputs editor', () => {
       render(<ExecutionExtendedProperties resource={verificationResource('prepare')} onChange={mockOnChange} />);
 
-      expect(screen.getByText('flows:core.executions.noConfig.description')).toBeInTheDocument();
-      expect(screen.getByText('flows:core.executions.inputs.title')).toBeInTheDocument();
+      expect(screen.getByText('flows:core.executions.attributeVerification.target.label')).toBeInTheDocument();
+      expect(screen.queryByText('flows:core.executions.noConfig.description')).not.toBeInTheDocument();
+      expect(screen.queryByText('flows:core.executions.inputs.title')).not.toBeInTheDocument();
     });
 
     it('should render NoConfigProperties without the inputs editor for record', () => {

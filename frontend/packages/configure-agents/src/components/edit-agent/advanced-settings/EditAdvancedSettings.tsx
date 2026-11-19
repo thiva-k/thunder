@@ -33,6 +33,8 @@ interface EditAdvancedSettingsProps {
   onBackchannelLogoutUriValidationChange?: (hasError: boolean) => void;
   /** Reports whether the Identity assertions (ID-JAG) card has a validation error, to gate Save. */
   onIdentityAssertionsValidationChange?: (hasError: boolean) => void;
+  /** Whether this deployment can verify an external owner, which a control plane cannot. */
+  ownerVerification?: boolean;
 }
 
 export default function EditAdvancedSettings({
@@ -43,6 +45,7 @@ export default function EditAdvancedSettings({
   onDeleteSuccess = undefined,
   onBackchannelLogoutUriValidationChange = undefined,
   onIdentityAssertionsValidationChange = undefined,
+  ownerVerification = true,
 }: EditAdvancedSettingsProps) {
   const {t} = useTranslation();
   const {can} = useCapabilitiesContext();
@@ -129,7 +132,12 @@ export default function EditAdvancedSettings({
         </Box>
       </SettingsCard>
 
-      <OwnerSection agent={agent} editedAgent={editedAgent} onFieldChange={onFieldChange} />
+      <OwnerSection
+        agent={agent}
+        editedAgent={editedAgent}
+        onFieldChange={onFieldChange}
+        ownerVerification={ownerVerification}
+      />
       <AllowedUserTypesSection
         agent={agent}
         editedAgent={editedAgent}

@@ -1367,7 +1367,7 @@
     "display": {
       "header": "Attribute Verification Executor",
       "label": "Prepare Verification",
-      "description": "Choose the email address or mobile number to verify",
+      "description": "Choose whose email address or mobile number to verify: a user's or an agent owner's",
       "image": "assets/images/icons/user.svg",
       "showOnResourcePanel": true
     },

@@ -19,7 +19,8 @@ const mockUseColorScheme = vi.hoisted(() =>
 vi.mock('react-i18next', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-i18next')>()),
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
+    t: (key: string, fallback?: string, options?: Record<string, string>) =>
+      (fallback ?? key).replace(/{{(\w+)}}/g, (_match: string, name: string) => options?.[name] ?? ''),
   }),
 }));
 
@@ -240,6 +241,43 @@ describe('ExecutionFactory', () => {
       render(<ExecutionFactory resource={resource} />);
 
       expect(screen.getByText('Executor')).toBeInTheDocument();
+    });
+  });
+
+  describe('Prepare Verification summary', () => {
+    const prepareResource = (inputs?: unknown[], mode = 'prepare'): Step =>
+      createMockResource({
+        data: {action: {executor: {name: ExecutionTypes.AttributeVerification, mode, inputs}}},
+      } as Partial<Step>);
+
+    it.each([
+      {
+        name: 'the agent owner',
+        inputs: [{identifier: 'attribute', type: 'TEXT_INPUT', required: true, defaultValue: 'owner', constant: true}],
+        expected: "Verifies the agent owner's contact",
+      },
+      {
+        name: 'a user attribute',
+        inputs: [{identifier: 'attribute', type: 'TEXT_INPUT', required: true, defaultValue: 'email'}],
+        expected: "Verifies the user's email",
+      },
+      {
+        name: 'the attribute the request names',
+        inputs: undefined,
+        expected: "Verifies the user's contact the request names",
+      },
+    ])('says the step verifies $name', ({inputs, expected}) => {
+      render(<ExecutionFactory resource={prepareResource(inputs)} />);
+
+      expect(screen.getByTestId('attribute-verification-summary')).toHaveTextContent(expected);
+    });
+
+    it('says nothing for a Record Verification step or another executor', () => {
+      const {rerender} = render(<ExecutionFactory resource={prepareResource(undefined, 'record')} />);
+      expect(screen.queryByTestId('attribute-verification-summary')).not.toBeInTheDocument();
+
+      rerender(<ExecutionFactory resource={createMockResource()} />);
+      expect(screen.queryByTestId('attribute-verification-summary')).not.toBeInTheDocument();
     });
   });
 

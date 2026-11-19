@@ -107,7 +107,8 @@ export const FLOW_PAGE_SIZE = 100;
 /**
  * `flow` server-config entries; an unset handle is the opt-out, running the native endpoint. The
  * account lifecycle actions and attribute verification have no native endpoint, so an unset handle
- * withholds them. Attribute verification names an `ADMIN_INITIATED` flow, which starts by handle.
+ * withholds them. A user's attribute verification and an agent's owner verification each name an
+ * `ADMIN_INITIATED` flow, which starts by handle.
  */
 export const AdministrationFlowConfigKey = {
   USER_UNLOCK: 'userUnlockFlow',
@@ -119,6 +120,7 @@ export const AdministrationFlowConfigKey = {
   APPLICATION_SUSPEND: 'applicationSuspendFlow',
   APPLICATION_UNSUSPEND: 'applicationUnsuspendFlow',
   ADMIN_ATTRIBUTE_VERIFICATION: 'adminAttributeVerificationFlow',
+  AGENT_OWNER_VERIFICATION: 'agentOwnerVerificationFlow',
 } as const;
 
 export type AdministrationFlowConfigKeyValue =

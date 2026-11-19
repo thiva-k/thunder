@@ -142,27 +142,47 @@ func (s *FlowConfigHandlerTestSuite) TestValidate_HandleValidatorRejectsUnknown(
 	s.Error(err)
 }
 
-// The attribute verification entry names an administrator-initiated flow, so its handle is checked
+// The attribute verification entries name an administrator-initiated flow, so their handles are checked
 // against that type, not ADMINISTRATION.
 func (s *FlowConfigHandlerTestSuite) TestValidate_AttributeVerificationFlowIsAdminInitiated() {
-	var gotHandle string
-	var gotType providers.FlowType
-	s.handler.SetHandleValidator(func(_ context.Context, handle string, flowType providers.FlowType) bool {
-		gotHandle, gotType = handle, flowType
-		return flowType == providers.FlowTypeAdminInitiated
-	})
-	cfg := flowconfig.FlowSectionConfig{
-		AdminAttributeVerificationFlow: flowconfig.FlowTypeConfig{
-			DefaultHandle: "default-admin-attribute-verification-flow"},
+	tests := []struct {
+		name   string
+		cfg    flowconfig.FlowSectionConfig
+		handle string
+		field  string
+	}{
+		{
+			name: "user attribute verification",
+			cfg: flowconfig.FlowSectionConfig{AdminAttributeVerificationFlow: flowconfig.FlowTypeConfig{
+				DefaultHandle: "default-admin-attribute-verification-flow"}},
+			handle: "default-admin-attribute-verification-flow",
+			field:  "adminAttributeVerificationFlow.defaultHandle",
+		},
+		{
+			name: "agent owner verification",
+			cfg: flowconfig.FlowSectionConfig{AgentOwnerVerificationFlow: flowconfig.FlowTypeConfig{
+				DefaultHandle: "default-agent-owner-verification-flow"}},
+			handle: "default-agent-owner-verification-flow",
+			field:  "agentOwnerVerificationFlow.defaultHandle",
+		},
 	}
+	for _, tc := range tests {
+		s.Run(tc.name, func() {
+			var gotHandle string
+			var gotType providers.FlowType
+			s.handler.SetHandleValidator(func(_ context.Context, handle string, flowType providers.FlowType) bool {
+				gotHandle, gotType = handle, flowType
+				return flowType == providers.FlowTypeAdminInitiated
+			})
 
-	s.Require().NoError(s.handler.Validate(context.Background(), cfg, nil, nil))
-	s.Equal("default-admin-attribute-verification-flow", gotHandle)
-	s.Equal(providers.FlowTypeAdminInitiated, gotType)
+			s.Require().NoError(s.handler.Validate(context.Background(), tc.cfg, nil, nil))
+			s.Equal(tc.handle, gotHandle)
+			s.Equal(providers.FlowTypeAdminInitiated, gotType)
 
-	s.handler.SetHandleValidator(func(_ context.Context, _ string, _ providers.FlowType) bool { return false })
-	s.ErrorContains(s.handler.Validate(context.Background(), cfg, nil, nil),
-		"adminAttributeVerificationFlow.defaultHandle")
+			s.handler.SetHandleValidator(func(_ context.Context, _ string, _ providers.FlowType) bool { return false })
+			s.ErrorContains(s.handler.Validate(context.Background(), tc.cfg, nil, nil), tc.field)
+		})
+	}
 }
 
 func (s *FlowConfigHandlerTestSuite) TestValidate_NoValidatorSkipsHandleCheck() {
@@ -321,6 +341,7 @@ func everyAdministrationFlow(prefix string) flowconfig.FlowSectionConfig {
 	}
 	return flowconfig.FlowSectionConfig{
 		AdminAttributeVerificationFlow: handle("admin-attribute-verification"),
+		AgentOwnerVerificationFlow:     handle("agent-owner-verification"),
 		UserUnlockFlow:                 handle("user-unlock"),
 		UserSuspendFlow:                handle("user-suspend"),
 		UserUnsuspendFlow:              handle("user-unsuspend"),

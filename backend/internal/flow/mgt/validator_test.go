@@ -2987,6 +2987,61 @@ func (s *ValidatorTestSuite) TestValidateCompanionExecutors_ReportsInNameOrder()
 	}
 }
 
+// Only an administrator-initiated flow binds the subject its caller names, so only it may verify an agent's owner.
+// A user's own email or mobile number may be verified in any flow type, as before.
+func (s *ValidatorTestSuite) TestValidateAttributeVerificationExecutor_AgentOwner() {
+	const flowTypeKey = "error.flowmgtservice.agent_owner_verification_flow_type_description"
+	attribute := func(value string, constant bool) []providers.InputDefinition {
+		return []providers.InputDefinition{{Identifier: "attribute", Type: "TEXT_INPUT", Required: true,
+			DefaultValue: value, Constant: constant}}
+	}
+
+	tests := []struct {
+		name     string
+		flowType providers.FlowType
+		mode     string
+		inputs   []providers.InputDefinition
+		wantKey  string
+	}{
+		{"OwnerInAdminInitiated", providers.FlowTypeAdminInitiated, executor.ExecutorModePrepare,
+			attribute("owner", true), ""},
+		{"OwnerInSelf", providers.FlowTypeSelf, executor.ExecutorModePrepare, attribute("owner", true), flowTypeKey},
+		{"OwnerNotConstantInSelf", providers.FlowTypeSelf, executor.ExecutorModePrepare, attribute("owner", false),
+			flowTypeKey},
+		{"OwnerInRegistration", providers.FlowTypeRegistration, executor.ExecutorModePrepare,
+			attribute("owner", true), flowTypeKey},
+		{"OwnerInRecovery", providers.FlowTypeRecovery, executor.ExecutorModePrepare, attribute("owner", true),
+			flowTypeKey},
+		{"OwnerInUserOnboarding", providers.FlowTypeUserOnboarding, executor.ExecutorModePrepare,
+			attribute("owner", true), flowTypeKey},
+		{"RecordNodeIgnored", providers.FlowTypeSelf, executor.ExecutorModeRecord, attribute("owner", true), ""},
+		{"EmailInSelf", providers.FlowTypeSelf, executor.ExecutorModePrepare, attribute("email", false), ""},
+		{"EmailInAdminInitiated", providers.FlowTypeAdminInitiated, executor.ExecutorModePrepare,
+			attribute("email", false), ""},
+		{"CallerNamesAttributeInSelf", providers.FlowTypeSelf, executor.ExecutorModePrepare, nil, ""},
+	}
+	for _, tc := range tests {
+		s.Run(tc.name, func() {
+			nodes := []providers.NodeDefinition{{
+				ID: "prepare_verification", Type: string(common.NodeTypeTaskExecution),
+				Executor: &providers.ExecutorDefinition{Name: executor.ExecutorNameAttributeVerification,
+					Mode: tc.mode, Inputs: tc.inputs},
+			}}
+
+			err := s.v.validateExecutorSpecificConstraints(&nodes[0], nodeIndexFor(nodes), nodes, tc.flowType)
+
+			if tc.wantKey == "" {
+				s.Nil(err)
+				return
+			}
+			s.Require().NotNil(err)
+			s.Equal(ErrorInvalidExecutorConfig.Code, err.Code)
+			s.Equal(tc.wantKey, err.ErrorDescription.Key)
+			s.Equal("prepare_verification", err.ErrorDescription.Params["nodeID"])
+		})
+	}
+}
+
 func (s *ValidatorTestSuite) TestValidateOUResolverExecutor_Inputs() {
 	const unsupported = "error.flowmgtservice.unsupported_ou_resolver_property_description"
 	const invalidInputs = "error.flowmgtservice.invalid_ou_resolver_inputs_description"

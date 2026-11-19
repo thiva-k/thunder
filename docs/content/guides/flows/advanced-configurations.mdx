@@ -2443,7 +2443,7 @@ In a sign-up flow, it skips the first two steps. It assigns the roles `roles` na
 
 #### Attribute Verification
 
-Both executors below are `AttributeVerificationExecutor`, selected by the node `mode`. The executor has no default mode. Flow validation accepts it in any flow type, but a flow that has a **Prepare Verification** node must also have a **Record Verification** node, and the reverse. A suspended user fails the node with `FET-1114`, and every other refusal of the user or the value with `FET-1112`. A server error ends the request with a server error instead.
+Both executors below are `AttributeVerificationExecutor`, selected by the node `mode`. The executor has no default mode. Flow validation accepts it in any flow type, but a flow that has a **Prepare Verification** node must also have a **Record Verification** node, and the reverse. A **Prepare Verification** node that verifies an agent's owner, with `owner` as the default value of its `attribute` input, is accepted only in an Administrator-initiated flow. A suspended user fails the node with `FET-1114`, and every other refusal of the user or the value with `FET-1112`. A server error ends the request with a server error instead.
 
 <details>
 <summary>Prepare Verification</summary>
@@ -2452,7 +2452,7 @@ Pins the email address or mobile number to verify, so that every later node acts
 
 **When to use:** Before Generate OTP or Generate Invite, in one of these flow types:
 - **Self:** at the start of the flow. The user is the signed-in user whose access token, issued by this deployment, started the flow.
-- **Administrator-initiated:** at the start of the flow, after Validate Permission. The user is the one the administrator names in the `subject` input of the request that starts the flow. The flow keeps that user to the end, so a later request cannot change it. The node refuses a user the administrator may not update, such as a user outside an organization unit administrator's units.
+- **Administrator-initiated:** at the start of the flow, after Validate Permission. The user is the one the administrator names in the `subject` input of the request that starts the flow. The flow keeps that user to the end, so a later request cannot change it. The node refuses a user the administrator may not update, such as a user outside an organization unit administrator's units. When `subject` names an agent and the attribute is `owner`, the node pins the agent's external owner instead, and refuses an agent the administrator may not update. `default-agent-owner-verification-flow` does this.
 - **Recovery:** after Identify User. The user is the one the flow identified.
 - **Registration** and **User Onboarding:** the user is the one the flow established. Before Provisioning creates the user, the node pins the value the flow collected for the attribute, such as the address entered on the sign-up form or the invited address, and **Record Verification** after Provisioning records it for the new user.
 
@@ -2465,7 +2465,7 @@ Always paired with **Record Verification**: a flow that has one without the othe
 - In any other flow type, the node fails.
 
 **Input Configuration:**
-- `attribute` (required): the name of the attribute to verify, such as `email` or `mobile_number`. In a Self or Administrator-initiated flow, supply it when the flow starts, as `default-self-attribute-verification-flow` expects. `default-admin-attribute-verification-flow` sets `defaultValue` to `email` on the input, so a start without it verifies the email address. When it is missing and has no default, the node asks for it. In a Recovery, Registration or User Onboarding flow, fix it on the node with a constant input: list `attribute` in the node's executor `inputs` with `defaultValue` set to the attribute name and `constant` set to `true`, so a submitted value cannot change it. See [Default and Constant Input Values](#default-and-constant-input-values).
+- `attribute` (required): the name of the attribute to verify, such as `email` or `mobile_number`. In a Self or Administrator-initiated flow, supply it when the flow starts, as `default-self-attribute-verification-flow` expects. `default-admin-attribute-verification-flow` sets `defaultValue` to `email` on the input, so a start without it verifies the email address. When it is missing and has no default, the node asks for it. In a Recovery, Registration or User Onboarding flow, fix it on the node with a constant input: list `attribute` in the node's executor `inputs` with `defaultValue` set to the attribute name and `constant` set to `true`, so a submitted value cannot change it. See [Default and Constant Input Values](#default-and-constant-input-values). To verify an agent's owner, `default-agent-owner-verification-flow` fixes `attribute` to `owner` with a constant input. In the Console, set the input with the node's **Whose contact to verify** setting rather than by hand: **User** sets the attribute as a default that the start request can replace, or leaves it for the request to name, and **Agent owner** fixes it to `owner`.
 
 **How it works:**
 1. Reads the user and the attribute. When the flow returns to this node, it keeps the attribute pinned earlier in the execution.

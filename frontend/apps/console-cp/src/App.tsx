@@ -225,7 +225,8 @@ function projectDashboardRoutes(): JSX.Element {
         path={`${ROUTE_SEGMENTS.agents}/:agentId`}
         element={
           <RuntimeEnvironmentsProvider>
-            <AgentEditPage />
+            {/* A control plane runs no flows, so it cannot send an owner a verification link. */}
+            <AgentEditPage ownerVerification={false} />
           </RuntimeEnvironmentsProvider>
         }
       />

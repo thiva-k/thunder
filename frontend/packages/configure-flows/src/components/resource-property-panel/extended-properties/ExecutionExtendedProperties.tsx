@@ -5,6 +5,7 @@ import {Stack} from '@wso2/oxygen-ui';
 import {useCallback, useMemo, type ReactNode} from 'react';
 import AccessChangeValidatorProperties from './execution-properties/AccessChangeValidatorProperties';
 import AgentTypeResolverProperties from './execution-properties/AgentTypeResolverProperties';
+import AttributeVerificationProperties from './execution-properties/AttributeVerificationProperties';
 import ConsentProperties from './execution-properties/ConsentProperties';
 import {EXECUTOR_TO_IDP_TYPE_MAP, EXECUTORS_WITH_FIXED_INPUTS} from './execution-properties/constants';
 import CriteriaRevocationProperties from './execution-properties/CriteriaRevocationProperties';
@@ -71,11 +72,13 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     return null;
   }
 
-  // Record Verification acts on the pin alone; Prepare Verification takes the attribute input.
+  // Prepare Verification sets its attribute input through its own properties; Record Verification acts on the
+  // pin alone.
+  const isPrepareVerification =
+    executorName === ExecutionTypes.AttributeVerification &&
+    (resource?.data as StepData | undefined)?.action?.executor?.['mode'] === 'prepare';
   const showInputsEditor =
-    executorName === ExecutionTypes.AttributeVerification
-      ? (resource?.data as StepData | undefined)?.action?.executor?.['mode'] === 'prepare'
-      : !EXECUTORS_WITH_FIXED_INPUTS.has(executorName);
+    executorName !== ExecutionTypes.AttributeVerification && !EXECUTORS_WITH_FIXED_INPUTS.has(executorName);
 
   let executorSpecificProperties: ReactNode = null;
 
@@ -158,8 +161,14 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     case ExecutionTypes.Session:
     case ExecutionTypes.OwnerResolver:
     case ExecutionTypes.AccountLinking:
-    case ExecutionTypes.AttributeVerification:
       executorSpecificProperties = <NoConfigProperties />;
+      break;
+    case ExecutionTypes.AttributeVerification:
+      executorSpecificProperties = isPrepareVerification ? (
+        <AttributeVerificationProperties resource={resource} onChange={onChange} />
+      ) : (
+        <NoConfigProperties />
+      );
       break;
     default:
       // Federated executors (Google, GitHub, OAuth, OIDC) - check if executor has an IDP type mapping

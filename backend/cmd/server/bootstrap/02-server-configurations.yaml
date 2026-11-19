@@ -22,6 +22,8 @@ value:
     defaultHandle: default-agent-onboarding-flow
   adminAttributeVerificationFlow:
     defaultHandle: default-admin-attribute-verification-flow
+  agentOwnerVerificationFlow:
+    defaultHandle: default-agent-owner-verification-flow
   userUnlockFlow:
     defaultHandle: default-user-unlock-flow
   userSuspendFlow:

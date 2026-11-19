@@ -932,6 +932,7 @@ var defaultMessages = map[string]string{
 	"error.flowmetaservice.ou_not_found": "Resource not found",
 	"error.flowmetaservice.ou_not_found_description": "The specified organization unit does not exist",
 	"error.flowmetaservice.resource_not_found": "Resource not found",
+	"error.flowmgtservice.agent_owner_verification_flow_type_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' verifies an agent's owner only in an ADMIN_INITIATED flow",
 	"error.flowmgtservice.agent_type_wildcard_not_supported_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' does not accept '*' in '{{param(propertyKey)}}'; leave the property out to allow every agent type",
 	"error.flowmgtservice.call_node_has_executor_description": "CALL node '{{param(nodeID)}}' must not have an executor",
 	"error.flowmgtservice.call_node_has_next_description": "CALL node '{{param(nodeID)}}' must not have next",

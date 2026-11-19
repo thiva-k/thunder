@@ -49,11 +49,12 @@ paths:
         through to its terminal state in a single call; omitting them returns the required inputs and
         an `executionId` to continue with.
 
-        An `ADMIN_INITIATED` flow is started by an administrator for the user its `subject` input
-        names, with an access token carrying a `system` permission, and runs as that administrator,
-        so it acts only on a user the administrator may update. The user continues from the link the flow sends, with the `executionId` and the
-        invite token the link carries, and no access token; those steps run with the permissions the
-        administrator still holds.
+        An `ADMIN_INITIATED` flow is started by an administrator for the user or agent its `subject`
+        input names, with an access token carrying a `system` permission, and runs as that administrator,
+        so it acts only on a user or agent the administrator may update. For an agent, the flow verifies
+        the agent's owner managed in another identity system. The person the flow reaches continues from
+        the link it sends, with the `executionId` and the invite token the link carries, and no access
+        token; those steps run with the permissions the administrator still holds.
       tags:
         - Flow Execution
       security:

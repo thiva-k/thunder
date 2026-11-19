@@ -4121,6 +4121,24 @@ components:
             Whether the owner is an entity of this deployment. A boolean, or on a control plane, a
             variable reference; it is text only when it is itself a reference.
           example: true
+        verified:
+          type: boolean
+          readOnly: true
+          description: |
+            Whether an owner managed in another identity system, named by an email address or mobile
+            number, proved control of it through the `default-agent-owner-verification-flow` flow.
+            Present only for such an owner; absent for a local owner, an owner named by a subject, and
+            an owner that holds a variable reference. Changing the owner resets it to `false`, and it is
+            ignored in requests.
+          example: true
+        verifiedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: |
+            When the owner proved control of its email address or mobile number. Absent while the owner
+            is not verified. Changing the owner removes it, and it is ignored in requests.
+          example: "2026-11-09T10:12:00Z"
 
     OwnerValueReference:
       type: string

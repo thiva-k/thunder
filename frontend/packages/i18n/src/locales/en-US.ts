@@ -1416,6 +1416,42 @@ const translations = {
     'owner.errors.tooLong': 'Use at most 256 characters.',
     'owner.errors.email': 'Enter an email address, such as jane@example.com.',
     'owner.errors.mobile': 'Enter the number in international format: a + followed by the country code and number.',
+    'owner.verification.verified': 'Verified on {{date}}',
+    'owner.verification.notVerified': 'Not verified',
+    'owner.verification.send': 'Send verification link',
+    'owner.verification.resend': 'Send a new verification link',
+    'owner.verification.resendLink': 'Resend link',
+    'owner.verification.saveFirst': 'Save the new owner before you send a verification link.',
+    'owner.verification.sent': 'Verification link sent to {{destination}}',
+    'owner.verification.sentNoDestination': 'Verification link sent to the owner',
+    'owner.verification.sendFailed': 'The verification link could not be sent. Please try again.',
+    'owner.verification.title': 'Ownership verification',
+    'owner.verification.descriptionEmail':
+      'Ask {{owner}} to confirm that they are accountable for this agent. They get a link by email and are verified once they confirm. They do not need an account.',
+    'owner.verification.descriptionMobile':
+      'Ask {{owner}} to confirm that they are accountable for this agent. They get a link by text message and are verified once they confirm. They do not need an account.',
+    'owner.verification.verifiedDescription':
+      '{{owner}} confirmed that they are accountable for this agent. Changing the owner removes the verification.',
+    'owner.verification.verifiedTooltip': 'The owner confirmed on {{time}}',
+    'owner.verification.sending': 'Sending the verification link',
+    'owner.verification.pending': 'Link sent to the owner.',
+    'owner.verification.pendingTo': 'Link sent to {{destination}}.',
+    'owner.verification.pendingWaiting':
+      'Waiting for the owner to open it and confirm. This page updates when they do.',
+    'owner.verification.pendingStopped': 'The owner has not confirmed yet. Check again later, or resend the link.',
+    'owner.verification.checkNow': 'Check now',
+    'owner.verification.confirmed': 'The owner confirmed ownership of this agent.',
+    'owner.verification.confirmedToast': 'The owner confirmed ownership of this agent',
+    'owner.verification.tokenClaimHint':
+      "This agent's access token does not carry the verification. To let the APIs it calls check it, add owner_verified to the token on the Tokens tab.",
+    'owner.verification.noFlow':
+      'No owner verification flow is set, so a link cannot be sent. Name one in agentOwnerVerificationFlow in the flow server configuration.',
+    'owner.verification.errors.noEmailSender':
+      'No email sender is selected on the agent owner verification flow. Select one on its Send Email step, then try again.',
+    'owner.verification.errors.noSmsSender':
+      'No SMS sender is selected on the agent owner verification flow. Select one on its Send SMS step, then try again.',
+    'owner.verification.errors.notVerifiable':
+      'This owner cannot be verified. Only an external owner named by an email address or mobile number can.',
     'edit.attributes.lifespan.title': 'Lifespan',
     'edit.attributes.lifespan.description':
       'When this agent stops being able to authenticate. Tokens issued to it expire no later than this.',
@@ -4764,6 +4800,24 @@ const translations = {
     'core.executions.ouResolver.directChildrenOnly.label': 'Limit to direct children',
     'core.executions.ouResolver.directChildrenOnly.hint':
       'Only direct children of the parent OU can be selected. Declare an ouHandle input below to select by handle.',
+
+    // Attribute verification executor
+    'core.executions.attributeVerification.description':
+      'Choose whose email address or mobile number this step verifies. The flow then sends it a code or a link, and a Record Verification step marks it verified.',
+    'core.executions.attributeVerification.target.label': 'Whose contact to verify',
+    'core.executions.attributeVerification.target.userAttribute': 'User',
+    'core.executions.attributeVerification.target.agentOwner': 'Agent owner',
+    'core.executions.attributeVerification.attribute.label': 'Attribute to verify',
+    'core.executions.attributeVerification.attribute.placeholder': 'email',
+    'core.executions.attributeVerification.attribute.hint':
+      'An email address or mobile number attribute of the user the request names. The request can name another. Leave it empty to have the request always name one.',
+    'core.executions.attributeVerification.agentOwner.hint':
+      'The email address or mobile number that names the external owner of the agent the request names. The owner needs no account.',
+    'core.executions.attributeVerification.agentOwner.flowTypeWarning':
+      "Only an administrator-initiated flow can verify an agent owner's contact, so this flow cannot be saved with this choice.",
+    'core.executions.attributeVerification.summary.agentOwner': "Verifies the agent owner's contact",
+    'core.executions.attributeVerification.summary.userAttribute': "Verifies the user's {{attribute}}",
+    'core.executions.attributeVerification.summary.requested': "Verifies the user's contact the request names",
 
     // Invite executor
     'core.executions.invite.description': 'Configure the invite executor mode.',

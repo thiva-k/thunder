@@ -6,14 +6,26 @@ import {useGetUsers} from '@thunderid/configure-users';
 import {MenuItem, Select, Typography} from '@wso2/oxygen-ui';
 import {useMemo, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
-import {PERSONAL_AGENT_KIND, type Agent} from '../../../models/agent';
+import OwnerVerificationPanel from './OwnerVerificationPanel';
+import {PERSONAL_AGENT_KIND, type Agent, type AgentOwner} from '../../../models/agent';
+import {isVerifiableOwner} from '../../../utils/externalOwner';
 import AgentOwnerField from '../../AgentOwnerField';
 
 interface OwnerSectionProps {
   agent: Agent;
   editedAgent: Partial<Agent>;
   onFieldChange: (field: keyof Agent, value: unknown) => void;
+  /**
+   * Whether this deployment can verify an external owner. A control plane runs no flows, so it cannot send
+   * the owner a verification link.
+   */
+  ownerVerification?: boolean;
 }
+
+/** Whether the edited owner differs from the saved one, so it would be lost by verifying the saved owner. */
+const isOwnerUnsaved = (saved?: AgentOwner, edited?: AgentOwner): boolean =>
+  edited !== undefined &&
+  (edited.id !== saved?.id || edited.idType !== saved?.idType || edited.isLocal !== saved?.isLocal);
 
 interface UserOption {
   id: string;
@@ -29,9 +41,16 @@ const formatUserLabel = (user: {id: string; display?: string; attributes?: Recor
 };
 
 /**
- * Shows and edits the agent's owner. A read-only agent's owner, and a personal agent's, cannot be changed.
+ * Shows and edits the agent's owner. A read-only agent's owner, and a personal agent's, cannot be changed. An
+ * external owner that can be verified shows whether it is, and where the deployment runs flows, a way to send it a
+ * verification link.
  */
-export default function OwnerSection({agent, editedAgent, onFieldChange}: OwnerSectionProps): JSX.Element {
+export default function OwnerSection({
+  agent,
+  editedAgent,
+  onFieldChange,
+  ownerVerification = true,
+}: OwnerSectionProps): JSX.Element {
   const {t} = useTranslation();
 
   const {data: usersData, isLoading: usersLoading} = useGetUsers({limit: 100, offset: 0});
@@ -47,6 +66,8 @@ export default function OwnerSection({agent, editedAgent, onFieldChange}: OwnerS
   // A personal agent keeps the owner it was registered for.
   const isPersonal = agent.kind === PERSONAL_AGENT_KIND;
   const isOwnerLocked = agent.isReadOnly === true || isPersonal;
+  const ownerUnsaved = isOwnerUnsaved(agent.owner, editedAgent.owner);
+  const showVerification = ownerVerification && isVerifiableOwner(agent.owner);
 
   return (
     <SettingsCard
@@ -100,6 +121,7 @@ export default function OwnerSection({agent, editedAgent, onFieldChange}: OwnerS
           </Select>
         }
       />
+      {showVerification && <OwnerVerificationPanel agent={agent} ownerUnsaved={ownerUnsaved} />}
     </SettingsCard>
   );
 }

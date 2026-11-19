@@ -7,8 +7,17 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {Agent} from '../../../../models/agent';
 import OwnerSection from '../OwnerSection';
 
-const {mockUseGetUsers} = vi.hoisted(() => ({
+const {mockUseGetUsers, mockSendVerification} = vi.hoisted(() => ({
   mockUseGetUsers: vi.fn(),
+  mockSendVerification: vi.fn(),
+}));
+
+vi.mock('../../../../api/useSendOwnerVerification', () => ({
+  default: () => ({mutate: mockSendVerification, isPending: false, isError: false, reset: vi.fn()}),
+}));
+
+vi.mock('../../../../api/useGetOwnerVerificationFlow', () => ({
+  default: () => ({data: 'default-agent-owner-verification-flow', isSuccess: true}),
 }));
 
 vi.mock('@thunderid/configure-users', async (importOriginal) => ({
@@ -221,5 +230,108 @@ describe('OwnerSection', () => {
     render(<OwnerSection agent={mockAgent} editedAgent={{}} onFieldChange={mockOnFieldChange} />);
 
     expect(screen.getByText('user-1')).toBeInTheDocument();
+  });
+
+  describe('owner verification', () => {
+    const emailOwner = {id: 'jane@example.com', idType: 'email', isLocal: false} as const;
+
+    it('shows an unverified external owner and sends it a verification link', async () => {
+      const user = userEvent.setup();
+      render(
+        <OwnerSection agent={{...mockAgent, owner: emailOwner}} editedAgent={{}} onFieldChange={mockOnFieldChange} />,
+      );
+
+      expect(screen.getByTestId('agent-owner-not-verified')).toHaveTextContent('Not verified');
+      await user.click(screen.getByRole('button', {name: 'Send verification link'}));
+
+      expect(mockSendVerification).toHaveBeenCalledWith(
+        {agentId: 'agent-1', handle: 'default-agent-owner-verification-flow', owner: 'jane@example.com'},
+        expect.anything(),
+      );
+    });
+
+    it('shows when the owner was verified and offers a new link', () => {
+      render(
+        <OwnerSection
+          agent={{...mockAgent, owner: {...emailOwner, verifiedAt: '2026-11-09T10:12:00Z'}}}
+          editedAgent={{}}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByTestId('agent-owner-verified')).toHaveTextContent('Verified on');
+      expect(screen.getByRole('button', {name: 'Send a new verification link'})).toBeEnabled();
+    });
+
+    it('asks for a changed owner to be saved before a link is sent', () => {
+      render(
+        <OwnerSection
+          agent={{...mockAgent, owner: emailOwner}}
+          editedAgent={{owner: {...emailOwner, id: 'bob@example.com'}}}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByRole('button', {name: 'Send verification link'})).toBeDisabled();
+      expect(screen.getByText('Save the new owner before you send a verification link.')).toBeInTheDocument();
+      expect(screen.queryByTestId('agent-owner-not-verified')).not.toBeInTheDocument();
+    });
+
+    it('sends a link for an agent a control plane deployed, which is read only here', async () => {
+      const user = userEvent.setup();
+      render(
+        <OwnerSection
+          agent={{...mockAgent, owner: emailOwner, isReadOnly: true}}
+          editedAgent={{}}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      await user.click(screen.getByRole('button', {name: 'Send verification link'}));
+
+      expect(mockSendVerification).toHaveBeenCalledWith(
+        {agentId: 'agent-1', handle: 'default-agent-owner-verification-flow', owner: 'jane@example.com'},
+        expect.anything(),
+      );
+    });
+
+    it('sends a link to a mobile owner', async () => {
+      const user = userEvent.setup();
+      const mobileOwner = {id: '+94771234567', idType: 'mobile', isLocal: false} as const;
+      render(
+        <OwnerSection agent={{...mockAgent, owner: mobileOwner}} editedAgent={{}} onFieldChange={mockOnFieldChange} />,
+      );
+
+      expect(screen.getByTestId('agent-owner-not-verified')).toHaveTextContent('Not verified');
+      await user.click(screen.getByRole('button', {name: 'Send verification link'}));
+
+      expect(mockSendVerification).toHaveBeenCalledWith(
+        {agentId: 'agent-1', handle: 'default-agent-owner-verification-flow', owner: '+94771234567'},
+        expect.anything(),
+      );
+    });
+
+    it.each([
+      ['a local owner', {id: 'user-1', idType: 'uuid', isLocal: true}],
+      ['an external subject', {id: 'sub-1', idType: 'uuid', isLocal: false}],
+    ] as const)('offers no verification link for %s', (_name, owner) => {
+      render(<OwnerSection agent={{...mockAgent, owner}} editedAgent={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(screen.queryByTestId('agent-owner-send-verification')).not.toBeInTheDocument();
+    });
+
+    it('offers no verification where the deployment cannot run the flow', () => {
+      render(
+        <OwnerSection
+          agent={{...mockAgent, owner: emailOwner}}
+          editedAgent={{}}
+          onFieldChange={mockOnFieldChange}
+          ownerVerification={false}
+        />,
+      );
+
+      expect(screen.queryByTestId('agent-owner-send-verification')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('agent-owner-not-verified')).not.toBeInTheDocument();
+    });
   });
 });
