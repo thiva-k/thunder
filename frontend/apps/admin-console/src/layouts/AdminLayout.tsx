@@ -3,8 +3,8 @@
 
 import {useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
-import {Attribution, SignOutButton, User, useThunderID} from '@thunderid/react';
-import {Box, ButtonBase, ColorSchemeToggle, Stack, UserMenu} from '@wso2/oxygen-ui';
+import {SignOutButton, User, useThunderID} from '@thunderid/react';
+import {Box, ButtonBase, ColorSchemeToggle, Stack, Typography, UserMenu} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, Outlet, useLocation} from 'react-router';
@@ -163,7 +163,7 @@ export default function AdminLayout(): JSX.Element {
         <Outlet />
       </Box>
       <Box component="footer" sx={{...gutterSx, display: 'flex', justifyContent: 'center', py: 3}}>
-        <Attribution />
+        <Typography variant="body2" color="text.secondary">© {new Date().getFullYear()} Choreo Labs LLC.</Typography>
       </Box>
     </Box>
   );

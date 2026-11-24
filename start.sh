@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Default settings
-PRODUCT_NAME="ThunderID"
-PRODUCT_NAME_LOWERCASE="$(echo "$PRODUCT_NAME" | tr '[:upper:]' '[:lower:]')"
-BINARY_NAME="${PRODUCT_NAME_LOWERCASE}"
+PRODUCT_NAME="Choreo Identity & Access Management"
+BINARY_NAME="choreo-iam"
 BACKEND_PORT=${BACKEND_PORT:-8090}
 DEBUG_PORT=${DEBUG_PORT:-2345}
 DEBUG_MODE=${DEBUG_MODE:-false}

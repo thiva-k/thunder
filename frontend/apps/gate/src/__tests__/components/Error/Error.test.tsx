@@ -74,7 +74,7 @@ describe('Error', () => {
     render(<Error />);
 
     const logo = screen.getByAltText('Logo (Light)');
-    expect(logo).toHaveStyle({height: '40px'});
+    expect(logo).toHaveStyle({height: '24px'});
   });
 
   it('renders the error images', () => {

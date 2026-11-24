@@ -123,7 +123,7 @@
       "username": "",
       "password": "",
       "db": 0,
-      "key_prefix": "thunderid",
+      "key_prefix": "choreo-iam",
       "max_retries": 5,
       "min_retry_backoff_ms": 10,
       "max_retry_backoff_ms": 100,
@@ -253,7 +253,7 @@
   },
   "scim": {
     "core_user_type_id": "01900000-0000-7000-8000-000000000010",
-    "urn_prefix": "urn:thunderid:params:scim:schemas:"
+    "urn_prefix": "urn:choreo-iam:params:scim:schemas:"
   },
   "declarative_resources": {
     "enabled": false
@@ -270,7 +270,7 @@
       "file": {
         "enabled": false,
         "path": "logs",
-        "file_name": "thunderid.log",
+        "file_name": "choreo-iam.log",
         "format": "text",
         "rotation": {
           "size": {

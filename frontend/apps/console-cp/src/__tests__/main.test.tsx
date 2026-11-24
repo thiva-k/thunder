@@ -55,8 +55,8 @@ describe('main', () => {
   it('seeds the dev server and gate URLs on the runtime config when unset', async () => {
     document.body.innerHTML = '<div id="root"></div>';
 
-    const previous = window.__THUNDERID_RUNTIME_CONFIG__;
-    window.__THUNDERID_RUNTIME_CONFIG__ = {
+    const previous = window.__IAM_RUNTIME_CONFIG__;
+    window.__IAM_RUNTIME_CONFIG__ = {
       brand: {product_name: 'ThunderID', favicon: {light: '', dark: ''}},
       client: {base: '/console', client_id: 'CONSOLE'},
     } as ProductConfig;
@@ -64,9 +64,9 @@ describe('main', () => {
     vi.resetModules();
     await import('../main');
 
-    expect(window.__THUNDERID_RUNTIME_CONFIG__?.server).toEqual({public_url: __DEV_SERVER_URL__});
-    expect(window.__THUNDERID_RUNTIME_CONFIG__?.gate_client).toEqual({public_url: __DEV_GATE_URL__});
+    expect(window.__IAM_RUNTIME_CONFIG__?.server).toEqual({public_url: __DEV_SERVER_URL__});
+    expect(window.__IAM_RUNTIME_CONFIG__?.gate_client).toEqual({public_url: __DEV_GATE_URL__});
 
-    window.__THUNDERID_RUNTIME_CONFIG__ = previous;
+    window.__IAM_RUNTIME_CONFIG__ = previous;
   });
 });

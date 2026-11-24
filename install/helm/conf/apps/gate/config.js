@@ -3,7 +3,7 @@
 
 /* eslint-disable no-underscore-dangle */
 
-window.__THUNDERID_RUNTIME_CONFIG__ = {
+window.__IAM_RUNTIME_CONFIG__ = {
   brand: {
     product_name: {{ .Values.configuration.brand.productName | default "ThunderID" | quote }},
     favicon: {

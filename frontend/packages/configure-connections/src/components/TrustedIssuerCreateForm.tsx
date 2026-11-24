@@ -248,7 +248,7 @@ export default function TrustedIssuerCreateForm({
                 <TextField
                   id="trusted-issuer-token-audience"
                   fullWidth
-                  placeholder="api://thunderid"
+                  placeholder="api://my-api"
                   value={trustedTokenAudience}
                   helperText={t(
                     'trustedIssuers:detail.tokenExchange.audience.hint',

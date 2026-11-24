@@ -832,7 +832,7 @@ spec:
           labels: ${metadata.labels}
         data:
           config.js: |
-            window.__THUNDERID_RUNTIME_CONFIG__ = {
+            window.__IAM_RUNTIME_CONFIG__ = {
               brand: {
                 product_name: "ThunderID",
                 favicon: {
@@ -873,7 +873,7 @@ spec:
           labels: ${metadata.labels}
         data:
           config.js: |
-            window.__THUNDERID_RUNTIME_CONFIG__ = {
+            window.__IAM_RUNTIME_CONFIG__ = {
               brand: {
                 product_name: "ThunderID",
                 documentation: {

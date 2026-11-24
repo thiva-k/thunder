@@ -976,7 +976,7 @@ describe('SimulationStepPreview', () => {
 
   describe('Preference persistence', () => {
     it('should restore the persisted device on open', () => {
-      window.localStorage.setItem('thunderid.flows.preview.device', 'desktop');
+      window.localStorage.setItem('iam.flows.preview.device', 'desktop');
       render(<SimulationStepPreview node={viewNode} simulation={createSimulation()} />);
 
       expect(screen.getByRole('button', {name: 'Desktop'})).toHaveAttribute('aria-pressed', 'true');
@@ -987,11 +987,11 @@ describe('SimulationStepPreview', () => {
 
       fireEvent.click(screen.getByRole('button', {name: 'Tablet'}));
 
-      expect(window.localStorage.getItem('thunderid.flows.preview.device')).toBe('tablet');
+      expect(window.localStorage.getItem('iam.flows.preview.device')).toBe('tablet');
     });
 
     it('should ignore an unknown persisted device', () => {
-      window.localStorage.setItem('thunderid.flows.preview.device', 'holodeck');
+      window.localStorage.setItem('iam.flows.preview.device', 'holodeck');
       render(<SimulationStepPreview node={viewNode} simulation={createSimulation()} />);
 
       expect(screen.getByRole('button', {name: 'Mobile'})).toHaveAttribute('aria-pressed', 'true');

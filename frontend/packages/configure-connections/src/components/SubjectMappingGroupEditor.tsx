@@ -144,7 +144,7 @@ export default function SubjectMappingGroupEditor({
       <Stack direction="column" spacing={1.5}>
         <Stack direction="row" spacing={1.5}>
           <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{flex: 1}}>
-            {t('subjectMapping.mappings.thunderIdAttribute', '{{productName}} attribute', {productName})}
+            {t('subjectMapping.mappings.productAttribute', '{{productName}} attribute', {productName})}
           </Typography>
           <Box sx={{width: 40}} />
         </Stack>
@@ -177,10 +177,10 @@ export default function SubjectMappingGroupEditor({
                     <TextField
                       {...params}
                       id={`subject-mapping-attribute-${group.key}-${index + 1}`}
-                      placeholder={t('subjectMapping.mappings.thunderIdPlaceholder', 'e.g. email')}
+                      placeholder={t('subjectMapping.mappings.productAttributePlaceholder', 'e.g. email')}
                       inputProps={{
                         ...params.inputProps,
-                        'aria-label': t('subjectMapping.mappings.thunderIdAttribute', '{{productName}} attribute', {
+                        'aria-label': t('subjectMapping.mappings.productAttribute', '{{productName}} attribute', {
                           productName,
                         }),
                       }}

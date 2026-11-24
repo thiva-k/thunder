@@ -2,7 +2,7 @@
 # Copyright 2025-2026 The ThunderID Authors
 # SPDX-License-Identifier: Apache-2.0
 
-$PRODUCT_NAME = "ThunderID Control Plane"
+$PRODUCT_NAME = "Choreo Identity & Access Management Control Plane"
 
 # Check for PowerShell Version Compatibility
 if ($PSVersionTable.PSVersion.Major -lt 7) {
@@ -316,7 +316,7 @@ function New-SelfSignedCertPair {
         return
     }
 
-    $subject = "CN=localhost, OU=$PRODUCT_NAME, O=ThunderID"
+    $subject = "CN=localhost, OU=$PRODUCT_NAME, O=Choreo Labs"
     $san = New-Object System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder
     $san.AddDnsName("localhost")
     $san.AddIpAddress([System.Net.IPAddress]::Parse("127.0.0.1"))

@@ -14,12 +14,12 @@ import AppWithDecorators from './AppWithDecorators';
 
 // Initialize the class name prefix from runtime config (e.g., "<PRODUCT_NAME>" -> "<PRODUCT_NAME>SignIn--root")
 if (typeof window !== 'undefined') {
-  setCnPrefix(window.__THUNDERID_RUNTIME_CONFIG__?.brand?.product_name ?? '');
+  setCnPrefix(window.__IAM_RUNTIME_CONFIG__?.brand?.product_name ?? '');
 }
 
 // Seed the runtime config with the dev backend and gate URLs when unset (dev only).
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  const runtimeConfig = window.__THUNDERID_RUNTIME_CONFIG__;
+  const runtimeConfig = window.__IAM_RUNTIME_CONFIG__;
   if (runtimeConfig && !runtimeConfig.server) {
     runtimeConfig.server = {public_url: __DEV_SERVER_URL__};
   }

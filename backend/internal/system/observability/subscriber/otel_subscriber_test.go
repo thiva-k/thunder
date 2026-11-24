@@ -245,7 +245,7 @@ func (suite *OTelSubscriberTestSuite) TestOnEvent_WithSpanRecorder() {
 	sub := &OTelSubscriber{
 		id:             "test-sub",
 		tracerProvider: tracerProvider,
-		tracer:         tracerProvider.Tracer("thunderid-observability"),
+		tracer:         tracerProvider.Tracer("choreo-iam-observability"),
 		categories:     []event.EventCategory{event.CategoryAll},
 		logger:         logger,
 	}

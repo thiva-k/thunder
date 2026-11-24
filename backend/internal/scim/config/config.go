@@ -94,7 +94,7 @@ type SCIMConfig struct {
 }
 
 // DefaultSchemaURNPrefix is used when no custom schema URN prefix is configured.
-const DefaultSchemaURNPrefix = "urn:thunderid:params:scim:schemas:"
+const DefaultSchemaURNPrefix = "urn:choreo-iam:params:scim:schemas:"
 
 // schemaURNPrefix returns the configured prefix, defaulting when empty and ensuring a trailing colon.
 func schemaURNPrefix(configured string) string {

@@ -55,9 +55,8 @@ PRODUCT_VERSION=${VERSION}
 if [[ $PRODUCT_VERSION == v* ]]; then
   PRODUCT_VERSION="${PRODUCT_VERSION#v}"
 fi
-PRODUCT_NAME="ThunderID"
-PRODUCT_NAME_LOWERCASE="$(echo "$PRODUCT_NAME" | tr '[:upper:]' '[:lower:]')"
-BINARY_NAME="${PRODUCT_NAME_LOWERCASE}"
+PRODUCT_NAME="Choreo Identity & Access Management"
+BINARY_NAME="choreo-iam"
 PRODUCT_FOLDER=${BINARY_NAME}-gateway-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}
 CP_PRODUCT_FOLDER=${BINARY_NAME}-cp-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}
 QUICKSTART_PRODUCT_FOLDER=${BINARY_NAME}-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}
@@ -995,12 +994,12 @@ function stage_quickstart_pack() {
     # The browser enforces the CP's own Content-Security-Policy, not auth-dp's, on every fetch the
     # console page makes — including the cross-origin token exchange the trusted_issuer config
     # above now sends to auth-dp. The shared csp.yaml's default connect-src only allows the page's
-    # own origin plus thunderid.dev, so without this the browser blocks that fetch outright
+    # own origin only, so without this the browser blocks that fetch outright
     # (visible as a CSP console error, not an API error). Patched into this copy only, right after
-    # the one other allowed connect-src entry.
+    # the console's own connect-src entry.
     awk -v port="$QUICKSTART_AUTH_DP_PORT" '
         { print }
-        /"https:\/\/thunderid\.dev"/ { print "          - \"https://localhost:" port "\"" }
+        /^        connect-src:$/ { getline; print; print "          - \"https://localhost:" port "\"" }
     ' "$cp_dir/config/resources/server_configs/csp.yaml" > "$cp_dir/config/resources/server_configs/csp.yaml.tmp"
     mv "$cp_dir/config/resources/server_configs/csp.yaml.tmp" "$cp_dir/config/resources/server_configs/csp.yaml"
 
@@ -1398,7 +1397,7 @@ function ensure_certificates() {
                 openssl req -new -x509 -nodes -days 3650 \
                     -key "$local_key_file" \
                     -out "$local_cert_file" \
-                    -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
+                    -subj "/O=Choreo Labs/OU=${PRODUCT_NAME}/CN=localhost" \
                     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
                     2>&1 >/dev/null
             )
@@ -1407,7 +1406,7 @@ function ensure_certificates() {
                 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
                     -keyout "$local_key_file" \
                     -out "$local_cert_file" \
-                    -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
+                    -subj "/O=Choreo Labs/OU=${PRODUCT_NAME}/CN=localhost" \
                     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
                     2>&1 >/dev/null
             )

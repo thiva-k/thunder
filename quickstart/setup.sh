@@ -46,7 +46,7 @@ kill_port "$AUTH_DP_PORT"
 rm -f .quickstart-setup-done
 
 echo "========================================="
-echo "   ThunderID Quickstart Setup"
+echo "   Choreo Identity & Access Management Quickstart Setup"
 echo "========================================="
 echo ""
 

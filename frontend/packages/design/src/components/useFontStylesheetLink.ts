@@ -11,7 +11,7 @@ import {isValidStylesheetUrl} from '../utils/cssSanitizer';
  *  the document `FontImporter` targets. Returns a tick that increments on each load. */
 export default function useFontStylesheetLink(importURL: string | undefined, targetDocument?: Document): number {
   const {config} = useConfig();
-  const idPrefix = config.brand.product_name.toLowerCase().replace(/\s+/g, '-');
+  const idPrefix = config.brand.product_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const linkId = `${idPrefix}-font-import`;
 
   const [loadedTick, setLoadedTick] = useState(0);

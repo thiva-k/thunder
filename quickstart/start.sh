@@ -36,7 +36,7 @@ kill_port "$DP_PORT"
 kill_port "$AUTH_DP_PORT"
 
 echo "========================================="
-echo "   ThunderID Quickstart"
+echo "   Choreo Identity & Access Management Quickstart"
 echo "========================================="
 echo ""
 echo "⚡ Starting auth-dp..."

@@ -86,9 +86,9 @@ function Providers({children, queryClient = undefined, config = undefined}: Prov
   const testConfig = config ?? currentConfig;
 
   // Setup window runtime configuration for tests
-  if (typeof window !== 'undefined' && !window.__THUNDERID_RUNTIME_CONFIG__) {
+  if (typeof window !== 'undefined' && !window.__IAM_RUNTIME_CONFIG__) {
     // eslint-disable-next-line react-hooks/immutability
-    window.__THUNDERID_RUNTIME_CONFIG__ = {
+    window.__IAM_RUNTIME_CONFIG__ = {
       brand: {
         product_name: 'ThunderID',
         favicon: {light: 'assets/images/favicon.ico', dark: 'assets/images/favicon-inverted.ico'},

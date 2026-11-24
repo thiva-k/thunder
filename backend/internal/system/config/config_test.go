@@ -481,7 +481,7 @@ log:
     file:
       enabled: true
       path: "logs"
-      file_name: "thunderid.log"
+      file_name: "choreo-iam.log"
       format: "json"
       rotation:
         size:
@@ -504,7 +504,7 @@ log:
 	assert.Equal(suite.T(), boolPtr(true), config.Log.Output.Console.Enabled)
 	assert.Equal(suite.T(), boolPtr(true), file.Enabled)
 	assert.Equal(suite.T(), "logs", file.Path)
-	assert.Equal(suite.T(), "thunderid.log", file.FileName)
+	assert.Equal(suite.T(), "choreo-iam.log", file.FileName)
 	assert.Equal(suite.T(), "json", file.Format)
 	assert.Equal(suite.T(), boolPtr(true), file.Rotation.Size.Enabled)
 	assert.Equal(suite.T(), floatPtr(0.5), file.Rotation.Size.MaxSizeMB)

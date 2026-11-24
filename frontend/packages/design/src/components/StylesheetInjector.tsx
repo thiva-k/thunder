@@ -34,7 +34,7 @@ export default function StylesheetInjector({stylesheets = undefined}: Stylesheet
   const {config} = useConfig();
   const {layout} = useDesign();
   const resolvedStylesheets = stylesheets ?? layout?.head?.stylesheets ?? [];
-  const idPrefix = config.brand.product_name.toLowerCase().replace(/\s+/g, '-');
+  const idPrefix = config.brand.product_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const elementIdPrefix = `${idPrefix}-stylesheet-`;
   const dataAttr = `data-${idPrefix}-custom`;
 

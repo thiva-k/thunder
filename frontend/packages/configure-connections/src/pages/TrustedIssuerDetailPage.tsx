@@ -320,7 +320,7 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
                 <TextField
                   id="trusted-issuer-token-audience"
                   fullWidth
-                  placeholder="api://thunderid"
+                  placeholder="api://my-api"
                   value={values.trustedTokenAudience ?? ''}
                   helperText={t(
                     'trustedIssuers:detail.tokenExchange.audience.hint',

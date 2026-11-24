@@ -670,7 +670,7 @@ func (c LogConfig) BuildOutputOptions(serverHome string) log.OutputOptions {
 		}
 		name := fileCfg.FileName
 		if name == "" {
-			name = "thunderid.log"
+			name = "choreo-iam.log"
 		}
 		filePath = filepath.Join(dir, name)
 	}

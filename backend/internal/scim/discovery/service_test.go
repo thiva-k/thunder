@@ -156,13 +156,13 @@ func (suite *ServiceTestSuite) TestGetSchema_ResolvesUserTypeHandleCaseInsensiti
 
 	result, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:Person:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:Person:2.0:User",
 		testGenericBaseURL,
 	)
 
 	require.Nil(t, svcErr)
 	require.NotNil(t, result)
-	require.Equal(t, "urn:thunderid:params:scim:schemas:person:2.0:User", result.ID)
+	require.Equal(t, "urn:choreo-iam:params:scim:schemas:person:2.0:User", result.ID)
 	require.Equal(t, "Person", result.Name)
 }
 
@@ -287,7 +287,7 @@ func (suite *ServiceTestSuite) TestBuildCoreUserSchema_InvalidSchemaJSON_Returns
 func (suite *ServiceTestSuite) TestParseUserTypeFromSchemaURN_ValidURN() {
 	t := suite.T()
 	name, ok := scim.ParseUserTypeFromSchemaURN(
-		testSCIMConfig.SchemaURNPrefix, "urn:thunderid:params:scim:schemas:person:2.0:User")
+		testSCIMConfig.SchemaURNPrefix, "urn:choreo-iam:params:scim:schemas:person:2.0:User")
 	require.True(t, ok)
 	require.Equal(t, "person", name)
 }
@@ -296,7 +296,7 @@ func (suite *ServiceTestSuite) TestParseUserTypeFromSchemaURN_ValidURN() {
 func (suite *ServiceTestSuite) TestParseUserTypeFromSchemaURN_UppercaseInput() {
 	t := suite.T()
 	name, ok := scim.ParseUserTypeFromSchemaURN(
-		testSCIMConfig.SchemaURNPrefix, "URN:THUNDERID:PARAMS:SCIM:SCHEMAS:EMPLOYEE:2.0:USER")
+		testSCIMConfig.SchemaURNPrefix, "URN:CHOREO-IAM:PARAMS:SCIM:SCHEMAS:EMPLOYEE:2.0:USER")
 	require.True(t, ok)
 	require.Equal(t, "employee", name)
 }
@@ -309,7 +309,7 @@ func (suite *ServiceTestSuite) TestParseUserTypeFromSchemaURN_CustomPrefix() {
 	name, ok := scim.ParseUserTypeFromSchemaURN(prefix, prefix+"person:2.0:User")
 	require.True(t, ok)
 	require.Equal(t, "person", name)
-	_, ok = scim.ParseUserTypeFromSchemaURN(prefix, "urn:thunderid:params:scim:schemas:person:2.0:User")
+	_, ok = scim.ParseUserTypeFromSchemaURN(prefix, "urn:choreo-iam:params:scim:schemas:person:2.0:User")
 	require.False(t, ok)
 }
 
@@ -325,7 +325,7 @@ func (suite *ServiceTestSuite) TestParseUserTypeFromSchemaURN_WrongPrefix() {
 func (suite *ServiceTestSuite) TestParseUserTypeFromSchemaURN_WrongSuffix() {
 	t := suite.T()
 	_, ok := scim.ParseUserTypeFromSchemaURN(
-		testSCIMConfig.SchemaURNPrefix, "urn:thunderid:params:scim:schemas:person:2.0:Group")
+		testSCIMConfig.SchemaURNPrefix, "urn:choreo-iam:params:scim:schemas:person:2.0:Group")
 	require.False(t, ok)
 }
 
@@ -473,7 +473,7 @@ func (suite *ServiceTestSuite) TestMapUserTypeToSCIMSchema_ValidSchema() {
 	}
 	schema, err := mapUserTypeToSCIMSchema(et, testGenericBaseURL, testSCIMConfig.SchemaURNPrefix)
 	require.NoError(t, err)
-	require.Equal(t, "urn:thunderid:params:scim:schemas:employee:2.0:User", schema.ID)
+	require.Equal(t, "urn:choreo-iam:params:scim:schemas:employee:2.0:User", schema.ID)
 	require.Len(t, schema.Attributes, 1)
 	require.Equal(t, "userName", schema.Attributes[0].Name)
 }
@@ -489,7 +489,7 @@ func (suite *ServiceTestSuite) TestMapUserTypeToSCIMSchema_UsesHandleForURNAndDi
 	}
 	schema, err := mapUserTypeToSCIMSchema(et, testGenericBaseURL, testSCIMConfig.SchemaURNPrefix)
 	require.NoError(t, err)
-	require.Equal(t, "urn:thunderid:params:scim:schemas:staff-member:2.0:User", schema.ID)
+	require.Equal(t, "urn:choreo-iam:params:scim:schemas:staff-member:2.0:User", schema.ID)
 	require.Equal(t, "Staff Member", schema.Name)
 	require.Equal(t, "Staff Member user type", schema.Description)
 }
@@ -625,7 +625,7 @@ func (suite *ServiceTestSuite) TestGetSchema_UserTypeNotFound_Returns404() {
 
 	schema, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:ghost:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:ghost:2.0:User",
 		testGenericBaseURL,
 	)
 	require.Nil(t, schema)
@@ -694,7 +694,7 @@ func (suite *ServiceTestSuite) TestListSchemas_IncludesExtensionSchemasForEachUs
 	}
 	require.Contains(t, urns, scim.SCIMCoreUserSchemaURN)
 	require.Contains(t, urns, scim.SCIMCoreGroupSchemaURN)
-	require.Contains(t, urns, "urn:thunderid:params:scim:schemas:customer:2.0:User")
+	require.Contains(t, urns, "urn:choreo-iam:params:scim:schemas:customer:2.0:User")
 }
 
 // TestListSchemas_IncludesEnterpriseUserSchema tests that ListSchemas includes SCIMEnterpriseUserSchemaURN
@@ -740,7 +740,7 @@ func (suite *ServiceTestSuite) TestListSchemas_IncludesEnterpriseUserSchema() {
 	require.Contains(t, urns, scim.SCIMCoreUserSchemaURN)
 	require.Contains(t, urns, scim.SCIMEnterpriseUserSchemaURN)
 	require.Contains(t, urns, scim.SCIMCoreGroupSchemaURN)
-	require.Contains(t, urns, "urn:thunderid:params:scim:schemas:employee:2.0:User")
+	require.Contains(t, urns, "urn:choreo-iam:params:scim:schemas:employee:2.0:User")
 }
 
 // TestListSchemas_IncludesCoreGroupSchema tests List Schemas for Includes Core Group Schema.
@@ -828,7 +828,7 @@ func (suite *ServiceTestSuite) TestGetSchema_AuthErrorFromResolve_Returns404() {
 
 	schema, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:employee:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		testGenericBaseURL,
 	)
 	require.Nil(t, schema)
@@ -850,7 +850,7 @@ func (suite *ServiceTestSuite) TestGetSchema_AuthErrorFromGetEntityTypeByHandle_
 
 	schema, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:employee:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		testGenericBaseURL,
 	)
 	require.Nil(t, schema)
@@ -872,7 +872,7 @@ func (suite *ServiceTestSuite) TestGetSchema_MalformedUserTypeSchema_Returns500(
 
 	schema, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:broken:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:broken:2.0:User",
 		testGenericBaseURL,
 	)
 	require.Nil(t, schema)
@@ -991,7 +991,7 @@ func (suite *ServiceTestSuite) TestListSchemas_WindowSpansStaticAndDynamicSchema
 	require.Equal(t, 3, resp.TotalResults) // Group + 2 registered user types
 	require.Len(t, resp.Resources, 2)
 	require.Equal(t, scim.SCIMCoreGroupSchemaURN, resp.Resources[0].ID)
-	require.Equal(t, "urn:thunderid:params:scim:schemas:typea:2.0:User", resp.Resources[1].ID)
+	require.Equal(t, "urn:choreo-iam:params:scim:schemas:typea:2.0:User", resp.Resources[1].ID)
 }
 
 // TestListSchemas_LargeRegistry_ConstantQueryCount tests that ListSchemas issues exactly two
@@ -1057,7 +1057,7 @@ func (suite *ServiceTestSuite) TestResolveUserType_AuthError_Returns404() {
 
 	_, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:anytype:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:anytype:2.0:User",
 		testGenericBaseURL,
 	)
 	require.NotNil(t, svcErr)
@@ -1076,7 +1076,7 @@ func (suite *ServiceTestSuite) TestResolveUserType_NonAuthLookupError_Returns404
 
 	_, svcErr := svc.GetSchema(
 		context.Background(),
-		"urn:thunderid:params:scim:schemas:anytype:2.0:User",
+		"urn:choreo-iam:params:scim:schemas:anytype:2.0:User",
 		testGenericBaseURL,
 	)
 	require.NotNil(t, svcErr)

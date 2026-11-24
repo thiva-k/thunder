@@ -29,7 +29,7 @@ func freshLogger() *Logger {
 }
 
 func TestConfigureWritesToFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "logs", "thunderid.log")
+	path := filepath.Join(t.TempDir(), "logs", "choreo-iam.log")
 	log := freshLogger()
 
 	err := log.Configure(OutputOptions{
@@ -50,7 +50,7 @@ func TestConfigureWritesToFile(t *testing.T) {
 }
 
 func TestConfigureJSONFormat(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	err := log.Configure(OutputOptions{
@@ -93,7 +93,7 @@ func TestConfigureErrorsOnInvalidFilePath(t *testing.T) {
 }
 
 func TestConfigureConsoleAndFileWritesFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	err := log.Configure(OutputOptions{
@@ -124,7 +124,7 @@ func readLines(t *testing.T, path string) []string {
 // happens before the configured format is known. The derived logger must follow the
 // format installed later rather than staying on the text handler it booted with.
 func TestConfigureAppliesFormatToLoggerDerivedBeforeConfigure(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	derived := log.With(String(LoggerKeyComponentName, "FlowEngine"))
@@ -147,7 +147,7 @@ func TestConfigureAppliesFormatToLoggerDerivedBeforeConfigure(t *testing.T) {
 // TestConfigureKeepsTraceIDOnLoggerDerivedBeforeConfigure guards the context decoration,
 // which is replayed onto the swapped handler along with the recorded attributes.
 func TestConfigureKeepsTraceIDOnLoggerDerivedBeforeConfigure(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	derived := log.With(String(LoggerKeyComponentName, "AuthAssertExecutor"))
@@ -199,7 +199,7 @@ func TestConfigureFollowedByReconfigureSwitchesFormatBack(t *testing.T) {
 // TestConfigureKeepsSiblingLoggersIndependent guards the derivation slice copy: siblings
 // derived from one parent must not overwrite each other's attributes.
 func TestConfigureKeepsSiblingLoggersIndependent(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	engine := log.With(String(LoggerKeyComponentName, "FlowEngine"))
@@ -237,7 +237,7 @@ func TestConfigureKeepsSiblingLoggersIndependent(t *testing.T) {
 // TestConfigurePreservesLevelSetEarlier guards the shared level variable across the
 // handler swap.
 func TestConfigurePreservesLevelSetEarlier(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	require.NoError(t, log.SetLevel("error"))
@@ -259,7 +259,7 @@ func TestConfigurePreservesLevelSetEarlier(t *testing.T) {
 }
 
 func TestSetFormatChangesFormatWithoutReplacingOutput(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	require.NoError(t, log.Configure(OutputOptions{
@@ -344,7 +344,7 @@ func TestConfigureIsSafeUnderConcurrentLogging(t *testing.T) {
 // TestConfigureReplaysGroupsOnDerivedHandler covers the WithGroup derivation path: groups
 // recorded before Configure must be replayed, in order, onto the swapped handler.
 func TestConfigureReplaysGroupsOnDerivedHandler(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	log := freshLogger()
 
 	grouped := slog.New(log.internal.Handler().

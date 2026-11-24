@@ -37,6 +37,6 @@ describe('SignInSlogan', () => {
 
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute('src', expect.stringContaining('/assets/images/logo.svg'));
-    expect(logo).toHaveStyle({height: '50px'});
+    expect(logo).toHaveStyle({height: '28px'});
   });
 });

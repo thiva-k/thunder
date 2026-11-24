@@ -102,12 +102,12 @@ func setServerPort(path string, port int) error {
 }
 
 // StartDataPlane starts the Data Plane PrepareDataPlane made and waits until it answers. Its output
-// goes to thunderid.log in its product home, so it does not interleave with the Control Plane's.
+// goes to choreo-iam.log in its product home, so it does not interleave with the Control Plane's.
 func StartDataPlane() error {
 	if dataPlaneHome == "" {
 		return fmt.Errorf("the data plane is not prepared, call PrepareDataPlane first")
 	}
-	logFile, err := os.Create(filepath.Join(dataPlaneHome, "thunderid.log"))
+	logFile, err := os.Create(filepath.Join(dataPlaneHome, "choreo-iam.log"))
 	if err != nil {
 		return fmt.Errorf("failed to create the data plane log: %w", err)
 	}
