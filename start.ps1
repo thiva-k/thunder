@@ -2,9 +2,9 @@
 # Copyright 2025 The ThunderID Authors
 # SPDX-License-Identifier: Apache-2.0
 
-$PRODUCT_NAME = "ThunderID"
+$PRODUCT_NAME = "Choreo Identity & Access Management"
 $PRODUCT_NAME_LOWERCASE = $PRODUCT_NAME.ToLower()
-$BINARY_NAME = $PRODUCT_NAME_LOWERCASE
+$BINARY_NAME = "choreo-iam"
 
 # Check for PowerShell Version Compatibility
 if ($PSVersionTable.PSVersion.Major -lt 7) {

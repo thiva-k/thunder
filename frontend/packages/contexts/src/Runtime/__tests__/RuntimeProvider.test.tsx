@@ -37,8 +37,8 @@ function tokenEndpoint(): string {
 }
 
 beforeEach(() => {
-  originalConfig = window.__THUNDERID_RUNTIME_CONFIG__;
-  window.__THUNDERID_RUNTIME_CONFIG__ = serverConfig;
+  originalConfig = window.__IAM_RUNTIME_CONFIG__;
+  window.__IAM_RUNTIME_CONFIG__ = serverConfig;
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -49,7 +49,7 @@ afterEach(() => {
     root.unmount();
   });
   container.remove();
-  window.__THUNDERID_RUNTIME_CONFIG__ = originalConfig;
+  window.__IAM_RUNTIME_CONFIG__ = originalConfig;
 });
 
 describe('useRuntimeUrl', () => {

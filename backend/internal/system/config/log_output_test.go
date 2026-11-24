@@ -34,11 +34,11 @@ func TestBuildOutputOptions_RelativePathResolvedUnderHome(t *testing.T) {
 	logCfg := LogConfig{}
 	logCfg.Output.File.Enabled = boolPtr(true)
 	logCfg.Output.File.Path = "logs"
-	logCfg.Output.File.FileName = "thunderid.log"
+	logCfg.Output.File.FileName = "choreo-iam.log"
 
 	opts := logCfg.BuildOutputOptions(home)
 	assert.True(t, opts.FileEnabled)
-	assert.Equal(t, filepath.Join(home, "logs", "thunderid.log"), opts.File.Path)
+	assert.Equal(t, filepath.Join(home, "logs", "choreo-iam.log"), opts.File.Path)
 }
 
 func TestBuildOutputOptions_AbsolutePathUsedAsIs(t *testing.T) {
@@ -49,7 +49,7 @@ func TestBuildOutputOptions_AbsolutePathUsedAsIs(t *testing.T) {
 	logCfg.Output.File.Path = absDir
 
 	opts := logCfg.BuildOutputOptions(home)
-	assert.Equal(t, filepath.Join(absDir, "thunderid.log"), opts.File.Path)
+	assert.Equal(t, filepath.Join(absDir, "choreo-iam.log"), opts.File.Path)
 }
 
 func TestBuildOutputOptions_DefaultsForEmptyPathAndName(t *testing.T) {
@@ -58,7 +58,7 @@ func TestBuildOutputOptions_DefaultsForEmptyPathAndName(t *testing.T) {
 	logCfg.Output.File.Enabled = boolPtr(true)
 
 	opts := logCfg.BuildOutputOptions(home)
-	assert.Equal(t, filepath.Join(home, "logs", "thunderid.log"), opts.File.Path)
+	assert.Equal(t, filepath.Join(home, "logs", "choreo-iam.log"), opts.File.Path)
 }
 
 // TestBuildOutputOptions_Rotation exercises both rotation triggers together:

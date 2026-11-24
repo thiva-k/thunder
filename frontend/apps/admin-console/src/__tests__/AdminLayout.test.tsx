@@ -7,11 +7,13 @@ import {MemoryRouter, Route, Routes} from 'react-router';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import AdminLayout from '../layouts/AdminLayout';
 
-const state: {genericOidc: boolean; ouName?: string; permissions: string[]} = {genericOidc: false, permissions: []};
+const state: {genericOidc: boolean; logoUrl?: string; ouName?: string; permissions: string[]} = {
+  genericOidc: false,
+  permissions: [],
+};
 const signOut = vi.fn(() => Promise.resolve());
 
 vi.mock('@thunderid/react', () => ({
-  Attribution: (): JSX.Element => <p>Secured by ThunderID</p>,
   Logo: ({alt}: {alt: string}): JSX.Element => <img alt={alt} />,
   SignOutButton: ({children}: {children: (props: {signOut: () => Promise<void>}) => ReactNode}) => children({signOut}),
   User: ({children}: {children: (user: Record<string, unknown>) => ReactNode}) =>
@@ -25,7 +27,7 @@ vi.mock('@thunderid/react', () => ({
   useThunderID: () => ({
     clearSession: vi.fn(),
     discovery: {wellKnown: {end_session_endpoint: 'https://idp.example/logout'}},
-    meta: {application: {logoUrl: 'https://acme.example/logo.svg'}},
+    meta: {application: {logoUrl: state.logoUrl}},
   }),
 }));
 
@@ -33,6 +35,7 @@ vi.mock('../hooks/useOrganizationName', () => ({default: () => state.ouName}));
 
 vi.mock('@thunderid/contexts', () => ({
   useConfig: () => ({
+    config: {brand: {product_name: 'Choreo Identity & Access Management'}},
     getClientUrl: () => 'https://admin.example/console',
     getTrustedIssuerClientId: () => 'console-client',
     isTrustedIssuerGenericOidc: () => state.genericOidc,
@@ -76,6 +79,7 @@ const renderAt = (path: string): void => {
 describe('AdminLayout', () => {
   beforeEach(() => {
     state.genericOidc = false;
+    state.logoUrl = undefined;
     state.ouName = undefined;
     state.permissions = ['system:user:view', 'system:group:view', 'system:role:view', 'system:agent:view'];
     signOut.mockClear();
@@ -105,14 +109,23 @@ describe('AdminLayout', () => {
     ).toEqual(['Roles']);
   });
 
-  it('shows the brand, the organization unit and the attribution', () => {
+  it('shows the brand, the organization unit and the copyright', () => {
+    state.logoUrl = 'https://acme.example/logo.svg';
     state.ouName = 'Default';
     renderAt('/users');
 
     expect(screen.getByRole('img', {name: 'Admin'})).toBeInTheDocument();
     expect(screen.getByRole('heading', {level: 1, name: 'Admin'})).toBeInTheDocument();
     expect(within(screen.getByLabelText('Organization unit')).getByText('Default')).toBeInTheDocument();
-    expect(screen.getByText('Secured by ThunderID')).toBeInTheDocument();
+    expect(screen.getByText(`© ${new Date().getFullYear()} Choreo Labs LLC.`)).toBeInTheDocument();
+  });
+
+  it('shows the product logo when the signed-in application has none', () => {
+    state.logoUrl = undefined;
+    renderAt('/users');
+
+    expect(screen.getAllByAltText('Choreo Identity & Access Management').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('img', {name: 'Admin'})).not.toBeInTheDocument();
   });
 
   it('signs out through the SDK', () => {

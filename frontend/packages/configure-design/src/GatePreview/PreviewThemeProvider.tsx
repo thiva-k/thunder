@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useDesign, type Theme} from '@thunderid/design';
-import {AcrylicOrangeTheme, ThemeProvider} from '@wso2/oxygen-ui';
+import {OxygenTheme, ThemeProvider} from '@wso2/oxygen-ui';
 import type {JSX, ReactNode} from 'react';
 import ColorSchemeSync from './ColorSchemeSync';
 
@@ -22,11 +22,11 @@ export default function PreviewThemeProvider({
 }: {
   colorScheme: 'light' | 'dark';
   colorSchemeNode?: HTMLElement | null;
-  /** Base theme the resolved design is merged over. Defaults to Acrylic Orange. */
+  /** Base theme the resolved design is merged over. Defaults to the Oxygen UI default theme. */
   baseTheme?: Theme;
   children: ReactNode;
 }): JSX.Element {
-  const effectiveBaseTheme = baseTheme ?? (AcrylicOrangeTheme as Theme);
+  const effectiveBaseTheme = baseTheme ?? (OxygenTheme as Theme);
   const {theme} = useDesign(effectiveBaseTheme);
 
   // MUI's ThemeProvider supports CSS-vars-specific props (colorSchemeNode,

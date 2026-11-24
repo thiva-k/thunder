@@ -386,7 +386,7 @@ const translations = {
     'welcome.wayfinderFolderImport.status.success': 'Wayfinder sample configured in {{productName}} successfully',
     'welcome.wayfinderFolderImport.status.resourcesImported_one': '{{count}} resource imported',
     'welcome.wayfinderFolderImport.status.resourcesImported_other': '{{count}} resources imported',
-    'welcome.wayfinderFolderImport.status.envNotFound': 'thunderid-config/*.env — not found',
+    'welcome.wayfinderFolderImport.status.envNotFound': 'Configuration .env file not found',
     'welcome.wayfinderFolderImport.errors.cannotReadFolder': 'Could not read the selected folder.',
     'welcome.wayfinderFolderImport.errors.importFailed': 'Import failed. Please try again.',
     'welcome.wayfinderFolderImport.errors.partialFailure': 'Import completed with {{count}} failed resource(s).',
@@ -2492,11 +2492,11 @@ const translations = {
       'Map {{productName}} subject attribute names to the attribute names expected by the PDP.',
     'subjectMapping.mappings.hint':
       'Select extra user or agent attributes to include in the PDP request. The PDP attribute is optional and is only needed when the PDP expects a different name.',
-    'subjectMapping.mappings.thunderIdAttribute': '{{productName}} attribute',
+    'subjectMapping.mappings.productAttribute': '{{productName}} attribute',
     'subjectMapping.mappings.pdpAttribute': 'PDP attribute',
     'subjectMapping.mappings.pdpAttributeOptional': 'PDP attribute (optional)',
     'subjectMapping.mappings.mapPdpAttribute': 'Map to a different PDP attribute',
-    'subjectMapping.mappings.thunderIdPlaceholder': 'e.g. email',
+    'subjectMapping.mappings.productAttributePlaceholder': 'e.g. email',
     'subjectMapping.mappings.add': 'Add mapping',
     'subjectMapping.mappings.user': 'User mappings',
     'subjectMapping.mappings.agent': 'Agent mappings',
@@ -3559,7 +3559,7 @@ const translations = {
     'edit.mcp.connect.redirectUris.optionalHint':
       'Each URI must be a loopback address (http://localhost or http://127.0.0.1) or use HTTPS. Needed only for the authorization code grant.',
     'edit.mcp.connect.sections.endpoints': 'Endpoints',
-    'edit.mcp.connect.sections.endpoints.description': 'ThunderID OAuth 2.1 endpoints for this client.',
+    'edit.mcp.connect.sections.endpoints.description': 'OAuth 2.1 endpoints for this client.',
     'edit.mcp.connect.clientUri.label': 'Client URI',
     'edit.mcp.connect.clientUri.hint': 'Public homepage of this client (optional).',
     'edit.mcp.connect.clientUri.error.invalid': 'Please enter a valid URL',
@@ -3634,7 +3634,7 @@ const translations = {
     'edit.general.labels.applicationId': 'Application ID',
     'edit.general.labels.clientId': 'Client ID',
     'edit.general.hints.applicationId':
-      "ThunderID's internal identifier for this application. Use it when calling the Management API.",
+      'The internal identifier for this application. Use it when calling the Management API.',
     'edit.general.hints.clientId':
       'The public OAuth2 client identifier this application uses to authenticate as a client.',
     'edit.general.labels.allowedUserTypes': 'Allowed user types',
@@ -4024,7 +4024,7 @@ const translations = {
     'landing.title': 'Import / Export',
     'landing.subtitle': 'Choose whether to import a configuration file or export your current one.',
     'landing.type.import.label': 'Import',
-    'landing.type.import.description': 'Bring in an existing ThunderID configuration file.',
+    'landing.type.import.description': 'Bring in an existing configuration file.',
     'landing.type.export.label': 'Export',
     'landing.type.export.description': 'Download your current configuration as a file.',
 
@@ -6760,7 +6760,7 @@ const translations = {
   },
   settings: {
     'page.title': 'Settings',
-    'page.subtitle': 'Settings that apply across your entire ThunderID deployment.',
+    'page.subtitle': 'Settings that apply across your entire deployment.',
     'tabs.ariaLabel': 'Settings sections',
     'tabs.cors': 'CORS',
     'tabs.accountSecurity': 'Account security',

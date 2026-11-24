@@ -24,7 +24,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 function renderWithConfig(config: ProductConfig | undefined, Consumer: React.ComponentType) {
-  window.__THUNDERID_RUNTIME_CONFIG__ = config;
+  window.__IAM_RUNTIME_CONFIG__ = config;
   act(() => {
     root.render(
       <ConfigProvider>
@@ -65,7 +65,7 @@ describe('ConfigProvider', () => {
   let originalConfig: ProductConfig | undefined;
 
   beforeEach(() => {
-    originalConfig = window.__THUNDERID_RUNTIME_CONFIG__;
+    originalConfig = window.__IAM_RUNTIME_CONFIG__;
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -75,12 +75,12 @@ describe('ConfigProvider', () => {
     act(() => {
       root.unmount();
     });
-    window.__THUNDERID_RUNTIME_CONFIG__ = originalConfig;
+    window.__IAM_RUNTIME_CONFIG__ = originalConfig;
     document.body.removeChild(container);
   });
 
   it('throws when window config is not set', () => {
-    window.__THUNDERID_RUNTIME_CONFIG__ = undefined;
+    window.__IAM_RUNTIME_CONFIG__ = undefined;
     expect(() => {
       act(() => {
         root.render(
@@ -89,7 +89,7 @@ describe('ConfigProvider', () => {
           </ConfigProvider>,
         );
       });
-    }).toThrow('ThunderID runtime configuration is not available on window.__THUNDERID_RUNTIME_CONFIG__');
+    }).toThrow('Runtime configuration is not available on window.__IAM_RUNTIME_CONFIG__');
   });
 
   it('provides server URL with HTTPS when http_only is false', () => {

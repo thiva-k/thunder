@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package nextjssdk provides MCP tools for integrating with the ThunderID Next.js SDK.
+// Package nextjssdk provides MCP tools for integrating with the Next.js SDK.
 package nextjssdk
 
 import (
@@ -15,8 +15,8 @@ import (
 func RegisterTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "integrate_nextjs_sdk",
-		Description: "Provides instructions and code snippets for integrating ThunderID authentication via the " +
-			"ThunderID Next.js SDK into a Next.js application (App Router). Uses ThunderID-hosted login pages " +
+		Description: "Provides instructions and code snippets for integrating authentication via the " +
+			"Next.js SDK into a Next.js application (App Router). Uses server-hosted login pages " +
 			"with redirect-based OAuth 2.0/OIDC flow and server-side session management via middleware.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Integrate Next.js SDK",
@@ -32,12 +32,12 @@ func integrateNextJSSDK(
 	input integrateNextJSSDKInput,
 ) (*mcp.CallToolResult, integrateNextJSSDKOutput, error) {
 	rawInstructions := `
-# ThunderID Authentication – Next.js Integration Instructions
+# Authentication – Next.js Integration Instructions
 
 ## Project Context
 
-This project is a **Next.js application** (App Router) that integrates **ThunderID authentication**
-using the **ThunderID Next.js SDK** (~@thunderid/nextjs~). It uses ThunderID-hosted login pages with
+This project is a **Next.js application** (App Router) that integrates **authentication**
+using the **Next.js SDK** (~@thunderid/nextjs~). It uses server-hosted login pages with
 redirect-based OAuth 2.0/OIDC flow and server-side session management.
 
 ---
@@ -45,9 +45,9 @@ redirect-based OAuth 2.0/OIDC flow and server-side session management.
 ## SDK & Platform
 
 - **SDK**: @thunderid/nextjs
-- **Authentication Mode**: ThunderID-hosted login (redirect-based)
+- **Authentication Mode**: server-hosted login (redirect-based)
 - **Router**: App Router (not Pages Router)
-- **Base URL**: https://localhost:8090 (or ThunderID instance URL)
+- **Base URL**: https://localhost:8090 (or server URL)
 - **Client ID**: <CREATED_APP'S_CLIENT_ID>
 
 ---
@@ -88,7 +88,7 @@ Generate a random value for ~THUNDERID_SECRET~:
 openssl rand -base64 32
 ~~~
 
-~NODE_TLS_REJECT_UNAUTHORIZED=0~ is required when ThunderID runs locally with a self-signed certificate.
+~NODE_TLS_REJECT_UNAUTHORIZED=0~ is required when the server runs locally with a self-signed certificate.
 
 ### Step 4: Add ThunderIDProvider to your layout
 
@@ -134,9 +134,9 @@ export default function RootLayout({
 }
 ~~~
 
-### Step 5: Add the ThunderID proxy
+### Step 5: Add the SDK proxy
 
-Create a ~proxy.ts~ file at your project root to proxy requests through ThunderID and protect routes:
+Create a ~proxy.ts~ file at your project root to proxy requests through the SDK and protect routes:
 
 ~~~ts
 // proxy.ts
@@ -160,9 +160,9 @@ export const config = {
 }
 ~~~
 
-### Step 6: Build with ThunderID components
+### Step 6: Build with the SDK components
 
-Update your home page with ThunderID authentication components:
+Update your home page with authentication components:
 
 ~~~tsx
 // app/page.tsx
@@ -188,7 +188,7 @@ export default function Home() {
 npm run dev
 ~~~
 
-Visit http://localhost:3000. Click **Sign In** to be redirected to the ThunderID-hosted sign-in page.
+Visit http://localhost:3000. Click **Sign In** to be redirected to the server-hosted sign-in page.
 
 ---
 
@@ -241,7 +241,7 @@ const isProtectedRoute = createRouteMatcher([
 
 ## References
 
-- [ThunderID Next.js SDK Docs](/docs/next/sdks/nextjs/overview)
+- [Next.js SDK Docs](/docs/next/sdks/nextjs/overview)
 - [ThunderIDProvider Configuration](/docs/next/sdks/nextjs/apis/contexts/thunderid-provider)
 - [SDK Components](/docs/next/sdks/nextjs/apis/components/sign-in-button)
 `

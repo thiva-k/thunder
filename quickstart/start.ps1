@@ -39,7 +39,7 @@ Stop-PortListener -Port $DP_PORT
 Stop-PortListener -Port $AUTH_DP_PORT
 
 Write-Host "========================================="
-Write-Host "   ThunderID Quickstart"
+Write-Host "   Choreo Identity & Access Management Quickstart"
 Write-Host "========================================="
 Write-Host ""
 

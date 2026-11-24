@@ -388,7 +388,7 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
                   dark: `${import.meta.env.BASE_URL.replace(/\/$/, '')}/assets/images/logo-inverted.svg`,
                 }}
                 alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}}
-                height={27}
+                height={24}
                 width="auto"
                 alignItems="center"
                 marginBottom="3px"
@@ -478,7 +478,7 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
 
       <AppShell.Footer>
         <Footer>
-          <Footer.Copyright>© {new Date().getFullYear()} The ThunderID Authors</Footer.Copyright>
+          <Footer.Copyright>© {new Date().getFullYear()} Choreo Labs LLC.</Footer.Copyright>
           <Footer.Divider />
           <Footer.Version>{`${VERSION}`}</Footer.Version>
         </Footer>

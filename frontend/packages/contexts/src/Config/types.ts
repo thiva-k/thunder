@@ -352,7 +352,7 @@ export interface ProductConfig {
  * @example
  * ```javascript
  * // In public/config.js
- * window.__THUNDERID_RUNTIME_CONFIG__ = {
+ * window.__IAM_RUNTIME_CONFIG__ = {
  *   client: {
  *     client_id: 'CONSOLE'
  *   },
@@ -369,6 +369,6 @@ export interface ProductConfig {
 declare global {
   interface Window {
     /** Runtime configuration loaded from config.js */
-    __THUNDERID_RUNTIME_CONFIG__?: ProductConfig;
+    __IAM_RUNTIME_CONFIG__?: ProductConfig;
   }
 }

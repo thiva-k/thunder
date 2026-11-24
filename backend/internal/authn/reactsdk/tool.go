@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package reactsdk provides MCP tools for integrating with the ThunderID React SDK.
+// Package reactsdk provides MCP tools for integrating with the React SDK.
 package reactsdk
 
 import (
@@ -15,8 +15,8 @@ import (
 func RegisterTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "integrate_react_sdk",
-		Description: "Provides instructions and code snippets for integrating ThunderID authentication via the " +
-			"ThunderID React SDK into a React application. Supports two modes: Mode 1 (default) - ThunderID-hosted " +
+		Description: "Provides instructions and code snippets for integrating authentication via the " +
+			"React SDK into a React application. Supports two modes: Mode 1 (default) - server-hosted " +
 			"login pages with redirect-based OAuth 2.0/OIDC flow. Mode 2 - Self-hosted login pages using Flow API " +
 			"or direct API calls for custom authentication UI.",
 		Annotations: &mcp.ToolAnnotations{
@@ -33,14 +33,14 @@ func integrateReactSDK(
 	input integrateReactSDKInput,
 ) (*mcp.CallToolResult, integrateReactSDKOutput, error) {
 	rawInstructions := `
-# ThunderID Authentication – React Integration Instructions
+# Authentication – React Integration Instructions
 
 ## Two Integration Modes
 
-ThunderID supports two ways to integrate React authentication:
+The server supports two ways to integrate React authentication:
 
-- **Mode 1 (Default - Recommended)**: ThunderID-hosted login pages with redirect-based
-  OAuth 2.0/OIDC flow using the ThunderID React SDK. Minimal configuration,
+- **Mode 1 (Default - Recommended)**: server-hosted login pages with redirect-based
+  OAuth 2.0/OIDC flow using the React SDK. Minimal configuration,
   recommended for most use cases.
 - **Mode 2**: Self-hosted custom login pages using direct API calls or flow
   orchestration for maximum control. Refer to the React Vanilla Sample or React
@@ -48,17 +48,16 @@ ThunderID supports two ways to integrate React authentication:
 
 This guide covers both integration modes:
 
-- **Mode 1** (default): ThunderID-hosted login with redirect-based OAuth 2.0/OIDC.
+- **Mode 1** (default): server-hosted login with redirect-based OAuth 2.0/OIDC.
 - **Mode 2**: Self-hosted app-native login using alternate API-driven patterns.
 
-Mode 1 remains the recommended default path and uses the **ThunderID React SDK**
+Mode 1 remains the recommended default path and uses the **React SDK**
 for a minimal, declarative authentication flow.
 
 ## Project Context
 
-This project is a **React application** that integrates **ThunderID
-authentication** using the **ThunderID React SDK**, covering both
-ThunderID-hosted login (Mode 1) and app-native/self-hosted flows (Mode 2).
+This project is a **React application** that integrates **authentication** using the **React SDK**, covering both
+server-hosted login (Mode 1) and app-native/self-hosted flows (Mode 2).
 
 The goal is to demonstrate a **minimal, declarative authentication flow** with minimal setup.
 This project intentionally avoids custom logic, hooks, and advanced configuration.
@@ -68,8 +67,8 @@ This project intentionally avoids custom logic, hooks, and advanced configuratio
 ## SDK & Platform
 
 - **SDK**: @thunderid/react
-- **Authentication Mode**: ThunderID-hosted login (redirect-based)
-- **Base URL**: https://localhost:8090 (or ThunderID instance URL)
+- **Authentication Mode**: server-hosted login (redirect-based)
+- **Base URL**: https://localhost:8090 (or server URL)
 - **Client ID**: <CREATED_APP'S_CLIENT_ID>
 
 ---
@@ -169,7 +168,7 @@ function Navigation() {
 
 #### 2. Sign Up (Self-Registration)
 
-No custom React component is needed for signup. When self-registration is enabled, the ThunderID-hosted
+No custom React component is needed for signup. When self-registration is enabled, the server-hosted
 sign-in page automatically renders a **Sign Up** link.
 
 **Two conditions must both be met:**
@@ -494,7 +493,7 @@ function App() {
   return (
     <div className="app">
       <header>
-        <h1>ThunderID Auth Demo</h1>
+        <h1>Auth Demo</h1>
         <Loading>
           <div>Loading...</div>
         </Loading>
@@ -515,15 +514,15 @@ export default App
 
 ---
 
-## Method 2: ThunderID App Native Authentication with React (Vite)
+## Method 2: App Native Authentication with React (Vite)
 
-This guide shows how to integrate ThunderID App Native authentication into a React
+This guide shows how to integrate App Native authentication into a React
 app using ~@thunderid/react~, based on this sample project.
 
 ### Prerequisites
 
-- A ThunderID application already created.
-- Your ThunderID **Application ID (UUID)**.
+- An application already created.
+- Your **Application ID (UUID)**.
 - Node.js and npm installed.
 
 ### 1) Create a new Vite project (or use existing)
@@ -559,7 +558,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThunderIDProvider
       baseUrl="https://localhost:8090"
-      applicationId="<THUNDERID_APP_ID>"
+      applicationId="<APPLICATION_ID>"
     >
       <App />
     </ThunderIDProvider>
@@ -567,7 +566,7 @@ createRoot(document.getElementById('root')).render(
 );
 ~~~
 
-Replace ~<THUNDERID_APP_ID>~ with your real application UUID from ThunderID.
+Replace ~<APPLICATION_ID>~ with your real application UUID.
 
 ### 4) Add Sign-In UI
 
@@ -604,7 +603,7 @@ For cleaner configuration, store values in ~.env~:
 
 ~~~bash
 VITE_THUNDERID_BASE_URL=https://localhost:8090
-VITE_THUNDERID_APP_ID=<THUNDERID_APP_ID>
+VITE_APPLICATION_ID=<APPLICATION_ID>
 ~~~
 
 Then use them in ~src/main.jsx~:
@@ -612,7 +611,7 @@ Then use them in ~src/main.jsx~:
 ~~~jsx
 <ThunderIDProvider
   baseUrl={import.meta.env.VITE_THUNDERID_BASE_URL}
-  applicationId={import.meta.env.VITE_THUNDERID_APP_ID}
+  applicationId={import.meta.env.VITE_APPLICATION_ID}
 >
   <App />
 </ThunderIDProvider>
@@ -622,7 +621,7 @@ Then use them in ~src/main.jsx~:
 
 #### ✅ Do
 
-- Do replace ~<THUNDERID_APP_ID>~ with the exact UUID from your ThunderID app registration.
+- Do replace ~<APPLICATION_ID>~ with the exact UUID from your app registration.
 - Do keep auth settings (~baseUrl~, app ID) environment-specific (dev/stage/prod).
 - Do keep ~ThunderIDProvider~ high in the component tree (usually in ~src/main.jsx~).
 - Do validate the ~baseUrl~ and cert setup when running locally over HTTPS.
@@ -639,7 +638,7 @@ Then use them in ~src/main.jsx~:
 ### Quick troubleshooting
 
 - **Sign-in not starting:** Verify ~applicationId~ and ~baseUrl~.
-- **Invalid app/client errors:** Re-check the ThunderID app registration and copied UUID.
+- **Invalid app/client errors:** Re-check the app registration and copied UUID.
 - **Local HTTPS issues:** Confirm your local endpoint and certificate trust setup.
 
 ---
@@ -650,7 +649,7 @@ For complete implementation examples of Method 2 authentication, refer to:
   - App-native authentication using Flow Orchestration API
   - Standard OAuth 2.0 / OIDC with custom UI
 
-Both samples show how to build custom authentication UIs while leveraging ThunderID's authentication capabilities.
+Both samples show how to build custom authentication UIs while leveraging the server's authentication capabilities.
 
 ---
 
@@ -1089,13 +1088,13 @@ function App() {
 
 ### Issue: CORS errors
 
-**Solution:** Configure CORS settings in ThunderID to allow your app's origin.
+**Solution:** Configure CORS settings on the server to allow your app's origin.
 
 ---
 
 ## References
 
-- [ThunderID React SDK Docs](/docs/next/sdks/react/overview)
+- [React SDK Docs](/docs/next/sdks/react/overview)
 - [ThunderIDProvider Configuration](/docs/next/sdks/react/apis/contexts/thunderid-provider)
 - [SDK Components](/docs/next/sdks/react/apis/components/sign-in-button)
 - [useThunderID Hook](/docs/next/sdks/react/apis/hooks/use-thunderid)

@@ -41,7 +41,7 @@ export default function FontImporter({
   targetDocument = undefined,
 }: FontImporterProps): null {
   const {config} = useConfig();
-  const idPrefix = config.brand.product_name.toLowerCase().replace(/\s+/g, '-');
+  const idPrefix = config.brand.product_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const fontOverrideId = `${idPrefix}-font-override`;
 
   useFontStylesheetLink(importURL, targetDocument);

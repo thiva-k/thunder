@@ -11,7 +11,7 @@ import (
 func newServer() *mcp.Server {
 	// Create the MCP server instance.
 	return mcp.NewServer(&mcp.Implementation{
-		Name:    "thunderid-mcp",
+		Name:    "choreo-iam-mcp",
 		Version: "1.0.0",
 	}, nil)
 }

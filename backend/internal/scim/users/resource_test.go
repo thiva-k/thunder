@@ -28,7 +28,7 @@ func TestResourceTestSuite(t *testing.T) {
 
 const testAPIBaseURL = "https://api.example.com"
 
-const testPersonExtensionURN = "urn:thunderid:params:scim:schemas:person:2.0:User"
+const testPersonExtensionURN = "urn:choreo-iam:params:scim:schemas:person:2.0:User"
 
 // TestFilterAttrsBySchema tests Filter Attrs By Schema.
 func (suite *ResourceTestSuite) TestFilterAttrsBySchema() {
@@ -170,13 +170,13 @@ func (suite *ResourceTestSuite) TestSCIMUser_MarshalJSON() {
 	var map1 map[string]interface{}
 	require.NoError(t, json.Unmarshal(b1, &map1))
 	require.Equal(t, "user-1", map1["id"])
-	require.Nil(t, map1["urn:thunderid:params:scim:schemas:employee:2.0:User"])
+	require.Nil(t, map1["urn:choreo-iam:params:scim:schemas:employee:2.0:User"])
 
 	// 2. With extension attributes and extension URN
 	u2 := SCIMUser{
 		ID:           "user-2",
-		Schemas:      []string{scim.SCIMCoreUserSchemaURN, "urn:thunderid:params:scim:schemas:employee:2.0:User"},
-		ExtensionURN: "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		Schemas:      []string{scim.SCIMCoreUserSchemaURN, "urn:choreo-iam:params:scim:schemas:employee:2.0:User"},
+		ExtensionURN: "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		Attributes:   json.RawMessage(`{"department":"Engineering"}`),
 		Meta: scim.SCIMMeta{
 			ResourceType: "User",
@@ -188,9 +188,9 @@ func (suite *ResourceTestSuite) TestSCIMUser_MarshalJSON() {
 	var map2 map[string]interface{}
 	require.NoError(t, json.Unmarshal(b2, &map2))
 	require.Equal(t, "user-2", map2["id"])
-	require.NotNil(t, map2["urn:thunderid:params:scim:schemas:employee:2.0:User"])
+	require.NotNil(t, map2["urn:choreo-iam:params:scim:schemas:employee:2.0:User"])
 
-	ext := map2["urn:thunderid:params:scim:schemas:employee:2.0:User"].(map[string]interface{})
+	ext := map2["urn:choreo-iam:params:scim:schemas:employee:2.0:User"].(map[string]interface{})
 	require.Equal(t, "Engineering", ext["department"])
 
 	// 3. With enterprise attributes
@@ -237,7 +237,7 @@ func (suite *ResourceTestSuite) TestBuildSCIMUserResource_EnterpriseAttrs() {
 // TestProjectSCIMAttributes tests Project SCIM Attributes.
 func (suite *ResourceTestSuite) TestProjectSCIMAttributes() {
 	t := suite.T()
-	const extURN = "urn:thunderid:params:scim:schemas:employee:2.0:User"
+	const extURN = "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
 	resource := map[string]interface{}{
 		"id":       "u1",
 		"schemas":  []interface{}{scim.SCIMCoreUserSchemaURN, extURN},
@@ -491,7 +491,7 @@ func (suite *ResourceTestSuite) TestProjectSCIMUserListResponse() {
 // TestProjectSCIMUserResource tests Project SCIM User Resource.
 func (suite *ResourceTestSuite) TestProjectSCIMUserResource() {
 	t := suite.T()
-	const extURN = "urn:thunderid:params:scim:schemas:employee:2.0:User"
+	const extURN = "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
 	u := SCIMUser{
 		ID:           "u1",
 		Schemas:      []string{scim.SCIMCoreUserSchemaURN, extURN},

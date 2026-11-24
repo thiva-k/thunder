@@ -33,7 +33,7 @@
 --   3. OS cron (every 60 minutes):
 -- --      */60 * * * * postgres PGPASSWORD=<pass> psql -h <host> -p <port> \
 -- --        -U <user> -d <runtime_transient> -c "CALL cleanup_expired_runtime_transient_data();" \
--- --        >> /var/log/thunderid-cleanup.log 2>&1
+-- --        >> /var/log/choreo-iam-cleanup.log 2>&1
 -- ============================================================
 
 -- Drop the old parameterless signature so re-applying doesn't leave an ambiguous overload.

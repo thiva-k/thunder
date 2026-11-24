@@ -81,7 +81,7 @@ func (suite *FilterTestSuite) TestParseSCIMFilterForEq_AttributeNamePrefixedWith
 func (suite *FilterTestSuite) TestParseSCIMFilterForEq_PathSegmentMatchingOperator_Accepted() {
 	t := suite.T()
 	filters, svcErr := ParseSCIMFilterForEq(
-		`urn:thunderid:params:scim:schemas:employee:2.0:User:emails.co eq "LK"`, testFilterAttrRules)
+		`urn:choreo-iam:params:scim:schemas:employee:2.0:User:emails.co eq "LK"`, testFilterAttrRules)
 	require.Nil(t, svcErr)
 	require.Equal(t, "LK", filters["emails.co"])
 	require.Len(t, filters, 1)
@@ -161,7 +161,7 @@ func (suite *FilterTestSuite) TestParseSCIMFilterForEq_CustomAttrWithoutURN_Retu
 func (suite *FilterTestSuite) TestParseSCIMFilterForEq_CustomAttrWithURN_Accepted() {
 	t := suite.T()
 	filters, svcErr := ParseSCIMFilterForEq(
-		`urn:thunderid:params:scim:schemas:employee:2.0:User:department eq "eng"`, testFilterAttrRules)
+		`urn:choreo-iam:params:scim:schemas:employee:2.0:User:department eq "eng"`, testFilterAttrRules)
 	require.Nil(t, svcErr)
 	require.Equal(t, "eng", filters["department"])
 	require.Len(t, filters, 1)

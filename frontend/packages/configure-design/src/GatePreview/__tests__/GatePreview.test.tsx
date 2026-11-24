@@ -22,7 +22,7 @@ vi.mock('@thunderid/design', async (importOriginal) => {
     AuthCardLayout: ({children}: {children: React.ReactNode}) => <div data-testid="auth-card-layout">{children}</div>,
     FontImporter: () => null,
     getFontImportURL: () => undefined,
-    AcrylicOrangeTheme: {},
+    OxygenTheme: {},
     getCspNonce: () => document.querySelector('meta[property="csp-nonce"]')?.getAttribute('content') ?? undefined,
   };
 });

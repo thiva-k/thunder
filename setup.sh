@@ -23,8 +23,7 @@ fi
 set -e
 
 # Default settings
-PRODUCT_NAME="ThunderID"
-PRODUCT_NAME_LOWERCASE="$(echo "$PRODUCT_NAME" | tr '[:upper:]' '[:lower:]')"
+PRODUCT_NAME="Choreo Identity & Access Management"
 DEBUG_PORT=${DEBUG_PORT:-2345}
 DEBUG_MODE=${DEBUG_MODE:-false}
 VERBOSE_MODE=${VERBOSE_MODE:-false}
@@ -394,11 +393,11 @@ generate_x509_cert() {
     if [ "$algo" = "ecdsa" ]; then
         openssl ecparam -name prime256v1 -genkey -noout -param_enc named_curve -out "$key_file" >/dev/null 2>&1 || true
         openssl req -new -x509 -nodes -days 3650 -key "$key_file" -out "$cert_file" \
-            -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
+            -subj "/O=Choreo Labs/OU=${PRODUCT_NAME}/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
     else
         openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout "$key_file" -out "$cert_file" \
-            -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
+            -subj "/O=Choreo Labs/OU=${PRODUCT_NAME}/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
     fi
     if [ ! -f "$cert_file" ] || [ ! -f "$key_file" ]; then

@@ -25,7 +25,7 @@ describe('SettingsPage', () => {
     renderWithProviders(<SettingsPage />);
 
     expect(screen.getByText('Settings')).toBeInTheDocument();
-    expect(screen.getByText('Settings that apply across your entire ThunderID deployment.')).toBeInTheDocument();
+    expect(screen.getByText('Settings that apply across your entire deployment.')).toBeInTheDocument();
     expect(screen.getByRole('tab', {name: 'CORS'})).toBeInTheDocument();
     expect(screen.getByTestId('cors-section')).toBeInTheDocument();
   });

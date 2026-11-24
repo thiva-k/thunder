@@ -51,7 +51,7 @@ export default function SignInSlogan(): JSX.Element {
       display={{xs: 'none', md: 'flex'}}
       className={cn('SignInSlogan--root')}
     >
-      <ColorSchemeImage src={logoSrc} alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}} height={50} width="auto" />
+      <ColorSchemeImage src={logoSrc} alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}} height={28} width="auto" />
       <Stack sx={{flexDirection: 'column', alignSelf: 'center', gap: 4}}>
         {items.map((item) => (
           <Stack key={item.title} direction="row" sx={{gap: 2}}>

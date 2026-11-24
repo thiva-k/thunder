@@ -18,7 +18,7 @@ set -euo pipefail
 #
 #   # PostgreSQL
 #   ./cleanup_runtime_transient_db.sh -type postgres -host localhost -port 5432 \
-#       -name thunderidruntime -username thunderid -password secret
+#       -name iamruntime -username iam -password secret
 #
 #   # With options
 #   ./cleanup_runtime_transient_db.sh -type sqlite -path /path/to/runtime_transient.db \
@@ -28,10 +28,10 @@ set -euo pipefail
 #   ./cleanup_runtime_transient_db.sh -type sqlite -path /path/to/runtime_transient.db -dry_run
 #
 #   # Cron (every 30 minutes)
-#   */30 * * * * /opt/thunderid/scripts/cleanup_runtime_transient_db.sh \
-#       -type postgres -host localhost -port 5432 -name thunderidruntime \
-#       -username thunderid -password "$THUNDERID_DB_PASSWORD" \
-#       >> /var/log/thunderid-cleanup.log 2>&1
+#   */30 * * * * /opt/choreo-iam/scripts/cleanup_runtime_transient_db.sh \
+#       -type postgres -host localhost -port 5432 -name iamruntime \
+#       -username iam -password "$IAM_DB_PASSWORD" \
+#       >> /var/log/choreo-iam-cleanup.log 2>&1
 # =============================================================================
 
 # Script common variables.
@@ -348,7 +348,7 @@ cleanup_all_tables() {
 
 main() {
   echo "============================================"
-  echo "ThunderID Runtime-transient Database Cleanup"
+  echo "Runtime-transient Database Cleanup"
   echo "$(date '+%Y-%m-%d %H:%M:%S')"
   echo "============================================"
   echo ""

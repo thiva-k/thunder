@@ -21,7 +21,6 @@ value:
           - "data:"
         connect-src:
           - "'self'"
-          - "https://thunderid.dev"
         worker-src:
           - "'self'"
           - "blob:" # Monaco instantiated web workers.

@@ -41,7 +41,7 @@ func backups(t *testing.T, path string) []string {
 
 func TestNewCreatesFileAndDirectoryWithPermissions(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "logs")
-	path := filepath.Join(dir, "thunderid.log")
+	path := filepath.Join(dir, "choreo-iam.log")
 
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestNewRequiresPath(t *testing.T) {
 }
 
 func TestNewClampsNegativeValues(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: -5, IntervalDays: -1, MaxBackups: -1, MaxAgeDays: -1})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -84,14 +84,14 @@ func TestNewErrorWhenDirectoryUncreatable(t *testing.T) {
 	parent := t.TempDir()
 	makeReadOnlyDir(t, parent)
 
-	_, err := New(Config{Path: filepath.Join(parent, "sub", "thunderid.log")})
+	_, err := New(Config{Path: filepath.Join(parent, "sub", "choreo-iam.log")})
 	assert.Error(t, err)
 }
 
 func TestRotateHandlesRenameFailure(t *testing.T) {
 	skipIfWindows(t)
 	dir := t.TempDir()
-	path := filepath.Join(dir, "thunderid.log")
+	path := filepath.Join(dir, "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: 0.01})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -111,7 +111,7 @@ func TestRotateHandlesRenameFailure(t *testing.T) {
 func TestScheduledRotationHandlesFailure(t *testing.T) {
 	skipIfWindows(t)
 	dir := t.TempDir()
-	path := filepath.Join(dir, "thunderid.log")
+	path := filepath.Join(dir, "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -126,7 +126,7 @@ func TestScheduledRotationHandlesFailure(t *testing.T) {
 }
 
 func TestUniqueRotatedPathAvoidsGzCollision(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -145,7 +145,7 @@ func TestCompressFileErrorsOnMissingSource(t *testing.T) {
 }
 
 func TestWriteAppends(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -162,7 +162,7 @@ func TestWriteAppends(t *testing.T) {
 }
 
 func TestNoRotationWhenSizeDisabled(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: 0})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -176,7 +176,7 @@ func TestNoRotationWhenSizeDisabled(t *testing.T) {
 }
 
 func TestSizeRotation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: 1})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -192,7 +192,7 @@ func TestSizeRotation(t *testing.T) {
 }
 
 func TestWriteRecoversFromMissingFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -211,7 +211,7 @@ func TestWriteRecoversFromMissingFile(t *testing.T) {
 }
 
 func TestFractionalSizeRotation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	// 0.01 MB is ~10 KB, so a couple of small writes should rotate.
 	w, err := New(Config{Path: path, MaxSizeMB: 0.01})
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestFractionalSizeRotation(t *testing.T) {
 }
 
 func TestRetentionByCount(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: 1, MaxBackups: 2})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -243,7 +243,7 @@ func TestRetentionByCount(t *testing.T) {
 }
 
 func TestRetentionByAge(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxAgeDays: 30})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -267,7 +267,7 @@ func TestRetentionByAge(t *testing.T) {
 }
 
 func TestCompressOnRotation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: 1, Compress: true})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -299,7 +299,7 @@ func TestNextBoundary(t *testing.T) {
 }
 
 func TestScheduledRotationRotatesNonEmptyFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -312,7 +312,7 @@ func TestScheduledRotationRotatesNonEmptyFile(t *testing.T) {
 }
 
 func TestScheduledRotationSkipsEmptyFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()
@@ -322,7 +322,7 @@ func TestScheduledRotationSkipsEmptyFile(t *testing.T) {
 }
 
 func TestCloseStopsTimeRotation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, IntervalDays: 1})
 	require.NoError(t, err)
 
@@ -337,7 +337,7 @@ func TestCloseStopsTimeRotation(t *testing.T) {
 }
 
 func TestCloseRejectsFurtherWrites(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path})
 	require.NoError(t, err)
 
@@ -349,7 +349,7 @@ func TestCloseRejectsFurtherWrites(t *testing.T) {
 }
 
 func TestConcurrentWrites(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "thunderid.log")
+	path := filepath.Join(t.TempDir(), "choreo-iam.log")
 	w, err := New(Config{Path: path, MaxSizeMB: 1})
 	require.NoError(t, err)
 	defer func() { _ = w.Close() }()

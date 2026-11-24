@@ -256,7 +256,7 @@ need:
   parameters:
     configOverrides:
       consoleConfigJs: |
-        window.__THUNDERID_RUNTIME_CONFIG__ = {
+        window.__IAM_RUNTIME_CONFIG__ = {
           brand: { product_name: "Acme Identity", ... },
           ...
         };

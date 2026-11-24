@@ -95,11 +95,11 @@ spec:
     #       port: 8090
     #       # ... full ThunderID server configuration
     #   gateConfigJs: |
-    #     window.__THUNDERID_RUNTIME_CONFIG__ = {
+    #     window.__IAM_RUNTIME_CONFIG__ = {
     #       # ... full Gate frontend configuration
     #     };
     #   consoleConfigJs: |
-    #     window.__THUNDERID_RUNTIME_CONFIG__ = {
+    #     window.__IAM_RUNTIME_CONFIG__ = {
     #       # ... full Console frontend configuration
     #     };
 

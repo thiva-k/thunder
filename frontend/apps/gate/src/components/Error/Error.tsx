@@ -31,6 +31,7 @@ export default function Error(): JSX.Element {
           justifyContent: 'center',
           height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
           minHeight: '100%',
+          textAlign: 'center',
         },
       ]}
     >
@@ -41,7 +42,7 @@ export default function Error(): JSX.Element {
             dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,
           }}
           alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}}
-          height={40}
+          height={24}
           width="auto"
         />
         <ColorSchemeImage

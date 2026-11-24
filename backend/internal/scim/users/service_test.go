@@ -64,7 +64,7 @@ func (suite *ServiceTestSuite) TestGetUser_Success() {
 	require.Nil(t, err)
 	require.NotNil(t, scimUser)
 	require.Equal(t, "user-123", scimUser.ID)
-	require.Contains(t, scimUser.Schemas, "urn:thunderid:params:scim:schemas:employee:2.0:User")
+	require.Contains(t, scimUser.Schemas, "urn:choreo-iam:params:scim:schemas:employee:2.0:User")
 }
 
 // TestGetUser_SchemaLookupFailure_DoesNotLeakAttributes tests Get User for Schema Lookup
@@ -404,7 +404,7 @@ func (suite *ServiceTestSuite) TestCreateUser_Success() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"given_name": json.RawMessage(`"Alice"`)},
 	}
 	createdUser := &providers.User{
@@ -428,7 +428,7 @@ func (suite *ServiceTestSuite) TestCreateUser_Success() {
 	require.Nil(t, err)
 	require.NotNil(t, scimUser)
 	require.Equal(t, "user-new", scimUser.ID)
-	require.Contains(t, scimUser.Schemas, "urn:thunderid:params:scim:schemas:employee:2.0:User")
+	require.Contains(t, scimUser.Schemas, "urn:choreo-iam:params:scim:schemas:employee:2.0:User")
 }
 
 // TestCreateUser_MissingRequiredAttribute_ReturnsSchemaValidationError tests Create User for Missing Required
@@ -442,7 +442,7 @@ func (suite *ServiceTestSuite) TestCreateUser_MissingRequiredAttribute_ReturnsSc
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"given_name": json.RawMessage(`"Alice"`)},
 	}
 
@@ -472,7 +472,7 @@ func (suite *ServiceTestSuite) TestCreateUser_UndeclaredAttribute_ReturnsSchemaV
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{
 			"department": json.RawMessage(`"Eng"`),
 			"undeclared": json.RawMessage(`"bad"`),
@@ -505,7 +505,7 @@ func (suite *ServiceTestSuite) TestCreateUser_MalformedSchemaJSON_ReturnsInterna
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		CoreAttrs: map[string]json.RawMessage{
 			"userName": json.RawMessage(`"alice"`),
 		},
@@ -539,7 +539,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_MalformedSchemaJSON_ReturnsIntern
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		CoreAttrs: map[string]json.RawMessage{
 			"userName": json.RawMessage(`"alice"`),
 		},
@@ -578,7 +578,7 @@ func (suite *ServiceTestSuite) TestCreateUser_SchemaAttributeErrors() {
 			name: "ConflictingCoreAndCustomValue_ReturnsConflictError",
 			payload: &SCIMUserPayload{
 				UserTypeHandle: testUserTypeEmployee,
-				ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+				ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 				CoreAttrs:      map[string]json.RawMessage{"userName": json.RawMessage(`"alice"`)},
 				ExtensionAttrs: map[string]json.RawMessage{"username": json.RawMessage(`"bob"`)},
 			},
@@ -625,7 +625,7 @@ func (suite *ServiceTestSuite) TestCreateUser_MatchingCoreAndCustomValue_Succeed
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		CoreAttrs:      map[string]json.RawMessage{"userName": json.RawMessage(`"alice"`)},
 		ExtensionAttrs: map[string]json.RawMessage{"username": json.RawMessage(`"alice"`)},
 	}
@@ -697,7 +697,7 @@ func (suite *ServiceTestSuite) TestCreateUser_CoreOnly_SingleUserType_DefaultsTo
 	require.Nil(t, err)
 	require.NotNil(t, scimUser)
 	require.Equal(t, "user-new", scimUser.ID)
-	require.Contains(t, scimUser.Schemas, "urn:thunderid:params:scim:schemas:employee:2.0:User")
+	require.Contains(t, scimUser.Schemas, "urn:choreo-iam:params:scim:schemas:employee:2.0:User")
 }
 
 // TestCreateUser_CoreOnly_MultipleUserTypes_ReturnsMissingCustomSchema tests Create User for Core Only
@@ -812,7 +812,7 @@ func (suite *ServiceTestSuite) TestCreateUser_EntityTypeNotFound_ReturnsUnknownU
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: "ghost",
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:ghost:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:ghost:2.0:User",
 	}
 
 	// resolver finds no user type with the handle
@@ -838,7 +838,7 @@ func (suite *ServiceTestSuite) TestCreateUser_EntityTypeLookupError_ReturnsUnkno
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 	}
 
 	mockUserTypeService.On(
@@ -863,7 +863,7 @@ func (suite *ServiceTestSuite) TestCreateUser_GetEntityTypeByHandleError_Returns
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 	}
 
 	mockUserTypeService.On(
@@ -906,7 +906,7 @@ func (suite *ServiceTestSuite) TestCreateUser_Error_Scenarios() {
 
 			payload := &SCIMUserPayload{
 				UserTypeHandle: testUserTypeEmployee,
-				ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+				ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 				ExtensionAttrs: map[string]json.RawMessage{},
 			}
 
@@ -938,7 +938,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_Success() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"given_name": json.RawMessage(`"Charlie"`)},
 	}
 	updatedUser := &providers.User{
@@ -962,7 +962,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_Success() {
 	require.Nil(t, err)
 	require.NotNil(t, scimUser)
 	require.Equal(t, "user-123", scimUser.ID)
-	require.Contains(t, scimUser.Schemas, "urn:thunderid:params:scim:schemas:employee:2.0:User")
+	require.Contains(t, scimUser.Schemas, "urn:choreo-iam:params:scim:schemas:employee:2.0:User")
 }
 
 // TestReplaceUser_IsSelf_UsesUpdateUserAttributes tests Replace User for Is Self Uses Update User Attributes.
@@ -975,7 +975,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_IsSelf_UsesUpdateUserAttributes()
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"given_name": json.RawMessage(`"Charlie"`)},
 	}
 	updatedUser := &providers.User{
@@ -1061,7 +1061,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_MissingRequiredAttribute_ReturnsS
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"given_name": json.RawMessage(`"Charlie"`)},
 	}
 
@@ -1093,7 +1093,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_UndeclaredAttribute_ReturnsSchema
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{
 			"department": json.RawMessage(`"Eng"`),
 			"undeclared": json.RawMessage(`"bad"`),
@@ -1128,7 +1128,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_ConflictingCoreAndCustomValue_Ret
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		CoreAttrs:      map[string]json.RawMessage{"userName": json.RawMessage(`"alice"`)},
 		ExtensionAttrs: map[string]json.RawMessage{"username": json.RawMessage(`"bob"`)},
 	}
@@ -1164,7 +1164,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_EntityTypeNotFound_ReturnsUnknown
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: "ghost",
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:ghost:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:ghost:2.0:User",
 	}
 
 	mockUserTypeService.On(
@@ -1218,7 +1218,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_Error_Scenarios() {
 
 			payload := &SCIMUserPayload{
 				UserTypeHandle: testUserTypeEmployee,
-				ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+				ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 				ExtensionAttrs: map[string]json.RawMessage{},
 			}
 
@@ -1256,7 +1256,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_TypeMismatch() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 	}
 
 	mockUserTypeService.On(
@@ -1282,7 +1282,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_GetEntityTypeByHandleError() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 	}
 
 	mockUserService.On("GetUser", mock.Anything, "user-123", false).
@@ -1308,7 +1308,7 @@ func (suite *ServiceTestSuite) TestCreateUser_MarshalExtensionAttrsError() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"empty": []byte("")},
 	}
 
@@ -1332,7 +1332,7 @@ func (suite *ServiceTestSuite) TestReplaceUser_MarshalExtensionAttrsError() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		ExtensionAttrs: map[string]json.RawMessage{"empty": []byte("")},
 	}
 
@@ -1539,7 +1539,7 @@ func (suite *ServiceTestSuite) TestCreateUser_EnterpriseSchema_Success() {
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		EnterpriseAttrs: map[string]json.RawMessage{
 			"department":     json.RawMessage(`"Security"`),
 			"employeeNumber": json.RawMessage(`"E-100"`),
@@ -1604,7 +1604,7 @@ func (suite *ServiceTestSuite) TestCreateUser_EnterpriseSchema_NotSupportedForNo
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: "customer",
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:customer:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:customer:2.0:User",
 		EnterpriseAttrs: map[string]json.RawMessage{
 			"department": json.RawMessage(`"Security"`),
 		},
@@ -1652,7 +1652,7 @@ func (suite *ServiceTestSuite) TestCreateUser_CoreSchema_NotSupportedForNonCoreU
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: "customer",
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:customer:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:customer:2.0:User",
 		CoreAttrs:      map[string]json.RawMessage{"userName": json.RawMessage(`"alice"`)},
 		ExtensionAttrs: map[string]json.RawMessage{},
 	}
@@ -1697,7 +1697,7 @@ func (suite *ServiceTestSuite) TestCreateUser_CoreSchema_UndeclaredAttribute_Ret
 
 	payload := &SCIMUserPayload{
 		UserTypeHandle: testUserTypeEmployee,
-		ExtensionURN:   "urn:thunderid:params:scim:schemas:employee:2.0:User",
+		ExtensionURN:   "urn:choreo-iam:params:scim:schemas:employee:2.0:User",
 		CoreAttrs: map[string]json.RawMessage{
 			"userName": json.RawMessage(`"alice"`),
 			"active":   json.RawMessage(`false`),
@@ -1824,7 +1824,7 @@ func (suite *ServiceTestSuite) TestValidateAttributePaths_CustomSchemaURN_Regist
 	).Return(&entitytype.EntityType{Handle: testUserTypeEmployee, OUID: testOUID}, (*tidcommon.ServiceError)(nil))
 
 	svcErr := service.ValidateAttributePaths(context.Background(),
-		[]string{"urn:thunderid:params:scim:schemas:employee:2.0:User:customAttr"}, nil)
+		[]string{"urn:choreo-iam:params:scim:schemas:employee:2.0:User:customAttr"}, nil)
 
 	require.Nil(t, svcErr)
 }
@@ -1843,7 +1843,7 @@ func (suite *ServiceTestSuite) TestValidateAttributePaths_CustomSchemaURN_Unregi
 	).Return((*entitytype.EntityType)(nil), &entitytype.ErrorUserTypeNotFound)
 
 	svcErr := service.ValidateAttributePaths(context.Background(),
-		[]string{"urn:thunderid:params:scim:schemas:employee2:2.0:User:department"}, nil)
+		[]string{"urn:choreo-iam:params:scim:schemas:employee2:2.0:User:department"}, nil)
 
 	require.NotNil(t, svcErr)
 	require.Equal(t, scim.NewUnrecognizedSchemaURNError("").Code, svcErr.Code)
@@ -1854,7 +1854,7 @@ func (suite *ServiceTestSuite) TestValidateAttributePaths_CustomSchemaURN_Unregi
 // TestValidateFilterSchemaAttribute tests schema URN validation of URN-qualified filter paths.
 func (suite *ServiceTestSuite) TestValidateFilterSchemaAttribute() {
 	t := suite.T()
-	employeeURN := "urn:thunderid:params:scim:schemas:employee:2.0:User:"
+	employeeURN := "urn:choreo-iam:params:scim:schemas:employee:2.0:User:"
 
 	tests := []struct {
 		name         string
@@ -1915,7 +1915,7 @@ func (suite *ServiceTestSuite) TestValidateFilterSchemaAttribute_UnregisteredTyp
 	).Return((*entitytype.EntityType)(nil), &tidcommon.ServiceError{Type: tidcommon.ClientErrorType})
 
 	svcErr := service.ValidateFilterSchemaAttribute(
-		context.Background(), "urn:thunderid:params:scim:schemas:ghost:2.0:User:", "department")
+		context.Background(), "urn:choreo-iam:params:scim:schemas:ghost:2.0:User:", "department")
 
 	require.NotNil(t, svcErr)
 	require.Equal(t, "SCIM-1034", svcErr.Code)

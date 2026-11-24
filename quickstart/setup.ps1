@@ -55,7 +55,7 @@ Stop-PortListener -Port $AUTH_DP_PORT
 Remove-Item -LiteralPath ".quickstart-setup-done" -Force -ErrorAction SilentlyContinue
 
 Write-Host "========================================="
-Write-Host "   ThunderID Quickstart Setup"
+Write-Host "   Choreo Identity & Access Management Quickstart Setup"
 Write-Host "========================================="
 Write-Host ""
 

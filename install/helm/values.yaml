@@ -674,7 +674,7 @@ configuration:
       # file:
       #   enabled: true
       #   path: "logs"
-      #   fileName: "thunderid.log"
+      #   fileName: "choreo-iam.log"
       #   format: "text"
       #   rotation:
       #     size:

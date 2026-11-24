@@ -120,7 +120,7 @@ passkey:
 #### `console-config.js`
 
 ```js
-window.__THUNDERID_RUNTIME_CONFIG__ = {
+window.__IAM_RUNTIME_CONFIG__ = {
   client: {
     base: '/console',
     client_id: 'CONSOLE',
@@ -141,7 +141,7 @@ window.__THUNDERID_RUNTIME_CONFIG__ = {
 #### `gate-config.js`
 
 ```js
-window.__THUNDERID_RUNTIME_CONFIG__ = {
+window.__IAM_RUNTIME_CONFIG__ = {
   client: {
     base: '/gate',
   },

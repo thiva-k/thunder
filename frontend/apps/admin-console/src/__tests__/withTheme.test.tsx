@@ -18,7 +18,7 @@ vi.mock('@thunderid/react', async (importOriginal) => ({
 
 vi.mock('@thunderid/contexts', () => ({
   useConfig: () => ({
-    config: {brand: {product_name: 'ThunderID'}},
+    config: {brand: {product_name: 'Choreo Identity & Access Management'}},
     getClientUuid: () => undefined,
     getServerUrl: () => 'https://localhost:8090',
   }),
@@ -46,10 +46,10 @@ describe('withTheme', () => {
     context.meta = null;
   });
 
-  it('uses the Admin Console theme when the application has no Design', () => {
+  it('uses the default theme when the application has no Design', () => {
     renderThemed();
 
-    expect(screen.getByTestId('primary')).toHaveTextContent('#a31515');
+    expect(screen.getByTestId('primary')).toHaveTextContent(/#ff4600/i);
   });
 
   it('takes the Design theme of the application from the flow meta response', () => {

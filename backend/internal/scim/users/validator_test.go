@@ -30,7 +30,7 @@ func TestValidatorTestSuite(t *testing.T) {
 // TestValidateSCIMUserRequest tests Validate SCIM User Request.
 func (suite *ValidatorTestSuite) TestValidateSCIMUserRequest() {
 	t := suite.T()
-	validURN := "urn:thunderid:params:scim:schemas:employee:2.0:User"
+	validURN := "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
 
 	tests := []struct {
 		name         string
@@ -74,24 +74,24 @@ func (suite *ValidatorTestSuite) TestValidateSCIMUserRequest() {
 		{
 			name: "MultipleThunderIDURNs",
 			body: []byte(`{` +
-				`"schemas":["urn:thunderid:params:scim:schemas:employee:2.0:User",` +
-				`"urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-				`"urn:thunderid:params:scim:schemas:employee:2.0:User":{},` +
-				`"urn:thunderid:params:scim:schemas:person:2.0:User":{}}`),
+				`"schemas":["urn:choreo-iam:params:scim:schemas:employee:2.0:User",` +
+				`"urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+				`"urn:choreo-iam:params:scim:schemas:employee:2.0:User":{},` +
+				`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{}}`),
 			wantErrCode: scim.ErrorMultipleCustomSchemas.Code,
 		},
 		{
 			name: "MalformedCustomSchemaURN_WrongSuffix",
 			body: []byte(
-				`{"schemas":["urn:thunderid:params:scim:schemas:employee:2.0:Group"],` +
-					`"urn:thunderid:params:scim:schemas:employee:2.0:Group":{}}`),
+				`{"schemas":["urn:choreo-iam:params:scim:schemas:employee:2.0:Group"],` +
+					`"urn:choreo-iam:params:scim:schemas:employee:2.0:Group":{}}`),
 			wantErrCode: scim.ErrorInvalidCustomSchemaURN.Code,
 		},
 		{
 			name: "MalformedCustomSchemaURN_EmptyUserType",
 			body: []byte(
-				`{"schemas":["urn:thunderid:params:scim:schemas::2.0:User"],` +
-					`"urn:thunderid:params:scim:schemas::2.0:User":{}}`),
+				`{"schemas":["urn:choreo-iam:params:scim:schemas::2.0:User"],` +
+					`"urn:choreo-iam:params:scim:schemas::2.0:User":{}}`),
 			wantErrCode: scim.ErrorInvalidCustomSchemaURN.Code,
 		},
 		{
@@ -293,7 +293,7 @@ func (suite *ValidatorTestSuite) TestUndeclaredAttrs_CaseInsensitive() {
 // echoed back (id, meta, externalId beside the extension URN only) yields no core attributes.
 func (suite *ValidatorTestSuite) TestParseAndValidateSCIMUserRequest_IgnoresReadOnlyCommonAttrs() {
 	t := suite.T()
-	ext := "urn:thunderid:params:scim:schemas:employee:2.0:User"
+	ext := "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
 	body := []byte(`{
 		"schemas": ["` + ext + `"],
 		"id": "user-1",

@@ -56,7 +56,7 @@ describe('ImportExportPage', () => {
   it('renders option descriptions', () => {
     render(<ImportExportPage />);
 
-    expect(screen.getByText('Bring in an existing ThunderID configuration file.')).toBeInTheDocument();
+    expect(screen.getByText('Bring in an existing configuration file.')).toBeInTheDocument();
     expect(screen.getByText('Download your current configuration as a file.')).toBeInTheDocument();
   });
 
@@ -245,7 +245,7 @@ describe('ImportExportPage', () => {
     render(<ImportExportPage />);
 
     // Cards should be rendered with descriptions
-    expect(screen.getByText('Bring in an existing ThunderID configuration file.')).toBeInTheDocument();
+    expect(screen.getByText('Bring in an existing configuration file.')).toBeInTheDocument();
     expect(screen.getByText('Download your current configuration as a file.')).toBeInTheDocument();
   });
 });

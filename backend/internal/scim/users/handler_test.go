@@ -44,8 +44,8 @@ var testHandlerConfig = scimconfig.SCIMConfig{PublicURL: testBaseURL, SchemaURNP
 var testSCIMConfig = scimconfig.SCIMConfig{SchemaURNPrefix: testURNPrefix}
 
 const scimTestPayloadBody = `{
-		"schemas": ["urn:thunderid:params:scim:schemas:person:2.0:User"],
-		"urn:thunderid:params:scim:schemas:person:2.0:User": {
+		"schemas": ["urn:choreo-iam:params:scim:schemas:person:2.0:User"],
+		"urn:choreo-iam:params:scim:schemas:person:2.0:User": {
 			"given_name": "Test"
 		}
 	}`
@@ -123,7 +123,7 @@ func (suite *HandlerTestSuite) TestHandleUsersCreateRequest_Success() {
 		Return((*tidcommon.ServiceError)(nil))
 
 	expectedUser := &SCIMUser{
-		Schemas: []string{scim.SCIMCoreUserSchemaURN, "urn:thunderid:params:scim:schemas:person:2.0:User"},
+		Schemas: []string{scim.SCIMCoreUserSchemaURN, "urn:choreo-iam:params:scim:schemas:person:2.0:User"},
 		ID:      "user-123",
 		Meta: scim.SCIMMeta{
 			ResourceType: "User",
@@ -178,7 +178,7 @@ func (suite *HandlerTestSuite) TestHandleUsersReplaceRequest_Success() {
 		Return((*tidcommon.ServiceError)(nil))
 
 	expectedUser := &SCIMUser{
-		Schemas: []string{scim.SCIMCoreUserSchemaURN, "urn:thunderid:params:scim:schemas:person:2.0:User"},
+		Schemas: []string{scim.SCIMCoreUserSchemaURN, "urn:choreo-iam:params:scim:schemas:person:2.0:User"},
 		ID:      "user-123",
 		Meta: scim.SCIMMeta{
 			ResourceType: "User",
@@ -324,7 +324,7 @@ func (suite *HandlerTestSuite) TestHandleMeReplaceRequest_Success() {
 	mockSvc.On("ValidateAttributePaths", mock.Anything, mock.Anything, mock.Anything).
 		Return((*tidcommon.ServiceError)(nil))
 	expectedUser := &SCIMUser{
-		Schemas: []string{scim.SCIMCoreUserSchemaURN, "urn:thunderid:params:scim:schemas:person:2.0:User"},
+		Schemas: []string{scim.SCIMCoreUserSchemaURN, "urn:choreo-iam:params:scim:schemas:person:2.0:User"},
 		ID:      "user-123",
 		Meta: scim.SCIMMeta{
 			ResourceType: "User",
@@ -417,8 +417,8 @@ func (suite *HandlerTestSuite) TestHandleMeReplaceRequest_ServiceError_Returns40
 		mock.AnythingOfType("*users.SCIMUserPayload"), testBaseURL, true).
 		Return((*SCIMUser)(nil), &scim.ErrorUserNotFound)
 
-	body := `{"schemas":["urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-		`"urn:thunderid:params:scim:schemas:person:2.0:User":{}}`
+	body := `{"schemas":["urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+		`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{}}`
 	h := newSCIMUsersHandler(mockSvc, testHandlerConfig)
 	req := httptest.NewRequest(http.MethodPut, "/scim/v2/Me", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", constants.SCIMContentType)
@@ -578,16 +578,16 @@ func (suite *HandlerTestSuite) TestHandleUsersCreateRequest_ServiceErrors() {
 		{
 			name:   "UniquenessConflict_Returns409",
 			svcErr: scim.ErrorUniquenessConflict,
-			body: `{"schemas":["urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-				`"urn:thunderid:params:scim:schemas:person:2.0:User":{"email":"x@x.com"}}`,
+			body: `{"schemas":["urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+				`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{"email":"x@x.com"}}`,
 			wantStatus:   http.StatusConflict,
 			wantScimType: scim.ScimErrorTypeUniqueness,
 		},
 		{
 			name:   "SchemaValidationFailed_Returns400",
 			svcErr: scim.ErrorSchemaValidationFailed,
-			body: `{"schemas":["urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-				`"urn:thunderid:params:scim:schemas:person:2.0:User":{}}`,
+			body: `{"schemas":["urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+				`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{}}`,
 			wantStatus:   http.StatusBadRequest,
 			wantScimType: scim.ScimErrorTypeInvalidValue,
 		},
@@ -628,8 +628,8 @@ func (suite *HandlerTestSuite) TestHandleUsersCreateRequest_ServerError_Returns5
 		mock.AnythingOfType("*users.SCIMUserPayload"), testBaseURL).
 		Return((*SCIMUser)(nil), &tidcommon.InternalServerError)
 
-	body := `{"schemas":["urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-		`"urn:thunderid:params:scim:schemas:person:2.0:User":{}}`
+	body := `{"schemas":["urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+		`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{}}`
 	h := newSCIMUsersHandler(mockSvc, testHandlerConfig)
 	req := httptest.NewRequest(http.MethodPost, "/scim/v2/Users",
 		bytes.NewBufferString(body))
@@ -711,8 +711,8 @@ func (suite *HandlerTestSuite) TestHandleUsersReplaceRequest_NotFound_Returns404
 		mock.AnythingOfType("*users.SCIMUserPayload"), testBaseURL, false).
 		Return((*SCIMUser)(nil), &scim.ErrorUserNotFound)
 
-	body := `{"schemas":["urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-		`"urn:thunderid:params:scim:schemas:person:2.0:User":{}}`
+	body := `{"schemas":["urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+		`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{}}`
 	h := newSCIMUsersHandler(mockSvc, testHandlerConfig)
 	req := httptest.NewRequest(http.MethodPut, "/scim/v2/Users/no-such",
 		bytes.NewBufferString(body))
@@ -736,8 +736,8 @@ func (suite *HandlerTestSuite) TestHandleUsersReplaceRequest_MutabilityViolation
 		mock.AnythingOfType("*users.SCIMUserPayload"), testBaseURL, false).
 		Return((*SCIMUser)(nil), &scim.ErrorMutabilityViolation)
 
-	body := `{"schemas":["urn:thunderid:params:scim:schemas:person:2.0:User"],` +
-		`"urn:thunderid:params:scim:schemas:person:2.0:User":{}}`
+	body := `{"schemas":["urn:choreo-iam:params:scim:schemas:person:2.0:User"],` +
+		`"urn:choreo-iam:params:scim:schemas:person:2.0:User":{}}`
 	h := newSCIMUsersHandler(mockSvc, testHandlerConfig)
 	req := httptest.NewRequest(http.MethodPut, "/scim/v2/Users/readonly",
 		bytes.NewBufferString(body))
@@ -867,7 +867,7 @@ func (suite *HandlerTestSuite) TestHandleUsersListRequest_AttributesCustomWithUR
 	t := suite.T()
 	mockSvc := NewSCIMUsersServiceInterfaceMock(t)
 	mockSvc.On("ValidateAttributePaths", mock.Anything,
-		[]string{"urn:thunderid:params:scim:schemas:employee:2.0:User:department"}, []string(nil)).
+		[]string{"urn:choreo-iam:params:scim:schemas:employee:2.0:User:department"}, []string(nil)).
 		Return((*tidcommon.ServiceError)(nil))
 	mockSvc.On("ListUsers", mock.Anything, 1, constants.DefaultPageSize,
 		map[string]interface{}(nil), testBaseURL).
@@ -876,7 +876,7 @@ func (suite *HandlerTestSuite) TestHandleUsersListRequest_AttributesCustomWithUR
 	h := newSCIMUsersHandler(mockSvc, testHandlerConfig)
 	req := httptest.NewRequest(http.MethodGet,
 		"/scim/v2/Users?"+neturl.QueryEscape("attributes")+"="+
-			neturl.QueryEscape("urn:thunderid:params:scim:schemas:employee:2.0:User:department"), nil)
+			neturl.QueryEscape("urn:choreo-iam:params:scim:schemas:employee:2.0:User:department"), nil)
 	rr := httptest.NewRecorder()
 
 	h.HandleUsersListRequest(rr, req)
@@ -915,12 +915,12 @@ func (suite *HandlerTestSuite) TestHandleUsersListRequest_FilterTranslatesCoreAt
 		},
 		{
 			name:           "unmapped attribute with URN passes through unchanged",
-			filter:         `urn:thunderid:params:scim:schemas:employee_hier:2.0:User:department eq "Engineering"`,
+			filter:         `urn:choreo-iam:params:scim:schemas:employee_hier:2.0:User:department eq "Engineering"`,
 			expectedFilter: map[string]interface{}{"department": "Engineering"},
 		},
 		{
 			name:           "URN-prefixed attribute with numeric version segment",
-			filter:         `urn:thunderid:params:scim:schemas:employee_hier:2.0:User:custom_code eq "code1"`,
+			filter:         `urn:choreo-iam:params:scim:schemas:employee_hier:2.0:User:custom_code eq "code1"`,
 			expectedFilter: map[string]interface{}{"custom_code": "code1"},
 		},
 		{

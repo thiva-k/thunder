@@ -203,7 +203,7 @@ func (ts *SCIMDiscoveryTestSuite) TestSchemaGetCoreUserURN() {
 
 // TestSchemaGetUnknownURN verifies fetching an unknown schema URN returns 404.
 func (ts *SCIMDiscoveryTestSuite) TestSchemaGetUnknownURN() {
-	status, _, err := scimRequest(http.MethodGet, "/Schemas/urn:thunderid:params:scim:schemas:does-not-exist:2.0:User", nil, nil)
+	status, _, err := scimRequest(http.MethodGet, "/Schemas/urn:choreo-iam:params:scim:schemas:does-not-exist:2.0:User", nil, nil)
 	ts.Require().NoError(err)
 	ts.Equal(http.StatusNotFound, status)
 }

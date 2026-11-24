@@ -172,7 +172,7 @@ export default function EditCredentialsSettings({
   const clientIdLabel = t('applications:edit.general.labels.clientId', 'Client ID');
   const applicationIdHint = t(
     'applications:edit.general.hints.applicationId',
-    "ThunderID's internal identifier for this application. Use it when calling the Management API.",
+    'The internal identifier for this application. Use it when calling the Management API.',
   );
   const clientIdHint = t(
     'applications:edit.general.hints.clientId',

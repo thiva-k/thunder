@@ -24,11 +24,11 @@ export type ConfigProviderProps = PropsWithChildren;
  * @internal
  */
 function loadConfig(): ProductConfig {
-  if (typeof window !== 'undefined' && window.__THUNDERID_RUNTIME_CONFIG__) {
-    return window.__THUNDERID_RUNTIME_CONFIG__;
+  if (typeof window !== 'undefined' && window.__IAM_RUNTIME_CONFIG__) {
+    return window.__IAM_RUNTIME_CONFIG__;
   }
 
-  throw new Error('ThunderID runtime configuration is not available on window.__THUNDERID_RUNTIME_CONFIG__');
+  throw new Error('Runtime configuration is not available on window.__IAM_RUNTIME_CONFIG__');
 }
 
 /**

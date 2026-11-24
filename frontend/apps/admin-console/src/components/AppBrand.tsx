@@ -1,8 +1,9 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {useConfig} from '@thunderid/contexts';
 import {Logo, useThunderID} from '@thunderid/react';
-import {Box, Stack, Typography} from '@wso2/oxygen-ui';
+import {Box, ColorSchemeImage, Stack, Typography} from '@wso2/oxygen-ui';
 import {Building2} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -14,19 +15,22 @@ import useOrganizationName from '../hooks/useOrganizationName';
 const LOGO_HEIGHT = 26;
 
 /**
- * The top bar's brand: the logo of the application the admin signed in with, the app's name, and the
- * organization unit the admin manages.
+ * The top bar's brand: the logo of the application the admin signed in with (the product logo when it
+ * has none), the app's name, and the organization unit the admin manages.
  */
 export default function AppBrand(): JSX.Element {
   const {t} = useTranslation();
   const {meta} = useThunderID();
+  const {config} = useConfig();
+  const productName: string = config?.brand?.product_name ?? '';
+  const basePath: string = import.meta.env.BASE_URL.replace(/\/$/, '');
   const organization: string | undefined = useOrganizationName();
   const title: string = t('manage:title', 'Admin');
   const logoUrl: string | undefined = meta?.application?.logoUrl;
 
   return (
     <Stack direction="row" alignItems="center" spacing={1.5} sx={{flexShrink: 0, minWidth: 0}}>
-      {logoUrl && (
+      {logoUrl ? (
         <Box
           sx={{
             display: 'flex',
@@ -37,6 +41,13 @@ export default function AppBrand(): JSX.Element {
         >
           <Logo src={logoUrl} alt={title} size="small" />
         </Box>
+      ) : (
+        <ColorSchemeImage
+          src={{light: `${basePath}/assets/images/logo.svg`, dark: `${basePath}/assets/images/logo-inverted.svg`}}
+          alt={{light: productName, dark: productName}}
+          height={24}
+          width="auto"
+        />
       )}
       {/* The app's name is the page's one top-level heading; each page's own title follows it. */}
       <Typography component="h1" noWrap sx={{fontSize: 16, fontWeight: 600}}>

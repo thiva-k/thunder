@@ -47,7 +47,7 @@ export default function ImportExportPage(): JSX.Element {
       labelKey: 'landing.type.import.label',
       labelDefault: 'Import',
       descriptionKey: 'landing.type.import.description',
-      descriptionDefault: 'Bring in an existing ThunderID configuration file.',
+      descriptionDefault: 'Bring in an existing configuration file.',
       icon: <FileInput size={28} />,
     },
     {

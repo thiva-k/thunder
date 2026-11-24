@@ -157,7 +157,7 @@ paths:
                       resourceType: "Schema"
                       location: "https://localhost:8090/scim/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
                   - schemas: ["urn:ietf:params:scim:schemas:core:2.0:Schema"]
-                    id: "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                    id: "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
                     name: "Employee"
                     description: "ThunderID extension schema for the \"employee\" user type"
                     attributes:
@@ -171,7 +171,7 @@ paths:
                         uniqueness: "none"
                     meta:
                       resourceType: "Schema"
-                      location: "https://localhost:8090/scim/v2/Schemas/urn:thunderid:params:scim:schemas:employee:2.0:User"
+                      location: "https://localhost:8090/scim/v2/Schemas/urn:choreo-iam:params:scim:schemas:employee:2.0:User"
         '401':
           description: Unauthorized
           content:
@@ -211,7 +211,7 @@ paths:
       description: |
         Returns a specific SCIM schema by its URN. Requires authentication to ensure tenant isolation.
 
-        The core `urn:ietf:params:scim:schemas:core:2.0:User` and `urn:ietf:params:scim:schemas:core:2.0:Group` URNs are always available. A ThunderID extension URN (`urn:thunderid:params:scim:schemas:<userTypeHandle>:2.0:User`) is available for each registered user type. The `urn:thunderid:params:scim:schemas:` prefix is the default and can be changed with `scim.urn_prefix` in `deployment.yaml`.
+        The core `urn:ietf:params:scim:schemas:core:2.0:User` and `urn:ietf:params:scim:schemas:core:2.0:Group` URNs are always available. A ThunderID extension URN (`urn:choreo-iam:params:scim:schemas:<userTypeHandle>:2.0:User`) is available for each registered user type. The `urn:choreo-iam:params:scim:schemas:` prefix is the default and can be changed with `scim.urn_prefix` in `deployment.yaml`.
       parameters:
         - name: id
           in: path
@@ -219,7 +219,7 @@ paths:
           description: The URN of the schema to retrieve
           schema:
             type: string
-          example: "urn:thunderid:params:scim:schemas:employee:2.0:User"
+          example: "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
       responses:
         '200':
           description: OK
@@ -229,7 +229,7 @@ paths:
                 $ref: '#/components/schemas/Schema'
               example:
                 schemas: ["urn:ietf:params:scim:schemas:core:2.0:Schema"]
-                id: "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                id: "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
                 name: "Employee"
                 description: "ThunderID extension schema for the \"employee\" user type"
                 attributes:
@@ -259,7 +259,7 @@ paths:
                     uniqueness: "none"
                 meta:
                   resourceType: "Schema"
-                  location: "https://localhost:8090/scim/v2/Schemas/urn:thunderid:params:scim:schemas:employee:2.0:User"
+                  location: "https://localhost:8090/scim/v2/Schemas/urn:choreo-iam:params:scim:schemas:employee:2.0:User"
         '401':
           description: Unauthorized
           content:
@@ -327,7 +327,7 @@ paths:
                     endpoint: "/Users"
                     schema: "urn:ietf:params:scim:schemas:core:2.0:User"
                     schemaExtensions:
-                      - schema: "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                      - schema: "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
                         required: false
                     meta:
                       resourceType: "ResourceType"
@@ -402,7 +402,7 @@ paths:
                 endpoint: "/Users"
                 schema: "urn:ietf:params:scim:schemas:core:2.0:User"
                 schemaExtensions:
-                  - schema: "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                  - schema: "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
                     required: false
                 meta:
                   resourceType: "ResourceType"
@@ -515,7 +515,7 @@ paths:
                 startIndex: 1
                 itemsPerPage: 1
                 Resources:
-                  - schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                  - schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                     id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                     userName: "alice.wu"
                     name:
@@ -524,7 +524,7 @@ paths:
                     emails:
                       - value: "alice.wu@company.inc"
                         primary: true
-                    urn:thunderid:params:scim:schemas:employee:2.0:User:
+                    urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                       department: "Engineering"
                     meta:
                       resourceType: "User"
@@ -592,7 +592,7 @@ paths:
         - SCIM Users
       summary: Create User
       description: |
-        Creates a new user. The request body must include the SCIM Core User schema URN (`urn:ietf:params:scim:schemas:core:2.0:User`) whenever core attributes (`userName`, `name`, `emails`, etc.) are present, and exactly one ThunderID extension URN (`urn:thunderid:params:scim:schemas:<userTypeHandle>:2.0:User`) identifying the target user type (RFC 7644 §3.3).
+        Creates a new user. The request body must include the SCIM Core User schema URN (`urn:ietf:params:scim:schemas:core:2.0:User`) whenever core attributes (`userName`, `name`, `emails`, etc.) are present, and exactly one ThunderID extension URN (`urn:choreo-iam:params:scim:schemas:<userTypeHandle>:2.0:User`) identifying the target user type (RFC 7644 §3.3).
 
         If exactly one user type is configured on the server, the extension URN and its object may be omitted and only core attributes supplied; the sole configured user type is used by default.
 
@@ -606,7 +606,7 @@ paths:
             example:
               schemas:
                 - "urn:ietf:params:scim:schemas:core:2.0:User"
-                - "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                - "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
               userName: "alice.wu"
               name:
                 givenName: "Alice"
@@ -614,7 +614,7 @@ paths:
               emails:
                 - value: "alice.wu@company.inc"
                   primary: true
-              urn:thunderid:params:scim:schemas:employee:2.0:User:
+              urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                 department: "Engineering"
       responses:
         '201':
@@ -629,7 +629,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
               example:
-                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                 id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                 userName: "alice.wu"
                 name:
@@ -638,7 +638,7 @@ paths:
                 emails:
                   - value: "alice.wu@company.inc"
                     primary: true
-                urn:thunderid:params:scim:schemas:employee:2.0:User:
+                urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                   department: "Engineering"
                 meta:
                   resourceType: "User"
@@ -759,7 +759,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
               example:
-                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                 id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                 userName: "alice.wu"
                 name:
@@ -768,7 +768,7 @@ paths:
                 emails:
                   - value: "alice.wu@company.inc"
                     primary: true
-                urn:thunderid:params:scim:schemas:employee:2.0:User:
+                urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                   department: "Engineering"
                 meta:
                   resourceType: "User"
@@ -848,7 +848,7 @@ paths:
             example:
               schemas:
                 - "urn:ietf:params:scim:schemas:core:2.0:User"
-                - "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                - "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
               userName: "alice.wu"
               name:
                 givenName: "Alice"
@@ -856,7 +856,7 @@ paths:
               emails:
                 - value: "alice.wu@newcompany.inc"
                   primary: true
-              urn:thunderid:params:scim:schemas:employee:2.0:User:
+              urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                 department: "Platform"
       responses:
         '200':
@@ -866,7 +866,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
               example:
-                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                 id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                 userName: "alice.wu"
                 name:
@@ -875,7 +875,7 @@ paths:
                 emails:
                   - value: "alice.wu@newcompany.inc"
                     primary: true
-                urn:thunderid:params:scim:schemas:employee:2.0:User:
+                urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                   department: "Platform"
                 meta:
                   resourceType: "User"
@@ -1064,7 +1064,7 @@ paths:
                 startIndex: 1
                 itemsPerPage: 1
                 Resources:
-                  - schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                  - schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                     id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                     userName: "alice.wu"
                     emails:
@@ -1147,7 +1147,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
               example:
-                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                 id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                 userName: "alice.wu"
                 name:
@@ -1156,7 +1156,7 @@ paths:
                 emails:
                   - value: "alice.wu@company.inc"
                     primary: true
-                urn:thunderid:params:scim:schemas:employee:2.0:User:
+                urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                   department: "Engineering"
                 meta:
                   resourceType: "User"
@@ -1226,7 +1226,7 @@ paths:
             example:
               schemas:
                 - "urn:ietf:params:scim:schemas:core:2.0:User"
-                - "urn:thunderid:params:scim:schemas:employee:2.0:User"
+                - "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
               userName: "alice.wu"
               name:
                 givenName: "Alice"
@@ -1234,7 +1234,7 @@ paths:
               emails:
                 - value: "alice.wu@newcompany.inc"
                   primary: true
-              urn:thunderid:params:scim:schemas:employee:2.0:User:
+              urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                 department: "Platform"
       responses:
         '200':
@@ -1244,7 +1244,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
               example:
-                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:thunderid:params:scim:schemas:employee:2.0:User"]
+                schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:choreo-iam:params:scim:schemas:employee:2.0:User"]
                 id: "9a475e1e-b0cb-4b29-8df5-2e5b24fb0ed3"
                 userName: "alice.wu"
                 name:
@@ -1253,7 +1253,7 @@ paths:
                 emails:
                   - value: "alice.wu@newcompany.inc"
                     primary: true
-                urn:thunderid:params:scim:schemas:employee:2.0:User:
+                urn:choreo-iam:params:scim:schemas:employee:2.0:User:
                   department: "Platform"
                 meta:
                   resourceType: "User"
@@ -2165,7 +2165,7 @@ components:
     UserRequest:
       type: object
       description: |
-        SCIM User create/replace request body. Besides `schemas`, top-level SCIM core fields (`userName`, `name`, `emails`, `phoneNumbers`, etc.) are mapped to their ThunderID attribute equivalents. The object keyed by the ThunderID extension URN (e.g. `urn:thunderid:params:scim:schemas:employee:2.0:User`) is mapped 1:1 to ThunderID attribute names for the target user type.
+        SCIM User create/replace request body. Besides `schemas`, top-level SCIM core fields (`userName`, `name`, `emails`, `phoneNumbers`, etc.) are mapped to their ThunderID attribute equivalents. The object keyed by the ThunderID extension URN (e.g. `urn:choreo-iam:params:scim:schemas:employee:2.0:User`) is mapped 1:1 to ThunderID attribute names for the target user type.
       required:
         - schemas
       additionalProperties: true
@@ -2177,7 +2177,7 @@ components:
           description: Must include the SCIM Core User schema URN (when core fields are present) and exactly one ThunderID extension URN, unless the server has exactly one configured user type.
           example:
             - "urn:ietf:params:scim:schemas:core:2.0:User"
-            - "urn:thunderid:params:scim:schemas:employee:2.0:User"
+            - "urn:choreo-iam:params:scim:schemas:employee:2.0:User"
         userName:
           type: string
         name:

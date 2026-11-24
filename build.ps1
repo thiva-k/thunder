@@ -21,7 +21,7 @@ param(
     [string]$TestPackage
 )
 
-$PRODUCT_NAME = "ThunderID"
+$PRODUCT_NAME = "Choreo Identity & Access Management"
 $PRODUCT_NAME_LOWERCASE = $PRODUCT_NAME.ToLower()
 
 # Check for PowerShell Version Compatibility
@@ -108,7 +108,7 @@ $PRODUCT_VERSION = $VERSION
 if ($PRODUCT_VERSION.StartsWith("v")) {
     $PRODUCT_VERSION = $PRODUCT_VERSION.Substring(1)
 }
-$BINARY_NAME = $PRODUCT_NAME_LOWERCASE
+$BINARY_NAME = "choreo-iam"
 $PRODUCT_FOLDER = "${BINARY_NAME}-gateway-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}"
 $CP_PRODUCT_FOLDER = "${BINARY_NAME}-cp-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}"
 $QUICKSTART_PRODUCT_FOLDER = "${BINARY_NAME}-${PRODUCT_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_ARCH}"
@@ -1195,10 +1195,10 @@ function Package-Quickstart {
 
     # The browser enforces the CP's own Content-Security-Policy, not auth-dp's, on every fetch the
     # console page makes, including the cross-origin token exchange the trusted_issuer config above
-    # sends to auth-dp. The shared csp.yaml's default connect-src only allows the page's own origin
-    # plus thunderid.dev. Patched into this copy only, right after the one other allowed entry.
+    # sends to auth-dp. The shared csp.yaml's default connect-src only allows the page's own origin.
+    # Patched into this copy only, as the first connect-src entry.
     Add-QuickstartLine -Path (Join-Path $cp_dir "config/resources/server_configs/csp.yaml") `
-        -Pattern '"https://thunderid\.dev"' -Lines "          - `"https://localhost:$QUICKSTART_AUTH_DP_PORT`""
+        -Pattern '^        connect-src:$' -Lines "          - `"https://localhost:$QUICKSTART_AUTH_DP_PORT`""
 
     # Turns on zero-touch propagation for this pack alone: a write on the Control Plane console
     # automatically captures a configuration version and applies it to the managed Data Plane.
@@ -1756,13 +1756,13 @@ function Ensure-Certificates {
                 if ($Algorithm -eq "ECDSA") {
                     & openssl ecparam -name prime256v1 -genkey -noout -param_enc named_curve -out $local_key_file 2>$null
                     if ($LASTEXITCODE -ne 0) { throw "Error generating EC key: OpenSSL failed with exit code $LASTEXITCODE" }
-                    & openssl req -new -x509 -nodes -key $local_key_file -out $local_cert_file -days 3650 -subj "/O=ThunderID/OU=$PRODUCT_NAME/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" 2>$null
+                    & openssl req -new -x509 -nodes -key $local_key_file -out $local_cert_file -days 3650 -subj "/O=Choreo Labs/OU=$PRODUCT_NAME/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" 2>$null
                 }
                 else {
                     & openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
                         -keyout $local_key_file `
                         -out $local_cert_file `
-                        -subj "/O=ThunderID/OU=$PRODUCT_NAME/CN=localhost" `
+                        -subj "/O=Choreo Labs/OU=$PRODUCT_NAME/CN=localhost" `
                         -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" 2>$null
                 }
                 if ($LASTEXITCODE -ne 0) {
@@ -1776,7 +1776,7 @@ function Ensure-Certificates {
                 try {
                     $keyAlg = $null
                     $certReq = $null
-                    $subjectName = New-Object System.Security.Cryptography.X509Certificates.X500DistinguishedName("CN=localhost, O=ThunderID, OU=$PRODUCT_NAME")
+                    $subjectName = New-Object System.Security.Cryptography.X509Certificates.X500DistinguishedName("CN=localhost, O=Choreo Labs, OU=$PRODUCT_NAME")
 
                     if ($Algorithm -eq "ECDSA") {
                         $keyAlg = [System.Security.Cryptography.ECDsa]::Create([System.Security.Cryptography.ECCurve+NamedCurves]::nistP256)

@@ -1,9 +1,9 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-window.__THUNDERID_RUNTIME_CONFIG__ = {
+window.__IAM_RUNTIME_CONFIG__ = {
   brand: {
-    product_name: 'ThunderID',
+    product_name: 'Choreo Identity & Access Management',
     favicon: {
       light: 'assets/images/favicon.ico',
       dark: 'assets/images/favicon-inverted.ico',
@@ -13,8 +13,6 @@ window.__THUNDERID_RUNTIME_CONFIG__ = {
     base: '/gate',
   },
   documentation: {
-    baseUrl: 'https://thunderid.dev/docs/next',
-    releasesUrl: 'https://thunderid.dev/data/releases.json',
     links: {},
   },
   // Defaults to the origin this app is served from. Add a `server` block with `public_url`

@@ -45,13 +45,13 @@ function renderProvider(queryClient = new QueryClient({defaultOptions: {queries:
 }
 
 beforeEach(() => {
-  window.__THUNDERID_RUNTIME_CONFIG__ = config;
+  window.__IAM_RUNTIME_CONFIG__ = config;
   isSignedIn = true;
   request.mockReset();
 });
 
 afterEach(() => {
-  window.__THUNDERID_RUNTIME_CONFIG__ = undefined;
+  window.__IAM_RUNTIME_CONFIG__ = undefined;
 });
 
 describe('withRuntimeUrl', () => {
