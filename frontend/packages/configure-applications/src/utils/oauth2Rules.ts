@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {admitsClientsByDomain} from './clientIdDomains';
 import {
   OAuth2GrantTypes,
   OAuth2ResponseTypes,
@@ -122,6 +123,9 @@ function hasTokenIssuingGrant(grants: string[]): boolean {
  * - response type 'code' is added/removed alongside the authorization_code grant
  */
 export function applyGrantTypesChange(current: OAuth2Config, selected: string[]): Partial<OAuth2Config> {
+  // A client that trusts domains keeps its placeholder public client settings: each admitted client's own
+  // document decides how it authenticates.
+  const keepsAuthentication = admitsClientsByDomain(current);
   let nextGrantTypes = selected;
   if (nextGrantTypes.includes(OAuth2GrantTypes.REFRESH_TOKEN) && !hasTokenIssuingGrant(nextGrantTypes)) {
     nextGrantTypes = nextGrantTypes.filter((g) => g !== OAuth2GrantTypes.REFRESH_TOKEN);
@@ -141,7 +145,7 @@ export function applyGrantTypesChange(current: OAuth2Config, selected: string[])
     updates.requirePushedAuthorizationRequests = false;
   }
 
-  if (current.publicClient && (nextHasCC || nextHasJwtBearer || !nextHasAuthzCode)) {
+  if (!keepsAuthentication && current.publicClient && (nextHasCC || nextHasJwtBearer || !nextHasAuthzCode)) {
     updates.publicClient = false;
     if (current.tokenEndpointAuthMethod === TokenEndpointAuthMethods.NONE) {
       updates.tokenEndpointAuthMethod = TokenEndpointAuthMethods.CLIENT_SECRET_BASIC;
@@ -262,7 +266,9 @@ export function getCimdGrantRestriction(grant: string, config: OAuth2Config): Ca
       'Required for a client registered from a metadata document',
     ];
   }
-  if (!isCimdGrantAllowed(grant, config.tokenEndpointAuthMethod)) {
+  // A client that trusts domains may hold them: each admitted client gets them only when its own document
+  // declares private key JWT authentication.
+  if (!admitsClientsByDomain(config) && !isCimdGrantAllowed(grant, config.tokenEndpointAuthMethod)) {
     return [
       'applications:edit.advanced.grantTypes.requiresPrivateKeyJwt',
       'Requires a metadata document that declares private key JWT authentication',

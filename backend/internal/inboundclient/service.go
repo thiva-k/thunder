@@ -184,7 +184,8 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 	}
 	oauthClientID := s.resolveClientID(ctx, client.ID)
 	if oauthProfile != nil {
-		if err := s.validateCIMD(oauthClientID, oauthProfile, hasClientSecret, "", nil); err != nil {
+		if err := s.validateCIMD(ctx, client.ID, oauthClientID, oauthProfile, hasClientSecret, "",
+			nil); err != nil {
 			return err
 		}
 		if vErr := validateOAuthProfile(
@@ -281,7 +282,7 @@ func (s *inboundClientService) UpdateInboundClient(ctx context.Context, client *
 		if err != nil && !errors.Is(err, ErrInboundClientNotFound) {
 			return err
 		}
-		if err := s.validateCIMD(oauthClientID, oauthProfile, hasClientSecret, oldOAuthClientID,
+		if err := s.validateCIMD(ctx, client.ID, oauthClientID, oauthProfile, hasClientSecret, oldOAuthClientID,
 			existing); err != nil {
 			return err
 		}
@@ -344,7 +345,8 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 		return err
 	}
 	if oauthProfile != nil {
-		if err := s.validateCIMD(oauthClientID, oauthProfile, hasClientSecret, "", nil); err != nil {
+		if err := s.validateCIMD(ctx, client.ID, oauthClientID, oauthProfile, hasClientSecret, "",
+			nil); err != nil {
 			return err
 		}
 		if vErr := validateOAuthProfile(
@@ -359,13 +361,26 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 	return nil
 }
 
-// validateCIMD applies the Client ID Metadata Document rules to the OAuth profile. existing is the
-// stored profile on an update, and nil on a create.
-func (s *inboundClientService) validateCIMD(oauthClientID string, oauthProfile *providers.OAuthProfile,
-	hasClientSecret bool, existingClientID string, existing *providers.OAuthProfile) error {
+// validateCIMD applies the Client ID Metadata Document rules to the OAuth profile of the entity with the
+// given ID, and refuses a Client ID domain another entity already admits. existing is the stored profile on an
+// update, and nil on a create.
+func (s *inboundClientService) validateCIMD(ctx context.Context, entityID, oauthClientID string,
+	oauthProfile *providers.OAuthProfile, hasClientSecret bool, existingClientID string,
+	existing *providers.OAuthProfile) error {
 	if svcErr := s.cimdService.ValidateOAuthProfile(
 		oauthClientID, oauthProfile, hasClientSecret, existingClientID, existing); svcErr != nil {
 		return &CIMDValidationError{Underlying: svcErr}
+	}
+	for _, domain := range oauthProfile.ClientIDDomains {
+		holder, err := s.store.GetEntityIDByClientIDDomain(ctx, domain)
+		if err != nil {
+			return err
+		}
+		if holder != "" && holder != entityID {
+			return &CIMDValidationError{
+				Underlying: cimd.ErrorClientIDDomainInUse.WithParams(map[string]string{"domain": domain}),
+			}
+		}
 	}
 	return nil
 }
@@ -614,14 +629,73 @@ func (s *inboundClientService) GetOAuthClientByClientID(ctx context.Context, cli
 	entityIDPtr, epErr := s.entityProvider.IdentifyEntity(ctx, map[string]interface{}{"clientId": clientID})
 	if epErr != nil {
 		if epErr.Code == entityprovider.ErrorCodeEntityNotFound {
-			return nil, nil
+			return s.resolveDomainClient(ctx, clientID)
 		}
 		return nil, fmt.Errorf("failed to resolve client_id: %w", epErr)
 	}
 	if entityIDPtr == nil {
-		return nil, nil
+		return s.resolveDomainClient(ctx, clientID)
 	}
 	return s.oauthClientForEntity(ctx, *entityIDPtr, clientID)
+}
+
+// resolveDomainClient returns the OAuth client of a client that no entity holds but whose Client Identifier URL
+// is on a Client ID domain an application or agent admits: that application's or agent's OAuth client, made
+// into this client's own from its document. It returns nil when no domain admits the client, admission by
+// domain is off or the URL blocked, or the document is unavailable or breaks a rule.
+func (s *inboundClientService) resolveDomainClient(ctx context.Context, clientID string) (
+	*providers.OAuthClient, error) {
+	if s.cimdService == nil {
+		return nil, nil
+	}
+	candidates, svcErr := s.cimdService.ClientIDDomainCandidates(ctx, clientID)
+	if svcErr != nil {
+		return nil, fmt.Errorf("failed to resolve the Client ID domains of a client: %s", svcErr.Code)
+	}
+	for _, domain := range candidates {
+		entityID, err := s.store.GetEntityIDByClientIDDomain(ctx, domain)
+		if err != nil {
+			return nil, err
+		}
+		if entityID == "" {
+			continue
+		}
+		document, svcErr := s.cimdService.ResolveDocumentClient(ctx, clientID)
+		if svcErr != nil {
+			return nil, fmt.Errorf("failed to resolve the document of a client: %s", svcErr.Code)
+		}
+		if document == nil {
+			return nil, nil
+		}
+		client, err := s.domainOAuthClient(ctx, entityID)
+		if err != nil || client == nil {
+			return nil, err
+		}
+		document.Apply(client)
+		return client, nil
+	}
+	return nil, nil
+}
+
+// domainOAuthClient returns the OAuth client of an entity that admits clients by Client ID domain. It has no
+// client ID or certificate of its own; each client it admits takes those from its document.
+func (s *inboundClientService) domainOAuthClient(ctx context.Context, entityID string) (
+	*providers.OAuthClient, error) {
+	e, epErr := s.entityProvider.GetEntityProfile(ctx, entityID)
+	if epErr != nil {
+		if epErr.Code == entityprovider.ErrorCodeEntityNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to load entity for OAuth client: %w", epErr)
+	}
+	oauthProfile, err := s.store.GetOAuthProfileByEntityID(ctx, entityID)
+	if err != nil && !errors.Is(err, ErrInboundClientNotFound) {
+		return nil, err
+	}
+	if oauthProfile == nil || len(oauthProfile.ClientIDDomains) == 0 {
+		return nil, nil
+	}
+	return BuildOAuthClient(entityID, "", e.OUID, e.Category, oauthProfile), nil
 }
 
 // GetOAuthClientByEntityID returns the runtime OAuth client of the entity with the given id. The
@@ -803,6 +877,7 @@ func BuildOAuthClient(
 		DPoPBoundAccessTokens:              p.DPoPBoundAccessTokens,
 		IncludeActClaim:                    p.IncludeActClaim,
 		ClientIDMetadataDocument:           p.ClientIDMetadataDocument,
+		ClientIDDomains:                    p.ClientIDDomains,
 		Scopes:                             p.Scopes,
 		ScopeClaims:                        p.ScopeClaims,
 		Token:                              p.Token,
@@ -937,6 +1012,11 @@ func (s *inboundClientService) LoadDeclarativeResources(ctx context.Context,
 // GetCertificate retrieves the certificate for the given reference type and ID.
 func (s *inboundClientService) GetCertificate(ctx context.Context, refType cert.CertificateReferenceType,
 	refID string) (*inboundmodel.Certificate, *CertOperationError) {
+	// A client with no client ID of its own, such as one that admits clients by Client ID domain, has no
+	// certificate.
+	if refID == "" {
+		return nil, nil
+	}
 	c, svcErr := s.certService.GetCertificateByReference(ctx, refType, refID)
 	if svcErr != nil {
 		if svcErr.Code == cert.ErrorCertificateNotFound.Code {
@@ -1362,8 +1442,9 @@ func validateRedirectURIs(p *providers.OAuthProfile) error {
 			return ErrOAuthInvalidRedirectURI
 		}
 	}
+	// A client that admits clients by domain takes each one's redirect URIs from its document.
 	if slices.Contains(p.GrantTypes, string(providers.GrantTypeAuthorizationCode)) &&
-		len(p.RedirectURIs) == 0 {
+		len(p.RedirectURIs) == 0 && len(p.ClientIDDomains) == 0 {
 		return ErrOAuthAuthCodeRequiresRedirectURIs
 	}
 	return nil
@@ -1482,6 +1563,12 @@ func validateTokenEndpointAuthMethod(p *providers.OAuthProfile, hasClientSecret 
 		}
 		if slices.Contains(p.GrantTypes, string(providers.GrantTypeClientCredentials)) {
 			return ErrOAuthClientCredentialsCannotUseNoneAuth
+		}
+		// A profile that admits clients by Client ID domain holds none as a placeholder: each client's
+		// document sets its method, and only a client whose document uses private_key_jwt is given these
+		// grants when it signs in.
+		if len(p.ClientIDDomains) > 0 {
+			break
 		}
 		// The jwt-bearer (ID-JAG) grant is bound to the client via client_id only, so it requires a
 		// confidential client.

@@ -326,6 +326,7 @@ func parseToApplicationDTO(data []byte) (*model.ApplicationDTO, error) {
 					DPoPBoundAccessTokens:              config.OAuthConfig.DPoPBoundAccessTokens,
 					IncludeActClaim:                    config.OAuthConfig.IncludeActClaim,
 					ClientIDMetadataDocument:           config.OAuthConfig.ClientIDMetadataDocument,
+					ClientIDDomains:                    config.OAuthConfig.ClientIDDomains,
 					Token:                              config.OAuthConfig.Token,
 					Scopes:                             config.OAuthConfig.Scopes,
 					UserInfo:                           config.OAuthConfig.UserInfo,
@@ -364,8 +365,10 @@ func (e *applicationExporter) GetResourceRules() *declarativeresource.ResourceRu
 // GetResourceRulesForResource returns parameterization rules tailored to the specific application
 // instance. Public clients and clients using private_key_jwt or none do not have a client secret, so
 // the ClientSecret variable is excluded from their export to avoid injecting an empty or invalid
-// placeholder into the YAML template. The FlowSecret variable is included only for a document that
-// refers to a Flow Secret, as a field a rule names is written even when it is empty.
+// placeholder into the YAML template. An application that admits clients by Client ID domain has no
+// client ID, so the ClientID variable is excluded the same way. The FlowSecret variable is included
+// only for a document that refers to a Flow Secret, as a field a rule names is written even when it
+// is empty.
 func (e *applicationExporter) GetResourceRulesForResource(resource interface{}) *declarativeresource.ResourceRules {
 	rules := e.GetResourceRules()
 	app, ok := applicationOf(resource)
@@ -374,9 +377,14 @@ func (e *applicationExporter) GetResourceRulesForResource(resource interface{}) 
 	}
 
 	for _, inbound := range app.InboundAuthConfig {
-		if inbound.OAuthConfig != nil && !inboundclient.UsesClientSecret(inbound.OAuthConfig) {
+		if inbound.OAuthConfig == nil {
+			continue
+		}
+		if !inboundclient.UsesClientSecret(inbound.OAuthConfig) {
 			rules.SecretVariables = nil
-			break
+		}
+		if len(inbound.OAuthConfig.ClientIDDomains) > 0 {
+			rules.Variables = nil
 		}
 	}
 	if doc, isDocument := resource.(*applicationDeclarativeResource); isDocument && doc.refersToFlowSecret() {

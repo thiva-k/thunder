@@ -8,6 +8,7 @@ import {
   useExternalLinkConfirmation,
 } from '@thunderid/components';
 import {
+  admitsClientsByDomain,
   deriveOAuth2Flags,
   EnvironmentChoice,
   EnvironmentClientIdField,
@@ -187,6 +188,15 @@ export default function AgentOverview({
 
   const isPersonal = agent.kind === PERSONAL_AGENT_KIND;
   const isDelegated = hasDelegationGrant(oauth2Config?.grantTypes);
+  // An agent that admits clients from trusted domains acts only for the user who signs in through one of them.
+  const admitsByDomain = admitsClientsByDomain(oauth2Config);
+  const actsOnOwnBehalf = !isPersonal && !admitsByDomain;
+  let ownBehalfLabel = actsOnOwnBehalf
+    ? t('common:status.enabled', 'Enabled')
+    : t('common:status.disabled', 'Disabled');
+  if (admitsByDomain) {
+    ownBehalfLabel = t('agents:edit.overview.accessMode.notAvailable', 'Not available');
+  }
   // Allowed user types apply only to users signing in through this agent, which takes the
   // authorization code grant, the same rule as the Advanced tab's Allowed user types section.
   const hasAuthorizationCodeGrant = Boolean(oauth2Config && deriveOAuth2Flags(oauth2Config).hasAuthorizationCodeGrant);
@@ -353,9 +363,9 @@ export default function AgentOverview({
             {t('agents:edit.overview.accessMode.own', 'On its own behalf')}
           </Typography>
           <Chip
-            label={isPersonal ? t('common:status.disabled', 'Disabled') : t('common:status.enabled', 'Enabled')}
+            label={ownBehalfLabel}
             size="small"
-            color={isPersonal ? 'default' : 'success'}
+            color={actsOnOwnBehalf ? 'success' : 'default'}
             variant="outlined"
             sx={{height: 20, fontSize: '0.7rem'}}
           />
@@ -378,6 +388,19 @@ export default function AgentOverview({
             sx={{height: 20, fontSize: '0.7rem'}}
           />
         </Stack>
+        {admitsByDomain && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            data-testid="agent-overview-trusted-domains-mode"
+            sx={{px: 1.75, py: 1, borderTop: '1px solid', borderColor: 'divider'}}
+          >
+            {t(
+              'agents:edit.overview.accessMode.throughTrustedDomains',
+              'Acts on behalf of the user who signs in through a client from its trusted domains.',
+            )}
+          </Typography>
+        )}
         {isPersonal ? (
           <Stack
             direction="row"

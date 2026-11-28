@@ -5,11 +5,15 @@ package actorprovider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"maps"
+	"strings"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
+	"github.com/thunder-id/thunderid/internal/cimd"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/inboundclient"
@@ -28,9 +32,11 @@ type ClientRulesResolverInterface interface {
 }
 
 // actorProvider delegates actor resolution to inbound-client and entity-provider services, and
-// actor authentication to the authentication provider.
+// actor authentication to the authentication provider. The CIMD service supplies the name and logo of a client
+// that the Client ID domains of an application or agent admit, when the login page names it by its URL.
 type actorProvider struct {
 	inboundClient  inboundclient.InboundClientServiceInterface
+	cimdService    cimd.CIMDServiceInterface
 	entityProvider entityprovider.EntityProviderInterface
 	authnProvider  providers.AuthnProviderManager
 	roleService    role.RoleServiceInterface
@@ -48,7 +54,7 @@ func newActorProvider(
 	roleService role.RoleServiceInterface,
 	entityTypeSvc entitytype.EntityTypeServiceInterface,
 	rulesResolvers map[providers.EntityCategory]ClientRulesResolverInterface,
-) providers.ActorProvider {
+) *actorProvider {
 	return &actorProvider{
 		inboundClient:  inboundClient,
 		entityProvider: entityProvider,
@@ -60,8 +66,8 @@ func newActorProvider(
 	}
 }
 
-// GetOAuthClientByClientID returns the OAuth client registered for the given ID, or nil when there
-// is none.
+// GetOAuthClientByClientID returns the OAuth client for the given client ID, including a client the Client ID
+// domains of an application or agent admit, or nil when there is none.
 func (p *actorProvider) GetOAuthClientByClientID(
 	ctx context.Context, clientID string,
 ) (*providers.OAuthClient, *tidcommon.ServiceError) {
@@ -81,8 +87,7 @@ func (p *actorProvider) IsOAuthClientAccessibleFromOU(
 	return p.inboundClient.IsClientAccessibleFromOU(ctx, client, ouID)
 }
 
-// GetOAuthClientByID returns the runtime OAuth client for the given entity UUID, or nil when there
-// is none.
+// GetOAuthClientByID returns the runtime OAuth client for the given entity UUID.
 func (p *actorProvider) GetOAuthClientByID(
 	ctx context.Context, id string,
 ) (*providers.OAuthClient, *tidcommon.ServiceError) {
@@ -92,6 +97,29 @@ func (p *actorProvider) GetOAuthClientByID(
 		return nil, &tidcommon.InternalServerError
 	}
 	return p.withClientRules(ctx, toProviderOAuthClient(client))
+}
+
+// resolveDomainClient resolves an ID that is the Client Identifier URL of a client the Client ID domains of an
+// application or agent admit, as the login page names such a client. It returns the ID of that application or
+// agent and the client's document, or an empty ID when id names no such client.
+func (p *actorProvider) resolveDomainClient(ctx context.Context, id string) (
+	string, *cimd.DocumentClient, *tidcommon.ServiceError) {
+	if p.cimdService == nil || !strings.HasPrefix(id, clientIdentifierURLPrefix) {
+		return "", nil, nil
+	}
+	client, err := p.inboundClient.GetOAuthClientByClientID(ctx, id)
+	if err != nil {
+		p.logger.Error(ctx, "Failed to fetch OAuth client", log.String("clientID", id), log.Error(err))
+		return "", nil, &tidcommon.InternalServerError
+	}
+	if client == nil || !client.ResolvedByClientIDDomain {
+		return "", nil, nil
+	}
+	document, svcErr := p.cimdService.ResolveDocumentClient(ctx, id)
+	if svcErr != nil || document == nil {
+		return "", nil, svcErr
+	}
+	return client.ID, document, nil
 }
 
 // withClientRules adds to a client the runtime rules its entity category's resolver returns. A client of
@@ -135,19 +163,53 @@ func (p *actorProvider) GetOAuthProfileByID(
 	return profile, nil
 }
 
-// GetInboundClientByID returns the inbound-client row for the given ID.
+// GetInboundClientByID returns the inbound-client row for the given ID. An ID that is the Client Identifier URL
+// of a client the Client ID domains of an application or agent admit returns that application's or agent's
+// inbound client with the client's own logo and links.
 func (p *actorProvider) GetInboundClientByID(
 	ctx context.Context, id string,
 ) (*providers.InboundClient, *tidcommon.ServiceError) {
 	client, err := p.inboundClient.GetInboundClientByEntityID(ctx, id)
 	if err != nil {
 		if errors.Is(err, inboundclient.ErrInboundClientNotFound) {
-			return nil, &ErrorActorNotFound
+			return p.getDomainInboundClient(ctx, id)
 		}
 		p.logger.Error(ctx, "Failed to fetch inbound client", log.String("id", id), log.Error(err))
 		return nil, &tidcommon.InternalServerError
 	}
 	return client, nil
+}
+
+// getDomainInboundClient returns the inbound client of the application or agent whose Client ID domains admit
+// the client with the given Client Identifier URL, with the client's own logo and links in place of its own.
+func (p *actorProvider) getDomainInboundClient(
+	ctx context.Context, id string,
+) (*providers.InboundClient, *tidcommon.ServiceError) {
+	entityID, document, svcErr := p.resolveDomainClient(ctx, id)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	if entityID == "" {
+		return nil, &ErrorActorNotFound
+	}
+	client, err := p.inboundClient.GetInboundClientByEntityID(ctx, entityID)
+	if err != nil {
+		if errors.Is(err, inboundclient.ErrInboundClientNotFound) {
+			return nil, &ErrorActorNotFound
+		}
+		p.logger.Error(ctx, "Failed to fetch inbound client", log.String("id", entityID), log.Error(err))
+		return nil, &tidcommon.InternalServerError
+	}
+	overlaid := *client
+	overlaid.Properties = maps.Clone(client.Properties)
+	if overlaid.Properties == nil {
+		overlaid.Properties = map[string]interface{}{}
+	}
+	for _, key := range documentPropertyKeys {
+		delete(overlaid.Properties, key)
+	}
+	maps.Copy(overlaid.Properties, document.Properties)
+	return &overlaid, nil
 }
 
 // AuthenticateActor verifies the supplied credentials against the actor resolved from the given
@@ -162,10 +224,15 @@ func (p *actorProvider) AuthenticateActor(
 	return svcErr
 }
 
-// GetActor returns the backing entity record for the given actor ID.
+// GetActor returns the backing entity record for the given actor ID. An ID that is the Client Identifier URL of
+// a client the Client ID domains of an application or agent admit returns that application's or agent's entity,
+// named as the client's document names it.
 func (p *actorProvider) GetActor(ctx context.Context, actorID string) (*providers.Entity, *tidcommon.ServiceError) {
 	entity, epErr := p.entityProvider.GetEntityProfile(ctx, actorID)
 	if epErr != nil {
+		if epErr.Code == entityprovider.ErrorCodeEntityNotFound {
+			return p.getDomainActor(ctx, actorID, epErr)
+		}
 		return nil, mapEntityProviderError(epErr)
 	}
 	if entity.Category == providers.EntityCategoryAgent {
@@ -175,6 +242,36 @@ func (p *actorProvider) GetActor(ctx context.Context, actorID string) (*provider
 		entity.Display = utils.ResolveDisplay(entity.ID, entity.Type, entity.Attributes, displayPaths)
 	}
 	return entity, nil
+}
+
+// getDomainActor returns the entity of the application or agent whose Client ID domains admit the client with
+// the given Client Identifier URL, named as the client's document names it. notFound is returned, mapped, when
+// the URL names no such client.
+func (p *actorProvider) getDomainActor(
+	ctx context.Context, id string, notFound *entityprovider.EntityProviderError,
+) (*providers.Entity, *tidcommon.ServiceError) {
+	entityID, document, svcErr := p.resolveDomainClient(ctx, id)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+	if entityID == "" {
+		return nil, mapEntityProviderError(notFound)
+	}
+	entity, epErr := p.entityProvider.GetEntityProfile(ctx, entityID)
+	if epErr != nil {
+		return nil, mapEntityProviderError(epErr)
+	}
+	attributes := readEntitySystemAttributes(entity)
+	attributes["name"] = document.Name
+	systemAttributes, err := json.Marshal(attributes)
+	if err != nil {
+		p.logger.Error(ctx, "Failed to marshal the system attributes of a client", log.Error(err))
+		return nil, &tidcommon.InternalServerError
+	}
+	named := *entity
+	named.SystemAttributes = systemAttributes
+	named.Display = document.Name
+	return &named, nil
 }
 
 // GetActorGroups returns transitive group memberships for the given actor ID.
@@ -255,6 +352,8 @@ func toProviderOAuthClient(c *providers.OAuthClient) *providers.OAuthClient {
 		DPoPBoundAccessTokens:              c.DPoPBoundAccessTokens,
 		IncludeActClaim:                    c.IncludeActClaim,
 		ClientIDMetadataDocument:           c.ClientIDMetadataDocument,
+		ClientIDDomains:                    c.ClientIDDomains,
+		ResolvedByClientIDDomain:           c.ResolvedByClientIDDomain,
 		EntityCategory:                     c.EntityCategory,
 		Token:                              c.Token,
 		Scopes:                             c.Scopes,

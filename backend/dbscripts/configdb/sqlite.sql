@@ -161,6 +161,20 @@ CREATE TABLE "OAUTH_INBOUND_PROFILE" (
         REFERENCES "INBOUND_CLIENT" (DEPLOYMENT_ID, ENTITY_ID) ON DELETE CASCADE
 );
 
+-- Table to store the Client ID Metadata Document domains whose clients an OAuth inbound profile admits.
+-- A domain is admitted by at most one profile in a deployment.
+CREATE TABLE "INBOUND_CLIENT_CIMD_DOMAIN" (
+    DEPLOYMENT_ID VARCHAR(255) NOT NULL,
+    DOMAIN VARCHAR(255) NOT NULL,
+    ENTITY_ID VARCHAR(36) NOT NULL,
+    PRIMARY KEY (DOMAIN, DEPLOYMENT_ID),
+    FOREIGN KEY (ENTITY_ID, DEPLOYMENT_ID)
+        REFERENCES "OAUTH_INBOUND_PROFILE" (ENTITY_ID, DEPLOYMENT_ID) ON DELETE CASCADE
+);
+
+-- Index for removing the domains of a profile.
+CREATE INDEX idx_inbound_client_cimd_domain_entity ON "INBOUND_CLIENT_CIMD_DOMAIN" (DEPLOYMENT_ID, ENTITY_ID);
+
 -- Table to store identity providers.
 CREATE TABLE "IDP" (
     DEPLOYMENT_ID VARCHAR(255) NOT NULL,

@@ -239,8 +239,9 @@ components:
       description: >
         The value of a configuration section. Its concrete shape is section-specific and may be any
         valid JSON value (object, array, or scalar). See `AccountAccessConfig` for the shape of the
-        `accountAccess` section, `NotificationConfig` for the `notification` section and
-        `GatewaySettingsConfig` for the `gateway` section.
+        `accountAccess` section, `NotificationConfig` for the `notification` section,
+        `GatewaySettingsConfig` for the `gateway` section and `CIMDSettingsConfig` for the `cimd`
+        section.
 
     GatewaySettingsConfig:
       type: object
@@ -505,6 +506,37 @@ components:
             sender or one that cannot send email causes delivery to fail. Empty means no default
             sender, and such email is not sent. Flow email nodes name their own sender.
       additionalProperties: false
+
+    CIMDSettingsConfig:
+      type: object
+      description: |
+        The value of the `cimd` section: whether clients that publish a Client ID Metadata Document may
+        sign in through the `clientIdDomains` of an application or agent, and the client IDs refused even then.
+
+        A client whose `client_id` is an https URL that no application or agent holds signs in when
+        `enabled` is on, `oauth.cimd.enabled` is on in the deployment configuration, the URL is not in
+        `blockedClientIds`, and the URL's host is on the `clientIdDomains` of an application or agent.
+        ThunderID then retrieves the client's document and applies the same document rules as for a
+        registered CIMD client. Nothing is stored for the client.
+
+        A `PUT` replaces the whole section, and an invalid value is rejected with `SCF-1003`. A
+        declarative `cimd` resource, when present, makes the section read-only.
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+          description: Whether clients the `clientIdDomains` of an application or agent admit may sign in.
+        blockedClientIds:
+          type: array
+          maxItems: 500
+          uniqueItems: true
+          description: Client Identifier URLs that never sign in through a policy, matched exactly.
+          items:
+            type: string
+            format: uri
+      example:
+        enabled: true
+        blockedClientIds: []
 
     ServerConfigLayers:
       type: object

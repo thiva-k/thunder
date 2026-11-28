@@ -233,6 +233,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// initialized. The handle-existence validator is injected in a second phase after flowMgtService
 	// is available.
 	flowConfigHandler := flowmgt.NewFlowConfigHandler()
+	cimdConfigHandler := cimd.NewConfigHandler()
 
 	// Server-wide configuration handlers. The "session" handler is omitted because SSO session
 	// lifetime is a data plane concern. The account access policy is authored here and exported.
@@ -243,6 +244,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		serverconfig.ConfigNameCSP:                   csp.PolicyHandler{},
 		serverconfig.ConfigNameAccountAccess:         identitygovernance.NewAccountAccessHandler(governanceCfg),
 		serverconfig.ConfigNameNotification:          notificationConfigHandler,
+		serverconfig.ConfigNameCIMD:                  cimdConfigHandler,
 		serverconfig.ConfigNameGateway:               gateway.NewSettingsConfigHandler(),
 	}
 	serverConfigService, serverConfigExporter, err := serverconfig.Initialize(mux, cacheManager, serverConfigHandlers,
@@ -372,7 +374,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	projectService.AddResourceCheck(layoutMgtService.ProjectHasLayouts)
 	exporters = append(exporters, layoutExporter)
 
-	cimdService := cimd.Initialize(mux)
+	cimdService := cimd.Initialize(mux, serverConfigService)
 	inboundClientService, err := inboundclient.Initialize(
 		cacheManager, certservice, entityProvider,
 		themeMgtService, layoutMgtService, flowMgtService, entityTypeService, runtimeCryptoSvc, jweService,

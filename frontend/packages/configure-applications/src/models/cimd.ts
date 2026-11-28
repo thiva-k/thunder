@@ -14,12 +14,31 @@ export const McpClientIdentityModes = {
   METADATA_DOCUMENT: 'metadataDocument',
   /** The administrator configures the client's redirect URIs and credentials. */
   MANUAL: 'manual',
+  /** Any client whose client ID URL is on a trusted domain, read from its document when it signs in. */
+  TRUSTED_DOMAINS: 'trustedDomains',
 } as const;
 
 /**
  * @public
  */
 export type McpClientIdentityMode = (typeof McpClientIdentityModes)[keyof typeof McpClientIdentityModes];
+
+/**
+ * Which clients a Client ID Metadata Document application admits, chosen on the CIMD template's first step.
+ *
+ * @public
+ */
+export const CimdRegistrationModes = {
+  /** One client, registered from its document URL after the administrator reviews the document. */
+  SPECIFIC_CLIENT: 'specificClient',
+  /** Any client whose client ID URL is on a trusted domain, read from its document when it signs in. */
+  TRUSTED_DOMAINS: 'trustedDomains',
+} as const;
+
+/**
+ * @public
+ */
+export type CimdRegistrationMode = (typeof CimdRegistrationModes)[keyof typeof CimdRegistrationModes];
 
 /**
  * The response of `POST /cimd/preview`: the values taken from a Client ID Metadata Document, in the

@@ -227,6 +227,7 @@ func (e *agentExporter) GetResourceRules() *declarativeresource.ResourceRules {
 // GetResourceRulesForResource returns per-resource parameterization rules.
 // Clients without a client secret (public, private_key_jwt or none) omit ClientSecret. RedirectURIs
 // are only parameterized when present (e.g. M2M agents using client_credentials have no redirect URIs).
+// An agent that admits clients by Client ID domain has no client ID, so ClientID is omitted too.
 // A control plane's export refers to the owner, so that each gateway names its own, except a personal
 // agent's, which is the user the agent acts for. A template export writes the owner as it is: a template
 // is filled in as text, which an owner's ID, being free text, could break.
@@ -238,6 +239,7 @@ func (e *agentExporter) GetResourceRulesForResource(resource interface{}) *decla
 
 	hasNoClientSecret := false
 	hasRedirectURIs := false
+	hasClientIDDomains := false
 	for _, inbound := range a.InboundAuthConfig {
 		if inbound.OAuthConfig == nil {
 			continue
@@ -248,9 +250,15 @@ func (e *agentExporter) GetResourceRulesForResource(resource interface{}) *decla
 		if len(inbound.OAuthConfig.RedirectURIs) > 0 {
 			hasRedirectURIs = true
 		}
+		if len(inbound.OAuthConfig.ClientIDDomains) > 0 {
+			hasClientIDDomains = true
+		}
 	}
 
-	variables := []string{"InboundAuthConfig[].OAuthConfig.ClientID"}
+	var variables []string
+	if !hasClientIDDomains {
+		variables = append(variables, "InboundAuthConfig[].OAuthConfig.ClientID")
+	}
 	if e.references && a.Owner != nil && a.Kind != providers.AgentKindPersonalAssistant {
 		variables = append(variables, ownerVariables...)
 	}

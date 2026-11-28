@@ -542,6 +542,8 @@ func (suite *InboundClientStoreTestSuite) TestDeleteProfile() {
 func (suite *InboundClientStoreTestSuite) TestDeleteOAuthProfile() {
 	suite.Run("successfully deletes", func() {
 		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryDeleteClientIDDomainsByEntityID,
+			testEntityID, testServerID).Return(int64(0), nil).Once()
 		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryDeleteOAuthProfileByEntityID,
 			testEntityID, testServerID).Return(int64(1), nil).Once()
 
@@ -619,9 +621,91 @@ func (suite *InboundClientStoreTestSuite) TestUpdateOAuthProfile() {
 		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
 		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryUpdateOAuthProfileByEntityID,
 			testEntityID, mock.Anything, testServerID).Return(int64(1), nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryDeleteClientIDDomainsByEntityID,
+			testEntityID, testServerID).Return(int64(0), nil).Once()
 
 		err := suite.store.UpdateOAuthProfile(context.Background(), testEntityID, &providers.OAuthProfile{})
 		suite.NoError(err)
+	})
+
+	suite.Run("replaces the Client ID domains", func() {
+		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryUpdateOAuthProfileByEntityID,
+			testEntityID, mock.Anything, testServerID).Return(int64(1), nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryDeleteClientIDDomainsByEntityID,
+			testEntityID, testServerID).Return(int64(1), nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryCreateClientIDDomain,
+			testEntityID, "claude.ai", testServerID).Return(int64(1), nil).Once()
+
+		err := suite.store.UpdateOAuthProfile(context.Background(), testEntityID,
+			&providers.OAuthProfile{ClientIDDomains: []string{"claude.ai"}})
+		suite.NoError(err)
+	})
+
+	suite.Run("fails when the domains cannot be removed", func() {
+		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryUpdateOAuthProfileByEntityID,
+			testEntityID, mock.Anything, testServerID).Return(int64(1), nil).Once()
+		suite.mockDBClient.On("ExecuteContext", mock.Anything, queryDeleteClientIDDomainsByEntityID,
+			testEntityID, testServerID).Return(int64(0), errors.New("db error")).Once()
+
+		err := suite.store.UpdateOAuthProfile(context.Background(), testEntityID, &providers.OAuthProfile{})
+		suite.Error(err)
+	})
+}
+
+func (suite *InboundClientStoreTestSuite) TestCreateOAuthProfile_RecordsClientIDDomains() {
+	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+	suite.mockDBClient.On("ExecuteContext", mock.Anything, queryCreateOAuthProfile,
+		testEntityID, mock.Anything, testServerID).Return(int64(1), nil).Once()
+	suite.mockDBClient.On("ExecuteContext", mock.Anything, queryCreateClientIDDomain,
+		testEntityID, "claude.ai", testServerID).Return(int64(1), nil).Once()
+	suite.mockDBClient.On("ExecuteContext", mock.Anything, queryCreateClientIDDomain,
+		testEntityID, "*.example.com", testServerID).Return(int64(0), errors.New("duplicate")).Once()
+
+	err := suite.store.CreateOAuthProfile(context.Background(), testEntityID,
+		&providers.OAuthProfile{ClientIDDomains: []string{"claude.ai", "*.example.com"}})
+
+	suite.Error(err)
+}
+
+func (suite *InboundClientStoreTestSuite) TestGetEntityIDByClientIDDomain() {
+	suite.Run("returns the entity that admits the domain", func() {
+		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("QueryContext", mock.Anything, queryGetEntityIDByClientIDDomain, "claude.ai",
+			testServerID).Return([]map[string]interface{}{{"entity_id": testEntityID}}, nil).Once()
+
+		entityID, err := suite.store.GetEntityIDByClientIDDomain(context.Background(), "claude.ai")
+		suite.NoError(err)
+		suite.Equal(testEntityID, entityID)
+	})
+
+	suite.Run("returns empty when no entity admits it", func() {
+		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("QueryContext", mock.Anything, queryGetEntityIDByClientIDDomain, "claude.ai",
+			testServerID).Return([]map[string]interface{}{}, nil).Once()
+
+		entityID, err := suite.store.GetEntityIDByClientIDDomain(context.Background(), "claude.ai")
+		suite.NoError(err)
+		suite.Empty(entityID)
+	})
+
+	suite.Run("fails on an unreadable row", func() {
+		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("QueryContext", mock.Anything, queryGetEntityIDByClientIDDomain, "claude.ai",
+			testServerID).Return([]map[string]interface{}{{"entity_id": 1}}, nil).Once()
+
+		_, err := suite.store.GetEntityIDByClientIDDomain(context.Background(), "claude.ai")
+		suite.Error(err)
+	})
+
+	suite.Run("fails when the query fails", func() {
+		suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil).Once()
+		suite.mockDBClient.On("QueryContext", mock.Anything, queryGetEntityIDByClientIDDomain, "claude.ai",
+			testServerID).Return(nil, errors.New("db error")).Once()
+
+		_, err := suite.store.GetEntityIDByClientIDDomain(context.Background(), "claude.ai")
+		suite.Error(err)
 	})
 }
 

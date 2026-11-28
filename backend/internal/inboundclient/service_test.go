@@ -537,6 +537,15 @@ func (suite *InboundClientServiceTestSuite) TestGetCertificate_NotFound() {
 	suite.Nil(err)
 }
 
+func (suite *InboundClientServiceTestSuite) TestGetCertificate_NoClientID() {
+	svc := newServiceWithCert(certmock.NewCertificateServiceInterfaceMock(suite.T()))
+
+	out, err := svc.GetCertificate(context.Background(), cert.CertificateReferenceTypeOAuthApp, "")
+
+	suite.Nil(out)
+	suite.Nil(err)
+}
+
 func (suite *InboundClientServiceTestSuite) TestGetCertificate_Success() {
 	mockCert := certmock.NewCertificateServiceInterfaceMock(suite.T())
 	mockCert.EXPECT().
@@ -1103,6 +1112,125 @@ func (suite *InboundClientServiceTestSuite) TestValidate_CIMDRuleViolation() {
 	assert.Equal(suite.T(), &cimd.ErrorInvalidRedirectURI, cimdErr.Underlying)
 }
 
+func (suite *InboundClientServiceTestSuite) TestValidate_ClientIDDomainHeldByAnotherClient() {
+	p := &providers.OAuthProfile{ClientIDMetadataDocument: true, ClientIDDomains: []string{"vscode.dev", "claude.ai"}}
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(suite.T())
+	cimdService.EXPECT().ValidateOAuthProfile("", p, false, "", (*providers.OAuthProfile)(nil)).Return(nil)
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().GetEntityIDByClientIDDomain(mock.Anything, "vscode.dev").Return("p1", nil)
+	store.EXPECT().GetEntityIDByClientIDDomain(mock.Anything, "claude.ai").Return("other", nil)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil, nil,
+		nil, cimdService, nil, nil)
+
+	err := svc.Validate(context.Background(), ptrInboundClient(), p, false, "")
+
+	var cimdErr *CIMDValidationError
+	suite.Require().ErrorAs(err, &cimdErr)
+	suite.Equal(cimd.ErrorClientIDDomainInUse.Code, cimdErr.Underlying.Code)
+	suite.Equal(map[string]string{"domain": "claude.ai"}, cimdErr.Underlying.ErrorDescription.Params)
+}
+
+func (suite *InboundClientServiceTestSuite) TestValidate_ClientIDDomainLookupFails() {
+	p := &providers.OAuthProfile{ClientIDMetadataDocument: true, ClientIDDomains: []string{"claude.ai"}}
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(suite.T())
+	cimdService.EXPECT().ValidateOAuthProfile("", p, false, "", (*providers.OAuthProfile)(nil)).Return(nil)
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().GetEntityIDByClientIDDomain(mock.Anything, "claude.ai").Return("", errors.New("db error"))
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil, nil,
+		nil, cimdService, nil, nil)
+
+	err := svc.Validate(context.Background(), ptrInboundClient(), p, false, "")
+
+	suite.EqualError(err, "db error")
+}
+
+const testDomainClientID = "https://a.example.com/oauth/client.json"
+
+// domainResolutionService returns a service whose store and CIMD service admit testDomainClientID through the
+// "*.example.com" domain of entity "app-1".
+func (suite *InboundClientServiceTestSuite) domainResolutionService() (
+	*inboundClientService, *cimdmock.CIMDServiceInterfaceMock, *inboundClientStoreInterfaceMock) {
+	ep := entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
+	ep.EXPECT().IdentifyEntity(mock.Anything, map[string]interface{}{"clientId": testDomainClientID}).
+		Return(nil, entityprovider.NewEntityProviderError(entityprovider.ErrorCodeEntityNotFound, "not found", ""))
+	ep.EXPECT().GetEntityProfile(mock.Anything, "app-1").Return(&providers.Entity{ID: "app-1", OUID: "ou-1",
+		Category: providers.EntityCategoryApp}, nil).Maybe()
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(suite.T())
+	cimdService.EXPECT().ClientIDDomainCandidates(mock.Anything, testDomainClientID).
+		Return([]string{"a.example.com", "*.example.com"}, nil)
+	store := newInboundClientStoreInterfaceMock(suite.T())
+	store.EXPECT().GetEntityIDByClientIDDomain(mock.Anything, "a.example.com").Return("", nil)
+	store.EXPECT().GetEntityIDByClientIDDomain(mock.Anything, "*.example.com").Return("app-1", nil)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, ep, nil, nil, nil, nil, nil,
+		nil, cimdService, nil, nil)
+	return svc, cimdService, store
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByClientID_ResolvesThroughAClientIDDomain() {
+	svc, cimdService, store := suite.domainResolutionService()
+	cimdService.EXPECT().ResolveDocumentClient(mock.Anything, testDomainClientID).Return(&cimd.DocumentClient{
+		OAuthConfig: &providers.OAuthConfigWithSecret{ClientID: testDomainClientID,
+			RedirectURIs: []string{"https://a.example.com/callback"}, TokenEndpointAuthMethod: "none",
+			PublicClient: true},
+		DeclaredGrantTypes: []string{"authorization_code"},
+	}, nil)
+	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, "app-1").Return(&providers.OAuthProfile{
+		ClientIDMetadataDocument: true, ClientIDDomains: []string{"*.example.com"},
+		GrantTypes: []string{"authorization_code"}, TokenEndpointAuthMethod: "none", PublicClient: true,
+	}, nil)
+
+	client, err := svc.GetOAuthClientByClientID(context.Background(), testDomainClientID)
+
+	suite.Require().NoError(err)
+	suite.Require().NotNil(client)
+	suite.Equal("app-1", client.ID)
+	suite.Equal("ou-1", client.OUID)
+	suite.Equal(testDomainClientID, client.ClientID)
+	suite.Equal([]string{"https://a.example.com/callback"}, client.RedirectURIs)
+	suite.True(client.ResolvedByClientIDDomain)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByClientID_DomainClientWithoutUsableDocument() {
+	svc, cimdService, _ := suite.domainResolutionService()
+	cimdService.EXPECT().ResolveDocumentClient(mock.Anything, testDomainClientID).Return(nil, nil)
+
+	client, err := svc.GetOAuthClientByClientID(context.Background(), testDomainClientID)
+
+	suite.NoError(err)
+	suite.Nil(client)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByClientID_NoDomainAdmitsTheClient() {
+	ep := entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
+	ep.EXPECT().IdentifyEntity(mock.Anything, map[string]interface{}{"clientId": testDomainClientID}).
+		Return(nil, entityprovider.NewEntityProviderError(entityprovider.ErrorCodeEntityNotFound, "not found", ""))
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(suite.T())
+	cimdService.EXPECT().ClientIDDomainCandidates(mock.Anything, testDomainClientID).Return(nil, nil)
+	svc := newInboundClientService(newInboundClientStoreInterfaceMock(suite.T()),
+		transaction.NewNoOpTransactioner(), nil, ep, nil, nil, nil, nil, nil, nil, cimdService, nil, nil)
+
+	client, err := svc.GetOAuthClientByClientID(context.Background(), testDomainClientID)
+
+	suite.NoError(err)
+	suite.Nil(client)
+}
+
+func (suite *InboundClientServiceTestSuite) TestGetOAuthClientByClientID_DomainCandidatesFail() {
+	ep := entityprovidermock.NewEntityProviderInterfaceMock(suite.T())
+	ep.EXPECT().IdentifyEntity(mock.Anything, map[string]interface{}{"clientId": testDomainClientID}).
+		Return(nil, entityprovider.NewEntityProviderError(entityprovider.ErrorCodeEntityNotFound, "not found", ""))
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(suite.T())
+	cimdService.EXPECT().ClientIDDomainCandidates(mock.Anything, testDomainClientID).
+		Return(nil, &tidcommon.InternalServerError)
+	svc := newInboundClientService(newInboundClientStoreInterfaceMock(suite.T()),
+		transaction.NewNoOpTransactioner(), nil, ep, nil, nil, nil, nil, nil, nil, cimdService, nil, nil)
+
+	client, err := svc.GetOAuthClientByClientID(context.Background(), testDomainClientID)
+
+	suite.Error(err)
+	suite.Nil(client)
+}
+
 func (suite *InboundClientServiceTestSuite) TestValidate_DefaultAudienceTooLong() {
 	store := newInboundClientStoreInterfaceMock(suite.T())
 	svc := newServiceForTest(store)
@@ -1263,6 +1391,24 @@ func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_
 	}
 	err := validateTokenEndpointAuthMethod(p, false)
 	assert.ErrorIs(suite.T(), err, ErrOAuthClientIDJAGCannotUseNoneAuth)
+}
+
+func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_DomainProfileAllowsIDJAG() {
+	p := &providers.OAuthProfile{
+		TokenEndpointAuthMethod:  "none",
+		PublicClient:             true,
+		ClientIDMetadataDocument: true,
+		ClientIDDomains:          []string{"agents.example.com"},
+		GrantTypes: []string{string(providers.GrantTypeAuthorizationCode),
+			string(providers.GrantTypeTokenExchange), string(providers.GrantTypeJWTBearer)},
+		Token: &providers.OAuthTokenConfig{
+			IDJAG: &providers.IDJAGConfig{Enabled: true},
+		},
+	}
+	assert.NoError(suite.T(), validateTokenEndpointAuthMethod(p, false))
+
+	p.GrantTypes = append(p.GrantTypes, string(providers.GrantTypeClientCredentials))
+	assert.ErrorIs(suite.T(), validateTokenEndpointAuthMethod(p, false), ErrOAuthClientCredentialsCannotUseNoneAuth)
 }
 
 // validateUserInfoConfig — happy paths

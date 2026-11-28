@@ -10,8 +10,10 @@ import McpAccessSection from './McpAccessSection';
 import type {Application} from '../../../models/application';
 import type {OAuth2Config} from '../../../models/oauth';
 import {TokenEndpointAuthMethods} from '../../../models/oauth';
+import {admitsClientsByDomain} from '../../../utils/clientIdDomains';
 import isJwtBearerOnlyGrantSet from '../../../utils/isJwtBearerOnlyGrantSet';
 import resolveApplicationType from '../../../utils/resolveApplicationType';
+import ClientIdDomainsSection from '../../cimd/ClientIdDomainsSection';
 import CopyableField from '../../common/CopyableField';
 import CimdDocumentSection from '../cimd/CimdDocumentSection';
 
@@ -61,6 +63,12 @@ export interface McpConnectTabProps {
    * are managed. Omit when the client has no Credentials tab (e.g. a metadata-document client).
    */
   onGoToCredentials?: () => void;
+
+  /**
+   * Invoked when the trusted domains of an application that admits any client from them change. Only used for
+   * such an application, whose Connect tab shows its domains instead of a metadata document.
+   */
+  onClientIdDomainsChange?: (domains: string[]) => void;
 }
 
 /**
@@ -104,6 +112,7 @@ export default function McpConnectTab({
   isReadOnly,
   onValidationChange = undefined,
   onGoToCredentials = undefined,
+  onClientIdDomainsChange = undefined,
 }: McpConnectTabProps): JSX.Element {
   const {t} = useTranslation();
 
@@ -115,6 +124,8 @@ export default function McpConnectTab({
   const isJwtBearerOnly = !isM2m && isJwtBearerOnlyGrantSet(oauth2Config?.grantTypes);
   // A metadata-document client's redirect URIs come from its document rather than this tab.
   const isCimd = oauth2Config?.clientIdMetadataDocument === true;
+  // An application that admits any client from trusted domains has no client ID or document of its own.
+  const isDomainClient = admitsClientsByDomain(oauth2Config);
 
   const isConfidentialClient =
     Boolean(oauth2Config) &&
@@ -181,6 +192,15 @@ export default function McpConnectTab({
             />
           )}
 
+          {isDomainClient && (
+            <Typography variant="body2" color="text.secondary" data-testid="mcp-connect-trusted-domains-note">
+              {t(
+                'applications:edit.mcp.connect.trustedDomainsNote',
+                "Clients from the trusted domains below connect with their own client ID, the URL of their metadata document, and authorize with PKCE. Each client's document sets its redirect URIs.",
+              )}
+            </Typography>
+          )}
+
           {isConfidentialClient && onGoToCredentials && (
             <Typography variant="body2" color="text.secondary">
               <Trans
@@ -197,7 +217,16 @@ export default function McpConnectTab({
         </Stack>
       </SettingsCard>
 
-      {isCimd && oauth2Config && (
+      {isDomainClient && oauth2Config && (
+        <ClientIdDomainsSection
+          subject="application"
+          domains={oauth2Config.clientIdDomains ?? []}
+          onDomainsChange={(domains) => onClientIdDomainsChange?.(domains)}
+          isReadOnly={isReadOnly || !onClientIdDomainsChange}
+        />
+      )}
+
+      {isCimd && !isDomainClient && oauth2Config && (
         <CimdDocumentSection
           application={application}
           oauth2Config={oauth2Config}

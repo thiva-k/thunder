@@ -242,6 +242,31 @@ func (s *ApplicationExporterTestSuite) TestGetResourceRulesForResource_PublicCli
 	assert.Contains(s.T(), rules.ArrayVariables, "InboundAuthConfig[].OAuthConfig.RedirectURIs")
 }
 
+func (s *ApplicationExporterTestSuite) TestGetResourceRulesForResource_ClientIDDomains() {
+	pr, ok := s.exporter.(declarativeresource.PerResourceRuler)
+	assert.True(s.T(), ok, "exporter should implement PerResourceRuler")
+
+	app := &providers.Application{
+		ID:   "app1",
+		Name: "Domain App",
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				OAuthConfig: &providers.OAuthConfigWithSecret{
+					ClientIDMetadataDocument: true,
+					ClientIDDomains:          []string{"vscode.dev"},
+					PublicClient:             true,
+				},
+			},
+		},
+	}
+
+	rules := pr.GetResourceRulesForResource(app)
+
+	assert.NotNil(s.T(), rules)
+	assert.NotContains(s.T(), rules.Variables, "InboundAuthConfig[].OAuthConfig.ClientID")
+	assert.Empty(s.T(), rules.SecretVariables)
+}
+
 func (s *ApplicationExporterTestSuite) TestGetResourceRulesForResource_ConfidentialClient() {
 	pr, ok := s.exporter.(declarativeresource.PerResourceRuler)
 	assert.True(s.T(), ok, "exporter should implement PerResourceRuler")

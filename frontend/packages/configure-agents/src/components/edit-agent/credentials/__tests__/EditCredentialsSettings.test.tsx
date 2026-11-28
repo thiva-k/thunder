@@ -57,6 +57,37 @@ describe('EditCredentialsSettings', () => {
     mockMutateAsync.mockResolvedValue(undefined);
   });
 
+  it('shows the trusted domains in place of the client ID, secret and keys of an agent that admits clients by domain', async () => {
+    const user = userEvent.setup();
+    const config: OAuthAgentConfig = {
+      clientIdMetadataDocument: true,
+      clientIdDomains: ['claude.ai'],
+      grantTypes: ['authorization_code'],
+      responseTypes: ['code'],
+    };
+    const agent: Agent = {...mockAgent, inboundAuthConfig: [{type: 'oauth2', config}]};
+    render(
+      <EditCredentialsSettings
+        agent={agent}
+        editedAgent={{}}
+        oauth2Config={config}
+        onFieldChange={mockOnFieldChange}
+        admitsClientsByDomain
+      />,
+    );
+
+    expect(screen.queryByTestId('client-id')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('client-secret')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('certificate')).not.toBeInTheDocument();
+    expect(screen.getByText('claude.ai')).toBeInTheDocument();
+
+    await user.type(screen.getByTestId('cimd-client-id-domains-input'), 'vscode.dev,');
+
+    expect(mockOnFieldChange).toHaveBeenLastCalledWith('inboundAuthConfig', [
+      {type: 'oauth2', config: {...config, clientIdDomains: ['claude.ai', 'vscode.dev']}},
+    ]);
+  });
+
   it('renders all sections', () => {
     render(
       <EditCredentialsSettings

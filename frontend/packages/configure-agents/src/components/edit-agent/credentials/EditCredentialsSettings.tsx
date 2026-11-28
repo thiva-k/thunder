@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {CredentialResetSection, type CredentialResetField} from '@thunderid/components';
+import {ClientIdDomainsSection} from '@thunderid/configure-applications';
 import {useCapabilitiesContext} from '@thunderid/contexts';
 import {getErrorMessage} from '@thunderid/utils';
 import {Stack} from '@wso2/oxygen-ui';
@@ -20,6 +21,11 @@ interface EditCredentialsSettingsProps {
   onFieldChange: (field: keyof Agent, value: unknown) => void;
   /** The credentials the agent type declares, such as a password. None, or a personal agent, shows no reset. */
   credentialFields?: CredentialResetField[];
+  /**
+   * Whether the agent admits any client from trusted domains, which has no client ID, secret or keys of its
+   * own. Its domains are shown in their place.
+   */
+  admitsClientsByDomain?: boolean;
 }
 
 export default function EditCredentialsSettings({
@@ -28,6 +34,7 @@ export default function EditCredentialsSettings({
   oauth2Config = undefined,
   onFieldChange,
   credentialFields = [],
+  admitsClientsByDomain = false,
 }: EditCredentialsSettingsProps): JSX.Element {
   const {t} = useTranslation();
   const {can} = useCapabilitiesContext();
@@ -52,7 +59,15 @@ export default function EditCredentialsSettings({
 
   return (
     <Stack spacing={3}>
-      {oauth2Config && (
+      {oauth2Config && admitsClientsByDomain && (
+        <ClientIdDomainsSection
+          subject="agent"
+          domains={oauth2Config.clientIdDomains ?? []}
+          onDomainsChange={(domains) => handleOAuth2ConfigChange({clientIdDomains: domains})}
+          isReadOnly={agent.isReadOnly === true}
+        />
+      )}
+      {oauth2Config && !admitsClientsByDomain && (
         <>
           <ClientIdSection oauth2Config={oauth2Config} />
           {!isPersonalAgent && (

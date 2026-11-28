@@ -19,6 +19,7 @@ import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {IDJAGConfig, OAuth2Config, OAuth2Token} from '../../../models/oauth';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods} from '../../../models/oauth';
+import {admitsClientsByDomain} from '../../../utils/clientIdDomains';
 import {applyGrantTypesChange, isIdJagIssuanceUnavailable} from '../../../utils/oauth2Rules';
 
 const DEFAULT_VALIDITY_PERIOD = 300;
@@ -100,8 +101,12 @@ export default function IdentityAssertionsSection({
 
   const validityPeriod = currentIdJag.validityPeriod ?? DEFAULT_VALIDITY_PERIOD;
   const validityPeriodValue = invalidValidityPeriodInput ?? validityPeriod;
+  // A client that trusts domains stores placeholder public client settings, so they do not block identity
+  // assertions: each admitted client gets them only when its own document declares private key JWT.
+  const isDomainClient = admitsClientsByDomain(oauth2Config);
   const isPublicClient =
-    oauth2Config.publicClient === true || oauth2Config.tokenEndpointAuthMethod === TokenEndpointAuthMethods.NONE;
+    !isDomainClient &&
+    (oauth2Config.publicClient === true || oauth2Config.tokenEndpointAuthMethod === TokenEndpointAuthMethods.NONE);
   const isIssuanceUnavailable = isIdJagIssuanceUnavailable(serverMetadata?.grant_types_supported);
   const isToggleDisabled = disabled || isPublicClient || (isIssuanceUnavailable && !isEnabled);
   const issuanceUnavailableHint = t(
@@ -199,10 +204,17 @@ export default function IdentityAssertionsSection({
   return (
     <SettingsCard
       title={toggleLabel}
-      description={t(
-        'applications:edit.advanced.idJag.description',
-        "Issue signed assertions of the signed-in user's identity that external services accept for token issuance.",
-      )}
+      description={
+        isDomainClient
+          ? t(
+              'applications:edit.advanced.idJag.domainClientDescription',
+              "Issue signed assertions of the signed-in user's identity that external services accept for token issuance. They apply only to clients whose own metadata document uses private key JWT authentication.",
+            )
+          : t(
+              'applications:edit.advanced.idJag.description',
+              "Issue signed assertions of the signed-in user's identity that external services accept for token issuance.",
+            )
+      }
       headerAction={
         toggleGuard ? (
           <Tooltip title={toggleGuard}>

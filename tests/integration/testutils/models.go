@@ -586,14 +586,16 @@ type AgentInboundAuthConfig struct {
 
 // AgentOAuthConfig holds OAuth client settings for an agent.
 type AgentOAuthConfig struct {
-	ClientID                string   `json:"clientId,omitempty"`
-	ClientSecret            string   `json:"clientSecret,omitempty"`
-	GrantTypes              []string `json:"grantTypes,omitempty"`
-	ResponseTypes           []string `json:"responseTypes,omitempty"`
-	RedirectURIs            []string `json:"redirectUris,omitempty"`
-	TokenEndpointAuthMethod string   `json:"tokenEndpointAuthMethod,omitempty"`
-	PKCERequired            bool     `json:"pkceRequired,omitempty"`
-	PublicClient            bool     `json:"publicClient,omitempty"`
+	ClientID                 string   `json:"clientId,omitempty"`
+	ClientSecret             string   `json:"clientSecret,omitempty"`
+	GrantTypes               []string `json:"grantTypes,omitempty"`
+	ResponseTypes            []string `json:"responseTypes,omitempty"`
+	RedirectURIs             []string `json:"redirectUris,omitempty"`
+	TokenEndpointAuthMethod  string   `json:"tokenEndpointAuthMethod,omitempty"`
+	PKCERequired             bool     `json:"pkceRequired,omitempty"`
+	PublicClient             bool     `json:"publicClient,omitempty"`
+	ClientIDMetadataDocument bool     `json:"clientIdMetadataDocument,omitempty"`
+	ClientIDDomains          []string `json:"clientIdDomains,omitempty"`
 }
 
 // AgentListResponse is the paginated list response for agents.

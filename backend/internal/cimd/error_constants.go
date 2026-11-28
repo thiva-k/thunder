@@ -204,4 +204,94 @@ var (
 				"exchange serves it only for ID-JAG requests",
 		},
 	}
+	// ErrorClientIDDomainsWithoutDocument is the error returned when a client lists Client ID domains without
+	// being marked as a Client ID Metadata Document client.
+	ErrorClientIDDomainsWithoutDocument = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CIMD-1016",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.client_id_domains_without_document",
+			DefaultValue: "Client ID domains need a Client ID Metadata Document client",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.cimdservice.client_id_domains_without_document_description",
+			DefaultValue: "Set clientIdMetadataDocument to true to admit clients by the domain of their " +
+				"Client ID Metadata Document URL",
+		},
+	}
+	// ErrorDomainClientValues is the error returned when a client that admits clients by domain sets a value
+	// each admitted client takes from its own document.
+	ErrorDomainClientValues = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CIMD-1017",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.domain_client_values",
+			DefaultValue: "Value set that comes from each client's document",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.cimdservice.domain_client_values_description",
+			DefaultValue: "A client that admits clients by domain has no client ID, client secret, redirect " +
+				"URIs, post-logout redirect URIs or certificate, and uses the none authentication method with " +
+				"PKCE. Each admitted client takes these from its own document",
+		},
+	}
+	// ErrorInvalidClientIDDomain is the error returned when a Client ID domain is not a lowercase DNS name of
+	// at least two labels, optionally with a leading wildcard label, or the domains are too many or repeated.
+	ErrorInvalidClientIDDomain = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CIMD-1018",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.invalid_client_id_domain",
+			DefaultValue: "Invalid Client ID domain",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.cimdservice.invalid_client_id_domain_description",
+			DefaultValue: "List 1 to 50 distinct domains, each a lowercase DNS name of at least two labels " +
+				"such as claude.ai, or *. and such a name to admit its subdomains",
+		},
+	}
+	// ErrorClientIDDomainInUse is the error returned when another application or agent already admits clients
+	// on a Client ID domain.
+	ErrorClientIDDomainInUse = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CIMD-1019",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.client_id_domain_in_use",
+			DefaultValue: "Client ID domain in use",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.cimdservice.client_id_domain_in_use_description",
+			DefaultValue: "Another application or agent already admits the clients on {{param(domain)}}. " +
+				"A domain can be admitted by one application or agent only",
+		},
+	}
+	// ErrorInvalidResponseTypes is the error returned when a document's response types leave out code, the only
+	// response type a CIMD client uses.
+	ErrorInvalidResponseTypes = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CIMD-1020",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.invalid_response_types",
+			DefaultValue: "Invalid response types",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.invalid_response_types_description",
+			DefaultValue: "The document's response_types must include code",
+		},
+	}
+	// ErrorInvalidClientIDDomainName is the error returned when a Client ID domain is not a lowercase DNS name of at
+	// least two labels, optionally with a leading wildcard label.
+	ErrorInvalidClientIDDomainName = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "CIMD-1021",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.cimdservice.invalid_client_id_domain_name",
+			DefaultValue: "Invalid Client ID domain",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.cimdservice.invalid_client_id_domain_name_description",
+			DefaultValue: "{{param(domain)}} is not a valid domain. Use a lowercase DNS name of at least two " +
+				"labels such as claude.ai, or *. and such a name to admit its subdomains",
+		},
+	}
 )

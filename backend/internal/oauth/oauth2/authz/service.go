@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"golang.org/x/net/idna"
 
 	authzdetailcommon "github.com/thunder-id/thunderid/internal/authzdetail/common"
@@ -552,7 +553,8 @@ func (as *authorizeService) handleStandardAuthorizationRequest(
 		authorizationDetails = details
 	}
 
-	oidcScopes, nonOidcScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(scope, app.ScopeClaims)
+	oidcScopes, nonOidcScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(
+		oauth2utils.LimitToClientScopes(scope, app), app.ScopeClaims)
 
 	// The single target resource server, downscoping, and audience binding are resolved in
 	// initiateFlowAndStoreRequest, the path shared by both standard and PAR-based requests.
@@ -627,6 +629,11 @@ func (as *authorizeService) initiateFlowAndStoreRequest(
 	queryParams := make(map[string]string)
 	queryParams[oauth2const.AuthID] = identifier
 	queryParams[oauth2const.AppID] = app.ID
+	// Every client the Client ID Metadata Document domains of an application or agent admit shares its ID, so
+	// the login page names the client by its Client Identifier URL to show that client's own name and logo.
+	if app.ResolvedByClientIDDomain {
+		queryParams[oauth2const.AppID] = app.ClientID
+	}
 	queryParams[oauth2const.ExecutionID] = executionID
 	if oauthParams.UILocales != "" {
 		queryParams[oauth2const.RequestParamUILocales] = oauthParams.UILocales
@@ -791,6 +798,7 @@ func (as *authorizeService) startAuthorizationFlow(
 		runtimeData[flowcm.RuntimeKeyRequestedAuthorizationDetails] = preparedDetails
 	}
 	as.addMetadataDocumentClientHosts(runtimeData, app, oauthParams.RedirectURI)
+	addDomainClientConsentGroup(runtimeData, app)
 	flowInitCtx := &flowexec.FlowInitContext{
 		ApplicationID:    app.ID,
 		FlowType:         string(providers.FlowTypeAuthentication),
@@ -886,7 +894,8 @@ func (as *authorizeService) AuthorizeWithSSOSession(ctx context.Context, app *pr
 			Message: "Only a single resource parameter is supported",
 		}
 	}
-	oidcScopes, permissionScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(req.Scope, app.ScopeClaims)
+	oidcScopes, permissionScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(
+		oauth2utils.LimitToClientScopes(req.Scope, app), app.ScopeClaims)
 	oauthParams := &oauth2model.OAuthParameters{
 		ClientID:         app.ClientID,
 		StandardScopes:   oidcScopes,
@@ -1748,6 +1757,21 @@ func (as *authorizeService) addMetadataDocumentClientHosts(
 	}
 	runtimeData[flowcm.RuntimeKeyClientIDHost] = clientIDHost
 	runtimeData[flowcm.RuntimeKeyRedirectURIHost] = redirectURIHost
+}
+
+// addDomainClientConsentGroup records the group the consent of a client admitted by Client ID Metadata
+// Document domains is kept under. Every client the domains of one application or agent admit shares its ID, so
+// the group is derived from that ID and the client ID, and a user's consent to one such client is never taken
+// as consent to another.
+func addDomainClientConsentGroup(runtimeData map[string]string, app *providers.OAuthClient) {
+	if !app.ResolvedByClientIDDomain {
+		return
+	}
+	appID, err := uuid.Parse(app.ID)
+	if err != nil {
+		return
+	}
+	runtimeData[flowcm.RuntimeKeyConsentGroupID] = uuid.NewSHA1(appID, []byte(app.ClientID)).String()
 }
 
 // asciiHost returns a host in lowercase ASCII. It converts an internationalized host with the IDNA

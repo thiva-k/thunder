@@ -393,6 +393,36 @@ describe('McpConnectTab', () => {
       expect(screen.queryByTestId('mcp-access-section')).not.toBeInTheDocument();
     });
 
+    it('shows the trusted domains of a client that admits any client from them', async () => {
+      const onClientIdDomainsChange = vi.fn();
+      render(
+        <McpConnectTab
+          application={buildApplication()}
+          oauth2Config={{
+            clientIdMetadataDocument: true,
+            clientIdDomains: ['vscode.dev'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            responseTypes: ['code'],
+            tokenEndpointAuthMethod: 'none',
+            publicClient: true,
+            pkceRequired: true,
+          }}
+          onFieldChange={mockOnFieldChange}
+          isReadOnly={false}
+          onClientIdDomainsChange={onClientIdDomainsChange}
+        />,
+      );
+
+      expect(screen.getByTestId('cimd-client-id-domains-section')).toBeInTheDocument();
+      expect(screen.getByTestId('mcp-connect-trusted-domains-note')).toBeInTheDocument();
+      expect(screen.queryByTestId('cimd-document-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mcp-access-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mcp-connect-client-id')).not.toBeInTheDocument();
+
+      await userEvent.type(screen.getByTestId('cimd-client-id-domains-input'), 'claude.ai ');
+      expect(onClientIdDomainsChange).toHaveBeenCalledWith(['vscode.dev', 'claude.ai']);
+    });
+
     it('treats an HTTPS client ID without the marker as an ordinary client', () => {
       render(
         <McpConnectTab

@@ -2,7 +2,7 @@
   "id": "cimd",
   "type": "custom",
   "displayName": "CIMD",
-  "description": "A client registered from the metadata document its vendor publishes",
+  "description": "A client registered from the metadata document its vendor publishes, or any client from domains you trust",
   "creationFlow": {
     "steps": ["ORGANIZATION_UNIT", "METADATA_DOCUMENT", "DETAILS", "COMPLETE"],
     "previewSteps": [],

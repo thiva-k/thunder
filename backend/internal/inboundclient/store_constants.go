@@ -145,4 +145,23 @@ var (
 			`WHERE EXISTS (SELECT 1 FROM json_each("INBOUND_CLIENT".PROPERTIES, '$.allowedAgentTypes') ` +
 			`WHERE json_each.value = $1) AND DEPLOYMENT_ID = $2`,
 	}
+
+	// queryCreateClientIDDomain records a Client ID Metadata Document domain an OAuth inbound profile admits.
+	queryCreateClientIDDomain = dbmodel.DBQuery{
+		ID: "ASQ-INBC_MGT-21",
+		Query: `INSERT INTO "INBOUND_CLIENT_CIMD_DOMAIN" (ENTITY_ID, DOMAIN, DEPLOYMENT_ID) ` +
+			`VALUES ($1, $2, $3)`,
+	}
+	// queryDeleteClientIDDomainsByEntityID removes the Client ID Metadata Document domains of an entity's
+	// OAuth inbound profile.
+	queryDeleteClientIDDomainsByEntityID = dbmodel.DBQuery{
+		ID:    "ASQ-INBC_MGT-22",
+		Query: `DELETE FROM "INBOUND_CLIENT_CIMD_DOMAIN" WHERE ENTITY_ID = $1 AND DEPLOYMENT_ID = $2`,
+	}
+	// queryGetEntityIDByClientIDDomain retrieves the entity whose OAuth inbound profile admits a Client ID
+	// Metadata Document domain.
+	queryGetEntityIDByClientIDDomain = dbmodel.DBQuery{
+		ID:    "ASQ-INBC_MGT-23",
+		Query: `SELECT ENTITY_ID FROM "INBOUND_CLIENT_CIMD_DOMAIN" WHERE DOMAIN = $1 AND DEPLOYMENT_ID = $2`,
+	}
 )

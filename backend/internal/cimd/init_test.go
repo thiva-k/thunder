@@ -34,7 +34,7 @@ func (s *InitTestSuite) TearDownTest() {
 func (s *InitTestSuite) TestInitialize() {
 	mux := http.NewServeMux()
 
-	svc := Initialize(mux)
+	svc := Initialize(mux, nil)
 
 	s.Require().NotNil(svc)
 	options := httptest.NewRecorder()

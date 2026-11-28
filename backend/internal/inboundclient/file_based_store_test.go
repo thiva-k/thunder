@@ -438,3 +438,23 @@ func (suite *FileBasedStoreTestSuite) TestGetEntityIDsByReference_UnknownType() 
 	suite.Equal(0, total)
 	suite.Empty(ids)
 }
+
+func (suite *FileBasedStoreTestSuite) TestGetEntityIDByClientIDDomain() {
+	store := newFileBasedStoreForTest()
+	ctx := context.Background()
+	suite.NoError(store.CreateInboundClient(ctx, inboundmodel.InboundClient{ID: "app-1"}))
+	suite.NoError(store.CreateInboundClient(ctx, inboundmodel.InboundClient{
+		ID: "app-2",
+		Properties: map[string]interface{}{
+			PropOAuthProfile: providers.OAuthProfile{ClientIDDomains: []string{"claude.ai", "*.example.com"}},
+		},
+	}))
+
+	entityID, err := store.GetEntityIDByClientIDDomain(ctx, "*.example.com")
+	suite.NoError(err)
+	suite.Equal("app-2", entityID)
+
+	entityID, err = store.GetEntityIDByClientIDDomain(ctx, "vscode.dev")
+	suite.NoError(err)
+	suite.Empty(entityID)
+}

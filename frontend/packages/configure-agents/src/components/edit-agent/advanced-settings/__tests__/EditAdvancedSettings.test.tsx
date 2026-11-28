@@ -134,6 +134,98 @@ describe('EditAdvancedSettings', () => {
     expect(screen.getByTestId('danger-zone-section')).toBeInTheDocument();
   });
 
+  it('hides the grant settings and locks delegated mode for an agent that admits clients by domain', () => {
+    render(
+      <EditAdvancedSettings
+        agent={mockAgent}
+        editedAgent={{}}
+        oauth2Config={{
+          clientIdMetadataDocument: true,
+          clientIdDomains: ['claude.ai'],
+          grantTypes: ['authorization_code'],
+          responseTypes: ['code'],
+        }}
+        onFieldChange={mockOnFieldChange}
+        admitsClientsByDomain
+      />,
+    );
+
+    expect(screen.queryByTestId('operation-modes-section')).not.toBeInTheDocument();
+    expect(screen.getByText(/Manage the trusted domains on the Credentials tab/)).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeChecked();
+    expect(screen.getByRole('switch')).toBeDisabled();
+  });
+
+  describe('agent that admits clients by domain', () => {
+    const domainConfig: OAuthAgentConfig = {
+      clientIdMetadataDocument: true,
+      clientIdDomains: ['claude.ai'],
+      grantTypes: ['authorization_code', 'refresh_token'],
+      responseTypes: ['code'],
+      tokenEndpointAuthMethod: 'none',
+      publicClient: true,
+      pkceRequired: true,
+    };
+    const domainAgent: Agent = {...mockAgent, inboundAuthConfig: [{type: 'oauth2', config: domainConfig}]};
+
+    it('offers identity assertions despite the public placeholder', () => {
+      render(
+        <EditAdvancedSettings
+          agent={domainAgent}
+          editedAgent={{}}
+          oauth2Config={domainConfig}
+          onFieldChange={mockOnFieldChange}
+          admitsClientsByDomain
+        />,
+      );
+
+      expect(screen.getByTestId('identity-assertions-section')).toBeInTheDocument();
+      expect(document.getElementById('agent-domain-grant-types')).toBeInTheDocument();
+    });
+
+    it('lets JWT bearer be picked while keeping the placeholder authentication settings', async () => {
+      const user = userEvent.setup();
+      render(
+        <EditAdvancedSettings
+          agent={domainAgent}
+          editedAgent={{}}
+          oauth2Config={domainConfig}
+          onFieldChange={mockOnFieldChange}
+          admitsClientsByDomain
+        />,
+      );
+
+      await user.click(document.getElementById('agent-domain-grant-types')!);
+      await user.click(screen.getByRole('option', {name: /JWT bearer/}));
+
+      const [field, value] = mockOnFieldChange.mock.calls.at(-1) as [string, AgentInboundAuthConfig[]];
+      expect(field).toBe('inboundAuthConfig');
+      expect(value[0].config).toMatchObject({
+        grantTypes: ['authorization_code', 'refresh_token', JWT_BEARER],
+        tokenEndpointAuthMethod: 'none',
+        publicClient: true,
+        pkceRequired: true,
+      });
+    });
+
+    it('ties token exchange to identity assertions', async () => {
+      const user = userEvent.setup();
+      render(
+        <EditAdvancedSettings
+          agent={domainAgent}
+          editedAgent={{}}
+          oauth2Config={domainConfig}
+          onFieldChange={mockOnFieldChange}
+          admitsClientsByDomain
+        />,
+      );
+
+      await user.click(document.getElementById('agent-domain-grant-types')!);
+
+      expect(screen.getByRole('option', {name: /Token exchange/i})).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
   it('passes the oauth2Config down to OperationModesSection', () => {
     render(
       <EditAdvancedSettings

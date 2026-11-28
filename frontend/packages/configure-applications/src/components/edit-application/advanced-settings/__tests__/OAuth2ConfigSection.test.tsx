@@ -1291,6 +1291,43 @@ describe('OAuth2ConfigSection', () => {
       expect(screen.queryByText('applications:edit.advanced.grantTypes.hint')).not.toBeInTheDocument();
     });
 
+    describe('client that trusts domains', () => {
+      const domainConfig: OAuth2Config = {
+        clientIdMetadataDocument: true,
+        clientIdDomains: ['vscode.dev'],
+        grantTypes: ['authorization_code', 'refresh_token'],
+        responseTypes: ['code'],
+        pkceRequired: true,
+        publicClient: true,
+        tokenEndpointAuthMethod: 'none',
+      };
+
+      it('should describe the authentication settings instead of showing the placeholders', () => {
+        render(<OAuth2ConfigSection oauth2Config={domainConfig} onOAuth2ConfigChange={vi.fn()} />);
+
+        expect(screen.getByTestId('oauth2-domain-client-authentication')).toHaveTextContent(
+          'applications:edit.advanced.domainClientAuthentication',
+        );
+        expect(document.getElementById('token_endpoint_auth_method')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('applications:edit.advanced.labels.publicClient')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('applications:edit.advanced.labels.pkceRequired')).not.toBeInTheDocument();
+        expect(screen.getByText('applications:edit.advanced.grantTypes.domainClientHint')).toBeInTheDocument();
+      });
+
+      it('should offer the JWT bearer grant despite the public placeholder', async () => {
+        const user = userEvent.setup();
+        const onOAuth2ConfigChange = vi.fn();
+
+        render(<OAuth2ConfigSection oauth2Config={domainConfig} onOAuth2ConfigChange={onOAuth2ConfigChange} />);
+        await user.click(document.getElementById('grant_types')!);
+        await user.click(screen.getByRole('option', {name: jwtBearerLabel}));
+
+        expect(onOAuth2ConfigChange).toHaveBeenCalledWith({
+          grantTypes: ['authorization_code', 'refresh_token', jwtBearer],
+        });
+      });
+    });
+
     it('should lock the authentication settings the document owns', () => {
       render(<OAuth2ConfigSection oauth2Config={cimdConfig('private_key_jwt')} onOAuth2ConfigChange={vi.fn()} />);
 

@@ -249,6 +249,10 @@ const (
 	// RuntimeKeyRedirectURIHost holds the host of the redirect URI of a client registered from a Client ID
 	// Metadata Document, set by the authorization request so that consent shows it.
 	RuntimeKeyRedirectURIHost = "redirect_uri_host"
+	// RuntimeKeyConsentGroupID holds the group the consent of a client admitted by Client ID domain is kept
+	// under, set by the authorization request. Such clients share the ID of the application or agent that admits
+	// them, so consent is kept per client.
+	RuntimeKeyConsentGroupID = "consent_group_id"
 	// RuntimeKeyStepTimeout holds the expiry timestamp for the current flow step.
 	RuntimeKeyStepTimeout = "step_timeout"
 	// RuntimeKeyConsentedAttributes holds a space-separated set of attributes that the user has consented to share.

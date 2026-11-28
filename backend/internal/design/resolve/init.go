@@ -9,6 +9,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/application"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
+	"github.com/thunder-id/thunderid/internal/inboundclient"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 )
 
@@ -18,8 +19,10 @@ func Initialize(
 	themeMgtService thememgt.ThemeMgtServiceInterface,
 	layoutMgtService layoutmgt.LayoutMgtServiceInterface,
 	applicationService application.ApplicationServiceInterface,
+	inboundClient inboundclient.InboundClientServiceInterface,
 ) DesignResolveServiceInterface {
-	designResolveService := newDesignResolveService(themeMgtService, layoutMgtService, applicationService)
+	designResolveService := newDesignResolveService(themeMgtService, layoutMgtService, applicationService,
+		inboundClient)
 
 	if mux != nil {
 		designResolveHandler := newDesignResolveHandler(designResolveService)

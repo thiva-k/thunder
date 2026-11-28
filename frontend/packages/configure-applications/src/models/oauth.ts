@@ -498,6 +498,15 @@ export interface OAuth2Config {
   clientIdMetadataDocument?: boolean;
 
   /**
+   * The domains a client ID URL may be on, for a client that admits any client publishing a Client ID
+   * Metadata Document on them instead of one client. Such a client has no `clientId`, secret, redirect URIs
+   * or keys: each client's document supplies them when it signs in. Requires `clientIdMetadataDocument`.
+   * Whether a client admits by domain is fixed at creation.
+   * @example ['vscode.dev', '*.example.com']
+   */
+  clientIdDomains?: string[];
+
+  /**
    * Default ACR values applied when the request does not specify acr_values
    * @example ['urn:thunder:silver', 'urn:thunder:gold']
    */

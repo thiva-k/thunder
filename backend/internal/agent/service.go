@@ -2164,17 +2164,24 @@ func (s *agentService) validatePlacedAgent(ctx context.Context, agent *providers
 	}
 	if oauthCfg != nil {
 		clientID = oauthCfg.ClientID
-		if clientID == "" {
+		switch {
+		case clientID == "" && len(oauthCfg.ClientIDDomains) > 0:
+			// An agent that admits clients by Client ID domain has no client ID of its own.
+		case clientID == "":
 			generated, err := oauthutils.GenerateOAuth2ClientID()
 			if err != nil {
 				s.logger.Error(ctx, "Failed to generate client ID", log.Error(err))
 				return "", "", inboundmodel.InboundClient{}, &tidcommon.InternalServerError
 			}
 			clientID = generated
-		} else if taken, checkErr := s.isClientIDTaken(ctx, clientID, excludeID); checkErr != nil {
-			return "", "", inboundmodel.InboundClient{}, checkErr
-		} else if taken {
-			return "", "", inboundmodel.InboundClient{}, &ErrorAgentAlreadyExistsWithClientID
+		default:
+			taken, checkErr := s.isClientIDTaken(ctx, clientID, excludeID)
+			if checkErr != nil {
+				return "", "", inboundmodel.InboundClient{}, checkErr
+			}
+			if taken {
+				return "", "", inboundmodel.InboundClient{}, &ErrorAgentAlreadyExistsWithClientID
+			}
 		}
 
 		if inboundclient.UsesClientSecret(oauthCfg) && oauthCfg.ClientSecret == "" {
@@ -2726,6 +2733,10 @@ func (s *agentService) resolveOAuthCredentials(ctx context.Context,
 	clientID := oauthCfg.ClientID
 	if clientID == "" {
 		clientID = existingClientID
+	}
+	if clientID == "" && len(oauthCfg.ClientIDDomains) > 0 {
+		// An agent that admits clients by Client ID domain has no client ID of its own.
+		return "", "", nil
 	}
 	if clientID == "" {
 		generated, err := oauthutils.GenerateOAuth2ClientID()
@@ -3465,6 +3476,8 @@ func buildOAuthProfile(configs []providers.InboundAuthConfigWithSecret) *provide
 		RequirePushedAuthorizationRequests: cfg.RequirePushedAuthorizationRequests,
 		DPoPBoundAccessTokens:              cfg.DPoPBoundAccessTokens,
 		IncludeActClaim:                    cfg.IncludeActClaim,
+		ClientIDMetadataDocument:           cfg.ClientIDMetadataDocument,
+		ClientIDDomains:                    cfg.ClientIDDomains,
 		Certificate:                        cfg.Certificate,
 		Token:                              cfg.Token,
 		Scopes:                             cfg.Scopes,
@@ -3492,6 +3505,8 @@ func oauthProfileToComplete(clientID string, p *providers.OAuthProfile) *provide
 		RequirePushedAuthorizationRequests: p.RequirePushedAuthorizationRequests,
 		DPoPBoundAccessTokens:              p.DPoPBoundAccessTokens,
 		IncludeActClaim:                    p.IncludeActClaim,
+		ClientIDMetadataDocument:           p.ClientIDMetadataDocument,
+		ClientIDDomains:                    p.ClientIDDomains,
 		Certificate:                        p.Certificate,
 		Token:                              p.Token,
 		Scopes:                             p.Scopes,
@@ -3599,6 +3614,10 @@ func (s *agentService) translateInboundClientError(ctx context.Context, err erro
 	}
 	if svcErr := translateOAuthValidationError(err); svcErr != nil {
 		return svcErr
+	}
+	var cimdErr *inboundclient.CIMDValidationError
+	if errors.As(err, &cimdErr) {
+		return tidcommon.CustomServiceError(ErrorInvalidCIMDClient, cimdErr.Underlying.ErrorDescription)
 	}
 	if svcErr := translateUserInfoValidationError(err); svcErr != nil {
 		return svcErr

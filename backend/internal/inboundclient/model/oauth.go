@@ -27,6 +27,7 @@ type OAuthConfig struct {
 	DPoPBoundAccessTokens              bool                              `json:"dpopBoundAccessTokens"              yaml:"dpopBoundAccessTokens"`
 	IncludeActClaim                    bool                              `json:"includeActClaim"                    yaml:"includeActClaim"`
 	ClientIDMetadataDocument           bool                              `json:"clientIdMetadataDocument,omitempty" yaml:"clientIdMetadataDocument,omitempty"`
+	ClientIDDomains                    []string                          `json:"clientIdDomains,omitempty"          yaml:"clientIdDomains,omitempty"`
 	Token                              *providers.OAuthTokenConfig       `json:"token,omitempty"                    yaml:"token,omitempty"`
 	Scopes                             []string                          `json:"scopes,omitempty"                   yaml:"scopes,omitempty"`
 	UserInfo                           *providers.UserInfoConfig         `json:"userInfo,omitempty"                 yaml:"userInfo,omitempty"`

@@ -3,6 +3,12 @@
 
 import {DocumentTitle, FullScreenCreationWizardLayout, QueryErrorNotice} from '@thunderid/components';
 import {useGetAgentType, useGetAllAgentTypes, type AgentTypeListItem} from '@thunderid/configure-agent-types';
+import {
+  ClientIdDomainsField,
+  buildClientIdDomainsConfig,
+  getCimdRuleErrorMessage,
+  validateClientIdDomains,
+} from '@thunderid/configure-applications';
 import {OrganizationUnitTreePicker, useGetOrganizationUnits} from '@thunderid/configure-organization-units';
 import {renderSchemaField, useGetUser, useGetUsers} from '@thunderid/configure-users';
 import {useProjectScope} from '@thunderid/contexts';
@@ -18,9 +24,10 @@ import {
   FormControlLabel,
   FormLabel,
   MenuItem,
+  Radio,
+  RadioGroup,
   Select,
   Stack,
-  Switch,
   TextField,
   Typography,
 } from '@wso2/oxygen-ui';
@@ -44,6 +51,12 @@ type AttributeFormData = Record<string, unknown>;
 type AgentAddStep = 'setup' | 'details';
 
 const STEPS: readonly AgentAddStep[] = ['setup', 'details'];
+
+/**
+ * How a new agent signs in: with client credentials it is issued, as any client whose Client ID Metadata
+ * Document URL is on a trusted domain, or with no OAuth client.
+ */
+type AgentSignInMode = 'credentials' | 'trustedDomains' | 'none';
 
 /** The OAuth client an agent is issued: the client credentials grant, authenticated with a secret. */
 const AGENT_CREDENTIALS: AgentInboundAuthConfig = {
@@ -103,7 +116,9 @@ export default function AgentAddFormPage(): JSX.Element {
   const [ownerId, setOwnerId] = useState<string>('');
   // Set while External is chosen; the user picker's choice applies otherwise.
   const [externalOwner, setExternalOwner] = useState<AgentOwner | undefined>(undefined);
-  const [issueCredentials, setIssueCredentials] = useState<boolean>(true);
+  const [signInMode, setSignInMode] = useState<AgentSignInMode>('credentials');
+  const [clientIdDomains, setClientIdDomains] = useState<string[]>([]);
+  const clientIdDomainsError = signInMode === 'trustedDomains' ? validateClientIdDomains(clientIdDomains) : undefined;
   // The created agent whose secret is being shown; the agent's page opens once the secret is closed.
   const [created, setCreated] = useState<{id: string; clientSecret: string} | null>(null);
   const {data: typeList, isLoading: typesLoading, error: typesError, refetch: refetchTypes} = useGetAllAgentTypes();
@@ -255,7 +270,14 @@ export default function AgentAddFormPage(): JSX.Element {
       ...(Object.keys(attributes).length > 0 ? {attributes} : {}),
       // The API generates the client ID and secret for an OAuth config that names none, so only how
       // the agent authenticates is given: the client credentials grant, with the secret.
-      ...(issueCredentials ? {inboundAuthConfig: [AGENT_CREDENTIALS]} : {}),
+      ...(signInMode === 'credentials' ? {inboundAuthConfig: [AGENT_CREDENTIALS]} : {}),
+      // Clients from trusted domains act for the user who signs in, so the agent is delegated.
+      ...(signInMode === 'trustedDomains'
+        ? {
+            delegated: true,
+            inboundAuthConfig: [{type: 'oauth2' as const, config: buildClientIdDomainsConfig(clientIdDomains)}],
+          }
+        : {}),
     };
 
     createAgent.mutate(request, {
@@ -310,7 +332,7 @@ export default function AgentAddFormPage(): JSX.Element {
               form="agent-attributes-form"
               variant="contained"
               sx={{minWidth: 140}}
-              disabled={!isSetupComplete || createAgent.isPending}
+              disabled={!isSetupComplete || clientIdDomainsError !== undefined || createAgent.isPending}
             >
               {createAgent.isPending ? t('agents:addForm.creating') : t('agents:addForm.submit')}
             </Button>
@@ -341,12 +363,13 @@ export default function AgentAddFormPage(): JSX.Element {
 
         {createAgent.isError && (
           <Alert severity="error">
-            {getErrorMessage(
-              createAgent.error,
-              tForErrors,
-              'create.error',
-              'Failed to create agent. Please try again.',
-            )}
+            {getCimdRuleErrorMessage(createAgent.error, tForErrors) ??
+              getErrorMessage(
+                createAgent.error,
+                tForErrors,
+                'create.error',
+                'Failed to create agent. Please try again.',
+              )}
           </Alert>
         )}
 
@@ -555,20 +578,59 @@ export default function AgentAddFormPage(): JSX.Element {
             />
 
             <FormControl fullWidth>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={issueCredentials}
-                    onChange={(event) => setIssueCredentials(event.target.checked)}
-                    inputProps={{'aria-label': t('agents:addForm.issueCredentials')}}
-                  />
-                }
-                label={t('agents:addForm.issueCredentials')}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {t('agents:addForm.issueCredentialsHint')}
-              </Typography>
+              <FormLabel id="agent-sign-in-label">
+                {t('agents:addForm.signIn.label', 'How the agent signs in')}
+              </FormLabel>
+              <RadioGroup
+                aria-labelledby="agent-sign-in-label"
+                value={signInMode}
+                onChange={(event) => setSignInMode(event.target.value as AgentSignInMode)}
+              >
+                {(
+                  [
+                    {
+                      value: 'credentials',
+                      label: t('agents:addForm.issueCredentials'),
+                      hint: t('agents:addForm.issueCredentialsHint'),
+                    },
+                    {
+                      value: 'trustedDomains',
+                      label: t('agents:addForm.signIn.trustedDomains.label', 'As any client from trusted domains'),
+                      hint: t(
+                        'agents:addForm.signIn.trustedDomains.hint',
+                        'Clients that publish a Client ID Metadata Document at a URL on a domain you trust sign in as this agent, on behalf of the user who signs in. No credentials are issued.',
+                      ),
+                    },
+                    {
+                      value: 'none',
+                      label: t('agents:addForm.signIn.none.label', 'Without an OAuth client'),
+                      hint: t('agents:addForm.signIn.none.hint', 'The agent has no OAuth client to sign in with.'),
+                    },
+                  ] satisfies {value: AgentSignInMode; label: string; hint: string}[]
+                ).map((option) => (
+                  <Box key={option.value} sx={{mb: 1}}>
+                    <FormControlLabel value={option.value} control={<Radio />} label={option.label} />
+                    <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: 4}}>
+                      {option.hint}
+                    </Typography>
+                  </Box>
+                ))}
+              </RadioGroup>
             </FormControl>
+
+            {signInMode === 'trustedDomains' && (
+              <ClientIdDomainsField
+                id="agent-client-id-domains"
+                value={clientIdDomains}
+                onChange={setClientIdDomains}
+                // An empty list is only incomplete, so its message waits until a domain has been entered.
+                error={
+                  clientIdDomains.length > 0 && clientIdDomainsError
+                    ? t(clientIdDomainsError.key, clientIdDomainsError.defaultValue)
+                    : undefined
+                }
+              />
+            )}
           </Stack>
         </Box>
       </Stack>

@@ -35,7 +35,7 @@ func (suite *InitTestSuite) TestInitialize() {
 	mockLayout := layoutmock.NewLayoutMgtServiceInterfaceMock(suite.T())
 	mockApp := applicationmock.NewApplicationServiceInterfaceMock(suite.T())
 
-	service := Initialize(mux, mockTheme, mockLayout, mockApp)
+	service := Initialize(mux, mockTheme, mockLayout, mockApp, nil)
 
 	assert.NotNil(suite.T(), service)
 	assert.Implements(suite.T(), (*DesignResolveServiceInterface)(nil), service)

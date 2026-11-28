@@ -610,6 +610,19 @@ func (suite *OAuth2UtilsTestSuite) TestGenerateOAuth2CredentialInvalidType() {
 		"Client secret should automatically use the correct length")
 }
 
+func (suite *OAuth2UtilsTestSuite) TestLimitToClientScopes() {
+	domainClient := &providers.OAuthClient{ResolvedByClientIDDomain: true, Scopes: []string{"openid", "mcp:tools"}}
+	suite.Equal("openid mcp:tools", LimitToClientScopes("openid profile mcp:tools admin", domainClient))
+	suite.Equal("", LimitToClientScopes("profile", domainClient))
+
+	undeclared := &providers.OAuthClient{ResolvedByClientIDDomain: true}
+	suite.Equal("openid profile", LimitToClientScopes("openid profile", undeclared))
+
+	registered := &providers.OAuthClient{Scopes: []string{"openid"}}
+	suite.Equal("openid profile", LimitToClientScopes("openid profile", registered))
+	suite.Equal("openid", LimitToClientScopes("openid", nil))
+}
+
 func (suite *OAuth2UtilsTestSuite) TestSeparateOIDCAndNonOIDCScopes() {
 	scopeClaimsMapping := map[string][]string{
 		"openid":  {"sub"},

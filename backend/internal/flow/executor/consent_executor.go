@@ -124,6 +124,9 @@ func (e *consentExecutor) Execute(ctx *providers.NodeContext) (*providers.Execut
 	// TODO: Replace with application's actual OU when OU support is added
 	ouID := "default"
 	appID := ctx.EntityID
+	// Clients admitted by Client ID domain share the ID of the application or agent that admits them, so their
+	// consent records are kept per client while the purposes stay the application's.
+	ctx.Context = consentauthn.WithConsentRecordGroup(ctx.Context, ctx.RuntimeData[common.RuntimeKeyConsentGroupID])
 	entityID := entityRef.EntityID
 
 	if !e.HasRequiredInputs(ctx, execResp) {

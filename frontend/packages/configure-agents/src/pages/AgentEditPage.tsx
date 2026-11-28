@@ -15,10 +15,13 @@ import {
 import {useGetAgentType, useGetAllAgentTypes} from '@thunderid/configure-agent-types';
 import {
   OAuth2GrantTypes,
+  admitsClientsByDomain,
   getBackchannelLogoutUriServerError,
+  getCimdRuleErrorMessage,
   hasUserAccess,
   isIdJagEnabled,
   validateBackchannelLogoutUri,
+  validateClientIdDomains,
 } from '@thunderid/configure-applications';
 import {FlowType, useGetFlows} from '@thunderid/configure-flows';
 import {dropNonConformingOptionalAttributes} from '@thunderid/configure-users';
@@ -324,6 +327,13 @@ export default function AgentEditPage(): JSX.Element {
   }
 
   const hasOAuth = Boolean(oauth2Config);
+  // An agent that admits any client from trusted domains has no client ID, secret, redirect URIs or keys of
+  // its own. The choice is fixed at creation, so it is read from the stored configuration.
+  const isDomainClient = admitsClientsByDomain(
+    agent.inboundAuthConfig?.find((config) => config.type === 'oauth2')?.config,
+  );
+  const hasInvalidClientIdDomains =
+    isDomainClient && validateClientIdDomains(oauth2Config?.clientIdDomains ?? []) !== undefined;
 
   // Computed directly from state rather than reported by the Advanced/Access tab content, since
   // that content unmounts when its tab isn't active — a callback-based report would be stale or
@@ -337,7 +347,7 @@ export default function AgentEditPage(): JSX.Element {
       return false;
     }
   });
-  const isMissingRedirectUri = hasAuthorizationCodeGrant && !hasValidRedirectUri;
+  const isMissingRedirectUri = !isDomainClient && hasAuthorizationCodeGrant && !hasValidRedirectUri;
   const allowedUserTypes = editedAgent.allowedUserTypes ?? agent.allowedUserTypes ?? [];
   const isMissingAllowedUserType = hasAuthorizationCodeGrant && allowedUserTypes.length === 0;
   const isMissingCertificate =
@@ -372,7 +382,8 @@ export default function AgentEditPage(): JSX.Element {
     isMissingDeviceGrantFlow ||
     isInvalidBackchannelLogoutUri ||
     isInvalidIdentityAssertions ||
-    isInvalidLifespan;
+    isInvalidLifespan ||
+    hasInvalidClientIdDomains;
 
   // ResourceAvatar opens its picker on any avatar click while onSelect is set, so a read-only
   // agent has to withhold the callback rather than rely on `editable` alone.
@@ -391,6 +402,11 @@ export default function AgentEditPage(): JSX.Element {
   }
   if (isMissingCertificate) {
     validationIssues.push(t('agents:edit.page.validation.missingCertificate', 'add a certificate'));
+  }
+  if (hasInvalidClientIdDomains) {
+    validationIssues.push(
+      t('agents:edit.page.validation.invalidClientIdDomains', 'add at least one valid trusted domain'),
+    );
   }
   if (isMissingDeviceGrantFlow) {
     validationIssues.push(
@@ -478,6 +494,7 @@ export default function AgentEditPage(): JSX.Element {
           oauth2Config={oauth2Config}
           onFieldChange={handleFieldChange}
           credentialFields={credentialFields}
+          admitsClientsByDomain={isDomainClient}
         />
       ),
     });
@@ -534,6 +551,7 @@ export default function AgentEditPage(): JSX.Element {
         editedAgent={editedAgent}
         oauth2Config={oauth2Config}
         onFieldChange={handleFieldChange}
+        admitsClientsByDomain={isDomainClient}
         onBackchannelLogoutUriValidationChange={setBackchannelLogoutUriInvalid}
         onIdentityAssertionsValidationChange={setIdentityAssertionsInvalid}
         onDeleteSuccess={() => {
@@ -714,6 +732,7 @@ export default function AgentEditPage(): JSX.Element {
           error={
             updateAgent.error
               ? (getBackchannelLogoutUriServerError(updateAgent.error, tForErrors) ??
+                getCimdRuleErrorMessage(updateAgent.error, tForErrors) ??
                 getErrorMessage(
                   updateAgent.error,
                   tForErrors,

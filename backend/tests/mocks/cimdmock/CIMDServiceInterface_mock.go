@@ -49,6 +49,76 @@ func (_m *CIMDServiceInterfaceMock) EXPECT() *CIMDServiceInterfaceMock_Expecter 
 	return &CIMDServiceInterfaceMock_Expecter{mock: &_m.Mock}
 }
 
+// ClientIDDomainCandidates provides a mock function for the type CIMDServiceInterfaceMock
+func (_mock *CIMDServiceInterfaceMock) ClientIDDomainCandidates(ctx context.Context, clientID string) ([]string, *common.ServiceError) {
+	ret := _mock.Called(ctx, clientID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClientIDDomainCandidates")
+	}
+
+	var r0 []string
+	var r1 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]string, *common.ServiceError)); ok {
+		return returnFunc(ctx, clientID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []string); ok {
+		r0 = returnFunc(ctx, clientID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, clientID)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*common.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClientIDDomainCandidates'
+type CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call struct {
+	*mock.Call
+}
+
+// ClientIDDomainCandidates is a helper method to define mock.On call
+//   - ctx context.Context
+//   - clientID string
+func (_e *CIMDServiceInterfaceMock_Expecter) ClientIDDomainCandidates(ctx any, clientID any) *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call {
+	return &CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call{Call: _e.mock.On("ClientIDDomainCandidates", ctx, clientID)}
+}
+
+func (_c *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call) Run(run func(ctx context.Context, clientID string)) *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call) Return(strings []string, serviceError *common.ServiceError) *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call {
+	_c.Call.Return(strings, serviceError)
+	return _c
+}
+
+func (_c *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call) RunAndReturn(run func(ctx context.Context, clientID string) ([]string, *common.ServiceError)) *CIMDServiceInterfaceMock_ClientIDDomainCandidates_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Preview provides a mock function for the type CIMDServiceInterfaceMock
 func (_mock *CIMDServiceInterfaceMock) Preview(ctx context.Context, clientID string) (*cimd.PreviewResponse, *common.ServiceError) {
 	ret := _mock.Called(ctx, clientID)
@@ -115,6 +185,76 @@ func (_c *CIMDServiceInterfaceMock_Preview_Call) Return(previewResponse *cimd.Pr
 }
 
 func (_c *CIMDServiceInterfaceMock_Preview_Call) RunAndReturn(run func(ctx context.Context, clientID string) (*cimd.PreviewResponse, *common.ServiceError)) *CIMDServiceInterfaceMock_Preview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResolveDocumentClient provides a mock function for the type CIMDServiceInterfaceMock
+func (_mock *CIMDServiceInterfaceMock) ResolveDocumentClient(ctx context.Context, clientID string) (*cimd.DocumentClient, *common.ServiceError) {
+	ret := _mock.Called(ctx, clientID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResolveDocumentClient")
+	}
+
+	var r0 *cimd.DocumentClient
+	var r1 *common.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*cimd.DocumentClient, *common.ServiceError)); ok {
+		return returnFunc(ctx, clientID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *cimd.DocumentClient); ok {
+		r0 = returnFunc(ctx, clientID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cimd.DocumentClient)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *common.ServiceError); ok {
+		r1 = returnFunc(ctx, clientID)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*common.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// CIMDServiceInterfaceMock_ResolveDocumentClient_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResolveDocumentClient'
+type CIMDServiceInterfaceMock_ResolveDocumentClient_Call struct {
+	*mock.Call
+}
+
+// ResolveDocumentClient is a helper method to define mock.On call
+//   - ctx context.Context
+//   - clientID string
+func (_e *CIMDServiceInterfaceMock_Expecter) ResolveDocumentClient(ctx any, clientID any) *CIMDServiceInterfaceMock_ResolveDocumentClient_Call {
+	return &CIMDServiceInterfaceMock_ResolveDocumentClient_Call{Call: _e.mock.On("ResolveDocumentClient", ctx, clientID)}
+}
+
+func (_c *CIMDServiceInterfaceMock_ResolveDocumentClient_Call) Run(run func(ctx context.Context, clientID string)) *CIMDServiceInterfaceMock_ResolveDocumentClient_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CIMDServiceInterfaceMock_ResolveDocumentClient_Call) Return(documentClient *cimd.DocumentClient, serviceError *common.ServiceError) *CIMDServiceInterfaceMock_ResolveDocumentClient_Call {
+	_c.Call.Return(documentClient, serviceError)
+	return _c
+}
+
+func (_c *CIMDServiceInterfaceMock_ResolveDocumentClient_Call) RunAndReturn(run func(ctx context.Context, clientID string) (*cimd.DocumentClient, *common.ServiceError)) *CIMDServiceInterfaceMock_ResolveDocumentClient_Call {
 	_c.Call.Return(run)
 	return _c
 }

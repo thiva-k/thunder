@@ -27,6 +27,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/application/model"
 	authncm "github.com/thunder-id/thunderid/internal/authn/common"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
+	"github.com/thunder-id/thunderid/internal/cimd"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	flowconfig "github.com/thunder-id/thunderid/internal/flow/config"
@@ -48,6 +49,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/actorprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/attestationprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
+	"github.com/thunder-id/thunderid/tests/mocks/cimdmock"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
@@ -5881,4 +5883,36 @@ func (s *ServiceTestSuite) TestGetFlowExpirySeconds_AdminInitiatedFlow() {
 		AdminInitiatedFlow: flowconfig.FlowTypeConfig{ExpirySeconds: 600},
 	}}
 	s.Equal(int64(600), service.getFlowExpirySeconds(context.Background(), providers.FlowTypeAdminInitiated))
+}
+
+func TestResolveAppID(t *testing.T) {
+	const appID = "019a0000-0000-7000-8000-000000000001"
+	const clientID = "https://client.example.com/oauth/client.json"
+	const unknownClientID = "https://unknown.example.com/c.json"
+	mockInboundClient := inboundclientmock.NewInboundClientServiceInterfaceMock(t)
+	for _, id := range []string{clientID, unknownClientID} {
+		mockInboundClient.On("GetInboundClientByEntityID", mock.Anything, id).
+			Return(nil, inboundclient.ErrInboundClientNotFound)
+	}
+	mockInboundClient.On("GetOAuthClientByClientID", mock.Anything, clientID).Return(
+		&providers.OAuthClient{ID: appID, ClientID: clientID, ResolvedByClientIDDomain: true}, nil)
+	mockInboundClient.On("GetOAuthClientByClientID", mock.Anything, unknownClientID).Return(nil, nil)
+	mockInboundClient.On("GetInboundClientByEntityID", mock.Anything, appID).
+		Return(&providers.InboundClient{ID: appID}, nil)
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(t)
+	cimdService.On("ResolveDocumentClient", mock.Anything, clientID).Return(&cimd.DocumentClient{Name: "Client"}, nil)
+	service := &flowExecService{actorProvider: actorprovider.Initialize(mockInboundClient,
+		entityprovidermock.NewEntityProviderInterfaceMock(t), noopAuthnMgr(), nil, nil, nil,
+		actorprovider.ResolvingCIMDDocumentClients(cimdService))}
+
+	for given, want := range map[string]string{
+		"":              "",
+		"test-app":      "test-app",
+		clientID:        appID,
+		unknownClientID: unknownClientID,
+	} {
+		resolved, svcErr := service.resolveAppID(context.Background(), given)
+		assert.Nil(t, svcErr, given)
+		assert.Equal(t, want, resolved, given)
+	}
 }

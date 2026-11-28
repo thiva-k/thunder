@@ -9,6 +9,7 @@ import (
 
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/applicationmock"
 	"github.com/thunder-id/thunderid/tests/mocks/design/layoutmock"
 	"github.com/thunder-id/thunderid/tests/mocks/design/thememock"
+	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
 )
 
 // Test Suite
@@ -41,7 +43,8 @@ func (suite *ResolveServiceTestSuite) SetupTest() {
 	suite.mockThemeService = thememock.NewThemeMgtServiceInterfaceMock(suite.T())
 	suite.mockLayoutService = layoutmock.NewLayoutMgtServiceInterfaceMock(suite.T())
 	suite.mockAppService = applicationmock.NewApplicationServiceInterfaceMock(suite.T())
-	suite.service = newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, suite.mockAppService)
+	suite.service = newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, suite.mockAppService,
+		nil)
 }
 
 // Test ResolveDesign - Empty resolve type
@@ -74,7 +77,7 @@ func (suite *ResolveServiceTestSuite) TestResolveDesign_UnsupportedType() {
 
 // Test ResolveDesign - Nil application service
 func (suite *ResolveServiceTestSuite) TestResolveDesign_NilApplicationService() {
-	service := newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, nil)
+	service := newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, nil, nil)
 
 	result, err := service.ResolveDesign(context.Background(), providers.DesignResolveTypeAPP,
 		"00000000-0000-0000-0000-000000000001")
@@ -293,7 +296,7 @@ func (suite *ResolveServiceTestSuite) TestResolveDesign_ThemeServiceError() {
 
 // Test ResolveDesign - Nil theme service
 func (suite *ResolveServiceTestSuite) TestResolveDesign_NilThemeService() {
-	service := newDesignResolveService(nil, suite.mockLayoutService, suite.mockAppService)
+	service := newDesignResolveService(nil, suite.mockLayoutService, suite.mockAppService, nil)
 	app := &providers.Application{
 		ID:   "00000000-0000-0000-0000-000000000001",
 		Name: "Test App",
@@ -362,7 +365,7 @@ func (suite *ResolveServiceTestSuite) TestResolveDesign_LayoutServiceError() {
 
 // Test ResolveDesign - Nil layout service
 func (suite *ResolveServiceTestSuite) TestResolveDesign_NilLayoutService() {
-	service := newDesignResolveService(suite.mockThemeService, nil, suite.mockAppService)
+	service := newDesignResolveService(suite.mockThemeService, nil, suite.mockAppService, nil)
 	app := &providers.Application{
 		ID:   "00000000-0000-0000-0000-000000000001",
 		Name: "Test App",
@@ -462,7 +465,7 @@ func (suite *ResolveServiceTestSuite) TestResolveDesignContent_NoApplicableColor
 
 // Test ResolveDesignContent - Nil theme service
 func (suite *ResolveServiceTestSuite) TestResolveDesignContent_NilThemeService() {
-	service := newDesignResolveService(nil, suite.mockLayoutService, suite.mockAppService)
+	service := newDesignResolveService(nil, suite.mockLayoutService, suite.mockAppService, nil)
 
 	out, err := service.ResolveDesignContent(context.Background(), "t1", "light",
 		"{{design(palette.primary.main)}}")
@@ -471,3 +474,57 @@ func (suite *ResolveServiceTestSuite) TestResolveDesignContent_NilThemeService()
 	assert.Equal(suite.T(), tidcommon.InternalServerError.Code, err.Code)
 	assert.Equal(suite.T(), "", out)
 }
+
+func (suite *ResolveServiceTestSuite) TestResolveDesign_DomainClient() {
+	clientID := testDomainClientID
+	inboundClient := inboundclientmock.NewInboundClientServiceInterfaceMock(suite.T())
+	service := newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, suite.mockAppService,
+		inboundClient)
+	suite.mockAppService.On("GetApplication", mock.Anything, clientID).
+		Return(nil, &application.ErrorApplicationNotFound)
+	inboundClient.On("GetOAuthClientByClientID", mock.Anything, clientID).Return(
+		&providers.OAuthClient{ID: "agent-1", ClientID: clientID, ResolvedByClientIDDomain: true}, nil)
+	inboundClient.On("GetInboundClientByEntityID", mock.Anything, "agent-1").
+		Return(&providers.InboundClient{ID: "agent-1", ThemeID: "theme-123"}, nil)
+	suite.mockThemeService.On("GetTheme", mock.Anything, "theme-123").Return(&thememgt.Theme{
+		ID: "theme-123", Theme: json.RawMessage(`{"colors": {"primary": "#007bff"}}`)}, nil)
+
+	result, err := service.ResolveDesign(context.Background(), providers.DesignResolveTypeAPP, clientID)
+
+	suite.Nil(err)
+	suite.Require().NotNil(result)
+	suite.NotNil(result.Theme)
+}
+
+func (suite *ResolveServiceTestSuite) TestResolveDesign_URLOfNoDomainClientHasNoDesign() {
+	clientID := testDomainClientID
+	inboundClient := inboundclientmock.NewInboundClientServiceInterfaceMock(suite.T())
+	service := newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, suite.mockAppService,
+		inboundClient)
+	suite.mockAppService.On("GetApplication", mock.Anything, clientID).
+		Return(nil, &application.ErrorApplicationNotFound)
+	inboundClient.On("GetOAuthClientByClientID", mock.Anything, clientID).Return(nil, nil)
+
+	result, err := service.ResolveDesign(context.Background(), providers.DesignResolveTypeAPP, clientID)
+
+	suite.Nil(result)
+	suite.Require().NotNil(err)
+	suite.Equal(common.ErrorApplicationHasNoDesign.Code, err.Code)
+}
+
+func (suite *ResolveServiceTestSuite) TestResolveDesign_DomainClientLookupFails() {
+	clientID := testDomainClientID
+	inboundClient := inboundclientmock.NewInboundClientServiceInterfaceMock(suite.T())
+	service := newDesignResolveService(suite.mockThemeService, suite.mockLayoutService, suite.mockAppService,
+		inboundClient)
+	suite.mockAppService.On("GetApplication", mock.Anything, clientID).
+		Return(nil, &application.ErrorApplicationNotFound)
+	inboundClient.On("GetOAuthClientByClientID", mock.Anything, clientID).Return(nil, errors.New("unavailable"))
+
+	result, err := service.ResolveDesign(context.Background(), providers.DesignResolveTypeAPP, clientID)
+
+	suite.Nil(result)
+	suite.Equal(&tidcommon.InternalServerError, err)
+}
+
+const testDomainClientID = "https://client.example.com/oauth/client.json"

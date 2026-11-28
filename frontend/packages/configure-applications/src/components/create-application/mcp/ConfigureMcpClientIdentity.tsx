@@ -15,14 +15,16 @@ import {
   Typography,
   useTheme,
 } from '@wso2/oxygen-ui';
-import {FileBadge, Lightbulb, Wrench} from '@wso2/oxygen-ui-icons-react';
+import {FileBadge, Globe, Lightbulb, Wrench} from '@wso2/oxygen-ui-icons-react';
 import type {ChangeEvent, JSX, ReactNode} from 'react';
 import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import usePreviewCimdDocument from '../../../api/usePreviewCimdDocument';
 import {McpClientIdentityModes} from '../../../models/cimd';
 import type {CimdPreview, McpClientIdentityMode} from '../../../models/cimd';
+import {validateClientIdDomains} from '../../../utils/clientIdDomains';
 import getCimdErrorMessage from '../../../utils/getCimdErrorMessage';
+import ClientIdDomainsField from '../../cimd/ClientIdDomainsField';
 import ConfigureMetadataDocument from '../cimd/ConfigureMetadataDocument';
 
 /**
@@ -47,6 +49,10 @@ export interface ConfigureMcpClientIdentityProps {
   onReadyChange?: (isReady: boolean) => void;
   /** Known MCP clients shown as tiles, from the template's `metadataDocumentClients`. */
   knownClients?: {name: string; clientId: string}[];
+  /** The trusted domains entered for "Any client from trusted domains". */
+  domains?: string[];
+  /** Invoked when the trusted domains change. */
+  onDomainsChange?: (domains: string[]) => void;
 }
 
 /**
@@ -65,17 +71,23 @@ export default function ConfigureMcpClientIdentity({
   isRegistering = false,
   onReadyChange = undefined,
   knownClients = [],
+  domains = [],
+  onDomainsChange = undefined,
 }: ConfigureMcpClientIdentityProps): JSX.Element {
   const {t} = useTranslation();
   const theme = useTheme();
   const previewKnownClient = usePreviewCimdDocument();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
-  // The embedded document form reports its own readiness; the manual mode is ready at once.
+  const domainsError = validateClientIdDomains(domains);
+
+  // The embedded document form reports its own readiness; the manual mode is ready at once, and trusted domains
+  // once every domain is valid.
   useEffect((): void => {
     if (mode === null) onReadyChange?.(false);
     if (mode === McpClientIdentityModes.MANUAL) onReadyChange?.(true);
-  }, [mode, onReadyChange]);
+    if (mode === McpClientIdentityModes.TRUSTED_DOMAINS) onReadyChange?.(domainsError === undefined);
+  }, [mode, domainsError, onReadyChange]);
 
   const handleKnownClientClick = (clientId: string): void => {
     if (previewKnownClient.isPending || isRegistering) return;
@@ -91,6 +103,15 @@ export default function ConfigureMcpClientIdentity({
       description: t(
         'applications:cimd.identity.document.description',
         "Enter the client's metadata document URL. Its identity and sign-in details come from its vendor.",
+      ),
+    },
+    {
+      value: McpClientIdentityModes.TRUSTED_DOMAINS,
+      icon: <Globe size={20} />,
+      title: t('applications:cimd.registration.trustedDomains.title', 'Any client from trusted domains'),
+      description: t(
+        'applications:cimd.registration.trustedDomains.description',
+        "Let every client whose client ID URL is on a domain you trust sign in, without registering each one. A client's document is read when it signs in.",
       ),
     },
     {
@@ -208,6 +229,23 @@ export default function ConfigureMcpClientIdentity({
           </Stack>
         </RadioGroup>
       </Stack>
+
+      {mode === McpClientIdentityModes.TRUSTED_DOMAINS && (
+        <Stack spacing={1.5}>
+          <ClientIdDomainsField
+            value={domains}
+            onChange={(next) => onDomainsChange?.(next)}
+            // An empty list is only incomplete, so its message waits until a domain has been entered.
+            error={domains.length > 0 && domainsError ? t(domainsError.key, domainsError.defaultValue) : undefined}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {t(
+              'applications:cimd.registration.trustedDomains.warning',
+              'Anyone who can publish a document on these domains can sign in through this application. Add only domains whose publishers you trust, and prefer an exact domain to a wildcard.',
+            )}
+          </Typography>
+        </Stack>
+      )}
 
       {mode === McpClientIdentityModes.METADATA_DOCUMENT && (
         <ConfigureMetadataDocument

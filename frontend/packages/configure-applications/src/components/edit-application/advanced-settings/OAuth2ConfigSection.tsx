@@ -30,6 +30,7 @@ import useValidationReport from '../../../hooks/useValidationReport';
 import type {ApplicationTemplate} from '../../../models/application-templates';
 import type {OAuth2Config} from '../../../models/oauth';
 import {OAuth2GrantTypes, OAuth2ResponseTypes, TokenEndpointAuthMethods} from '../../../models/oauth';
+import {admitsClientsByDomain} from '../../../utils/clientIdDomains';
 import {getGrantTypeLabel} from '../../../utils/getGrantTypeLabel';
 import isValidRedirectUriFormat from '../../../utils/isValidRedirectUriFormat';
 import {
@@ -284,6 +285,9 @@ export default function OAuth2ConfigSection({
   // A client registered from a metadata document takes its authentication settings from the document,
   // and the document rules limit its grants.
   const isCimdClient = oauth2Config.clientIdMetadataDocument === true;
+  // A client that trusts domains stores placeholder authentication settings: each admitted client's own
+  // document decides them, so they are described rather than shown.
+  const isDomainClient = admitsClientsByDomain(oauth2Config);
   const discoveredGrantTypes = discovery?.wellKnown?.grant_types_supported ?? [];
   const availableGrantTypes = discoveredGrantTypes.filter(
     (grant) =>
@@ -324,6 +328,23 @@ export default function OAuth2ConfigSection({
   } = flags;
   const isPublicClientDisallowed = isPublicClientDisabledByGrants || isPublicClientDisabledByIdJag;
   const idJagEnabled = isIdJagEnabled(oauth2Config);
+
+  let grantTypesHint = t(
+    'applications:edit.advanced.grantTypes.hint',
+    'OAuth 2 flows this {{entity}} can use (e.g., authorization_code, client_credentials, refresh_token).',
+    {entity: 'application'},
+  );
+  if (isDomainClient) {
+    grantTypesHint = t(
+      'applications:edit.advanced.grantTypes.domainClientHint',
+      'Each client gets the grant types both this application allows and its own metadata document declares. Token exchange and JWT bearer apply only to clients whose document uses private key JWT authentication, and token exchange comes with identity assertions (ID-JAG).',
+    );
+  } else if (isCimdClient) {
+    grantTypesHint = t(
+      'applications:edit.advanced.grantTypes.metadataDocumentHint',
+      'Only the grant types a metadata document client can hold are offered. Token exchange and JWT bearer need a document that declares private key JWT authentication, and token exchange comes with identity assertions (ID-JAG).',
+    );
+  }
 
   let tokenMethodCaption: string;
   if (isCimdClient) {
@@ -405,16 +426,7 @@ export default function OAuth2ConfigSection({
             })}
           </Select>
           <Typography variant="caption" color="text.secondary" sx={{mt: 0.5}}>
-            {isCimdClient
-              ? t(
-                  'applications:edit.advanced.grantTypes.metadataDocumentHint',
-                  'Only the grant types a metadata document client can hold are offered. Token exchange and JWT bearer need a document that declares private key JWT authentication, and token exchange comes with identity assertions (ID-JAG).',
-                )
-              : t(
-                  'applications:edit.advanced.grantTypes.hint',
-                  'OAuth 2 flows this {{entity}} can use (e.g., authorization_code, client_credentials, refresh_token).',
-                  {entity: 'application'},
-                )}
+            {grantTypesHint}
           </Typography>
           {grantTypes.includes(OAuth2GrantTypes.DEVICE_CODE) && (
             <Alert severity="info" sx={{mt: 1}}>
@@ -595,40 +607,54 @@ export default function OAuth2ConfigSection({
         )}
 
         {/* Token Endpoint Auth Method */}
-        <FormControl fullWidth size="small">
-          <FormLabel htmlFor="token_endpoint_auth_method">
-            {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Client authentication method')}
-          </FormLabel>
-          <Select
-            id="token_endpoint_auth_method"
-            displayEmpty
-            disabled={!isEditable || isTokenMethodLocked}
-            value={effectiveTokenMethod}
-            onChange={(e) => onOAuth2ConfigChange?.(applyTokenEndpointAuthMethodChange(oauth2Config, e.target.value))}
-            renderValue={(selected) =>
-              !selected ? (
-                <Typography color="text.secondary" variant="body2">
-                  {t('applications:edit.advanced.tokenEndpointAuthMethod.placeholder')}
-                </Typography>
-              ) : (
-                selected
-              )
-            }
-          >
-            {availableTokenEndpointAuthMethods.map((method) => (
-              <MenuItem
-                key={method}
-                value={method}
-                disabled={method === TokenEndpointAuthMethods.NONE && isPublicClientDisallowed}
-              >
-                {method}
-              </MenuItem>
-            ))}
-          </Select>
-          <Typography variant="caption" color="text.secondary" sx={{mt: 0.5}}>
-            {tokenMethodCaption}
-          </Typography>
-        </FormControl>
+        {isDomainClient ? (
+          <Box data-testid="oauth2-domain-client-authentication">
+            <Typography variant="subtitle2">
+              {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Client authentication method')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mt: 0.5}}>
+              {t(
+                'applications:edit.advanced.domainClientAuthentication',
+                "Each client's own metadata document sets how it authenticates: as a public client, or with private key JWT. PKCE is always required.",
+              )}
+            </Typography>
+          </Box>
+        ) : (
+          <FormControl fullWidth size="small">
+            <FormLabel htmlFor="token_endpoint_auth_method">
+              {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Client authentication method')}
+            </FormLabel>
+            <Select
+              id="token_endpoint_auth_method"
+              displayEmpty
+              disabled={!isEditable || isTokenMethodLocked}
+              value={effectiveTokenMethod}
+              onChange={(e) => onOAuth2ConfigChange?.(applyTokenEndpointAuthMethodChange(oauth2Config, e.target.value))}
+              renderValue={(selected) =>
+                !selected ? (
+                  <Typography color="text.secondary" variant="body2">
+                    {t('applications:edit.advanced.tokenEndpointAuthMethod.placeholder')}
+                  </Typography>
+                ) : (
+                  selected
+                )
+              }
+            >
+              {availableTokenEndpointAuthMethods.map((method) => (
+                <MenuItem
+                  key={method}
+                  value={method}
+                  disabled={method === TokenEndpointAuthMethods.NONE && isPublicClientDisallowed}
+                >
+                  {method}
+                </MenuItem>
+              ))}
+            </Select>
+            <Typography variant="caption" color="text.secondary" sx={{mt: 0.5}}>
+              {tokenMethodCaption}
+            </Typography>
+          </FormControl>
+        )}
 
         {/* ACR Values */}
         {availableAcrValues.length > 0 && (
@@ -674,58 +700,62 @@ export default function OAuth2ConfigSection({
         <Divider />
 
         {/* Public Client Toggle */}
-        <Box>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={oauth2Config.publicClient ?? false}
-                disabled={!isEditable || isPublicClientLocked || isPublicClientDisallowed}
-                onChange={(e) => onOAuth2ConfigChange?.(applyPublicClientChange(oauth2Config, e.target.checked))}
-                inputProps={{'aria-label': t('applications:edit.advanced.labels.publicClient')}}
-              />
-            }
-            label={
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Typography variant="subtitle2">{t('applications:edit.advanced.labels.publicClient')}</Typography>
-                {isPublicClientLocked && (
-                  <Tooltip title={lockedTooltip}>
-                    <Lock size={14} />
-                  </Tooltip>
-                )}
-              </Stack>
-            }
-          />
-          <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {t(...getPublicClientCaption(flags, oauth2Config))}
-          </Typography>
-        </Box>
+        {!isDomainClient && (
+          <Box>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={oauth2Config.publicClient ?? false}
+                  disabled={!isEditable || isPublicClientLocked || isPublicClientDisallowed}
+                  onChange={(e) => onOAuth2ConfigChange?.(applyPublicClientChange(oauth2Config, e.target.checked))}
+                  inputProps={{'aria-label': t('applications:edit.advanced.labels.publicClient')}}
+                />
+              }
+              label={
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Typography variant="subtitle2">{t('applications:edit.advanced.labels.publicClient')}</Typography>
+                  {isPublicClientLocked && (
+                    <Tooltip title={lockedTooltip}>
+                      <Lock size={14} />
+                    </Tooltip>
+                  )}
+                </Stack>
+              }
+            />
+            <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
+              {t(...getPublicClientCaption(flags, oauth2Config))}
+            </Typography>
+          </Box>
+        )}
 
         {/* PKCE Required Toggle */}
-        <Box>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isPkceForcedByPublicClient ? true : (oauth2Config.pkceRequired ?? false)}
-                disabled={!isEditable || isPkceLocked || isPkceDisabledByGrants || isPkceForcedByPublicClient}
-                onChange={(e) => onOAuth2ConfigChange?.({pkceRequired: e.target.checked})}
-                inputProps={{'aria-label': t('applications:edit.advanced.labels.pkceRequired')}}
-              />
-            }
-            label={
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Typography variant="subtitle2">{t('applications:edit.advanced.labels.pkceRequired')}</Typography>
-                {isPkceLocked && (
-                  <Tooltip title={lockedTooltip}>
-                    <Lock size={14} />
-                  </Tooltip>
-                )}
-              </Stack>
-            }
-          />
-          <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {t(...getPkceCaption(flags, oauth2Config))}
-          </Typography>
-        </Box>
+        {!isDomainClient && (
+          <Box>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isPkceForcedByPublicClient ? true : (oauth2Config.pkceRequired ?? false)}
+                  disabled={!isEditable || isPkceLocked || isPkceDisabledByGrants || isPkceForcedByPublicClient}
+                  onChange={(e) => onOAuth2ConfigChange?.({pkceRequired: e.target.checked})}
+                  inputProps={{'aria-label': t('applications:edit.advanced.labels.pkceRequired')}}
+                />
+              }
+              label={
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Typography variant="subtitle2">{t('applications:edit.advanced.labels.pkceRequired')}</Typography>
+                  {isPkceLocked && (
+                    <Tooltip title={lockedTooltip}>
+                      <Lock size={14} />
+                    </Tooltip>
+                  )}
+                </Stack>
+              }
+            />
+            <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
+              {t(...getPkceCaption(flags, oauth2Config))}
+            </Typography>
+          </Box>
+        )}
 
         {/* Require Pushed Authorization Requests (PAR) Toggle */}
         <Box>

@@ -3,7 +3,7 @@ title: Register an MCP Client from Its Metadata Document
 docType: guide
 persona: iam
 sidebar_position: 4
-description: Register Claude, ChatGPT, Visual Studio Code, or any MCP client that publishes a Client ID Metadata Document, after reviewing what its document declares.
+description: Register Claude, ChatGPT, Visual Studio Code, or any MCP client that publishes a Client ID Metadata Document, or let such clients sign in without registering them by trusting their domains.
 ---
 
 # Register an MCP Client from Its Metadata Document
@@ -54,6 +54,42 @@ A client whose document declares the `private_key_jwt` authentication method can
 Registering the client never adds these grant types, even when its document declares them, so you choose them here. The client's ID is its document URL, so an identity assertion issued for it carries that URL as its `client_id`. An authorization server that also identifies the client by its document URL recognizes it without any client ID mapping.
 
 On the **Advanced** tab, **Client authentication method**, **Public client**, and **PKCE required** come from the document and cannot be changed. The only grant types offered are authorization code, which stays on, refresh token, JWT bearer, and token exchange, which comes and goes with identity assertions. A public client, whose document declares `none`, cannot use token exchange, JWT bearer, or identity assertions.
+
+## Let Clients Sign In Without Registering Them
+
+Instead of registering each client, you can create one application or agent that admits every client whose metadata document URL is on a domain you trust. <ProductName /> stores nothing for these clients. When one starts signing in, <ProductName /> finds the application or agent whose trusted domains match the client's URL, retrieves the document, applies the same document rules as for a registered client, and signs the user in with that application's or agent's settings. The sign-in and consent pages show the client's own name and logo from its document.
+
+To admit clients that act for the signed-in user, create an application:
+
+1. In the <ProductName /> Console, navigate to **Applications** and click **Add application**.
+2. Select **CIMD**, and if prompted, select an organization unit and click **Continue**.
+3. On **Which clients should sign in?**, select **Any client from trusted domains**.
+4. Enter each domain whose clients you trust, such as `claude.ai` or `vscode.dev`. Enter `*.example.com` to trust every subdomain of `example.com`, but not `example.com` itself. Click **Continue**.
+5. Enter a name for the application and click **Finish**.
+
+To admit AI agents instead, navigate to **Agents**, click **Add agent**, and under **How the agent signs in** select **As any client from trusted domains** and enter the domains.
+
+Then turn the feature on for the deployment:
+
+1. Navigate to **Configurations** and open the **Client ID Metadata Documents** tab.
+2. Turn on **Unregistered clients**.
+
+Configure everything else, such as the sign-in flow, allowed user types, and design, on the application or agent as usual. Every client it admits uses those settings. To change the domains later, open the application's **Trusted domains** tab, or the agent's **Credentials** tab.
+
+How trusted domains apply:
+
+- A registered application or agent with the same client ID always takes precedence over trusted domains.
+- A domain can be trusted by only one application or agent. When several domains match a client, the most specific one applies: an exact domain before a wildcard, and a longer wildcard before a shorter one.
+- <ProductName /> asks for consent separately for each client, so a user's consent to one client is never taken as consent to another client of the same application or agent.
+- <ProductName /> keeps a retrieved document for as long as its `Cache-Control` header allows, from 1 minute to 1 hour, or 5 minutes when the header sets no lifetime. A document that cannot be retrieved, or that breaks a document rule, stops the client from signing in.
+- To stop one client without changing its domains, add its document URL under **Blocked clients** on the **Client ID Metadata Documents** tab of **Configurations**.
+- Turning off **Unregistered clients**, removing a domain, or deleting the application or agent stops its clients from signing in and from refreshing their tokens. Access tokens already issued stay valid until they expire.
+
+:::caution
+Trusting a domain admits every client that anyone can publish under it. Add only domains whose publishers you trust, and prefer an exact domain to a wildcard.
+:::
+
+These clients follow the same redirect URI rules as registered ones. A loopback redirect URI, such as `http://127.0.0.1/callback`, matches on any port, so native clients that listen on a random port, such as Claude Code, can sign in.
 
 ## Next Steps
 

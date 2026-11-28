@@ -6,6 +6,7 @@ import {Box, PageContent, PageTitle, Tab, Tabs} from '@wso2/oxygen-ui';
 import {useState, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import AccountSecuritySection from '../components/accountSecurity/AccountSecuritySection';
+import CimdSection from '../components/cimd/CimdSection';
 import CorsSection from '../components/cors/CorsSection';
 import CspSection from '../components/csp/CspSection';
 
@@ -47,6 +48,13 @@ export default function SettingsPage(): JSX.Element {
           aria-controls="settings-tabpanel-2"
           sx={{textTransform: 'none'}}
         />
+        <Tab
+          label={t('settings:tabs.cimd', 'Client ID Metadata Documents')}
+          id="settings-tab-3"
+          aria-controls="settings-tabpanel-3"
+          sx={{textTransform: 'none'}}
+          data-testid="settings-tab-cimd"
+        />
       </Tabs>
 
       {/* Every panel stays mounted so unsaved drafts survive a tab switch. */}
@@ -76,6 +84,15 @@ export default function SettingsPage(): JSX.Element {
         sx={{py: 3}}
       >
         <AccountSecuritySection />
+      </Box>
+      <Box
+        role="tabpanel"
+        id="settings-tabpanel-3"
+        aria-labelledby="settings-tab-3"
+        hidden={activeTab !== 3}
+        sx={{py: 3}}
+      >
+        <CimdSection />
       </Box>
     </PageContent>
   );

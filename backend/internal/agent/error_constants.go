@@ -881,6 +881,20 @@ var (
 			DefaultValue: "A personal agent's credentials can only be set by its owner",
 		},
 	}
+	// ErrorInvalidCIMDClient is returned when an agent's OAuth configuration breaks a Client ID Metadata Document
+	// rule, such as an invalid or already admitted Client ID domain. The description names the broken rule.
+	ErrorInvalidCIMDClient = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "AGT-1070",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.agentservice.invalid_cimd_client",
+			DefaultValue: "Invalid Client ID Metadata Document client",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.agentservice.invalid_cimd_client_description",
+			DefaultValue: "The client does not satisfy the Client ID Metadata Document rules",
+		},
+	}
 )
 
 // errInvalidDeclarativeLifespan is returned when a declarative agent's validUntil is not an RFC 3339

@@ -164,6 +164,16 @@ func (c *compositeStore) IsDeclarative(ctx context.Context, entityID string) boo
 	)
 }
 
+// GetEntityIDByClientIDDomain returns the ID of the entity, declared or stored, whose OAuth profile admits the
+// Client ID Metadata Document domain, or an empty string when none does.
+func (c *compositeStore) GetEntityIDByClientIDDomain(ctx context.Context, domain string) (string, error) {
+	entityID, err := c.fileStore.GetEntityIDByClientIDDomain(ctx, domain)
+	if err != nil || entityID != "" {
+		return entityID, err
+	}
+	return c.dbStore.GetEntityIDByClientIDDomain(ctx, domain)
+}
+
 // mergeAndDeduplicateInboundClients merges inbound clients from the DB and file stores,
 // deduplicating by entity ID. DB entries are marked mutable (IsReadOnly=false); file entries
 // declarative (IsReadOnly=true).

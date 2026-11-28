@@ -38,6 +38,7 @@ import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import useGetApplication from '../api/useGetApplication';
 import useUpdateApplication from '../api/useUpdateApplication';
+import ClientIdDomainsSection from '../components/cimd/ClientIdDomainsSection';
 import SettingsLockNotice from '../components/common/SettingsLockNotice';
 import ShowClientSecret from '../components/create-application/ShowClientSecret';
 import EditAccessSettings from '../components/edit-application/access/EditAccessSettings';
@@ -58,6 +59,7 @@ import useApplicationRoutes from '../hooks/useApplicationRoutes';
 import type {Application} from '../models/application';
 import type {OAuth2Config} from '../models/oauth';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods} from '../models/oauth';
+import {admitsClientsByDomain, validateClientIdDomains} from '../utils/clientIdDomains';
 import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';
 import getTemplateFieldConstraints from '../utils/getTemplateFieldConstraints';
@@ -376,6 +378,22 @@ export default function ApplicationEditPage() {
   const isMcpClient = application.template === TemplateConstants.MCP_CLIENT_TEMPLATE_ID;
   // A metadata-document client's redirect URIs, authentication method, and keys come from its document.
   const isCimdClient = oauth2Config?.clientIdMetadataDocument === true;
+  // An application that admits any client from trusted domains has no client ID or redirect URIs of its own.
+  // The choice is fixed at creation, so it is read from the stored configuration, which removing every
+  // domain while editing does not change.
+  const isDomainClient = admitsClientsByDomain(
+    application.inboundAuthConfig?.find((config) => config.type === 'oauth2')?.config,
+  );
+  const handleClientIdDomainsChange = (domains: string[]): void => {
+    handleFieldChange(
+      'inboundAuthConfig',
+      (editedApp.inboundAuthConfig ?? application.inboundAuthConfig ?? []).map((config) =>
+        config.type === 'oauth2' && config.config
+          ? {...config, config: {...config.config, clientIdDomains: domains}}
+          : config,
+      ),
+    );
+  };
 
   // Suspending the Console's own client would lock every operator out, with nowhere to unsuspend it.
   const isConsoleClient = isSystemConsoleClient(oauth2Config?.clientId, config?.client?.client_id);
@@ -398,7 +416,9 @@ export default function ApplicationEditPage() {
   const isMissingDeviceGrantFlow = Boolean(deviceGrantEnabled && !deviceGrantFlowId);
   const hasAuthorizationCodeGrant = grantTypes.includes(OAuth2GrantTypes.AUTHORIZATION_CODE);
   const hasValidRedirectUri = (oauth2Config?.redirectUris ?? []).some((uri) => isValidRedirectUriFormat(uri));
-  const isMissingRedirectUri = !isMcpClient && hasAuthorizationCodeGrant && !hasValidRedirectUri;
+  const isMissingRedirectUri = !isMcpClient && !isDomainClient && hasAuthorizationCodeGrant && !hasValidRedirectUri;
+  const hasInvalidClientIdDomains =
+    isDomainClient && validateClientIdDomains(oauth2Config?.clientIdDomains ?? []) !== undefined;
   const isMissingCertificate =
     !(isMcpClient && isCimdClient) &&
     oauth2Config?.tokenEndpointAuthMethod === TokenEndpointAuthMethods.PRIVATE_KEY_JWT &&
@@ -417,6 +437,14 @@ export default function ApplicationEditPage() {
   }
   if (isMissingCertificate) {
     validationIssues.push(t('applications:edit.page.validation.missingCertificate', 'A certificate is required.'));
+  }
+  if (hasInvalidClientIdDomains) {
+    validationIssues.push(
+      t(
+        'applications:edit.page.validation.invalidClientIdDomains',
+        'The trusted domains need at least one valid domain.',
+      ),
+    );
   }
   if (isMissingDeviceGrantFlow) {
     validationIssues.push(
@@ -455,6 +483,7 @@ export default function ApplicationEditPage() {
                 onValidationChange={setMcpAccessInvalid}
                 sectionResetKey={sectionResetKey}
                 onGoToCredentials={isCimdClient ? undefined : () => setActiveTabKey('credentials')}
+                onClientIdDomainsChange={handleClientIdDomainsChange}
               />
             ),
           },
@@ -583,8 +612,17 @@ export default function ApplicationEditPage() {
           ? [
               {
                 key: 'metadata-document',
-                label: t('applications:edit.page.tabs.metadataDocument', 'Metadata document'),
-                panel: (
+                label: isDomainClient
+                  ? t('applications:edit.page.tabs.trustedDomains', 'Trusted domains')
+                  : t('applications:edit.page.tabs.metadataDocument', 'Metadata document'),
+                panel: isDomainClient ? (
+                  <ClientIdDomainsSection
+                    subject="application"
+                    domains={oauth2Config.clientIdDomains ?? []}
+                    onDomainsChange={handleClientIdDomainsChange}
+                    isReadOnly={application.isReadOnly === true}
+                  />
+                ) : (
                   <CimdDocumentSection
                     application={application}
                     oauth2Config={oauth2Config}

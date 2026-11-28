@@ -72,7 +72,8 @@ describe('ConfigureMcpClientIdentity', () => {
     expect(screen.getByTestId('cimd-known-client-ChatGPT')).toHaveTextContent(/^ChatGPT$/);
     expect(screen.getByText('Another client with a CIMD')).toBeInTheDocument();
     expect(screen.getByText("I'll configure it myself")).toBeInTheDocument();
-    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(screen.getByText('Any client from trusted domains')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
   });
 
   it('hides the known clients group when the template lists none', () => {
@@ -146,6 +147,43 @@ describe('ConfigureMcpClientIdentity', () => {
 
     await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(true));
     expect(screen.queryByTestId('cimd-document-url-input')).not.toBeInTheDocument();
+  });
+
+  it('collects trusted domains and is ready only once they are valid', async () => {
+    const onReadyChange = vi.fn();
+    const {rerender} = render(
+      <ConfigureMcpClientIdentity {...baseProps} mode="trustedDomains" domains={[]} onReadyChange={onReadyChange} />,
+    );
+
+    expect(screen.getByTestId('cimd-client-id-domains-input')).toBeInTheDocument();
+    expect(screen.queryByTestId('cimd-document-url-input')).not.toBeInTheDocument();
+    await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(false));
+
+    rerender(
+      <ConfigureMcpClientIdentity
+        {...baseProps}
+        mode="trustedDomains"
+        domains={['vscode.dev']}
+        onReadyChange={onReadyChange}
+      />,
+    );
+    await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(true));
+  });
+
+  it('reports the domains entered', async () => {
+    const onDomainsChange = vi.fn();
+    render(
+      <ConfigureMcpClientIdentity
+        {...baseProps}
+        mode="trustedDomains"
+        domains={[]}
+        onDomainsChange={onDomainsChange}
+      />,
+    );
+
+    await userEvent.type(screen.getByTestId('cimd-client-id-domains-input'), 'claude.ai ');
+
+    expect(onDomainsChange).toHaveBeenCalledWith(['claude.ai']);
   });
 
   it('reports the chosen option', async () => {

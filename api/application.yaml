@@ -2656,6 +2656,23 @@ components:
             `token.idJag.enabled` and serves only ID-JAG requests.
           example: false
           default: false
+        clientIdDomains:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+          description: >-
+            With `clientIdMetadataDocument: true`, admits any client whose Client ID Metadata Document URL is on
+            one of these domains, in place of a single `clientId`. Each entry is a lowercase DNS name of at least
+            two labels, such as `claude.ai`, or `*.` and such a name to admit its subdomains but not the name
+            itself. A domain can be admitted by one application or agent only. The application then has no
+            `clientId`, `clientSecret`, `redirectUris`, `postLogoutRedirectUris` or `certificate`, and uses
+            `tokenEndpointAuthMethod: none` with `publicClient` and `pkceRequired`, which are the defaults when
+            omitted. Each admitted client takes its redirect URIs, authentication method and keys from its own
+            document when it signs in, and holds only the grants both this application and its document declare.
+            Fixed at creation: an application cannot switch between a single client ID and domains.
+          example: ["claude.ai", "*.example.com"]
         scopes:
           type: array
           items:
@@ -2788,6 +2805,23 @@ components:
             `token.idJag.enabled` and serves only ID-JAG requests.
           example: false
           default: false
+        clientIdDomains:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+          description: >-
+            With `clientIdMetadataDocument: true`, admits any client whose Client ID Metadata Document URL is on
+            one of these domains, in place of a single `clientId`. Each entry is a lowercase DNS name of at least
+            two labels, such as `claude.ai`, or `*.` and such a name to admit its subdomains but not the name
+            itself. A domain can be admitted by one application or agent only. The application then has no
+            `clientId`, `clientSecret`, `redirectUris`, `postLogoutRedirectUris` or `certificate`, and uses
+            `tokenEndpointAuthMethod: none` with `publicClient` and `pkceRequired`, which are the defaults when
+            omitted. Each admitted client takes its redirect URIs, authentication method and keys from its own
+            document when it signs in, and holds only the grants both this application and its document declare.
+            Fixed at creation: an application cannot switch between a single client ID and domains.
+          example: ["claude.ai", "*.example.com"]
         scopes:
           type: array
           items:

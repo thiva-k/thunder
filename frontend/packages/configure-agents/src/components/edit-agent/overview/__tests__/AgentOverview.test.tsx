@@ -205,6 +205,31 @@ describe('AgentOverview', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows an agent that trusts domains as acting only on behalf of a user', () => {
+    render(
+      <AgentOverview
+        agent={baseAgent}
+        oauth2Config={{
+          clientIdMetadataDocument: true,
+          clientIdDomains: ['claude.ai'],
+          grantTypes: ['authorization_code', 'refresh_token'],
+          responseTypes: ['code'],
+          tokenEndpointAuthMethod: 'none',
+          publicClient: true,
+          pkceRequired: true,
+        }}
+      />,
+    );
+
+    const ownRow = screen.getByText('On its own behalf').parentElement!;
+    expect(within(ownRow).getByText('Not available')).toBeInTheDocument();
+    const delegatedRow = screen.getByText('On behalf of a user').parentElement!;
+    expect(within(delegatedRow).getByText('Enabled')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-overview-trusted-domains-mode')).toHaveTextContent(
+      'Acts on behalf of the user who signs in through a client from its trusted domains.',
+    );
+  });
+
   describe('personal agent', () => {
     const personalAgent = {...baseAgent, kind: 'personal-assistant', allowedUserTypes: ['person']};
 

@@ -140,6 +140,29 @@ func (s *ConsentEnforcerServiceTestSuite) TestResolveConsent_PassesGroupIDFilter
 	s.Nil(svcErr)
 }
 
+func (s *ConsentEnforcerServiceTestSuite) TestResolveConsent_KeepsRecordsUnderTheRecordGroup() {
+	s.mockConsentSvc.On("ListPurposes", mock.Anything,
+		mock.MatchedBy(func(f consent.PurposeFilter) bool { return f.GroupID == "app1" })).
+		Return([]consent.ConsentPurpose{attributesPurpose("email")}, nil)
+	s.mockConsentSvc.On("SearchConsents", mock.Anything,
+		mock.MatchedBy(func(f consent.ConsentFilter) bool { return f.GroupID == "client-group" })).
+		Return([]*consent.Consent{}, nil)
+	s.mockJWTSvc.On("GenerateJWT", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("test-session-token", int64(0), nil)
+
+	result, svcErr := s.service.ResolveConsent(WithConsentRecordGroup(context.Background(), "client-group"),
+		"ou1", "app1", "App 1", "user1", []string{"email"}, nil, nil, nil, nil, false, nil)
+
+	s.Nil(svcErr)
+	s.Require().NotNil(result)
+}
+
+func (s *ConsentEnforcerServiceTestSuite) TestConsentRecordGroup() {
+	s.Equal("app1", consentRecordGroup(context.Background(), "app1"))
+	s.Equal("app1", consentRecordGroup(WithConsentRecordGroup(context.Background(), ""), "app1"))
+	s.Equal("client-group", consentRecordGroup(WithConsentRecordGroup(context.Background(), "client-group"), "app1"))
+}
+
 func (s *ConsentEnforcerServiceTestSuite) TestResolveConsent_NoPurposesConfigured() {
 	s.mockConsentSvc.On("ListPurposes", mock.Anything, mock.Anything).
 		Return([]consent.ConsentPurpose{}, nil)

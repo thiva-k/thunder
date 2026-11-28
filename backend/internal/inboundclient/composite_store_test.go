@@ -412,3 +412,21 @@ func (suite *CompositeStoreTestSuite) TestGetEntityIDsByThemeID_FileHitsCap() {
 	suite.Nil(ids)
 	suite.Equal(0, total)
 }
+
+func (suite *CompositeStoreTestSuite) TestGetEntityIDByClientIDDomain() {
+	suite.NoError(suite.fileStore.CreateInboundClient(context.Background(), inboundmodel.InboundClient{
+		ID: "declared",
+		Properties: map[string]interface{}{
+			PropOAuthProfile: providers.OAuthProfile{ClientIDDomains: []string{"claude.ai"}},
+		},
+	}))
+	suite.dbMock.EXPECT().GetEntityIDByClientIDDomain(mock.Anything, "vscode.dev").Return("stored", nil)
+
+	entityID, err := suite.composite.GetEntityIDByClientIDDomain(context.Background(), "claude.ai")
+	suite.NoError(err)
+	suite.Equal("declared", entityID)
+
+	entityID, err = suite.composite.GetEntityIDByClientIDDomain(context.Background(), "vscode.dev")
+	suite.NoError(err)
+	suite.Equal("stored", entityID)
+}

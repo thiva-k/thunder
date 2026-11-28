@@ -14,11 +14,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/thunder-id/thunderid/internal/cimd"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/inboundclient"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
+	"github.com/thunder-id/thunderid/tests/mocks/cimdmock"
 	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/entitytypemock"
 	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
@@ -359,4 +361,121 @@ func (s *ActorProviderTestSuite) TestGetOAuthClient_ClientRulesLookupFails() {
 	s.Nil(client)
 	s.Require().NotNil(svcErr)
 	s.Equal(tidcommon.InternalServerError.Code, svcErr.Code)
+}
+
+const testDomainClientID = "https://claude.ai/oauth/client.json"
+
+// withCIMD returns a provider that names the clients Client ID domains admit through a CIMD service mock.
+func (s *ActorProviderTestSuite) withCIMD() (providers.ActorProvider, *cimdmock.CIMDServiceInterfaceMock) {
+	cimdService := cimdmock.NewCIMDServiceInterfaceMock(s.T())
+	return Initialize(s.mockInbound, s.mockEntity, s.mockAuthn, s.mockRole, nil, nil,
+		ResolvingCIMDDocumentClients(cimdService)), cimdService
+}
+
+// admittingDomainClient makes the test client's URL resolve to app-1 through its Client ID domains.
+func (s *ActorProviderTestSuite) admittingDomainClient(cimdService *cimdmock.CIMDServiceInterfaceMock) {
+	s.mockInbound.On("GetOAuthClientByClientID", mock.Anything, testDomainClientID).Return(
+		&providers.OAuthClient{ID: "app-1", ClientID: testDomainClientID, ResolvedByClientIDDomain: true}, nil)
+	cimdService.On("ResolveDocumentClient", mock.Anything, testDomainClientID).Return(&cimd.DocumentClient{
+		Name: "Claude", Properties: map[string]interface{}{"logo_url": "https://claude.ai/logo.png"}}, nil)
+}
+
+func (s *ActorProviderTestSuite) TestGetInboundClientByID_DomainClientURL() {
+	provider, cimdService := s.withCIMD()
+	s.mockInbound.On("GetInboundClientByEntityID", mock.Anything, testDomainClientID).
+		Return(nil, inboundclient.ErrInboundClientNotFound)
+	s.admittingDomainClient(cimdService)
+	stored := &providers.InboundClient{ID: "app-1", ThemeID: "theme-1",
+		Properties: map[string]interface{}{"logo_url": "https://example.com/app.png", "type": "mcp"}}
+	s.mockInbound.On("GetInboundClientByEntityID", mock.Anything, "app-1").Return(stored, nil)
+
+	client, svcErr := provider.GetInboundClientByID(context.Background(), testDomainClientID)
+
+	s.Require().Nil(svcErr)
+	s.Equal("app-1", client.ID)
+	s.Equal("theme-1", client.ThemeID)
+	s.Equal(map[string]interface{}{"logo_url": "https://claude.ai/logo.png", "type": "mcp"}, client.Properties)
+	s.Equal("https://example.com/app.png", stored.Properties["logo_url"], "the stored client must not change")
+}
+
+func (s *ActorProviderTestSuite) TestGetInboundClientByID_URLOfARegisteredClient() {
+	provider, _ := s.withCIMD()
+	s.mockInbound.On("GetInboundClientByEntityID", mock.Anything, testDomainClientID).
+		Return(nil, inboundclient.ErrInboundClientNotFound)
+	s.mockInbound.On("GetOAuthClientByClientID", mock.Anything, testDomainClientID).
+		Return(&providers.OAuthClient{ID: "app-2", ClientID: testDomainClientID}, nil)
+
+	client, svcErr := provider.GetInboundClientByID(context.Background(), testDomainClientID)
+
+	s.Nil(client)
+	s.Equal(&ErrorActorNotFound, svcErr)
+}
+
+func (s *ActorProviderTestSuite) TestGetInboundClientByID_NotAURL() {
+	provider, _ := s.withCIMD()
+	s.mockInbound.On("GetInboundClientByEntityID", mock.Anything, "missing").
+		Return(nil, inboundclient.ErrInboundClientNotFound)
+
+	client, svcErr := provider.GetInboundClientByID(context.Background(), "missing")
+
+	s.Nil(client)
+	s.Equal(&ErrorActorNotFound, svcErr)
+}
+
+func (s *ActorProviderTestSuite) TestGetInboundClientByID_DomainLookupFails() {
+	provider, _ := s.withCIMD()
+	s.mockInbound.On("GetInboundClientByEntityID", mock.Anything, testDomainClientID).
+		Return(nil, inboundclient.ErrInboundClientNotFound)
+	s.mockInbound.On("GetOAuthClientByClientID", mock.Anything, testDomainClientID).
+		Return(nil, errors.New("store unavailable"))
+
+	client, svcErr := provider.GetInboundClientByID(context.Background(), testDomainClientID)
+
+	s.Nil(client)
+	s.Equal(&tidcommon.InternalServerError, svcErr)
+}
+
+func (s *ActorProviderTestSuite) TestGetActor_DomainClientURL() {
+	provider, cimdService := s.withCIMD()
+	s.mockEntity.On("GetEntityProfile", mock.Anything, testDomainClientID).Return(nil,
+		&entityprovider.EntityProviderError{Code: entityprovider.ErrorCodeEntityNotFound})
+	s.admittingDomainClient(cimdService)
+	s.mockEntity.On("GetEntityProfile", mock.Anything, "app-1").Return(&providers.Entity{ID: "app-1",
+		Category: providers.EntityCategoryApp, SystemAttributes: []byte(`{"name":"MCP clients","url":"u"}`)}, nil)
+
+	entity, svcErr := provider.GetActor(context.Background(), testDomainClientID)
+
+	s.Require().Nil(svcErr)
+	s.Equal("app-1", entity.ID)
+	s.Equal("Claude", entity.Display)
+	s.JSONEq(`{"name":"Claude","url":"u"}`, string(entity.SystemAttributes))
+}
+
+func (s *ActorProviderTestSuite) TestGetActor_UnknownURL() {
+	provider, _ := s.withCIMD()
+	s.mockEntity.On("GetEntityProfile", mock.Anything, testDomainClientID).Return(nil,
+		&entityprovider.EntityProviderError{Code: entityprovider.ErrorCodeEntityNotFound})
+	s.mockInbound.On("GetOAuthClientByClientID", mock.Anything, testDomainClientID).Return(nil, nil)
+
+	entity, svcErr := provider.GetActor(context.Background(), testDomainClientID)
+
+	s.Nil(entity)
+	s.Require().NotNil(svcErr)
+	s.Equal(mapEntityProviderError(&entityprovider.EntityProviderError{
+		Code: entityprovider.ErrorCodeEntityNotFound}).Code, svcErr.Code)
+}
+
+func (s *ActorProviderTestSuite) TestGetActor_DocumentLookupFails() {
+	provider, cimdService := s.withCIMD()
+	s.mockEntity.On("GetEntityProfile", mock.Anything, testDomainClientID).Return(nil,
+		&entityprovider.EntityProviderError{Code: entityprovider.ErrorCodeEntityNotFound})
+	s.mockInbound.On("GetOAuthClientByClientID", mock.Anything, testDomainClientID).Return(
+		&providers.OAuthClient{ID: "app-1", ResolvedByClientIDDomain: true}, nil)
+	cimdService.On("ResolveDocumentClient", mock.Anything, testDomainClientID).
+		Return(nil, &tidcommon.InternalServerError)
+
+	entity, svcErr := provider.GetActor(context.Background(), testDomainClientID)
+
+	s.Nil(entity)
+	s.Equal(&tidcommon.InternalServerError, svcErr)
 }

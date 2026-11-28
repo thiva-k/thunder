@@ -433,6 +433,34 @@ describe('IdentityAssertionsSection', () => {
       ).toBeInTheDocument();
     });
 
+    it('should let a client that trusts domains turn identity assertions on despite its public placeholder', async () => {
+      const user = userEvent.setup();
+      const oauth2Config: OAuth2Config = {
+        ...baseConfig,
+        clientIdMetadataDocument: true,
+        clientIdDomains: ['vscode.dev'],
+        publicClient: true,
+        pkceRequired: true,
+        tokenEndpointAuthMethod: 'none',
+        grantTypes: ['authorization_code', 'refresh_token'],
+      };
+
+      render(<IdentityAssertionsSection oauth2Config={oauth2Config} onTokenConfigChange={mockOnTokenConfigChange} />);
+
+      expect(
+        screen.getByText(/They apply only to clients whose own metadata document uses private key JWT authentication/),
+      ).toBeInTheDocument();
+      const toggle = screen.getByLabelText('Identity assertions (ID-JAG)');
+      expect(toggle).toBeEnabled();
+      await user.click(toggle);
+
+      // The placeholder public client settings are kept: each admitted client's document decides them.
+      expect(mockOnTokenConfigChange).toHaveBeenCalledWith(
+        {idJag: {enabled: true, allowedAudiences: [], validityPeriod: 300}},
+        {grantTypes: ['authorization_code', 'refresh_token', TOKEN_EXCHANGE]},
+      );
+    });
+
     it('should add the token exchange grant when a private key JWT metadata document client turns it on', async () => {
       const user = userEvent.setup();
       const oauth2Config: OAuth2Config = {

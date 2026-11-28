@@ -297,3 +297,23 @@ func (suite *DelegationTestSuite) TestPersonalAgentWithoutAnOAuthConfigGetsOne()
 
 	suite.Equal([]providers.GrantType{authCode}, suite.oauthConfig(agent).GrantTypes)
 }
+
+func (suite *DelegationTestSuite) TestAgentAdmittingClientsByDomain() {
+	agent := &providers.Agent{InboundAuthConfig: []providers.InboundAuthConfigWithSecret{{
+		Type: providers.OAuthInboundAuthType,
+		OAuthConfig: &providers.OAuthConfigWithSecret{
+			ClientIDMetadataDocument: true,
+			ClientIDDomains:          []string{"claude.ai"},
+			GrantTypes:               []providers.GrantType{authCode, refreshToken},
+		},
+	}}}
+
+	suite.Nil(applyGrantTypes(agent))
+
+	config := suite.oauthConfig(agent)
+	suite.Equal([]providers.GrantType{authCode, refreshToken}, config.GrantTypes)
+	suite.Equal([]providers.ResponseType{providers.ResponseTypeCode}, config.ResponseTypes)
+	suite.Equal(providers.TokenEndpointAuthMethodNone, config.TokenEndpointAuthMethod)
+	suite.True(config.PublicClient)
+	suite.True(config.PKCERequired)
+}

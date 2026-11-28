@@ -13,6 +13,8 @@ const SettingsQueryKeys = {
   CSP: 'csp',
   /** Name segment for the account-lockout section */
   ACCOUNT_ACCESS: 'accountAccess',
+  /** Name segment for the Client ID Metadata Document policies section */
+  CIMD: 'cimd',
 } as const;
 
 export default SettingsQueryKeys;

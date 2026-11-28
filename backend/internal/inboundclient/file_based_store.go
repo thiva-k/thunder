@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -190,4 +191,27 @@ func (f *fileBasedStore) GetEntityIDsByReference(
 		end = total
 	}
 	return matched[offset:end], total, nil
+}
+
+// GetEntityIDByClientIDDomain returns the ID of the declared inbound client whose OAuth profile admits the
+// Client ID Metadata Document domain, or an empty string when none does.
+func (f *fileBasedStore) GetEntityIDByClientIDDomain(ctx context.Context, domain string) (string, error) {
+	list, err := f.GenericFileBasedStore.List()
+	if err != nil {
+		return "", err
+	}
+	for _, item := range list {
+		client, ok := item.Data.(*inboundmodel.InboundClient)
+		if !ok {
+			continue
+		}
+		profile, err := f.GetOAuthProfileByEntityID(ctx, client.ID)
+		if err != nil {
+			return "", err
+		}
+		if profile != nil && slices.Contains(profile.ClientIDDomains, domain) {
+			return client.ID, nil
+		}
+	}
+	return "", nil
 }

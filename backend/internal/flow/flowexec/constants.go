@@ -21,6 +21,8 @@ const (
 	// applicationTypePropertyKey is the InboundClient.Properties key under which the application
 	// type is stored.
 	applicationTypePropertyKey = "type"
+	// clientIdentifierURLPrefix starts the Client Identifier URL that names a client admitted by Client ID domain.
+	clientIdentifierURLPrefix = "https://"
 
 	// maxNodeVisitsPerRequest is the number of times a node may run within a single request. A flow
 	// that goes past it is cycling without pausing for user input.

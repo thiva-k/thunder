@@ -46,8 +46,16 @@ func (o *OAuthClient) IsAllowedTokenEndpointAuthMethod(method TokenEndpointAuthM
 	return o.TokenEndpointAuthMethod == method
 }
 
-// ValidateRedirectURI validates the given redirect URI against this client's registered URIs.
+// ValidateRedirectURI validates the given redirect URI against this client's registered URIs. A client from a
+// Client ID Metadata Document is a native client when it registers a loopback redirect URI, which may name any port
+// at request time, as RFC 8252 section 7.3 requires.
 func (o *OAuthClient) ValidateRedirectURI(ctx context.Context, redirectURI string) error {
+	if o.ClientIDMetadataDocument && redirectURI != "" &&
+		slices.ContainsFunc(o.RedirectURIs, func(registered string) bool {
+			return matchesLoopbackRedirectURI(registered, redirectURI)
+		}) {
+		return nil
+	}
 	return ValidateRedirectURI(ctx, o.RedirectURIs, redirectURI)
 }
 
@@ -173,4 +181,19 @@ func matchAnyRedirectURIPattern(patterns []string, redirectURI string) bool {
 		}
 	}
 	return false
+}
+
+// matchesLoopbackRedirectURI reports whether redirectURI is the registered http loopback redirect URI on any port:
+// the same host, path and query, with no fragment.
+func matchesLoopbackRedirectURI(registered, redirectURI string) bool {
+	reg, err := url.Parse(registered)
+	if err != nil || reg.Scheme != "http" || !utils.IsLoopbackRedirectHost(reg.Hostname()) {
+		return false
+	}
+	req, err := url.Parse(redirectURI)
+	if err != nil || req.Scheme != "http" || req.Fragment != "" || req.User != nil {
+		return false
+	}
+	return req.Hostname() == reg.Hostname() && req.EscapedPath() == reg.EscapedPath() &&
+		req.RawQuery == reg.RawQuery
 }

@@ -11,8 +11,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -24,6 +26,7 @@ import (
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/httpmock"
+	"github.com/thunder-id/thunderid/tests/mocks/serverconfigmock"
 )
 
 const testCIMDClientID = "https://client.example.com/oauth/client.json"
@@ -527,9 +530,10 @@ func (s *CIMDServiceTestSuite) TestValidateOAuthProfile() {
 }
 
 func (s *CIMDServiceTestSuite) TestNewCIMDService() {
-	svc := newCIMDService().(*cimdService)
+	svc := newCIMDService(nil).(*cimdService)
 
 	s.NotNil(svc.httpClient)
+	s.NotNil(svc.documents)
 	s.NotNil(svc.logger)
 }
 
@@ -559,7 +563,7 @@ func (s *CIMDServiceTestSuite) TestFetchCIMDDocument() {
 					req.Header.Get("Accept") == "application/json"
 			})).Return(tc.resp, tc.err)
 
-			doc, err := fetchCIMDDocument(context.Background(), client, testCIMDClientID)
+			doc, _, err := fetchCIMDDocument(context.Background(), client, testCIMDClientID)
 
 			if tc.wantErr {
 				s.Error(err)
@@ -573,7 +577,7 @@ func (s *CIMDServiceTestSuite) TestFetchCIMDDocument() {
 }
 
 func (s *CIMDServiceTestSuite) TestFetchCIMDDocument_RefusesLoopbackAddress() {
-	svc := newCIMDService().(*cimdService)
+	svc := newCIMDService(nil).(*cimdService)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{}`))
@@ -582,7 +586,7 @@ func (s *CIMDServiceTestSuite) TestFetchCIMDDocument_RefusesLoopbackAddress() {
 	serverURL, err := url.Parse(server.URL)
 	s.Require().NoError(err)
 
-	_, err = fetchCIMDDocument(context.Background(), svc.httpClient,
+	_, _, err = fetchCIMDDocument(context.Background(), svc.httpClient,
 		"https://localhost:"+serverURL.Port()+"/client.json")
 
 	s.ErrorContains(err, "private address")
@@ -716,4 +720,429 @@ func (s *CIMDServiceTestSuite) TestPreview() {
 		_, svcErr := svc.Preview(context.Background(), testCIMDClientID)
 		s.Equal(&ErrorPrivateKeySet, svcErr)
 	})
+}
+
+const testDomainDocument = `{"client_id":"` + testCIMDClientID + `","client_name":"Client",` +
+	`"logo_uri":"https://client.example.com/logo.png","client_uri":"https://client.example.com",` +
+	`"tos_uri":"javascript:alert(1)",` +
+	`"redirect_uris":["https://client.example.com/callback"],"token_endpoint_auth_method":"none",` +
+	`"post_logout_redirect_uris":["https://client.example.com/bye","https://evil.example.org/bye"],` +
+	`"grant_types":["authorization_code","refresh_token"]}`
+
+// enableCIMD restarts the server runtime with oauth.cimd.enabled set.
+func (s *CIMDServiceTestSuite) enableCIMD(enabled bool) {
+	config.ResetServerRuntime()
+	cfg := &config.Config{}
+	cfg.OAuth.CIMD.Enabled = &enabled
+	s.Require().NoError(config.InitializeServerRuntime("/tmp/test", cfg))
+}
+
+// newDomainService returns a service that reads the given settings and retrieves documents through a stub.
+func (s *CIMDServiceTestSuite) newDomainService(settings unregisteredClientSettings, docBody string,
+	docErr error) *cimdService {
+	configReader := serverconfigmock.NewServerConfigServiceMock(s.T())
+	configReader.On("GetMergedConfig", mock.Anything, "cimd").Return(settings, nil).Maybe()
+	svc := newCIMDService(configReader).(*cimdService)
+	svc.documents = newDocumentCache(func(context.Context, string) (*cimdDocument, time.Duration, error) {
+		if docErr != nil {
+			return nil, 0, docErr
+		}
+		var doc cimdDocument
+		s.Require().NoError(json.Unmarshal([]byte(docBody), &doc))
+		return &doc, time.Minute, nil
+	})
+	return svc
+}
+
+var enabledSettings = unregisteredClientSettings{Enabled: true}
+
+func (s *CIMDServiceTestSuite) TestClientIDDomainCandidates() {
+	s.enableCIMD(true)
+	svc := s.newDomainService(enabledSettings, "", nil)
+
+	candidates, svcErr := svc.ClientIDDomainCandidates(context.Background(),
+		"https://A.b.Example.com/oauth/client.json")
+
+	s.Nil(svcErr)
+	s.Equal([]string{"a.b.example.com", "*.b.example.com", "*.example.com"}, candidates)
+}
+
+func (s *CIMDServiceTestSuite) TestClientIDDomainCandidates_NoneWhenNotAdmitted() {
+	cases := []struct {
+		name     string
+		enabled  bool
+		settings unregisteredClientSettings
+		clientID string
+	}{
+		{"CIMD disabled for the deployment", false, enabledSettings, testCIMDClientID},
+		{"unregistered clients turned off", true, unregisteredClientSettings{}, testCIMDClientID},
+		{"blocked", true, unregisteredClientSettings{Enabled: true, BlockedClientIDs: []string{testCIMDClientID}},
+			testCIMDClientID},
+		{"not a client identifier URL", true, enabledSettings, "my-client"},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			s.enableCIMD(tc.enabled)
+			candidates, svcErr := s.newDomainService(tc.settings, "", nil).
+				ClientIDDomainCandidates(context.Background(), tc.clientID)
+			s.Nil(svcErr)
+			s.Nil(candidates)
+		})
+	}
+}
+
+func (s *CIMDServiceTestSuite) TestClientIDDomainCandidates_FailsWhenSettingsCannotBeRead() {
+	s.enableCIMD(true)
+	configReader := serverconfigmock.NewServerConfigServiceMock(s.T())
+	configReader.On("GetMergedConfig", mock.Anything, "cimd").Return(nil, &tidcommon.InternalServerError)
+
+	candidates, svcErr := newCIMDService(configReader).ClientIDDomainCandidates(context.Background(),
+		testCIMDClientID)
+
+	s.Nil(candidates)
+	s.Equal(&tidcommon.InternalServerError, svcErr)
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient() {
+	svc := s.newDomainService(enabledSettings, testDomainDocument, nil)
+
+	document, svcErr := svc.ResolveDocumentClient(context.Background(), testCIMDClientID)
+
+	s.Require().Nil(svcErr)
+	s.Require().NotNil(document)
+	s.Equal("Client", document.Name)
+	s.Equal(map[string]interface{}{"logo_url": "https://client.example.com/logo.png",
+		"url": "https://client.example.com"}, document.Properties)
+
+	client := &providers.OAuthClient{ID: "app-1", OUID: "ou-1", GrantTypes: []providers.GrantType{
+		providers.GrantTypeAuthorizationCode, providers.GrantTypeTokenExchange}, TokenEndpointAuthMethod: "none"}
+	document.Apply(client)
+	s.Equal("app-1", client.ID)
+	s.Equal("ou-1", client.OUID)
+	s.Equal(testCIMDClientID, client.ClientID)
+	s.Equal([]string{"https://client.example.com/callback"}, client.RedirectURIs)
+	s.Equal([]string{"https://client.example.com/bye"}, client.PostLogoutRedirectURIs)
+	s.Equal([]providers.GrantType{providers.GrantTypeAuthorizationCode}, client.GrantTypes)
+	s.Equal(providers.TokenEndpointAuthMethodNone, client.TokenEndpointAuthMethod)
+	s.True(client.PublicClient)
+	s.True(client.PKCERequired)
+	s.True(client.ClientIDMetadataDocument)
+	s.True(client.ResolvedByClientIDDomain)
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient_NamesAnUnnamedClientByItsHost() {
+	svc := s.newDomainService(enabledSettings,
+		strings.Replace(testDomainDocument, `"client_name":"Client",`, "", 1), nil)
+
+	document, svcErr := svc.ResolveDocumentClient(context.Background(), testCIMDClientID)
+
+	s.Require().Nil(svcErr)
+	s.Equal("client.example.com", document.Name)
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient_NoneForAnUnusableDocument() {
+	cases := []struct {
+		name     string
+		clientID string
+		doc      string
+		docErr   error
+	}{
+		{"not a client identifier URL", "my-client", testDomainDocument, nil},
+		{"document unavailable", testCIMDClientID, "", errors.New("unavailable")},
+		{"document for another client", testCIMDClientID,
+			strings.Replace(testDomainDocument, testCIMDClientID, "https://client.example.com/other.json", 1), nil},
+		{"document with a secret", testCIMDClientID,
+			strings.Replace(testDomainDocument, `"client_name"`, `"client_secret":"x","client_name"`, 1), nil},
+		{"document redirecting elsewhere", testCIMDClientID,
+			strings.Replace(testDomainDocument, "https://client.example.com/callback",
+				"https://evil.example.org/callback", 1), nil},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			document, svcErr := s.newDomainService(enabledSettings, tc.doc, tc.docErr).
+				ResolveDocumentClient(context.Background(), tc.clientID)
+			s.Nil(svcErr)
+			s.Nil(document)
+		})
+	}
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient_IdentityAssertionGrantsNeedPrivateKeyJWT() {
+	appGrants := []providers.GrantType{providers.GrantTypeAuthorizationCode, providers.GrantTypeTokenExchange,
+		providers.GrantTypeJWTBearer}
+	declared := `"grant_types":["authorization_code","urn:ietf:params:oauth:grant-type:token-exchange",` +
+		`"urn:ietf:params:oauth:grant-type:jwt-bearer"]`
+	public := strings.Replace(testDomainDocument, `"grant_types":["authorization_code","refresh_token"]`, declared, 1)
+	keyed := strings.Replace(public, `"token_endpoint_auth_method":"none"`,
+		`"token_endpoint_auth_method":"private_key_jwt",`+
+			`"jwks":{"keys":[{"kty":"EC","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",`+
+			`"y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"}]}`, 1)
+
+	publicClient, svcErr := s.newDomainService(enabledSettings, public, nil).
+		ResolveDocumentClient(context.Background(), testCIMDClientID)
+	s.Require().Nil(svcErr)
+	unkeyed := &providers.OAuthClient{GrantTypes: slices.Clone(appGrants)}
+	publicClient.Apply(unkeyed)
+	s.Equal([]providers.GrantType{providers.GrantTypeAuthorizationCode}, unkeyed.GrantTypes)
+
+	keyedClient, svcErr := s.newDomainService(enabledSettings, keyed, nil).
+		ResolveDocumentClient(context.Background(), testCIMDClientID)
+	s.Require().Nil(svcErr)
+	s.Require().NotNil(keyedClient)
+	confidential := &providers.OAuthClient{GrantTypes: slices.Clone(appGrants)}
+	keyedClient.Apply(confidential)
+	s.Equal(appGrants, confidential.GrantTypes)
+	s.Equal(providers.TokenEndpointAuthMethodPrivateKeyJWT, confidential.TokenEndpointAuthMethod)
+	s.False(confidential.PublicClient)
+	s.NotNil(confidential.Certificate)
+}
+
+const testPublicJWKS = `{"keys":[{"kty":"EC","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",` +
+	`"y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"}]}`
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentKeys() {
+	keyed := func() *cimdDocument {
+		return &cimdDocument{TokenEndpointAuthMethod: "private_key_jwt", JWKSURI: "https://client.example.com/jwks"}
+	}
+
+	doc := keyed()
+	s.Require().NoError(resolveDocumentKeys(context.Background(),
+		s.stubCIMDHTTPClient(cimdResponse(http.StatusOK, "application/json", testPublicJWKS), nil), doc))
+	s.Equal(testPublicJWKS, doc.resolvedJWKS)
+
+	s.Error(resolveDocumentKeys(context.Background(), s.stubCIMDHTTPClient(cimdResponse(http.StatusOK,
+		"application/json", `{"keys":[{"kty":"oct","k":"c2VjcmV0"}]}`), nil), keyed()))
+	s.Error(resolveDocumentKeys(context.Background(),
+		s.stubCIMDHTTPClient(cimdResponse(http.StatusFound, "application/json", ""), nil), keyed()))
+	s.Error(resolveDocumentKeys(context.Background(),
+		s.stubCIMDHTTPClient(nil, errors.New("refused: private address")), keyed()))
+	s.Error(resolveDocumentKeys(context.Background(), nil,
+		&cimdDocument{TokenEndpointAuthMethod: "private_key_jwt", JWKSURI: "https://10.0.0.1/jwks"}))
+
+	public := &cimdDocument{TokenEndpointAuthMethod: "none", JWKSURI: "https://client.example.com/jwks"}
+	s.NoError(resolveDocumentKeys(context.Background(), nil, public))
+	s.Empty(public.resolvedJWKS)
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient_AuthenticatesWithResolvedKeys() {
+	keyedDocument := strings.Replace(testDomainDocument, `"token_endpoint_auth_method":"none"`,
+		`"token_endpoint_auth_method":"private_key_jwt","jwks_uri":"https://client.example.com/jwks"`, 1)
+	resolve := func(resolvedJWKS string) *DocumentClient {
+		svc := s.newDomainService(enabledSettings, "", nil)
+		svc.documents = newDocumentCache(func(context.Context, string) (*cimdDocument, time.Duration, error) {
+			var doc cimdDocument
+			s.Require().NoError(json.Unmarshal([]byte(keyedDocument), &doc))
+			doc.resolvedJWKS = resolvedJWKS
+			return &doc, time.Minute, nil
+		})
+		document, svcErr := svc.ResolveDocumentClient(context.Background(), testCIMDClientID)
+		s.Require().Nil(svcErr)
+		return document
+	}
+
+	document := resolve(testPublicJWKS)
+	s.Require().NotNil(document)
+	s.Equal(&providers.Certificate{Type: cert.CertificateTypeJWKS, Value: testPublicJWKS},
+		document.OAuthConfig.Certificate)
+
+	s.Nil(resolve(""))
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient_DeclaredScopesLimitTheClient() {
+	svc := s.newDomainService(enabledSettings,
+		strings.Replace(testDomainDocument, `"client_name"`, `"scope":"openid mcp:tools","client_name"`, 1), nil)
+
+	document, svcErr := svc.ResolveDocumentClient(context.Background(), testCIMDClientID)
+
+	s.Require().Nil(svcErr)
+	s.Equal([]string{"openid", "mcp:tools"}, document.DeclaredScopes)
+	client := &providers.OAuthClient{Scopes: []string{"app-scope"}}
+	document.Apply(client)
+	s.Equal([]string{"openid", "mcp:tools"}, client.Scopes)
+
+	undeclared, svcErr := s.newDomainService(enabledSettings, testDomainDocument, nil).
+		ResolveDocumentClient(context.Background(), testCIMDClientID)
+	s.Require().Nil(svcErr)
+	unscoped := &providers.OAuthClient{Scopes: []string{"app-scope"}}
+	undeclared.Apply(unscoped)
+	s.Empty(unscoped.Scopes)
+}
+
+func (s *CIMDServiceTestSuite) TestDocumentOAuthConfig_ResponseTypes() {
+	cases := []struct {
+		name          string
+		responseTypes string
+		want          *tidcommon.ServiceError
+	}{
+		{"absent defaults to code", "", nil},
+		{"code", `"response_types":["code"],`, nil},
+		{"code among others", `"response_types":["code","id_token"],`, nil},
+		{"implicit only", `"response_types":["token"],`, &ErrorInvalidResponseTypes},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			var doc cimdDocument
+			s.Require().NoError(json.Unmarshal([]byte(strings.Replace(testDomainDocument, `"client_name"`,
+				tc.responseTypes+`"client_name"`, 1)), &doc))
+
+			_, svcErr := documentOAuthConfig(testCIMDClientID, &doc)
+
+			s.Equal(tc.want, svcErr)
+		})
+	}
+}
+
+func (s *CIMDServiceTestSuite) TestDocumentOAuthConfig_WebClientsTakeNoLoopbackRedirect() {
+	loopback := strings.Replace(testDomainDocument, `"https://client.example.com/callback"`,
+		`"https://client.example.com/callback","http://127.0.0.1:33418/"`, 1)
+	cases := []struct {
+		name            string
+		applicationType string
+		want            *tidcommon.ServiceError
+	}{
+		{"undeclared", "", nil},
+		{"native", `"application_type":"native",`, nil},
+		{"web", `"application_type":"web",`, &ErrorInvalidRedirectURI},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			var doc cimdDocument
+			s.Require().NoError(json.Unmarshal([]byte(strings.Replace(loopback, `"client_name"`,
+				tc.applicationType+`"client_name"`, 1)), &doc))
+
+			_, svcErr := documentOAuthConfig(testCIMDClientID, &doc)
+
+			s.Equal(tc.want, svcErr)
+		})
+	}
+}
+
+func (s *CIMDServiceTestSuite) TestResolveDocumentClient_WebClientDropsLoopbackPostLogoutRedirects() {
+	doc := strings.Replace(testDomainDocument, `"https://client.example.com/bye",`,
+		`"https://client.example.com/bye","http://127.0.0.1:33418/bye",`, 1)
+
+	native, svcErr := s.newDomainService(enabledSettings, doc, nil).
+		ResolveDocumentClient(context.Background(), testCIMDClientID)
+	s.Require().Nil(svcErr)
+	s.Equal([]string{"https://client.example.com/bye", "http://127.0.0.1:33418/bye"}, native.PostLogoutRedirectURIs)
+
+	web, svcErr := s.newDomainService(enabledSettings,
+		strings.Replace(doc, `"client_name"`, `"application_type":"web","client_name"`, 1), nil).
+		ResolveDocumentClient(context.Background(), testCIMDClientID)
+	s.Require().Nil(svcErr)
+	s.Equal([]string{"https://client.example.com/bye"}, web.PostLogoutRedirectURIs)
+}
+
+func domainProfile() *providers.OAuthProfile {
+	return &providers.OAuthProfile{
+		ClientIDMetadataDocument: true,
+		ClientIDDomains:          []string{"claude.ai", "*.example.com"},
+		GrantTypes:               []string{"authorization_code", "refresh_token"},
+		ResponseTypes:            []string{"code"},
+		TokenEndpointAuthMethod:  "none",
+		PublicClient:             true,
+		PKCERequired:             true,
+	}
+}
+
+func (s *CIMDServiceTestSuite) TestValidateOAuthProfile_ClientIDDomains() {
+	svc := newTestCIMDService()
+	s.Nil(svc.ValidateOAuthProfile("", domainProfile(), false, "", nil))
+	s.Nil(svc.ValidateOAuthProfile("", domainProfile(), false, "", domainProfile()))
+
+	cases := []struct {
+		name   string
+		change func(*providers.OAuthProfile)
+		secret bool
+		id     string
+		want   *tidcommon.ServiceError
+	}{
+		{"not marked as CIMD", func(p *providers.OAuthProfile) { p.ClientIDMetadataDocument = false }, false, "",
+			&ErrorClientIDDomainsWithoutDocument},
+		{"with a client ID", func(*providers.OAuthProfile) {}, false, testCIMDClientID, &ErrorDomainClientValues},
+		{"with a secret", func(*providers.OAuthProfile) {}, true, "", &ErrorDomainClientValues},
+		{"with redirect URIs", func(p *providers.OAuthProfile) {
+			p.RedirectURIs = []string{"https://claude.ai/callback"}
+		}, false, "", &ErrorDomainClientValues},
+		{"with post-logout redirect URIs", func(p *providers.OAuthProfile) {
+			p.PostLogoutRedirectURIs = []string{"https://claude.ai/bye"}
+		}, false, "", &ErrorDomainClientValues},
+		{"with a certificate", func(p *providers.OAuthProfile) {
+			p.Certificate = &providers.Certificate{Type: "JWKS_URI", Value: "https://claude.ai/jwks.json"}
+		}, false, "", &ErrorDomainClientValues},
+		{"confidential", func(p *providers.OAuthProfile) {
+			p.TokenEndpointAuthMethod, p.PublicClient = "private_key_jwt", false
+		}, false, "", &ErrorDomainClientValues},
+		{"without PKCE", func(p *providers.OAuthProfile) { p.PKCERequired = false }, false, "",
+			&ErrorDomainClientValues},
+		{"uppercase domain", func(p *providers.OAuthProfile) { p.ClientIDDomains = []string{"Claude.ai"} }, false,
+			"", ErrorInvalidClientIDDomainName.WithParams(map[string]string{"domain": "Claude.ai"})},
+		{"single label domain", func(p *providers.OAuthProfile) { p.ClientIDDomains = []string{"localhost"} },
+			false, "", ErrorInvalidClientIDDomainName.WithParams(map[string]string{"domain": "localhost"})},
+		{"repeated domain", func(p *providers.OAuthProfile) {
+			p.ClientIDDomains = []string{"claude.ai", "claude.ai"}
+		}, false, "", &ErrorInvalidClientIDDomain},
+		{"too many domains", func(p *providers.OAuthProfile) {
+			p.ClientIDDomains = nil
+			for i := range maxClientIDDomains + 1 {
+				p.ClientIDDomains = append(p.ClientIDDomains, strings.Repeat("a", i+1)+".example")
+			}
+		}, false, "", &ErrorInvalidClientIDDomain},
+		{"no authorization code grant", func(p *providers.OAuthProfile) { p.GrantTypes = []string{"refresh_token"} },
+			false, "", &ErrorInvalidGrantTypes},
+		{"client credentials grant", func(p *providers.OAuthProfile) {
+			p.GrantTypes = append(p.GrantTypes, "client_credentials")
+		}, false, "", &ErrorInvalidGrantTypes},
+		{"token exchange without ID-JAG", func(p *providers.OAuthProfile) {
+			p.GrantTypes = append(p.GrantTypes, string(providers.GrantTypeTokenExchange))
+		}, false, "", &ErrorTokenExchangeRequiresIDJAG},
+	}
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			p := domainProfile()
+			tc.change(p)
+			s.Equal(tc.want, svc.ValidateOAuthProfile(tc.id, p, tc.secret, "", nil))
+		})
+	}
+}
+
+func (s *CIMDServiceTestSuite) TestValidateOAuthProfile_ClientIDDomainsWithIdentityAssertions() {
+	p := domainProfile()
+	p.GrantTypes = append(p.GrantTypes, string(providers.GrantTypeTokenExchange),
+		string(providers.GrantTypeJWTBearer))
+	p.Token = &providers.OAuthTokenConfig{IDJAG: &providers.IDJAGConfig{Enabled: true,
+		AllowedAudiences: []string{"https://api.example.com"}}}
+
+	s.Nil(newTestCIMDService().ValidateOAuthProfile("", p, false, "", nil))
+
+	p.Token.IDJAG.Enabled = false
+	s.Equal(&ErrorTokenExchangeRequiresIDJAG, newTestCIMDService().ValidateOAuthProfile("", p, false, "", nil))
+}
+
+func (s *CIMDServiceTestSuite) TestValidateOAuthProfile_ClientIDDomainsAreFixedToTheMode() {
+	svc := newTestCIMDService()
+	static := &providers.OAuthProfile{ClientIDMetadataDocument: true}
+
+	s.Equal(&ErrorImmutable, svc.ValidateOAuthProfile("", domainProfile(), false, testCIMDClientID, static))
+	s.Equal(&ErrorImmutable, svc.ValidateOAuthProfile("", domainProfile(), false, "", &providers.OAuthProfile{}))
+	s.Equal(&ErrorImmutable, svc.ValidateOAuthProfile(testCIMDClientID, publicCIMDProfile(), false, "",
+		domainProfile()))
+}
+
+func publicCIMDProfile() *providers.OAuthProfile {
+	p := ruleProfile(publicCIMDConfig())
+	p.ClientIDMetadataDocument = true
+	return p
+}
+
+func (s *CIMDServiceTestSuite) TestIsValidClientIDDomain() {
+	valid := []string{"claude.ai", "*.example.com", "a-b.example.co", "xn--bcher-kva.example"}
+	invalid := []string{"", "*.", "*", "localhost", "-a.example", "a-.example", "a..example", "A.example",
+		"a_b.example", "*.*.example", "127.0.0.1", strings.Repeat("a", 64) + ".example"}
+	for _, domain := range valid {
+		s.True(isValidClientIDDomain(domain), domain)
+	}
+	for _, domain := range invalid {
+		s.False(isValidClientIDDomain(domain), domain)
+	}
 }

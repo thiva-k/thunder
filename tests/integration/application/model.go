@@ -61,6 +61,7 @@ type OAuthAppConfig struct {
 	Certificate              *ApplicationCert    `json:"certificate,omitempty"`
 	AcrValues                []string            `json:"acrValues,omitempty"`
 	ClientIDMetadataDocument bool                `json:"clientIdMetadataDocument,omitempty"`
+	ClientIDDomains          []string            `json:"clientIdDomains,omitempty"`
 }
 
 // AttestationConfig represents the platform attestation configuration in the OAuth config.

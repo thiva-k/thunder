@@ -36,6 +36,21 @@ export type {
 } from './models/oauth';
 export type {AccessTokenConfig, AccessTokenSubConfig, AssertionConfig, TokenConfig} from './models/token';
 
+// Clients admitted by the domain of their Client ID Metadata Document URL
+export {default as ClientIdDomainsField} from './components/cimd/ClientIdDomainsField';
+export type {ClientIdDomainsFieldProps} from './components/cimd/ClientIdDomainsField';
+export {default as ClientIdDomainsSection} from './components/cimd/ClientIdDomainsSection';
+export type {ClientIdDomainsSectionProps} from './components/cimd/ClientIdDomainsSection';
+export {
+  admitsClientsByDomain,
+  buildClientIdDomainsConfig,
+  isValidClientIdDomain,
+  normalizeClientIdDomain,
+  parseClientIdDomains,
+  validateClientIdDomains,
+} from './utils/clientIdDomains';
+export {default as getCimdRuleErrorMessage} from './utils/getCimdRuleErrorMessage';
+
 // Constants
 export {default as ApplicationQueryKeys} from './constants/application-query-keys';
 
@@ -81,7 +96,9 @@ export {getGrantTypeLabel} from './utils/getGrantTypeLabel';
 export {
   applyGrantTypesChange,
   applyTokenEndpointAuthMethodChange,
+  CIMD_GRANT_TYPES,
   deriveOAuth2Flags,
+  getCimdGrantRestriction,
   hasUserAccess,
   isGrantLockedByIdJag,
   isIdJagEnabled,

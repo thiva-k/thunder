@@ -47,6 +47,7 @@ func resolveGrantTypes(
 	if configs[index].OAuthConfig != nil {
 		oauthConfig = *configs[index].OAuthConfig
 	}
+	applyClientIDDomainDefaults(&oauthConfig)
 
 	if isPersonalAssistantKind {
 		if svcErr := resolvePersonalAssistantGrantTypes(&oauthConfig); svcErr != nil {
@@ -106,6 +107,24 @@ func resolvePersonalAssistantGrantTypes(oauthConfig *providers.OAuthConfigWithSe
 }
 
 // isPublicClient reports whether the client authenticates without a secret.
+// applyClientIDDomainDefaults gives an OAuth configuration that admits clients by Client ID domain the code
+// response type and, when it sets no authentication method, makes it a public client with PKCE: each client it
+// admits authenticates as its document says.
+func applyClientIDDomainDefaults(oauthConfig *providers.OAuthConfigWithSecret) {
+	if len(oauthConfig.ClientIDDomains) == 0 {
+		return
+	}
+	if len(oauthConfig.ResponseTypes) == 0 {
+		oauthConfig.ResponseTypes = []providers.ResponseType{providers.ResponseTypeCode}
+	}
+	if oauthConfig.TokenEndpointAuthMethod != "" {
+		return
+	}
+	oauthConfig.TokenEndpointAuthMethod = providers.TokenEndpointAuthMethodNone
+	oauthConfig.PublicClient = true
+	oauthConfig.PKCERequired = true
+}
+
 func isPublicClient(oauthConfig *providers.OAuthConfigWithSecret) bool {
 	return oauthConfig.PublicClient || oauthConfig.TokenEndpointAuthMethod == providers.TokenEndpointAuthMethodNone
 }

@@ -595,6 +595,7 @@ type OAuthClient struct {
 	DPoPBoundAccessTokens              bool                    `yaml:"dpopBoundAccessTokens,omitempty"`
 	IncludeActClaim                    bool                    `yaml:"includeActClaim,omitempty"`
 	ClientIDMetadataDocument           bool                    `yaml:"clientIdMetadataDocument,omitempty"`
+	ClientIDDomains                    []string                `yaml:"clientIdDomains,omitempty"`
 	EntityCategory                     EntityCategory          `yaml:"entityCategory,omitempty"`
 	Token                              *OAuthTokenConfig       `yaml:"token,omitempty"`
 	Scopes                             []string                `yaml:"scopes,omitempty"`
@@ -604,6 +605,10 @@ type OAuthClient struct {
 	AcrValues                          []string                `yaml:"acrValues,omitempty"`
 	// Rules are the runtime rules the actor provider resolves for the client. Never serialized.
 	Rules ClientRules `yaml:"-" json:"-"`
+	// ResolvedByClientIDDomain marks a client that is not registered itself but signs in because the Client ID
+	// Metadata Document domains of a registered application or agent admit it. Its ID is that application's or
+	// agent's ID, which every client the domains admit shares. Never serialized.
+	ResolvedByClientIDDomain bool `yaml:"-" json:"-"`
 }
 
 // OAuthTokenConfig wraps access and ID token configs.
@@ -732,6 +737,7 @@ type OAuthProfile struct {
 	DPoPBoundAccessTokens              bool                `json:"dpopBoundAccessTokens"`
 	IncludeActClaim                    bool                `json:"includeActClaim"`
 	ClientIDMetadataDocument           bool                `json:"clientIdMetadataDocument,omitempty"`
+	ClientIDDomains                    []string            `json:"clientIdDomains,omitempty"`
 	Token                              *OAuthTokenConfig   `json:"token,omitempty"`
 	Scopes                             []string            `json:"scopes,omitempty"`
 	UserInfo                           *UserInfoConfig     `json:"userInfo,omitempty"`
@@ -1658,6 +1664,7 @@ type OAuthConfigWithSecret struct {
 	DPoPBoundAccessTokens              bool                    `json:"dpopBoundAccessTokens"              yaml:"dpopBoundAccessTokens"              jsonschema:"Require DPoP-bound access tokens (RFC 9449)."`
 	IncludeActClaim                    bool                    `json:"includeActClaim"                    yaml:"includeActClaim"                    jsonschema:"Include an implicit on-behalf-of 'act' claim (identifying the application entity) in access tokens this client obtains for a user through the authorization code, CIBA or jwt-bearer grant, or through token exchange without an actor token. Agents always include it regardless of this setting."`
 	ClientIDMetadataDocument           bool                    `json:"clientIdMetadataDocument,omitempty" yaml:"clientIdMetadataDocument,omitempty" jsonschema:"Registered from a Client ID Metadata Document. The client ID is the document URL and the values must satisfy the document rules. Fixed at creation."`
+	ClientIDDomains                    []string                `json:"clientIdDomains,omitempty"          yaml:"clientIdDomains,omitempty"          jsonschema:"With clientIdMetadataDocument, admits any client whose Client ID Metadata Document URL is on one of these domains, such as claude.ai or *.example.com, in place of a single client ID. Redirect URIs, the authentication method and keys come from each client's document when it signs in. Fixed at creation to this mode."`
 	Token                              *OAuthTokenConfig       `json:"token,omitempty"                    yaml:"token,omitempty"                    jsonschema:"Token configuration for access tokens and ID tokens"`
 	Scopes                             []string                `json:"scopes,omitempty"                   yaml:"scopes,omitempty"                   jsonschema:"Allowed OAuth scopes. Add custom scopes as needed for your application."`
 	UserInfo                           *UserInfoConfig         `json:"userInfo,omitempty"                 yaml:"userInfo,omitempty"                 jsonschema:"UserInfo endpoint configuration. Configure user attributes returned from the OIDC userinfo endpoint."`

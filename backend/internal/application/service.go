@@ -1745,6 +1745,7 @@ func buildOAuthProfileFromProcessed(inboundAuth inboundmodel.InboundAuthConfigPr
 		DPoPBoundAccessTokens:              oa.DPoPBoundAccessTokens,
 		IncludeActClaim:                    oa.IncludeActClaim,
 		ClientIDMetadataDocument:           oa.ClientIDMetadataDocument,
+		ClientIDDomains:                    oa.ClientIDDomains,
 		Scopes:                             oa.Scopes,
 		ScopeClaims:                        oa.ScopeClaims,
 		Token:                              oa.Token,
@@ -2059,6 +2060,13 @@ func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*provider
 	}
 	if oauthAppConfig.TokenEndpointAuthMethod == "" {
 		oauthAppConfig.TokenEndpointAuthMethod = providers.TokenEndpointAuthMethodClientSecretBasic
+		// Clients admitted by Client ID domain authenticate as their documents say, so the application itself
+		// is a public client with PKCE.
+		if len(oauthAppConfig.ClientIDDomains) > 0 {
+			oauthAppConfig.TokenEndpointAuthMethod = providers.TokenEndpointAuthMethodNone
+			oauthAppConfig.PublicClient = true
+			oauthAppConfig.PKCERequired = true
+		}
 	}
 
 	if err := validateAcrValues(oauthAppConfig.AcrValues); err != nil {
@@ -2507,6 +2515,9 @@ func (as *applicationService) processInboundAuthConfig(ctx context.Context, app 
 	}
 
 	clientID := inboundAuthConfig.OAuthConfig.ClientID
+	// A client that admits clients by Client ID domain has no client ID of its own; each admitted client
+	// uses its Client ID Metadata Document URL.
+	byDomain := len(inboundAuthConfig.OAuthConfig.ClientIDDomains) > 0
 
 	// For update operation
 	if existingApp != nil {
@@ -2517,11 +2528,11 @@ func (as *applicationService) processInboundAuthConfig(ctx context.Context, app 
 			existingClientID = existingOAuthConfig.OAuthConfig.ClientID
 		}
 
-		if clientID == "" {
+		if clientID == "" && !byDomain {
 			if svcErr := generateAndAssignClientID(ctx, inboundAuthConfig); svcErr != nil {
 				return nil, svcErr
 			}
-		} else if clientID != existingClientID {
+		} else if clientID != "" && clientID != existingClientID {
 			if taken, svcErr := as.isIdentifierTaken(ctx, fieldClientID, clientID, existingApp.ID); svcErr != nil {
 				return nil, svcErr
 			} else if taken {
@@ -2529,11 +2540,11 @@ func (as *applicationService) processInboundAuthConfig(ctx context.Context, app 
 			}
 		}
 	} else { // For create operation
-		if clientID == "" {
+		if clientID == "" && !byDomain {
 			if svcErr := generateAndAssignClientID(ctx, inboundAuthConfig); svcErr != nil {
 				return nil, svcErr
 			}
-		} else {
+		} else if clientID != "" {
 			if taken, svcErr := as.isIdentifierTaken(ctx, fieldClientID, clientID, app.ID); svcErr != nil {
 				return nil, svcErr
 			} else if taken {
@@ -2728,6 +2739,7 @@ func buildApplicationResponse(dto *model.ApplicationProcessedDTO) *providers.App
 					DPoPBoundAccessTokens:              oauthAppConfig.DPoPBoundAccessTokens,
 					IncludeActClaim:                    oauthAppConfig.IncludeActClaim,
 					ClientIDMetadataDocument:           oauthAppConfig.ClientIDMetadataDocument,
+					ClientIDDomains:                    oauthAppConfig.ClientIDDomains,
 					Token:                              oauthAppConfig.Token,
 					Scopes:                             oauthAppConfig.Scopes,
 					UserInfo:                           oauthAppConfig.UserInfo,
@@ -2870,6 +2882,7 @@ func buildOAuthInboundAuthConfigProcessedDTO(
 			DPoPBoundAccessTokens:              inboundAuthConfig.OAuthConfig.DPoPBoundAccessTokens,
 			IncludeActClaim:                    inboundAuthConfig.OAuthConfig.IncludeActClaim,
 			ClientIDMetadataDocument:           inboundAuthConfig.OAuthConfig.ClientIDMetadataDocument,
+			ClientIDDomains:                    inboundAuthConfig.OAuthConfig.ClientIDDomains,
 			Token:                              oauthToken,
 			Scopes:                             inboundAuthConfig.OAuthConfig.Scopes,
 			UserInfo:                           userInfo,
@@ -2941,6 +2954,7 @@ func buildReturnApplicationDTO(
 				DPoPBoundAccessTokens:              inboundAuthConfig.OAuthConfig.DPoPBoundAccessTokens,
 				IncludeActClaim:                    inboundAuthConfig.OAuthConfig.IncludeActClaim,
 				ClientIDMetadataDocument:           inboundAuthConfig.OAuthConfig.ClientIDMetadataDocument,
+				ClientIDDomains:                    inboundAuthConfig.OAuthConfig.ClientIDDomains,
 				Token:                              oauthToken,
 				Scopes:                             inboundAuthConfig.OAuthConfig.Scopes,
 				UserInfo:                           userInfo,

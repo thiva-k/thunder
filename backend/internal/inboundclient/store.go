@@ -54,6 +54,9 @@ type inboundClientStoreInterface interface {
 	// return false; file-based stores return true when the inbound client exists in their
 	// in-memory set.
 	IsDeclarative(ctx context.Context, entityID string) bool
+	// GetEntityIDByClientIDDomain returns the ID of the entity whose OAuth profile admits the Client ID
+	// Metadata Document domain, or an empty string when none does.
+	GetEntityIDByClientIDDomain(ctx context.Context, domain string) (string, error)
 }
 
 // store implements inboundClientStoreInterface using the configured config database.
@@ -187,7 +190,7 @@ func (st *store) CreateOAuthProfile(ctx context.Context, entityID string,
 	if err != nil {
 		return fmt.Errorf("failed to insert OAuth profile: %w", err)
 	}
-	return nil
+	return st.insertClientIDDomains(ctx, dbClient, entityID, oauthProfile)
 }
 
 // GetInboundClientByEntityID retrieves an inbound client by entity ID.
@@ -400,7 +403,47 @@ func (st *store) UpdateOAuthProfile(ctx context.Context, entityID string,
 	if rowsAffected == 0 {
 		return ErrInboundClientNotFound
 	}
+	if _, err := dbClient.ExecuteContext(ctx, queryDeleteClientIDDomainsByEntityID,
+		entityID, st.scope(ctx)); err != nil {
+		return fmt.Errorf("failed to delete Client ID Metadata Document domains: %w", err)
+	}
+	return st.insertClientIDDomains(ctx, dbClient, entityID, oauthProfile)
+}
+
+// insertClientIDDomains records the Client ID Metadata Document domains an OAuth profile admits.
+func (st *store) insertClientIDDomains(ctx context.Context, dbClient provider.DBClientInterface, entityID string,
+	oauthProfile *providers.OAuthProfile) error {
+	if oauthProfile == nil {
+		return nil
+	}
+	for _, domain := range oauthProfile.ClientIDDomains {
+		if _, err := dbClient.ExecuteContext(ctx, queryCreateClientIDDomain, entityID, domain,
+			st.scope(ctx)); err != nil {
+			return fmt.Errorf("failed to insert Client ID Metadata Document domain: %w", err)
+		}
+	}
 	return nil
+}
+
+// GetEntityIDByClientIDDomain returns the ID of the entity whose OAuth profile admits the Client ID Metadata
+// Document domain, or an empty string when none does.
+func (st *store) GetEntityIDByClientIDDomain(ctx context.Context, domain string) (string, error) {
+	dbClient, err := st.dbProvider.GetConfigDBClient()
+	if err != nil {
+		return "", fmt.Errorf("failed to get database client: %w", err)
+	}
+	results, err := dbClient.QueryContext(ctx, queryGetEntityIDByClientIDDomain, domain, st.scope(ctx))
+	if err != nil {
+		return "", fmt.Errorf("failed to execute query: %w", err)
+	}
+	if len(results) == 0 {
+		return "", nil
+	}
+	entityID, ok := results[0]["entity_id"].(string)
+	if !ok {
+		return "", fmt.Errorf("failed to parse entity ID of a Client ID Metadata Document domain")
+	}
+	return entityID, nil
 }
 
 // marshalOAuthProfile serializes an OAuthProfile to the OAUTH_CONFIG JSON format.
@@ -437,6 +480,10 @@ func (st *store) DeleteOAuthProfile(ctx context.Context, entityID string) error 
 		return fmt.Errorf("failed to get database client: %w", err)
 	}
 
+	if _, err := dbClient.ExecuteContext(ctx, queryDeleteClientIDDomainsByEntityID,
+		entityID, st.scope(ctx)); err != nil {
+		return fmt.Errorf("failed to delete Client ID Metadata Document domains: %w", err)
+	}
 	_, err = dbClient.ExecuteContext(ctx, queryDeleteOAuthProfileByEntityID, entityID, st.scope(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to delete OAuth profile: %w", err)

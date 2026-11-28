@@ -818,6 +818,44 @@ describe('ApplicationEditPage', () => {
       expect(screen.getByTestId('cimd-document-section')).toBeInTheDocument();
     });
 
+    it('should edit the trusted domains of an application that admits clients by domain', async () => {
+      mockUseGetApplication.mockReturnValue({
+        data: {
+          ...mockApplication,
+          template: 'cimd',
+          inboundAuthConfig: [
+            {
+              type: 'oauth2',
+              config: {
+                clientIdMetadataDocument: true,
+                clientIdDomains: ['vscode.dev'],
+                grantTypes: ['authorization_code', 'refresh_token'],
+                responseTypes: ['code'],
+                pkceRequired: true,
+                publicClient: true,
+                tokenEndpointAuthMethod: 'none',
+              },
+            },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as UseQueryResult<Application>);
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      expect(screen.queryByRole('tab', {name: /credentials/i})).not.toBeInTheDocument();
+      await user.click(screen.getByRole('tab', {name: /trusted domains/i}));
+      expect(screen.queryByTestId('cimd-document-section')).not.toBeInTheDocument();
+      expect(screen.getByText('vscode.dev')).toBeInTheDocument();
+
+      // It has no redirect URIs of its own, so adding a domain is enough to save.
+      await user.type(screen.getByTestId('cimd-client-id-domains-input'), 'claude.ai,');
+      expect(await screen.findByRole('button', {name: /save changes/i})).toBeEnabled();
+    });
+
     it('should render all tabs without integration guides', () => {
       renderComponent();
 

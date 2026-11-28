@@ -6,6 +6,8 @@ package resolve
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -14,6 +16,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/design/common"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
+	"github.com/thunder-id/thunderid/internal/inboundclient"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
 )
@@ -35,6 +38,7 @@ type designResolveService struct {
 	themeMgtService    thememgt.ThemeMgtServiceInterface
 	layoutMgtService   layoutmgt.LayoutMgtServiceInterface
 	applicationService application.ApplicationServiceInterface
+	inboundClient      inboundclient.InboundClientServiceInterface
 	logger             *log.Logger
 }
 
@@ -43,12 +47,14 @@ func newDesignResolveService(
 	themeMgtService thememgt.ThemeMgtServiceInterface,
 	layoutMgtService layoutmgt.LayoutMgtServiceInterface,
 	applicationService application.ApplicationServiceInterface,
+	inboundClient inboundclient.InboundClientServiceInterface,
 ) DesignResolveServiceInterface {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, serviceLogger))
 	return &designResolveService{
 		themeMgtService:    themeMgtService,
 		layoutMgtService:   layoutMgtService,
 		applicationService: applicationService,
+		inboundClient:      inboundClient,
 		logger:             logger,
 	}
 }
@@ -77,46 +83,33 @@ func (drs *designResolveService) ResolveDesign(
 		return nil, &tidcommon.InternalServerError
 	}
 
-	// The design of any organization unit's application is public.
-	app, svcErr := drs.applicationService.GetApplication(security.WithRuntimeContext(ctx), id)
+	themeID, layoutID, svcErr := drs.resolveClientDesign(ctx, id)
 	if svcErr != nil {
-		// Convert application service errors to design resolve errors
-		if svcErr.Code == application.ErrorInvalidApplicationID.Code {
-			return nil, &common.ErrorMissingResolveID
-		}
-		// This endpoint is unauthenticated, so an unknown application reports the same result as a
-		// known one with nothing configured. Distinguishing them lets an anonymous caller confirm
-		// which application IDs exist.
-		if svcErr.Code == application.ErrorApplicationNotFound.Code {
-			drs.logger.Debug(ctx, "No design resolved; application does not exist",
-				log.String("applicationID", id))
-			return nil, &common.ErrorApplicationHasNoDesign
-		}
 		return nil, svcErr
 	}
 
 	// Check if the application has theme or layout configured
-	if app.ThemeID == "" && app.LayoutID == "" {
+	if themeID == "" && layoutID == "" {
 		return nil, &common.ErrorApplicationHasNoDesign
 	}
 
 	designResponse := &providers.DesignResponse{}
 
 	// Get theme configuration if available
-	if app.ThemeID != "" {
+	if themeID != "" {
 		if drs.themeMgtService == nil {
 			drs.logger.Error(ctx, "Theme management service is not available")
 			return nil, &tidcommon.InternalServerError
 		}
 
-		themeConfig, svcErr := drs.themeMgtService.GetTheme(ctx, app.ThemeID)
+		themeConfig, svcErr := drs.themeMgtService.GetTheme(ctx, themeID)
 		if svcErr != nil {
 			if svcErr.Code == thememgt.ErrorThemeNotFound.Code {
 				// The referenced theme has been deleted; fall back to the system default by leaving
 				// the theme unset in the response.
 				drs.logger.Warn(ctx, "Application references a deleted theme; falling back to default",
 					log.String("applicationID", id),
-					log.String("themeID", app.ThemeID))
+					log.String("themeID", themeID))
 			} else {
 				return nil, svcErr
 			}
@@ -126,20 +119,20 @@ func (drs *designResolveService) ResolveDesign(
 	}
 
 	// Get layout configuration if available
-	if app.LayoutID != "" {
+	if layoutID != "" {
 		if drs.layoutMgtService == nil {
 			drs.logger.Error(ctx, "Layout management service is not available")
 			return nil, &tidcommon.InternalServerError
 		}
 
-		layoutConfig, svcErr := drs.layoutMgtService.GetLayout(ctx, app.LayoutID)
+		layoutConfig, svcErr := drs.layoutMgtService.GetLayout(ctx, layoutID)
 		if svcErr != nil {
 			if svcErr.Code == layoutmgt.ErrorLayoutNotFound.Code {
 				// The referenced layout has been deleted; fall back to the system default by leaving
 				// the layout unset in the response.
 				drs.logger.Warn(ctx, "Application references a deleted layout; falling back to default",
 					log.String("applicationID", id),
-					log.String("layoutID", app.LayoutID))
+					log.String("layoutID", layoutID))
 			} else {
 				return nil, svcErr
 			}
@@ -151,10 +144,57 @@ func (drs *designResolveService) ResolveDesign(
 	drs.logger.Debug(ctx, "Successfully resolved design configuration",
 		log.String("type", string(resolveType)),
 		log.String("id", id),
-		log.String("themeID", app.ThemeID),
-		log.String("layoutID", app.LayoutID))
+		log.String("themeID", themeID),
+		log.String("layoutID", layoutID))
 
 	return designResponse, nil
+}
+
+// resolveClientDesign returns the theme and layout of the application with the given ID, or, for the Client
+// Identifier URL of a client the Client ID domains of an application or agent admit, of that application or
+// agent. An unknown ID reports no design, the same as an application with nothing configured, since this
+// endpoint is unauthenticated and must not confirm which IDs exist.
+func (drs *designResolveService) resolveClientDesign(ctx context.Context, id string) (
+	themeID, layoutID string, svcErr *tidcommon.ServiceError) {
+	// The design of any organization unit's application is public.
+	ctx = security.WithRuntimeContext(ctx)
+	app, svcErr := drs.applicationService.GetApplication(ctx, id)
+	if svcErr == nil {
+		return app.ThemeID, app.LayoutID, nil
+	}
+	if svcErr.Code != application.ErrorApplicationNotFound.Code &&
+		svcErr.Code != application.ErrorInvalidApplicationID.Code {
+		return "", "", svcErr
+	}
+	if inbound, err := drs.domainClientInbound(ctx, id); err != nil {
+		drs.logger.Error(ctx, "Failed to resolve the client a Client ID domain admits", log.Error(err))
+		return "", "", &tidcommon.InternalServerError
+	} else if inbound != nil {
+		return inbound.ThemeID, inbound.LayoutID, nil
+	}
+	if svcErr.Code == application.ErrorInvalidApplicationID.Code {
+		return "", "", &common.ErrorMissingResolveID
+	}
+	drs.logger.Debug(ctx, "No design resolved; application does not exist", log.String("applicationID", id))
+	return "", "", &common.ErrorApplicationHasNoDesign
+}
+
+// domainClientInbound returns the inbound client of the application or agent whose Client ID domains admit the
+// client with the given Client Identifier URL, or nil when id names no such client.
+func (drs *designResolveService) domainClientInbound(ctx context.Context, id string) (
+	*providers.InboundClient, error) {
+	if drs.inboundClient == nil || !strings.HasPrefix(id, clientIdentifierURLPrefix) {
+		return nil, nil
+	}
+	client, err := drs.inboundClient.GetOAuthClientByClientID(ctx, id)
+	if err != nil || client == nil || !client.ResolvedByClientIDDomain {
+		return nil, err
+	}
+	inbound, err := drs.inboundClient.GetInboundClientByEntityID(ctx, client.ID)
+	if errors.Is(err, inboundclient.ErrInboundClientNotFound) {
+		return nil, nil
+	}
+	return inbound, err
 }
 
 // ResolveDesignContent replaces every "{{design(<dot.path>)}}" placeholder in content with its value

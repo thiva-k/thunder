@@ -260,6 +260,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// initialized. The handle-existence validator is injected in a second phase after flowMgtService
 	// is available.
 	flowConfigHandler := flowmgt.NewFlowConfigHandler()
+	cimdConfigHandler := cimd.NewConfigHandler()
 
 	// Initialize server-wide configuration after its handler dependencies and before the services that
 	// read it.
@@ -271,6 +272,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		serverconfig.ConfigNameCSP:                   csp.PolicyHandler{},
 		serverconfig.ConfigNameAccountAccess:         identitygovernance.NewAccountAccessHandler(governanceCfg),
 		serverconfig.ConfigNameNotification:          notificationConfigHandler,
+		serverconfig.ConfigNameCIMD:                  cimdConfigHandler,
 	}
 	serverConfigService, serverConfigExporter, err := serverconfig.Initialize(mux, cacheManager, serverConfigHandlers,
 		observabilitySvc, auditBus, ouAuthzService)
@@ -523,7 +525,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize LayoutMgtService")
 	exporters = append(exporters, layoutExporter)
 
-	cimdService := cimd.Initialize(mux)
+	cimdService := cimd.Initialize(mux, serverConfigService)
 	inboundClientService, err := inboundclient.Initialize(
 		cacheManager, certservice, entityProvider,
 		themeMgtService, layoutMgtService, flowMgtService, entityTypeService, runtimeCryptoSvc, jweService,
@@ -587,7 +589,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		sharingService, notifTemplateSvc, ouDependencyProvider, openid4vpDefSvc, openid4vciCredSvc)
 
 	// Initialize design resolve service for theme and layout resolution
-	designResolveService := resolve.Initialize(mux, themeMgtService, layoutMgtService, applicationService)
+	designResolveService := resolve.Initialize(mux, themeMgtService, layoutMgtService, applicationService,
+		inboundClientService)
 
 	// Inject the design resolve service now that it exists (the translation resolver was passed at init).
 	notifTemplateRenderer.SetDesignResolver(designResolveService)
@@ -598,7 +601,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		providers.EntityCategoryAgent: agentService,
 	}
 	actorProvider := actorprovider.Initialize(
-		inboundClientService, entityProvider, authnProvider, roleService, entityTypeService, clientRulesResolvers)
+		inboundClientService, entityProvider, authnProvider, roleService, entityTypeService, clientRulesResolvers,
+		actorprovider.ResolvingCIMDDocumentClients(cimdService))
 	// Two-phase initialization: inject the actor provider into the executors that resolve an actor's
 	// OAuth client.
 	fatalOnError(ctx, logger, executor.SetActorProvider(execRegistry, actorProvider),

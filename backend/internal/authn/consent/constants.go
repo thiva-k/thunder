@@ -13,3 +13,6 @@ const (
 	// consentSessionClaimKey is the JWT claim key for consent session data
 	consentSessionClaimKey = "consent_session"
 )
+
+// consentRecordGroupKey is the context key of the group a user's consent records are kept under.
+type consentRecordGroupKey struct{}

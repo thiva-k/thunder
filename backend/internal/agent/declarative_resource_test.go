@@ -351,6 +351,31 @@ func (s *AgentExporterTestSuite) TestGetResourceRulesForResource_PublicClientNoR
 	assert.Empty(s.T(), rules.ArrayVariables, "no redirect URIs means no array variables")
 }
 
+func (s *AgentExporterTestSuite) TestGetResourceRulesForResource_ClientIDDomains() {
+	pr, ok := s.exporter.(declarativeresource.PerResourceRuler)
+	assert.True(s.T(), ok, "exporter should implement PerResourceRuler")
+
+	a := &model.AgentGetResponse{
+		ID:      "agent1",
+		Display: "Domain Agent",
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
+			{
+				OAuthConfig: &providers.OAuthConfigWithSecret{
+					ClientIDMetadataDocument: true,
+					ClientIDDomains:          []string{"claude.ai"},
+					PublicClient:             true,
+				},
+			},
+		},
+	}
+
+	rules := pr.GetResourceRulesForResource(a)
+
+	assert.NotNil(s.T(), rules)
+	assert.NotContains(s.T(), rules.Variables, "InboundAuthConfig[].OAuthConfig.ClientID")
+	assert.Empty(s.T(), rules.SecretVariables)
+}
+
 func (s *AgentExporterTestSuite) TestGetResourceRulesForResource_PublicClientWithRedirectURIs() {
 	pr, ok := s.exporter.(declarativeresource.PerResourceRuler)
 	assert.True(s.T(), ok, "exporter should implement PerResourceRuler")

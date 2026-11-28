@@ -206,6 +206,29 @@ func (suite *OAuthClientTestSuite) TestOAuthClient_ValidateRedirectURI() {
 	assert.Error(suite.T(), client.ValidateRedirectURI(context.Background(), "https://other.com/callback"))
 }
 
+func (suite *OAuthClientTestSuite) TestOAuthClient_ValidateRedirectURI_CIMDLoopbackAnyPort() {
+	suite.setupRuntime(suite.T(), sysconfig.OAuthConfig{})
+	ctx := context.Background()
+	cimdClient := &OAuthClient{ClientIDMetadataDocument: true,
+		RedirectURIs: []string{"http://127.0.0.1/callback", "http://[::1]:33418/cb?x=1", "https://app.example.com/cb"}}
+
+	for _, allowed := range []string{
+		"http://127.0.0.1/callback", "http://127.0.0.1:51234/callback", "http://[::1]:60000/cb?x=1",
+		"https://app.example.com/cb",
+	} {
+		assert.NoError(suite.T(), cimdClient.ValidateRedirectURI(ctx, allowed), allowed)
+	}
+	for _, refused := range []string{
+		"http://127.0.0.1:51234/other", "http://localhost:51234/callback", "http://127.0.0.1:51234/callback#f",
+		"https://127.0.0.1:51234/callback", "http://[::1]:60000/cb?x=2", "https://app.example.com:8443/cb",
+	} {
+		assert.Error(suite.T(), cimdClient.ValidateRedirectURI(ctx, refused), refused)
+	}
+
+	registered := &OAuthClient{RedirectURIs: []string{"http://127.0.0.1/callback"}}
+	assert.Error(suite.T(), registered.ValidateRedirectURI(ctx, "http://127.0.0.1:51234/callback"))
+}
+
 func (suite *OAuthClientTestSuite) TestValidateRedirectURI_InvalidRegisteredURI() {
 	suite.setupRuntime(suite.T(), sysconfig.OAuthConfig{})
 	err := ValidateRedirectURI(context.Background(), []string{"/relative/callback"}, "")

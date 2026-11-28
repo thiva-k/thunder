@@ -18,6 +18,7 @@ import AllowedUserTypesSection from './AllowedUserTypesSection';
 import DangerZoneSection from './DangerZoneSection';
 import OperationModesSection from './OperationModesSection';
 import OwnerSection from './OwnerSection';
+import TrustedDomainsClientSection from './TrustedDomainsClientSection';
 import {DEFAULT_DELEGATED_GRANTS, DELEGATED_ONLY_GRANTS} from '../../../constants/delegationGrants';
 import type {Agent, AgentInboundAuthConfig, OAuthAgentConfig} from '../../../models/agent';
 import applyAgentPkceRule from '../../../utils/applyAgentPkceRule';
@@ -29,6 +30,11 @@ interface EditAdvancedSettingsProps {
   editedAgent: Partial<Agent>;
   oauth2Config?: OAuthAgentConfig;
   onFieldChange: (field: keyof Agent, value: unknown) => void;
+  /**
+   * Whether the agent admits any client from trusted domains. Each client's metadata document then sets the
+   * grants, redirect URIs and client authentication, and the agent always acts for a user.
+   */
+  admitsClientsByDomain?: boolean;
   onDeleteSuccess?: () => void;
   onBackchannelLogoutUriValidationChange?: (hasError: boolean) => void;
   /** Reports whether the Identity assertions (ID-JAG) card has a validation error, to gate Save. */
@@ -40,6 +46,7 @@ export default function EditAdvancedSettings({
   editedAgent,
   oauth2Config = undefined,
   onFieldChange,
+  admitsClientsByDomain = false,
   onDeleteSuccess = undefined,
   onBackchannelLogoutUriValidationChange = undefined,
   onIdentityAssertionsValidationChange = undefined,
@@ -109,7 +116,7 @@ export default function EditAdvancedSettings({
               <Switch
                 checked={isUnlocked}
                 onChange={(e) => handleDelegationToggle(e.target.checked)}
-                disabled={!oauth2Config || agent.isReadOnly === true}
+                disabled={!oauth2Config || agent.isReadOnly === true || admitsClientsByDomain}
               />
             }
             label={
@@ -119,12 +126,17 @@ export default function EditAdvancedSettings({
             }
           />
           <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {isUnlocked
-              ? t('agents:edit.advanced.mode.onBehalfOfUser.description', 'This agent can act on behalf of a user.')
-              : t(
-                  'agents:edit.advanced.mode.onOwnBehalf.description',
-                  'This agent authenticates with its own credentials without user interaction, using client credentials.',
-                )}
+            {admitsClientsByDomain
+              ? t(
+                  'agents:edit.advanced.mode.trustedDomains.description',
+                  'This agent acts on behalf of the user who signs in through a client from its trusted domains.',
+                )
+              : isUnlocked
+                ? t('agents:edit.advanced.mode.onBehalfOfUser.description', 'This agent can act on behalf of a user.')
+                : t(
+                    'agents:edit.advanced.mode.onOwnBehalf.description',
+                    'This agent authenticates with its own credentials without user interaction, using client credentials.',
+                  )}
           </Typography>
         </Box>
       </SettingsCard>
@@ -142,12 +154,20 @@ export default function EditAdvancedSettings({
         oauth2Config={oauth2Config}
         onFieldChange={onFieldChange}
       />
-      <OperationModesSection
-        oauth2Config={oauth2Config}
-        onOAuth2ConfigChange={handleOAuth2ConfigChange}
-        onBackchannelLogoutUriValidationChange={onBackchannelLogoutUriValidationChange}
-        disabled={agent.isReadOnly}
-      />
+      {admitsClientsByDomain && oauth2Config ? (
+        <TrustedDomainsClientSection
+          oauth2Config={oauth2Config}
+          onOAuth2ConfigChange={handleOAuth2ConfigChange}
+          disabled={agent.isReadOnly}
+        />
+      ) : (
+        <OperationModesSection
+          oauth2Config={oauth2Config}
+          onOAuth2ConfigChange={handleOAuth2ConfigChange}
+          onBackchannelLogoutUriValidationChange={onBackchannelLogoutUriValidationChange}
+          disabled={agent.isReadOnly}
+        />
+      )}
       {oauth2Config && isUnlocked && (
         <IdentityAssertionsSection
           oauth2Config={oauth2Config}

@@ -3112,6 +3112,49 @@ describe('ApplicationCreatePage', () => {
       });
     });
 
+    it('should create an application that admits any client from trusted domains', async () => {
+      renderWithProviders();
+      await user.click(screen.getByTestId('select-cimd-template'));
+      await user.click(screen.getByRole('radio', {name: 'Any client from trusted domains'}));
+      expect(screen.queryByTestId('cimd-document-url-input')).not.toBeInTheDocument();
+      expect(screen.getByTestId('application-wizard-next-button')).toBeDisabled();
+
+      await user.type(screen.getByTestId('cimd-client-id-domains-input'), 'https://VSCode.dev/oauth, *.example.com ');
+      await waitFor(() => expect(screen.getByTestId('application-wizard-next-button')).toBeEnabled());
+
+      // METADATA_DOCUMENT -> DETAILS, where the administrator names the application.
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+      expect(screen.getByTestId('app-name-input')).toHaveValue('');
+      await user.type(screen.getByTestId('app-name-input'), 'MCP clients');
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+
+      await waitFor(() => {
+        expect(mockCreateApplication).toHaveBeenCalled();
+      });
+      const requestBody = mockCreateApplication.mock.calls[0][0] as Application;
+      expect(requestBody.name).toBe('MCP clients');
+      expect(requestBody.template).toBe('cimd');
+      expect(requestBody.inboundAuthConfig?.[0]?.config).toEqual({
+        clientIdMetadataDocument: true,
+        clientIdDomains: ['vscode.dev', '*.example.com'],
+        grantTypes: ['authorization_code', 'refresh_token'],
+        responseTypes: ['code'],
+        tokenEndpointAuthMethod: 'none',
+        publicClient: true,
+        pkceRequired: true,
+      });
+    });
+
+    it('should not continue with an invalid trusted domain', async () => {
+      renderWithProviders();
+      await user.click(screen.getByTestId('select-cimd-template'));
+      await user.click(screen.getByRole('radio', {name: 'Any client from trusted domains'}));
+      await user.type(screen.getByTestId('cimd-client-id-domains-input'), 'localhost ');
+
+      expect(await screen.findByText(/IP addresses and single-label names are not allowed/)).toBeInTheDocument();
+      expect(screen.getByTestId('application-wizard-next-button')).toBeDisabled();
+    });
+
     it('should submit a private key JWT client with its JWKS URI as the certificate', async () => {
       renderWithProviders();
       await fetchDocument('https://chatgpt.com/oauth/client.json');
@@ -3185,6 +3228,39 @@ describe('ApplicationCreatePage', () => {
         clientId: 'https://chatgpt.com/oauth/client.json',
         tokenEndpointAuthMethod: 'private_key_jwt',
         certificate: {type: 'JWKS_URI', value: 'https://chatgpt.com/oauth/jwks.json'},
+      });
+    });
+
+    it('should create an MCP client that admits any client from trusted domains', async () => {
+      renderWithProviders();
+      await user.click(screen.getByTestId('select-mcp-client-identity-template'));
+      await user.click(screen.getByText('Any client from trusted domains'));
+      expect(screen.getByTestId('application-wizard-next-button')).toBeDisabled();
+
+      await user.type(screen.getByTestId('cimd-client-id-domains-input'), 'vscode.dev claude.ai ');
+      await waitFor(() => expect(screen.getByTestId('application-wizard-next-button')).toBeEnabled());
+
+      // CLIENT_IDENTITY -> DETAILS, the last step: each client's document fixes its type and redirect URIs.
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+      expect(screen.getByTestId('app-name-input')).toHaveValue('');
+      await user.type(screen.getByTestId('app-name-input'), 'MCP clients');
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+
+      await waitFor(() => {
+        expect(mockCreateApplication).toHaveBeenCalled();
+      });
+      expect(screen.queryByTestId('application-configure-mcp-client-type')).not.toBeInTheDocument();
+      const requestBody = mockCreateApplication.mock.calls[0][0] as Application;
+      expect(requestBody.name).toBe('MCP clients');
+      expect(requestBody.template).toBe('mcp-client');
+      expect(requestBody.inboundAuthConfig?.[0]?.config).toEqual({
+        clientIdMetadataDocument: true,
+        clientIdDomains: ['vscode.dev', 'claude.ai'],
+        grantTypes: ['authorization_code', 'refresh_token'],
+        responseTypes: ['code'],
+        tokenEndpointAuthMethod: 'none',
+        publicClient: true,
+        pkceRequired: true,
       });
     });
 

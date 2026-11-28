@@ -194,6 +194,22 @@ func GenerateAuthorizationCode() (string, error) {
 	return generateOAuth2Credential(AuthorizationCodeCredential)
 }
 
+// LimitToClientScopes returns the requested scopes the client may request. A client a Client ID domain admits
+// may request only the scopes its Client ID Metadata Document declares, when it declares any; any other client's
+// requested scopes are returned unchanged.
+func LimitToClientScopes(scopes string, client *providers.OAuthClient) string {
+	if client == nil || !client.ResolvedByClientIDDomain || len(client.Scopes) == 0 {
+		return scopes
+	}
+	allowed := make([]string, 0, len(client.Scopes))
+	for _, scp := range utils.ParseStringArray(scopes, " ") {
+		if slices.Contains(client.Scopes, scp) {
+			allowed = append(allowed, scp)
+		}
+	}
+	return strings.Join(allowed, " ")
+}
+
 // SeparateOIDCAndNonOIDCScopes separates the given scopes into OIDC and non-OIDC scopes.
 // A scope is OIDC if it is a standard OIDC scope or the app's scope-to-claims mapping defines it.
 // Anything else is a permission scope for the resource servers.

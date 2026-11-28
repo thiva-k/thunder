@@ -462,6 +462,25 @@ func (suite *AuthorizeServiceTestSuite) TestOUQualifiedAuthorize_UnknownAndUnsha
 	suite.Equal("test-state", location.Query().Get("state"))
 }
 
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_NamesDomainClientByItsURL() {
+	app := suite.testApp()
+	app.ID = "019a0000-0000-7000-8000-000000000001"
+	app.ClientID = "https://client.example.com/oauth/client.json"
+	app.ResolvedByClientIDDomain = true
+	msg := suite.testMsg()
+	msg.RequestQueryParams["client_id"] = []string{app.ClientID}
+	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, app.ClientID).Return(app, nil)
+	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
+		Return(false, "", "")
+	suite.mockFlowExecService.EXPECT().InitiateFlow(mock.Anything, mock.Anything).Return("test-flow-id", nil)
+	suite.mockAuthReqStore.EXPECT().AddRequest(mock.Anything, mock.Anything).Return(testAuthID, nil)
+
+	result, authErr := suite.newService().HandleInitialAuthorizationRequest(context.Background(), msg)
+
+	suite.Require().Nil(authErr)
+	suite.Equal(app.ClientID, result.QueryParams[oauth2const.AppID])
+}
+
 func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_StoreRequestError() {
 	app := suite.testApp()
 	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
@@ -3563,4 +3582,35 @@ func (suite *AuthorizeServiceTestSuite) TestAddMetadataDocumentClientHosts_Skips
 			assert.Empty(suite.T(), runtimeData)
 		})
 	}
+}
+
+func (suite *AuthorizeServiceTestSuite) TestAddDomainClientConsentGroup() {
+	const policyID = "019a0000-0000-7000-8000-000000000001"
+	claude := &providers.OAuthClient{ID: policyID, ClientID: "https://claude.ai/oauth/client.json",
+		ResolvedByClientIDDomain: true}
+	vscode := &providers.OAuthClient{ID: policyID, ClientID: "https://vscode.dev/oauth/client-metadata.json",
+		ResolvedByClientIDDomain: true}
+
+	claudeData, vscodeData, again := map[string]string{}, map[string]string{}, map[string]string{}
+	addDomainClientConsentGroup(claudeData, claude)
+	addDomainClientConsentGroup(vscodeData, vscode)
+	addDomainClientConsentGroup(again, claude)
+
+	group := claudeData[flowcm.RuntimeKeyConsentGroupID]
+	assert.Len(suite.T(), group, 36)
+	assert.NotEqual(suite.T(), policyID, group)
+	assert.NotEqual(suite.T(), group, vscodeData[flowcm.RuntimeKeyConsentGroupID])
+	assert.Equal(suite.T(), group, again[flowcm.RuntimeKeyConsentGroupID])
+}
+
+func (suite *AuthorizeServiceTestSuite) TestAddDomainClientConsentGroup_SkipsOtherClients() {
+	registered := map[string]string{}
+	addDomainClientConsentGroup(registered, &providers.OAuthClient{ID: "019a0000-0000-7000-8000-000000000001",
+		ClientID: "https://claude.ai/oauth/client.json", ClientIDMetadataDocument: true})
+	assert.Empty(suite.T(), registered)
+
+	invalidID := map[string]string{}
+	addDomainClientConsentGroup(invalidID, &providers.OAuthClient{ID: "not-a-uuid",
+		ClientID: "https://claude.ai/oauth/client.json", ResolvedByClientIDDomain: true})
+	assert.Empty(suite.T(), invalidID)
 }

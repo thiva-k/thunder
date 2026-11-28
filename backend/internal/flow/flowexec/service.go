@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -589,6 +590,11 @@ func (s *flowExecService) loadNewContext(ctx context.Context, flowID, appID, flo
 		flowID, appID, boundSubject = resolvedFlow.ID, "", inputs[adminInitiatedSubjectInput]
 	}
 
+	appID, svcErr = s.resolveAppID(ctx, appID)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+
 	if svcErr := s.checkDirectFlowInitiationAllowed(
 		ctx, appID, flowType, flowSecret, attestationToken, logger); svcErr != nil {
 		return nil, svcErr
@@ -734,6 +740,27 @@ func (s *flowExecService) verifyAttestation(ctx context.Context,
 		return &ErrorAttestationInvalid
 	}
 	return nil
+}
+
+// resolveAppID returns the ID of the application appID names. An application is named by its ID, except a
+// client the Client ID domains of an application or agent admit, which the login page names by its https Client
+// Identifier URL; that resolves to the ID of that application or agent, which the flow records. An appID that
+// names no application is returned as given.
+func (s *flowExecService) resolveAppID(ctx context.Context, appID string) (string, *tidcommon.ServiceError) {
+	if !strings.HasPrefix(appID, clientIdentifierURLPrefix) {
+		return appID, nil
+	}
+	client, svcErr := s.actorProvider.GetInboundClientByID(ctx, appID)
+	if svcErr != nil {
+		if svcErr.Type == tidcommon.ClientErrorType {
+			return appID, nil
+		}
+		return "", svcErr
+	}
+	if client == nil || client.ID == "" {
+		return appID, nil
+	}
+	return client.ID, nil
 }
 
 // resolveFlowInitiationMode decides how an application may initiate a flow, based on its type. An

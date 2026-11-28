@@ -113,7 +113,7 @@ func (s *consentEnforcerService) ResolveConsent(ctx context.Context, ouID, appID
 	if !forceReprompt {
 		// Search for existing consent records for this user and application
 		filter := consent.ConsentFilter{
-			GroupID:       appID,
+			GroupID:       consentRecordGroup(ctx, appID),
 			UserID:        userID,
 			ConsentStatus: consent.ConsentStatusActive,
 		}
@@ -233,7 +233,7 @@ func (s *consentEnforcerService) RecordConsent(ctx context.Context, ouID, appID,
 	hasEssentialDenial := hasEssentialDenials(decisions, essentialElements)
 
 	filter := consent.ConsentFilter{
-		GroupID:       appID,
+		GroupID:       consentRecordGroup(ctx, appID),
 		UserID:        userID,
 		ConsentStatus: consent.ConsentStatusActive,
 	}
@@ -308,7 +308,7 @@ func (s *consentEnforcerService) updateExistingConsent(ctx context.Context, appI
 
 	// Build the consent request payload
 	req := &consent.ConsentRequest{
-		GroupID:      appID,
+		GroupID:      consentRecordGroup(ctx, appID),
 		ValidityTime: validityTime,
 		Authorizations: []consent.ConsentAuthorizationRequest{
 			{
@@ -349,7 +349,7 @@ func (s *consentEnforcerService) createNewConsent(ctx context.Context, appID, us
 
 	// Build the consent request payload
 	req := &consent.ConsentRequest{
-		GroupID:      appID,
+		GroupID:      consentRecordGroup(ctx, appID),
 		ValidityTime: validityTime,
 		Authorizations: []consent.ConsentAuthorizationRequest{
 			{
@@ -1423,4 +1423,23 @@ func (s *consentEnforcerService) populatePermissionDisplay(ctx context.Context,
 		}
 	}
 	return nil
+}
+
+// WithConsentRecordGroup returns ctx carrying the group a user's consent records are kept under, for consent to
+// an application's purposes that is kept apart from the application's own records: each client a Client ID domain
+// admits keeps its consent under its own group, while the purposes stay those of the application or agent that
+// admits it.
+func WithConsentRecordGroup(ctx context.Context, groupID string) context.Context {
+	if groupID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, consentRecordGroupKey{}, groupID)
+}
+
+// consentRecordGroup returns the group a user's consent records are kept under: the one ctx carries, or appID.
+func consentRecordGroup(ctx context.Context, appID string) string {
+	if groupID, ok := ctx.Value(consentRecordGroupKey{}).(string); ok && groupID != "" {
+		return groupID
+	}
+	return appID
 }

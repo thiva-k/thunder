@@ -2648,3 +2648,21 @@ func (suite *ConsentExecutorTestSuite) TestExecute_BindsPermissionsToResourceSer
 	suite.NoError(err)
 	suite.Equal(providers.ExecComplete, response.Status)
 }
+
+func (suite *ConsentExecutorTestSuite) TestExecute_KeepsConsentPerDomainClient() {
+	ctx := buildConsentNodeContext()
+	ctx.RuntimeData[common.RuntimeKeyConsentGroupID] = "group-for-client"
+	suite.setupDefaultAuthnProviderMocks()
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("ValidatePrerequisites", ctx, mock.AnythingOfType("*providers.ExecutorResponse"), mock.Anything).Return(true)
+	suite.executor.Executor.(*coremock.ExecutorInterfaceMock).
+		On("HasRequiredInputs", ctx, mock.AnythingOfType("*providers.ExecutorResponse")).Return(false)
+	suite.mockConsentEnforcer.On("ResolveConsent", mock.Anything, "default", "app-123", "", "user-123",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	suite.Require().NoError(err)
+	suite.Equal(providers.ExecComplete, resp.Status)
+}

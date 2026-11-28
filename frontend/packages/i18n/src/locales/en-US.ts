@@ -1275,6 +1275,12 @@ const translations = {
     'addForm.issueCredentials': 'Issue OAuth client credentials',
     'addForm.issueCredentialsHint':
       'A client ID and a client secret the agent authenticates with. The secret is shown once, when the agent is created.',
+    'addForm.signIn.label': 'How the agent signs in',
+    'addForm.signIn.trustedDomains.label': 'As any client from trusted domains',
+    'addForm.signIn.trustedDomains.hint':
+      'Clients that publish a Client ID Metadata Document at a URL on a domain you trust sign in as this agent, on behalf of the user who signs in. No credentials are issued.',
+    'addForm.signIn.none.label': 'Without an OAuth client',
+    'addForm.signIn.none.hint': 'The agent has no OAuth client to sign in with.',
     'addForm.secretIssued.title': 'Agent created',
     'addForm.secretIssued.subtitle':
       "Copy the client secret and store it somewhere safe. It won't be shown again; the agent's page can only regenerate it.",
@@ -1369,6 +1375,7 @@ const translations = {
     'edit.page.validation.missingRedirectUri': 'add a redirect URI',
     'edit.page.validation.missingAllowedUserType': 'select at least one allowed user type',
     'edit.page.validation.missingCertificate': 'add a certificate',
+    'edit.page.validation.invalidClientIdDomains': 'add at least one valid trusted domain',
     'edit.page.validation.loadingDeviceGrantFlow': 'wait for the default Device Grant flow to load',
     'edit.page.validation.deviceGrantFlowQueryFailed': 'retry loading the Device Grant flow list',
     'edit.page.validation.missingDeviceGrantFlow': 'select a Device Grant flow',
@@ -1454,6 +1461,9 @@ const translations = {
     'edit.overview.accessMode.description': 'How this agent is allowed to authenticate.',
     'edit.overview.accessMode.editAdvanced': 'Edit in advanced',
     'edit.overview.accessMode.own': 'On its own behalf',
+    'edit.overview.accessMode.notAvailable': 'Not available',
+    'edit.overview.accessMode.throughTrustedDomains':
+      'Acts on behalf of the user who signs in through a client from its trusted domains.',
     'edit.overview.accessMode.delegated': 'On behalf of a user',
     'edit.overview.accessMode.allowedUsers': 'Allowed users',
     'edit.overview.accessMode.ownerOnly': 'Owner only',
@@ -1535,6 +1545,13 @@ const translations = {
     'edit.advanced.mode.onOwnBehalf.description':
       'This agent authenticates with its own credentials without user interaction, using client credentials.',
     'edit.advanced.mode.onBehalfOfUser.description': 'This agent can act on behalf of a user.',
+    'edit.advanced.mode.trustedDomains.description':
+      'This agent acts on behalf of the user who signs in through a client from its trusted domains.',
+    'edit.advanced.trustedDomains.title': 'Client settings',
+    'edit.advanced.trustedDomains.description':
+      "Each client's own metadata document sets its redirect URIs and client authentication. Manage the trusted domains on the Credentials tab.",
+    'edit.advanced.trustedDomains.grantTypesHint':
+      'Each client gets the grant types both this agent allows and its own metadata document declares. Token exchange and JWT bearer apply only to clients whose document uses private key JWT authentication, and token exchange comes with identity assertions (ID-JAG).',
     'edit.advanced.agentSignIn.title': 'Agent sign-in',
     'edit.advanced.agentSignIn.description':
       'Allow agents of any agent type to sign in through this agent using the sign-in flow.',
@@ -4108,6 +4125,63 @@ const translations = {
     'cimd.refetch.unchanged': 'The application is unchanged.',
     'cimd.refetch.updateDetails': 'Also update the name and links from the document',
     'edit.page.tabs.metadataDocument': 'Metadata document',
+    'edit.page.tabs.trustedDomains': 'Trusted domains',
+    'edit.page.validation.invalidClientIdDomains': 'The trusted domains need at least one valid domain.',
+    'cimd.registration.title': 'Which clients should sign in?',
+    'cimd.registration.subtitle':
+      'Clients that publish a Client ID Metadata Document identify themselves by its URL, so their sign-in details come from their vendor.',
+    'cimd.registration.specificClient.title': 'A specific client',
+    'cimd.registration.specificClient.description':
+      'Register one client from its metadata document URL. You review what the document declares before the application is created.',
+    'cimd.registration.trustedDomains.title': 'Any client from trusted domains',
+    'cimd.registration.trustedDomains.description':
+      "Let every client whose client ID URL is on a domain you trust sign in, without registering each one. A client's document is read when it signs in.",
+    'cimd.registration.trustedDomains.warning':
+      'Anyone who can publish a document on these domains can sign in through this application. Add only domains whose publishers you trust, and prefer an exact domain to a wildcard.',
+    'cimd.domains.label': 'Trusted domains',
+    'edit.mcp.connect.trustedDomainsNote':
+      "Clients from the trusted domains below connect with their own client ID, the URL of their metadata document, and authorize with PKCE. Each client's document sets its redirect URIs.",
+    'edit.advanced.grantTypes.domainClientHint':
+      'Each client gets the grant types both this application allows and its own metadata document declares. Token exchange and JWT bearer apply only to clients whose document uses private key JWT authentication, and token exchange comes with identity assertions (ID-JAG).',
+    'edit.advanced.idJag.domainClientDescription':
+      "Issue signed assertions of the signed-in user's identity that external services accept for token issuance. They apply only to clients whose own metadata document uses private key JWT authentication.",
+    'edit.advanced.domainClientAuthentication':
+      "Each client's own metadata document sets how it authenticates: as a public client, or with private key JWT. PKCE is always required.",
+    'cimd.rules.client_id_domains_without_document':
+      'Trusted domains can be set only on a client that uses Client ID Metadata Documents.',
+    'cimd.rules.domain_client_values':
+      "A client that trusts domains can't have its own client ID, client secret, redirect URIs, post-logout redirect URIs or certificate. Each client's metadata document sets them.",
+    'cimd.rules.invalid_client_id_domain': 'List 1 to 50 trusted domains, each only once.',
+    'cimd.rules.invalid_client_id_domain_name':
+      '{{domain}} is not a valid domain. Use a lowercase name such as claude.ai, or *.example.com for its subdomains.',
+    'cimd.rules.client_id_domain_in_use':
+      '{{domain}} is already trusted by another application or agent. A domain can be trusted by only one.',
+    'cimd.rules.invalid_response_types': "The client's metadata document must allow the code response type.",
+    'cimd.rules.immutable':
+      "How this client signs in, through one metadata document or through trusted domains, can't be changed after it is created.",
+    'cimd.rules.invalid_grant_types':
+      'The grant types must include authorization code. Token exchange and JWT bearer are allowed only with private key JWT authentication.',
+    'cimd.rules.token_exchange_requires_idjag':
+      'The token exchange grant needs identity assertions (ID-JAG) to be turned on.',
+    'cimd.rules.pkce_required': 'A metadata document client must require PKCE.',
+    'cimd.rules.invalid_redirect_uri':
+      "Each redirect URI must be on the client's own domain or the user's device, and at least one is required.",
+    'cimd.rules.invalid_auth_method':
+      'Only public clients, and private key JWT clients with exactly one key source, can use a metadata document.',
+    'cimd.domains.placeholder': 'vscode.dev, claude.ai',
+    'cimd.domains.helper':
+      'Clients whose client ID URL is on one of these domains can sign in. Use *.example.com to include every subdomain of example.com.',
+    'cimd.domains.validation.required': 'Add at least one domain.',
+    'cimd.domains.validation.tooMany': 'You can list at most 50 domains.',
+    'cimd.domains.validation.invalid':
+      'Use domain names such as claude.ai or *.example.com. IP addresses and single-label names are not allowed.',
+    'cimd.domains.edit.title': 'Clients from trusted domains',
+    'cimd.domains.edit.description.application':
+      "Any client that publishes a Client ID Metadata Document at a client ID URL on these domains signs in through this application, with this application's settings. Nothing is registered for each client.",
+    'cimd.domains.edit.description.agent':
+      "Any client that publishes a Client ID Metadata Document at a client ID URL on these domains signs in as this agent, with this agent's settings. Nothing is registered for each client.",
+    'cimd.domains.edit.fromDocument':
+      "Each client's own document sets its client ID, redirect URIs, sign-in method and keys, and the name and logo users see when they sign in. The document is read when the client signs in and kept for as long as its cache headers allow.",
     'onboarding.steps.clientIdentity': 'Client identity',
     'onboarding.steps.metadataDocument': 'Metadata document',
     'errors.CIMD-1002': 'Enter an HTTPS URL with a host name and a path, for example https://example.com/client.json.',
@@ -7863,6 +7937,7 @@ const translations = {
     'tabs.cors': 'CORS',
     'tabs.csp': 'Content security policy',
     'tabs.accountSecurity': 'Account security',
+    'tabs.cimd': 'Client ID Metadata Documents',
     'cors.card.title': 'Allowed origins',
     'cors.card.description':
       'Manage which origins are allowed to access your APIs. Each entry is either an exact origin or a regular expression.',
@@ -7888,6 +7963,33 @@ const translations = {
     'cors.load.error': 'Failed to load allowed origins.',
     'cors.save.success': 'Allowed origins updated.',
     'cors.save.error': 'Failed to update allowed origins.',
+
+    // Client ID Metadata Documents
+    'cimd.card.title': 'Unregistered clients',
+    'cimd.card.description':
+      'Let MCP clients and AI agents, such as Claude, ChatGPT, and Visual Studio Code, sign in without registering each one. They identify themselves with a Client ID Metadata Document published at their client ID URL. A client registered with its own client ID always takes precedence.',
+    'cimd.card.hint': 'Users still sign in and give consent as usual. Consent is asked for each client separately.',
+    'cimd.toggle.ariaLabel': 'Let unregistered clients sign in',
+    'cimd.domains.hint':
+      "An application or agent lets these clients sign in when its Client ID Metadata Document settings list the domain of their client ID URL. The clients then use that application or agent's settings.",
+    'cimd.enabled.success': 'Unregistered clients can now sign in.',
+    'cimd.disabled.success': 'Unregistered clients can no longer sign in.',
+    'cimd.readOnlyHint':
+      "These settings are read-only because they're managed declaratively. Change them in the declarative configuration.",
+    'cimd.load.error': 'Failed to load the Client ID Metadata Document settings.',
+    'cimd.save.error': 'Failed to update the settings.',
+    'cimd.blocked.title': 'Blocked clients',
+    'cimd.blocked.description':
+      "Clients listed here can't sign in, even when an application or agent allows their domain.",
+    'cimd.blocked.placeholder': 'https://example.com/oauth/client.json',
+    'cimd.blocked.inputLabel': 'Client ID URL to block',
+    'cimd.blocked.add': 'Block',
+    'cimd.blocked.remove': 'Unblock',
+    'cimd.blocked.empty': 'No clients are blocked.',
+    'cimd.blocked.add.success': 'Client blocked.',
+    'cimd.blocked.remove.success': 'Client unblocked.',
+    'cimd.blocked.validation.invalid': 'Enter a client ID URL, for example https://example.com/client.json.',
+    'cimd.blocked.validation.duplicate': 'This client is already blocked.',
 
     // Content security policy
     'csp.reportOnly.title': 'Report only',

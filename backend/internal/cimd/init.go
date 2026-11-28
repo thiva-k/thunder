@@ -6,12 +6,15 @@ package cimd
 import (
 	"net/http"
 
+	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 )
 
-// Initialize initializes the Client ID Metadata Document service and registers its routes.
-func Initialize(mux *http.ServeMux) CIMDServiceInterface {
-	cimdService := newCIMDService()
+// Initialize initializes the Client ID Metadata Document service and registers its routes. configReader
+// reads the cimd server configuration section, which turns admission by Client ID domain on and blocks
+// Client Identifier URLs.
+func Initialize(mux *http.ServeMux, configReader serverconfig.ServerConfigService) CIMDServiceInterface {
+	cimdService := newCIMDService(configReader)
 	registerRoutes(mux, newCIMDHandler(cimdService))
 	return cimdService
 }

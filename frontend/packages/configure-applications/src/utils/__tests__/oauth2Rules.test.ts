@@ -586,6 +586,42 @@ describe('getCimdGrantRestriction', () => {
   });
 });
 
+describe('clients that trust domains', () => {
+  const domainConfig = (overrides: Partial<OAuth2Config> = {}): OAuth2Config =>
+    baseConfig({
+      clientIdMetadataDocument: true,
+      clientIdDomains: ['vscode.dev'],
+      grantTypes: [OAuth2GrantTypes.AUTHORIZATION_CODE, OAuth2GrantTypes.REFRESH_TOKEN],
+      responseTypes: [OAuth2ResponseTypes.CODE],
+      tokenEndpointAuthMethod: TokenEndpointAuthMethods.NONE,
+      publicClient: true,
+      pkceRequired: true,
+      ...overrides,
+    });
+
+  it('offers JWT bearer despite the public placeholder and ties token exchange to identity assertions', () => {
+    expect(getCimdGrantRestriction(OAuth2GrantTypes.JWT_BEARER, domainConfig())).toBeUndefined();
+    expect(getCimdGrantRestriction(OAuth2GrantTypes.TOKEN_EXCHANGE, domainConfig())?.[0]).toBe(
+      'applications:edit.advanced.grantTypes.followsIdJag',
+    );
+    expect(getCimdGrantRestriction(OAuth2GrantTypes.AUTHORIZATION_CODE, domainConfig())?.[0]).toBe(
+      'applications:edit.advanced.grantTypes.requiredByMetadataDocument',
+    );
+  });
+
+  it('keeps the placeholder public client settings when JWT bearer is added', () => {
+    const updates = applyGrantTypesChange(domainConfig(), [
+      OAuth2GrantTypes.AUTHORIZATION_CODE,
+      OAuth2GrantTypes.REFRESH_TOKEN,
+      OAuth2GrantTypes.JWT_BEARER,
+    ]);
+
+    expect(updates.publicClient).toBeUndefined();
+    expect(updates.tokenEndpointAuthMethod).toBeUndefined();
+    expect(updates.grantTypes).toContain(OAuth2GrantTypes.JWT_BEARER);
+  });
+});
+
 describe('metadata document captions', () => {
   it('attributes the public client and PKCE settings to the metadata document', () => {
     const config = baseConfig({

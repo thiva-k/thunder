@@ -127,6 +127,8 @@ export interface CreateAgentRequest {
   description?: string;
   logoUrl?: string;
   owner?: AgentOwner;
+  /** Whether the agent acts on behalf of a user. Not stored; it selects the grant rules checked on create. */
+  delegated?: boolean;
   attributes?: Record<string, unknown>;
   inboundAuthConfig?: AgentInboundAuthConfig[];
 }

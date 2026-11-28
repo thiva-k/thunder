@@ -35,7 +35,7 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useCreateApplication from '../api/useCreateApplication';
 import useGetApplications from '../api/useGetApplications';
-import ConfigureMetadataDocument from '../components/create-application/cimd/ConfigureMetadataDocument';
+import ConfigureCimdRegistration from '../components/create-application/cimd/ConfigureCimdRegistration';
 import ConfigureSecuritySettings from '../components/create-application/configure-security-settings/ConfigureSecuritySettings';
 import ConfigureApplicationDetails from '../components/create-application/ConfigureApplicationDetails';
 import ConfigureDesign from '../components/create-application/ConfigureDesign';
@@ -54,12 +54,13 @@ import {
   OrganizationUnitDefaultItem,
 } from '../models/application-create-flow';
 import {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../models/application-templates';
-import {McpClientIdentityModes} from '../models/cimd';
-import type {CimdPreview, McpClientIdentityMode} from '../models/cimd';
+import {CimdRegistrationModes, McpClientIdentityModes} from '../models/cimd';
+import type {CimdPreview, CimdRegistrationMode, McpClientIdentityMode} from '../models/cimd';
 import {McpClientTypes} from '../models/mcp-client';
 import type {OAuth2Config} from '../models/oauth';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods} from '../models/oauth';
 import type {CreateApplicationRequest} from '../models/requests';
+import {buildClientIdDomainsConfig} from '../utils/clientIdDomains';
 import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getConfigurationTypeFromTemplate from '../utils/getConfigurationTypeFromTemplate';
 import isRedirectCapableTemplate from '../utils/isRedirectCapableTemplate';
@@ -133,9 +134,27 @@ export default function ApplicationCreatePage(): JSX.Element {
   // Whether a user-delegated MCP client is created confidential (issued a client secret) rather than public.
   const [mcpConfidentialClient, setMcpConfidentialClient] = useState(false);
   const [cimdPreview, setCimdPreview] = useState<CimdPreview | null>(null);
+  // Whether the CIMD template registers one specific client or admits any client from trusted domains.
+  const [cimdMode, setCimdMode] = useState<CimdRegistrationMode>(CimdRegistrationModes.SPECIFIC_CLIENT);
+  const [cimdDomains, setCimdDomains] = useState<string[]>([]);
 
   // The approved metadata document supplies the client's name, so the Details step starts from it.
   // A document always describes a client that acts for a signed-in user.
+  // A specific client's name came from its document, so it does not carry over to clients from trusted
+  // domains, which the administrator names.
+  const handleCimdModeChange = (mode: CimdRegistrationMode): void => {
+    if (mode === cimdMode) return;
+    setError(null);
+    setCimdMode(mode);
+    setCimdPreview(null);
+    setAppName('');
+  };
+
+  const handleCimdDomainsChange = (domains: string[]): void => {
+    setError(null);
+    setCimdDomains(domains);
+  };
+
   const handleCimdPreviewChange = (preview: CimdPreview | null): void => {
     setError(null);
     setCimdPreview(preview);
@@ -417,6 +436,11 @@ export default function ApplicationCreatePage(): JSX.Element {
     creationFlow.steps.includes(ApplicationCreateFlowStep.CLIENT_IDENTITY) &&
     mcpIdentityMode === McpClientIdentityModes.METADATA_DOCUMENT;
   const isCimdRegistration = isCimdTemplate || isMcpCimdRegistration;
+  // An MCP client may instead admit any client from trusted domains, chosen on the same Client identity step.
+  const isMcpDomainRegistration =
+    isMcpClientTemplate &&
+    creationFlow.steps.includes(ApplicationCreateFlowStep.CLIENT_IDENTITY) &&
+    mcpIdentityMode === McpClientIdentityModes.TRUSTED_DOMAINS;
 
   // The organization unit is the wizard's first step whenever there's a choice to make. Single-OU
   // deployments never need it, so once that's known, skip straight past it.
@@ -519,7 +543,7 @@ export default function ApplicationCreatePage(): JSX.Element {
       if (step === ApplicationCreateFlowStep.ORGANIZATION_UNIT) return hasMultipleOUs;
       if (step === ApplicationCreateFlowStep.CONFIGURE) return showConfigureStep;
       // A metadata document already fixes the client type and redirect URIs.
-      if (step === ApplicationCreateFlowStep.CLIENT_TYPE) return !isMcpCimdRegistration;
+      if (step === ApplicationCreateFlowStep.CLIENT_TYPE) return !isMcpCimdRegistration && !isMcpDomainRegistration;
       // Nothing left to show once the Sign In section is snapshotted from the organization
       // unit's default — Sign Up/Recovery/Sign Out live elsewhere and aren't configured here.
       if (step === ApplicationCreateFlowStep.SECURITY) return !ouDefaults[OrganizationUnitDefaultItem.SIGN_IN];
@@ -554,6 +578,7 @@ export default function ApplicationCreatePage(): JSX.Element {
     ouDefaults,
     resolvedOrganizationUnit,
     isMcpCimdRegistration,
+    isMcpDomainRegistration,
   ]);
 
   const handleClose = (): void => {
@@ -607,6 +632,10 @@ export default function ApplicationCreatePage(): JSX.Element {
   ): void => {
     const approvedCimd: CimdPreview | null = knownClientDocument ?? cimdPreview;
     const registersFromDocument = Boolean(knownClientDocument) || isCimdRegistration;
+    // An application that admits clients from trusted domains has no document of its own to register from.
+    const admitsByDomain =
+      !knownClientDocument &&
+      ((isCimdTemplate && cimdMode === CimdRegistrationModes.TRUSTED_DOMAINS) || isMcpDomainRegistration);
     setError(null);
 
     const includesSecurity = hasSecurityStep;
@@ -676,9 +705,13 @@ export default function ApplicationCreatePage(): JSX.Element {
 
     // A metadata-document client stores the previewed OAuth values as returned, over the template's
     // seeded config: the URL is the client ID, and the redirect URIs, authentication method, grants
-    // and keys come from the document.
-    const cimdOAuth2Config: OAuth2Config | null =
-      registersFromDocument && approvedCimd ? {...oauthConfig, ...approvedCimd.oauth2Config} : null;
+    // and keys come from the document. An application that admits clients from trusted domains stores
+    // only the domains, since each client's document supplies the rest when it signs in.
+    const cimdOAuth2Config: OAuth2Config | null = admitsByDomain
+      ? buildClientIdDomainsConfig(cimdDomains)
+      : registersFromDocument && approvedCimd
+        ? {...oauthConfig, ...approvedCimd.oauth2Config}
+        : null;
 
     // The mcp-client template branches the oauth2 config off the template-seeded config (never
     // rebuilt from scratch): user-delegated keeps the seeded authorization_code/refresh_token/PKCE/
@@ -1057,16 +1090,22 @@ export default function ApplicationCreatePage(): JSX.Element {
             }}
             preview={cimdPreview}
             onPreviewChange={handleCimdPreviewChange}
+            domains={cimdDomains}
+            onDomainsChange={handleCimdDomainsChange}
             onReadyChange={handleClientIdentityStepReadyChange}
           />
         );
 
       case ApplicationCreateFlowStep.METADATA_DOCUMENT:
         return (
-          <ConfigureMetadataDocument
+          <ConfigureCimdRegistration
+            mode={cimdMode}
+            onModeChange={handleCimdModeChange}
             knownClients={selectedTemplateConfig?.metadataDocumentClients ?? []}
             preview={cimdPreview}
             onPreviewChange={handleCimdPreviewChange}
+            domains={cimdDomains}
+            onDomainsChange={handleCimdDomainsChange}
             onReadyChange={handleMetadataDocumentStepReadyChange}
           />
         );

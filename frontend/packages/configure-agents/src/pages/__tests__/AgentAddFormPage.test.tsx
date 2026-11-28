@@ -705,13 +705,13 @@ describe('AgentAddFormPage', () => {
     });
   });
 
-  it('creates the agent without OAuth credentials when switched off, and opens it at once', async () => {
+  it('creates the agent without an OAuth client when chosen, and opens it at once', async () => {
     const user = userEvent.setup();
     render(<AgentAddFormPage />);
 
     await fillSetup(user);
     await fillAttributes(user);
-    await user.click(screen.getByRole('switch', {name: 'agents:addForm.issueCredentials'}));
+    await user.click(screen.getByRole('radio', {name: 'agents:addForm.signIn.none.label'}));
     await user.click(screen.getByRole('button', {name: 'agents:addForm.submit'}));
 
     await waitFor(() => {
@@ -720,6 +720,87 @@ describe('AgentAddFormPage', () => {
     const post = requests().find((request) => request.method === 'POST');
     expect(post?.data).not.toHaveProperty('inboundAuthConfig');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('creates an agent that admits any client from trusted domains, with no credentials issued', async () => {
+    const user = userEvent.setup();
+    render(<AgentAddFormPage />);
+
+    await fillSetup(user);
+    await fillAttributes(user);
+    await user.click(screen.getByRole('radio', {name: 'agents:addForm.signIn.trustedDomains.label'}));
+    expect(screen.getByRole('button', {name: 'agents:addForm.submit'})).toBeDisabled();
+    await user.type(screen.getByTestId('agent-client-id-domains-input'), 'Claude.ai ');
+    await user.click(screen.getByRole('button', {name: 'agents:addForm.submit'}));
+
+    await waitFor(() => {
+      expect(h.navigate).toHaveBeenCalledWith('/agents/agent-1');
+    });
+    const post = requests().find((request) => request.method === 'POST');
+    expect(post?.data).toMatchObject({
+      delegated: true,
+      inboundAuthConfig: [
+        {
+          type: 'oauth2',
+          config: {
+            clientIdMetadataDocument: true,
+            clientIdDomains: ['claude.ai'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            responseTypes: ['code'],
+            tokenEndpointAuthMethod: 'none',
+            publicClient: true,
+            pkceRequired: true,
+          },
+        },
+      ],
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('names the metadata document rule a trusted-domains agent breaks', async () => {
+    const defaultRequest = h.http.request.getMockImplementation()!;
+    h.http.request.mockImplementation((config: unknown) => {
+      const {method} = config as RecordedRequest;
+      if (method === 'POST') {
+        return Promise.reject(
+          Object.assign(new Error('Bad Request'), {
+            response: {
+              data: {
+                code: 'AGT-1070',
+                description: {
+                  key: 'error.cimdservice.client_id_domain_in_use_description',
+                  params: {domain: 'claude.ai'},
+                },
+              },
+            },
+          }),
+        );
+      }
+      return defaultRequest(config);
+    });
+    const user = userEvent.setup();
+    render(<AgentAddFormPage />);
+
+    await fillSetup(user);
+    await fillAttributes(user);
+    await user.click(screen.getByRole('radio', {name: 'agents:addForm.signIn.trustedDomains.label'}));
+    await user.type(screen.getByTestId('agent-client-id-domains-input'), 'claude.ai ');
+    await user.click(screen.getByRole('button', {name: 'agents:addForm.submit'}));
+
+    expect(await screen.findByText('applications:cimd.rules.client_id_domain_in_use')).toBeInTheDocument();
+  });
+
+  it('keeps Create off until the trusted domains are valid', async () => {
+    const user = userEvent.setup();
+    render(<AgentAddFormPage />);
+
+    await fillSetup(user);
+    await fillAttributes(user);
+    await user.click(screen.getByRole('radio', {name: 'agents:addForm.signIn.trustedDomains.label'}));
+    await user.type(screen.getByTestId('agent-client-id-domains-input'), 'localhost ');
+
+    expect(await screen.findByText('applications:cimd.domains.validation.invalid')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'agents:addForm.submit'})).toBeDisabled();
   });
 
   it('omits the description when none is given', async () => {
@@ -906,7 +987,7 @@ describe('AgentAddFormPage', () => {
     // The type's schema has loaded, but its attributes wait for the next step.
     expect(screen.queryByRole('textbox', {name: /^name/})).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', {name: 'agents:addForm.description'})).not.toBeInTheDocument();
-    expect(screen.queryByRole('switch', {name: 'agents:addForm.issueCredentials'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', {name: 'agents:addForm.issueCredentials'})).not.toBeInTheDocument();
 
     await continueToAttributes(user);
     expect(heading('details')).toBeInTheDocument();
@@ -915,11 +996,11 @@ describe('AgentAddFormPage', () => {
     expect(screen.getByRole('textbox', {name: /llmModel/})).toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: /environment/})).toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: 'agents:addForm.description'})).toBeInTheDocument();
-    expect(screen.getByRole('switch', {name: 'agents:addForm.issueCredentials'})).toBeInTheDocument();
+    expect(screen.getByRole('radio', {name: 'agents:addForm.issueCredentials'})).toBeChecked();
     // What the first step asked for is out of view.
     expect(screen.getByTestId('ou-picker')).not.toBeVisible();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', {name: 'agents:owner.kind.internal'})).not.toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'common:actions.continue'})).not.toBeInTheDocument();
   });
 

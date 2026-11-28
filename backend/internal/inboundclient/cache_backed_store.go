@@ -132,6 +132,10 @@ func (c *cachedBackStore) IsDeclarative(ctx context.Context, entityID string) bo
 	return c.inner.IsDeclarative(ctx, entityID)
 }
 
+func (c *cachedBackStore) GetEntityIDByClientIDDomain(ctx context.Context, domain string) (string, error) {
+	return c.inner.GetEntityIDByClientIDDomain(ctx, domain)
+}
+
 func (c *cachedBackStore) GetEntityIDsByReference(
 	ctx context.Context, refType, refID string, limit, offset int) ([]string, int, error) {
 	return c.inner.GetEntityIDsByReference(ctx, refType, refID, limit, offset)

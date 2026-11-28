@@ -24,6 +24,9 @@ const (
 	ConfigNameNotification ConfigName = "notification"
 	// ConfigNameGateway is the configuration key for how a control plane deploys to its gateways.
 	ConfigNameGateway ConfigName = "gateway"
+	// ConfigNameCIMD is the configuration key for the policies that let clients publishing a Client ID
+	// Metadata Document sign in without being registered.
+	ConfigNameCIMD ConfigName = "cimd"
 )
 
 // supportedConfigNames lists all the supported server configuration names.
@@ -36,6 +39,7 @@ var supportedConfigNames = []ConfigName{
 	ConfigNameAccountAccess,
 	ConfigNameNotification,
 	ConfigNameGateway,
+	ConfigNameCIMD,
 }
 
 // IsPortable reports whether the section moves with the configuration: it is exported, captured into

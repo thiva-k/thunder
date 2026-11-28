@@ -3435,6 +3435,29 @@ components:
           default: false
           description: Whether all authorization requests must use PAR (RFC 9126).
           example: false
+        clientIdMetadataDocument:
+          type: boolean
+          default: false
+          description: >-
+            Whether the agent admits clients that publish a Client ID Metadata Document. Fixed at creation.
+            Used with `clientIdDomains`.
+          example: false
+        clientIdDomains:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+          description: >-
+            With `clientIdMetadataDocument: true`, admits any client whose Client ID Metadata Document URL is on
+            one of these domains, and signs it in as this agent. Each entry is a lowercase DNS name of at least
+            two labels, such as `claude.ai`, or `*.` and such a name to admit its subdomains. A domain can be
+            admitted by one application or agent only. The agent then has no `clientId`, `clientSecret`,
+            `redirectUris`, `postLogoutRedirectUris` or `certificate`, holds `authorization_code` and optionally
+            `refresh_token`, and uses `tokenEndpointAuthMethod: none` with `publicClient` and `pkceRequired`, the
+            defaults when omitted. Each admitted client takes its redirect URIs, authentication method and keys
+            from its own document. Fixed at creation.
+          example: ["claude.ai"]
         certificate:
           $ref: '#/components/schemas/Certificate'
         scopes:

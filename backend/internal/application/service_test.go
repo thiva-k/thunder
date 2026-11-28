@@ -1479,6 +1479,30 @@ func (suite *ServiceTestSuite) TestValidateOAuthParamsForCreateAndUpdate_EmptyIn
 	assert.Nil(suite.T(), svcErr)
 }
 
+func (suite *ServiceTestSuite) TestValidateOAuthParamsForCreateAndUpdate_ClientIDDomainDefaults() {
+	app := &model.ApplicationDTO{
+		Name: "Test App",
+		OUID: testOUID,
+		InboundAuthConfig: []providers.InboundAuthConfigWithSecret{{
+			Type: providers.OAuthInboundAuthType,
+			OAuthConfig: &providers.OAuthConfigWithSecret{
+				ClientIDMetadataDocument: true,
+				ClientIDDomains:          []string{"claude.ai"},
+			},
+		}},
+	}
+
+	result, svcErr := validateOAuthParamsForCreateAndUpdate(app)
+
+	suite.Require().Nil(svcErr)
+	config := result.OAuthConfig
+	suite.Equal([]providers.GrantType{providers.GrantTypeAuthorizationCode}, config.GrantTypes)
+	suite.Equal([]providers.ResponseType{providers.ResponseTypeCode}, config.ResponseTypes)
+	suite.Equal(providers.TokenEndpointAuthMethodNone, config.TokenEndpointAuthMethod)
+	suite.True(config.PublicClient)
+	suite.True(config.PKCERequired)
+}
+
 func (suite *ServiceTestSuite) TestValidateOAuthParamsForCreateAndUpdate_InvalidType() {
 	app := &model.ApplicationDTO{
 		Name: "Test App",

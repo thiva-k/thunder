@@ -362,3 +362,141 @@ func (ts *CIMDTestSuite) TestPreviewRejectsURLs() {
 		})
 	}
 }
+
+// domainCIMDApp builds an MCP application that admits the clients on the given domains.
+func (ts *CIMDTestSuite) domainCIMDApp(name string, domains ...string) Application {
+	return Application{
+		OUID: ts.ouID,
+		Name: name,
+		Type: "mcp",
+		InboundAuthConfig: []InboundAuthConfig{{
+			Type: "oauth2",
+			OAuthAppConfig: &OAuthAppConfig{
+				ClientIDMetadataDocument: true,
+				ClientIDDomains:          domains,
+				GrantTypes:               []string{"authorization_code", "refresh_token"},
+				ResponseTypes:            []string{"code"},
+			},
+		}},
+	}
+}
+
+func (ts *CIMDTestSuite) TestDomainCIMDApplicationLifecycle() {
+	appID, err := createApplication(ts.domainCIMDApp("CIMD Domain Clients", "cimd-domain.example.com"))
+	ts.Require().NoError(err)
+	defer func() {
+		if err := deleteApplication(appID); err != nil {
+			ts.T().Logf("Failed to delete the CIMD domain application: %v", err)
+		}
+	}()
+
+	app, err := getApplicationByID(appID)
+	ts.Require().NoError(err)
+	ts.Require().Len(app.InboundAuthConfig, 1)
+	oauthConfig := app.InboundAuthConfig[0].OAuthAppConfig
+	ts.Empty(oauthConfig.ClientID)
+	ts.Equal([]string{"cimd-domain.example.com"}, oauthConfig.ClientIDDomains)
+	ts.True(oauthConfig.ClientIDMetadataDocument)
+	ts.Equal("none", oauthConfig.TokenEndpointAuthMethod)
+	ts.True(oauthConfig.PublicClient)
+	ts.True(oauthConfig.PKCERequired)
+
+	ts.Require().NoError(updateApplication(appID,
+		ts.domainCIMDApp("CIMD Domain Clients", "cimd-domain.example.com", "*.cimd-domain.example.org")))
+	app, err = getApplicationByID(appID)
+	ts.Require().NoError(err)
+	ts.Equal([]string{"cimd-domain.example.com", "*.cimd-domain.example.org"},
+		app.InboundAuthConfig[0].OAuthAppConfig.ClientIDDomains)
+
+	toSingleClient := ts.publicCIMDApp("CIMD Domain Clients")
+	ts.requireRuleViolation(http.MethodPut, "/applications/"+appID, toSingleClient, "immutable")
+}
+
+func (ts *CIMDTestSuite) TestDomainCIMDApplicationRejectsRuleViolations() {
+	invalidDomain := ts.domainCIMDApp("CIMD Domain Invalid", "Cimd-Domain.example.com")
+	ts.requireRuleViolation(http.MethodPost, "/applications", invalidDomain, "invalid_client_id_domain")
+
+	singleLabel := ts.domainCIMDApp("CIMD Domain Single Label", "localhost")
+	ts.requireRuleViolation(http.MethodPost, "/applications", singleLabel, "invalid_client_id_domain")
+
+	withRedirect := ts.domainCIMDApp("CIMD Domain Redirect", "cimd-domain-redirect.example.com")
+	withRedirect.InboundAuthConfig[0].OAuthAppConfig.RedirectURIs = []string{"https://cimd.example.com/cb"}
+	ts.requireRuleViolation(http.MethodPost, "/applications", withRedirect, "domain_client_values")
+
+	withoutMarker := ts.domainCIMDApp("CIMD Domain Unmarked", "cimd-domain-unmarked.example.com")
+	withoutMarker.InboundAuthConfig[0].OAuthAppConfig.ClientIDMetadataDocument = false
+	ts.requireRuleViolation(http.MethodPost, "/applications", withoutMarker, "client_id_domains_without_document")
+
+	clientCredentials := ts.domainCIMDApp("CIMD Domain Client Credentials", "cimd-domain-cc.example.com")
+	clientCredentials.InboundAuthConfig[0].OAuthAppConfig.GrantTypes = []string{"authorization_code",
+		"client_credentials"}
+	ts.requireRuleViolation(http.MethodPost, "/applications", clientCredentials, "invalid_grant_types")
+}
+
+func (ts *CIMDTestSuite) TestDomainIsAdmittedByOneApplicationOrAgent() {
+	appID, err := createApplication(ts.domainCIMDApp("CIMD Domain Holder", "cimd-shared.example.com"))
+	ts.Require().NoError(err)
+	defer func() {
+		if err := deleteApplication(appID); err != nil {
+			ts.T().Logf("Failed to delete the CIMD domain application: %v", err)
+		}
+	}()
+
+	second := ts.domainCIMDApp("CIMD Domain Second", "other-domain.example.com", "cimd-shared.example.com")
+	ts.requireRuleViolation(http.MethodPost, "/applications", second, "client_id_domain_in_use")
+
+	agent := map[string]any{
+		"type":       "default",
+		"attributes": map[string]any{"name": "CIMD Domain Agent"},
+		"inboundAuthConfig": []map[string]any{{"type": "oauth2", "config": map[string]any{
+			"clientIdMetadataDocument": true,
+			"clientIdDomains":          []string{"cimd-shared.example.com"},
+			"grantTypes":               []string{"authorization_code"},
+		}}},
+	}
+	status, code, descriptionKey := ts.sendJSON(http.MethodPost, "/agents", agent)
+	ts.Equal(http.StatusBadRequest, status)
+	ts.Equal("AGT-1070", code)
+	ts.Equal("error.cimdservice.client_id_domain_in_use_description", descriptionKey)
+}
+
+func (ts *CIMDTestSuite) TestDomainCIMDAgent() {
+	agentID, err := testutils.CreateAgent(testutils.Agent{
+		Type:       "default",
+		Attributes: map[string]any{"name": "CIMD Domain Agent"},
+		InboundAuthConfig: []testutils.AgentInboundAuthConfig{{
+			Type: "oauth2",
+			Config: &testutils.AgentOAuthConfig{
+				ClientIDMetadataDocument: true,
+				ClientIDDomains:          []string{"cimd-agent.example.com"},
+				GrantTypes:               []string{"authorization_code", "refresh_token"},
+			},
+		}},
+	})
+	ts.Require().NoError(err)
+	defer func() {
+		if err := testutils.DeleteAgent(agentID); err != nil {
+			ts.T().Logf("Failed to delete the CIMD domain agent: %v", err)
+		}
+	}()
+
+	req, err := http.NewRequest(http.MethodGet, testServerURL+"/agents/"+agentID, nil)
+	ts.Require().NoError(err)
+	resp, err := testutils.GetHTTPClient().Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+	ts.Require().Equal(http.StatusOK, resp.StatusCode)
+	var agent testutils.Agent
+	ts.Require().NoError(json.NewDecoder(resp.Body).Decode(&agent))
+	ts.Require().Len(agent.InboundAuthConfig, 1)
+	config := agent.InboundAuthConfig[0].Config
+	ts.Empty(config.ClientID)
+	ts.Equal([]string{"cimd-agent.example.com"}, config.ClientIDDomains)
+	ts.Equal([]string{"authorization_code", "refresh_token"}, config.GrantTypes)
+	ts.Equal("none", config.TokenEndpointAuthMethod)
+	ts.True(config.PublicClient)
+	ts.True(config.PKCERequired)
+
+	app := ts.domainCIMDApp("CIMD Domain After Agent", "cimd-agent.example.com")
+	ts.requireRuleViolation(http.MethodPost, "/applications", app, "client_id_domain_in_use")
+}
